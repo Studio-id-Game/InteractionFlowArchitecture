@@ -35,9 +35,9 @@ Interaction Flow Architecture は、クリーンアーキテクチャと同様�
 
 各要素は、それぞれ対応する名前空間（およびディレクトリ）を持ちます。
 
-以下は、本アーキテクチャの構造と依存関係の全体像です。
+以下は、本アーキテクチャの構造の全体像です。
 
-![Architecture Overview](./docs/Interactions_Flow_Architecture_Map.png)
+![Architecture Overview](./docs/Interaction_Flow_Architecture__Overview.png)
 
 # Layers
 
@@ -143,7 +143,7 @@ Interaction Flow Architecture は、クリーンアーキテクチャと同様�
 DI コンテナのラッパーとして、Focus の構築を担います。
 
 **特徴**
-- Port を介して External 実装を注入
+- Function Port を介して Function External 実装を注入
 - Focus の実行環境を構成する
 
 ## External Block
@@ -159,23 +159,44 @@ OS、Framework、ライブラリなどの外部要素です。
 
 ## 実行フロー
 
+以下は、本アーキテクチャにおけるフローの全体像です。
+
+![Architecture Flow](./docs/Interaction_Flow_Architecture__User_Flow.png)
+
 ユーザー視点の処理は、以下の順で流れます：
 
-    Focus → Interaction → Port → External
+    User(開始) → Focus → Interaction → Function Port → Function External → User(入力/観測/終了)
+
+このフローは、常に「Context（文脈）」を入力として開始されます。
+
+Context は現在のユーザーに関する状態や状況を表す文脈的情報で、初期に与えられた情報や、過去の処理によって更新された情報を含みます。  
+Focus はこの Context をもとに実行され、Interaction を通じて処理が進行します。
+
+処理の過程で、Function External を介した操作や状態更新が行われ、その結果として Context は更新されます。  
+また、Context の更新は Focus / Interaction 内で行われる場合もあります。
+
+更新された Context は、必要に応じて次のフローの入力として再利用されます。  
+これにより、連続したユーザー体験が構成されます。
+
+
 
 ## 依存関係
 
+以下は、本アーキテクチャにおける依存関係の全体像です。
+
+![Architecture Flow](./docs/Interaction_Flow_Architecture__Dependency_Diagram.png)
+
 依存関係は次のようになります：
 
-    Focus → Interaction → Port ← External
+    Focus → Interaction → Function Port ← Function External
 
-- External のみが外部に依存します
+- Function External のみが外部に依存します
 
-    External → External Block
+    Function External → External Block
 
 - Builder は以下に依存します
 
-    Focus Builder → Focus / Port / External
+    Focus Builder → Focus / Function Port / Function External
 
 - すべての要素は Domain に依存します
 
@@ -203,7 +224,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Storage（状態管理）
 - Reaction（ユーザーへの出力）
 
-これらは Port によって抽象化され、External によって実装されます。
+これらは Function Port によって抽象化され、Function External によって実装されます。
 
 # 振る舞いの違い
 
@@ -226,7 +247,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ## Focus の制約
 
-- Port および External に依存しない
+- Function Port および Function External に依存しない
 - ユーザーにとって単一の意味と目的を持つ
 - 必ず「明確な終了」を示す Interaction を持つ
 
@@ -238,7 +259,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ## Interaction の制約
 
-- Port に依存するが、External には依存しない
+- Function Port に依存するが、Function External には依存しない
 - Focus に依存しない
 - システム内で単一の意味と目的を持つ
 - 必ず終了を示す Reaction を持つ

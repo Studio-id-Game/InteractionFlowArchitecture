@@ -178,8 +178,6 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 更新された Context は、必要に応じて次のフローの入力として再利用されます。  
 これにより、連続したユーザー体験が構成されます。
 
-
-
 ## 依存関係
 
 以下は、本アーキテクチャにおける依存関係の全体像です。
@@ -233,9 +231,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Function は中断（例外・キャンセル）を持つ
 - Focus / Interaction は中断を持たない
 
-ただし実際には：
-
-> Focus / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
+> 正確には、Focus / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
 
 ## 状態
 - Function（Operation / Storage / Reaction）のみが、必要に応じて Mutable な状態を持つことができる
@@ -253,9 +249,9 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ### アンチパターン
 
-- ユーザーの目的を持たない Focus
+- ユーザーの目的を意味しない Focus
 
-  ※ただし、単一 Interaction のラップは許可される
+> ユーザーの目的と対応する場合は、単一の Interaction をラップする Focus であってもよい。
 
 ## Interaction の制約
 
@@ -267,6 +263,9 @@ Function Port を介して複数の Function（機能）を実行し、それら
 ### アンチパターン
 
 - 過度に巨大な Interaction
+
+> システムの目的と対応する場合は、単一の Reaction をラップする Interaction であってもよい。
+> また、それ以上分解するとシステム内における意味や目的が失われる場合には、複数の Function を組み合わせてある程度大きい Interaction を構築してもよい。
 
 ## 補足
 

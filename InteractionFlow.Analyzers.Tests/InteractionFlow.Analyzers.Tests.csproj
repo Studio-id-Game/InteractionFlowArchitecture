@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\InteractionFlow.Analyzers.csproj" />
+	  <ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

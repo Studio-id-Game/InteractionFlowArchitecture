@@ -1,157 +1,265 @@
 # Interaction Flow C# Package
 
-このプロジェクトは、Interaction Flow Architecture を実現するための、C# 向けベースライブラリです。
+このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。
+
+## ソリューション構成
+
+本パッケージは、以下のプロジェクトで構成されています。
+- `InteractionFlow.Core`  
+  基礎となるインターフェースや構造を提供するライブラリ
+
+- `InteractionFlow.Standard`  
+  コンソール操作など、汎用的な実装を提供するライブラリ
+
+- `InteractionFlow.Analyzers`  
+  アーキテクチャの依存関係ルールを検証し、設計違反を検出する Roslyn アナライザー
+
+- `InteractionFlow.Sample.Parrot`  
+  コンソールベースのオウム返しアプリケーションによる、基本構成のサンプル実装
 
 # Interaction Flow Architecture
 
-Interaction Flow Architecture は、
-クリーンアーキテクチャのようなテスト耐性と依存関係の逆転を実現しながら、
-開発者にとって認知・管理しやすい構造や、責任の所在の明確化によって、開発における迷いを減らすアーキテクチャです。
+Interaction Flow Architecture は、クリーンアーキテクチャと同様の高いテスト耐性と拡張性を備えています。
 
-Interaction Flow Architecture の基本構成は、
-以下の4つの Layer と3つの Block で構成され、
-またそれぞれに固有の名前空間（及びディレクトリ）を持ちます。
+さらに、構造の認知しやすさと責任範囲の明確化を徹底することで、実装単位や責務、コードの配置が自然に導かれるよう設計されています。  
+開発者は「どこに何を書くべきか」を意識的に判断する必要がなくなり、設計の迷いを大きく減らすことができます。  
+
+また、この構造に従うことで、UX を損なわないフロー設計が自然に導かれます。
+
+# 全体構成
+
+本アーキテクチャは、以下の要素で構成されます：
+
+- 4つの Layer（層）
+- 3つの Block（補助構造）
+
+各要素は、それぞれ対応する名前空間（およびディレクトリ）を持ちます。
+
+以下は、本アーキテクチャの構造と依存関係の全体像です。
+
+![Architecture Overview](./docs/Interactions_Flow_Architecture_Map.png)
+
+# Layers
 
 ## Focus Layer
 
-namespace : `ProjectName.Focuses.{FocusName}`
+**namespace**  
+`ProjectName.Focuses.{FocusName}`
 
-- ユーザー内の目的を達成するための、ユーザーにとって単一の意味を持つフロー
-- ユーザー内の目的ごとに、複数のクラス（または構造体）を実装する
+**役割**  
+ユーザーの目的を達成するためのフロー単位です。  
+ユーザーにとって「単一の意味」を持つ単位として設計されます。
+
+**構成**  
+- 1つのユーザー目的に対して1つのクラス（または構造体）で構成
 
 ## Interaction Layer
 
-namespace + class name : `ProjectName.Interactions.{InteractionName}`
+**namespace**  
+`ProjectName.Interactions.{InteractionName}`
 
-- システム内の目的を達成するための、システム内部において単一の意味を持つフロー
-- システム内の目的ごとに、複数のクラス（または構造体）を実装する
-- 接続層による抽象化を経由して、ユーザー入力を解釈し、保管や反応を実行する。
+**役割**  
+システム内部の目的を達成するためのフロー単位です。  
+システムにとって「単一の意味」を持つ処理単位として設計されます。
 
-namespace + class name : `ProjectName.Interactions.Rules.{InteractionRuleName}`
+**特徴**
 
-- システム内の目的を達成するために定義・遵守する必要がある、フローの規則
+- Port 層を経由して機能を呼び出す
+- ユーザー入力を受け取り、処理に適用する
+- 保存操作やユーザーへの反応を実行する
+
+**構成**  
+- 1つのシステム目的に対して1つのクラス（または構造体）で構成
+
+### Interaction Rules
+
+**namespace**  
+`ProjectName.Interactions.Rules.{InteractionRuleName}`
+
+**役割**  
+複数の Interaction 間で共有されるべきルールを定義します。
+
+**制約**
 - `ProjectName.Interactions` 内からのみ参照可能
 
 ## Function Port Layer
 
-namespace + class name : `ProjectName.{Operation|Storage|Reaction}Ports.{PortName}`
+**namespace**  
+`ProjectName.{Operation|Storage|Reaction}Ports.{PortName}`
 
-- 依存を逆転させるための、機能の抽象的定義
-- 外部機能層をinterfaceによって抽象化し、外部実装の切り替えを可能にする
+**役割**  
+依存関係を逆転させるための抽象インターフェース群です。
+
+**特徴**
+- 外部機能を interface として定義
+- 実装の差し替えを可能にする
 
 ## Function External Layer
 
-namespace + class name : `ProjectName.{Operations|Storages|Reactions}.{ExternalFunctionName}`
+**namespace**  
+`ProjectName.{Operations|Storages|Reactions}.{ExternalFunctionName}`
 
-- 動作を実現するための、外部に依存した処理
-- `Operations` : 具体的な実装によって、ユーザーによる入力や条件を待機、入力・条件データを取得する操作機能を定義する（Controllerに相当）
-- `Storages` : 具体的な実装によって、ユーザーまたはアプリケーションに帰属する状態の管理機能を定義する（Gateway + DB/FileSystemなど に相当）
-- `Reactions` : 具体的な実装によって、ユーザーに観測可能な形で表現する反応機能を定義する（Presenter + UI に相当）
+**役割**  
+実際の処理を行う、外部依存の実装です。
+
+**分類**
+
+- **Operations**  
+  ユーザー入力や条件の取得を担当（UI / Controller 相当）
+
+- **Storages**  
+  状態の保存・管理を担当（DB / FileSystem / Gateway 相当）
+
+- **Reactions**  
+  ユーザーに観測可能な出力を担当（UI / Presenter 相当）
+
+# Blocks
 
 ## Domain Block
 
-namespace + class name : `ProjectName.Entities.{EntityName}`
+**namespace**  
+`ProjectName.Entities.{EntityName}`
 
-- システムの前提を構築するための、情報の表現
+**役割**  
+システムの前提となるデータ構造（エンティティ）を定義します。
 
-namespace + class name : `ProjectName.Entities.Rules.{EntityRuleName}`
+### Entity Rules
 
-- システムの前提を構築するために定義・遵守する必要がある、表現の規則
+**namespace**  
+`ProjectName.Entities.Rules.{EntityRuleName}`
+
+**役割**  
+エンティティに対する制約やルールを定義します。
+
+**制約**
 - `ProjectName.Entities` 内からのみ参照可能
 
 ## Focus Builder Block
 
-namespace + class name : `ProjectName.Builders`
+**namespace**  
+`ProjectName.Builders`
 
-- 具体的な外部機能層を指定し、Port層を経由して焦点層のコンストラクトを行うための、DIコンテナの特化ラッパー
+**役割**  
+DI コンテナのラッパーとして、Focus の構築を担います。
+
+**特徴**
+- Port を介して External 実装を注入
+- Focus の実行環境を構成する
 
 ## External Block
 
-namespace + class name : `開発対象ではないため不定`
+**役割**  
+OS、Framework、ライブラリなどの外部要素です。
 
-- 外部機能層から参照される OS, Framework, Library など
+※本アーキテクチャの管理対象外
 
-## プログラムのフローと依存関係
+# フローと依存関係
 
-このアーキテクチャは、ユーザーからみたプログラムの流れを中心に構築されています。
-ここでユーザーとは、人間だけではなく、エージェントや他システムを含みます。
+このアーキテクチャでは、依存関係の逆転により実行フローと依存関係が明確に分離されます。
 
-このアーキテクチャにおいて、プログラムのフローは各層の間を以下のように流れます。
+## 実行フロー
 
-`「焦点」（Focus） →「作用」（Interaction） →「接続」（Port） →「外部機能」（Operation / Storages / Reaction） `
+ユーザー視点の処理は、以下の順で流れます：
 
-また、各層は以下のように依存関係を持ちます。
+    Focus → Interaction → Port → External
 
-`「焦点」（Focus） →「作用」（Interaction） →「接続」（Port） ←「外部機能」（Operation / Storages / Reaction）`
+## 依存関係
 
-「外部機能」のみが「外部」に依存します。
+依存関係は次のようになります：
 
-`「外部機能」（Operation / Storages / Reaction） →「外部」（External Block）` 
+    Focus → Interaction → Port ← External
 
-「焦点構成部」は「焦点層」「接続層」「外部機能層」に依存します。
+- External のみが外部に依存します
 
-`「焦点構成部」（Focus Builder Block） → 「焦点層」（Focus）,「接続層」（Function Port）,「外部機能層」（Function External）` 
+    External → External Block
 
-全ての Layer と Block は「関心」に依存します。（External Block を除く）
+- Builder は以下に依存します
 
-`All Layers and Blocks → 「関心」（Domain Block）` 
+    Focus Builder → Focus / Port / External
 
-## 各層の定義名と名前空間
+- すべての要素は Domain に依存します
 
-各層の定義は、プログラムの名前空間およびフォルダ、ディレクトリ構造と一致させることができます。
+    All Layers & Blocks → Domain
 
-さらに、アルファベット順にソートした時に、おおむねプログラムのフローの順に各レイヤーが並びます。
+# 概念モデル
 
-これにより、構造とコードの対応関係を保ちながら、認知しやすくクリーンな設計を維持できます。
+## Focus / Interaction / Function
 
-## 「焦点」と「作用」と「機能」
+### Focus（焦点）
 
-「焦点」（Focus）は、ユーザーにとって単一の意味を持つフローの単位であり、複数の「作用」により構成されます。
+ユーザーにとっての意味単位です。  
+複数の Interaction を組み合わせてユーザーフローを構成します。
 
-「作用」（Interaction）は、システム内部において単一の意味を持つフローの単位であり、複数の「機能」により構成されます。
+### Interaction（作用）
 
-「機能」（Operation, Reaction, Storage）は、作用を実現するための処理であり、「接続」（Function Port）によって抽象化され、「外部機能」（Function Externalにより実装されます。
+システム内部の意味単位です。  
+Function Port を介して複数の Function（機能）を実行し、それらを組み合わせてシステムフローを構成します。
 
-### 中断についての違い
+### Function（機能）
 
-「機能」はキャンセルやエラー、例外による中断の動作がありますが、
-「焦点」と「作用」には基本的に中断の動作がありません。
+処理の実体です。
 
-厳密には、状況に応じて、「正しく中断を終え、その事をユーザーに伝える」ことで「焦点」と「作用」は常に正常に終了します。
-（詳細は「「焦点」と「作用」の推奨パターンとアンチパターン」で後述）
+- Operation（ユーザーからの入力）
+- Storage（状態管理）
+- Reaction（ユーザーへの出力）
 
-### 状態についての違い
+これらは Port によって抽象化され、External によって実装されます。
 
-「機能」は「管理」（Storage）に代表されるように、Mutable な状態（Memory State）を持つことができますが、「焦点」と「作用」の状態は Immutable である必要があります。
+# 振る舞いの違い
 
-開始された「焦点」と「作用」で扱われる遷移状態は、
-それら自身のスコープを抜けるまでに完全に破棄される必要があります。
+## 中断
 
-### 「焦点」と「作用」の制約とアンチパターン
+- Function は中断（例外・キャンセル）を持つ
+- Focus / Interaction は中断を持たない
 
-「焦点」は必ず以下の条件を満たす必要があります
+ただし実際には：
 
-- 「外部機能」はもちろん、「接続」にも依存しない
-- ユーザーにとって単一の意味を持つ
-- ユーザーにとって単一の目的を持つ
-- 最後は必ず「明確な焦点の終了」を示す作用を実行する
+> Focus / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
 
-また、ユーザーにとって主観的な目的を持たない「焦点」はアンチパターンです。  
-ただし、単一の「作用」をラップする「焦点」は許可されます。 
+## 状態
+- Function（Operation / Storage / Reaction）のみが、必要に応じて Mutable な状態を持つことができる
+- Focus / Interaction は Immutable
 
-「作用」は必ず以下の条件を満たす必要があります。
+また、Focus / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
 
-- 「外部機能」に依存しない
-- システム内における単一の意味を持つ
-- システム内における単一の目的を持つ
-- 最後は必ず「明確な作用の終了」を示す反応を実行する
+# 制約とアンチパターン
 
-また、必要以上に巨大な「作用」はアンチパターンです。  
+## Focus の制約
 
-これを満たす範囲であれば、複雑な「作用」のフローを、1つの作用内で複数の入力や反応を利用することで実現出来ます。
-その場合、UX的品質を担保するために、十分短い間隔での「反応」を含んだ上で、
-アーキテクチャとしての制約として、作用の最後には必ず反応によってその作用の「明確な終了」を示す必要があります。
+- Port および External に依存しない
+- ユーザーにとって単一の意味と目的を持つ
+- 必ず「明確な終了」を示す Interaction を持つ
 
-また「明確な終了」を示すという制約は、「焦点」のフローにおいても同様です。
+### アンチパターン
 
-最終的な「焦点」と「作用」の詳細な粒度はチームの意向に委ねられ、また粒度の計画的変更も許容されます。
+- ユーザーの目的を持たない Focus
+
+  ※ただし、単一 Interaction のラップは許可される
+
+## Interaction の制約
+
+- Port に依存するが、External には依存しない
+- Focus に依存しない
+- システム内で単一の意味と目的を持つ
+- 必ず終了を示す Reaction を持つ
+
+### アンチパターン
+
+- 過度に巨大な Interaction
+
+## 補足
+
+Focus / Interaction の粒度はチームで調整可能です。
+ただし、前述したアンチパターンにならないように注意する必要があります。
+
+# 設計指針（名前空間）
+
+各 Layer / Block は、名前空間およびディレクトリ構造と一致させることを推奨します。
+
+さらに、アルファベット順に並べることで、おおよそ処理フロー順に配置されます。
+
+これにより：
+
+- 構造とコードの対応が明確になる
+- 認知負荷が下がる
+- 保守性が向上する

@@ -1,0 +1,9 @@
+root = true
+
+# C#
+[*.cs]
+
+# Interaction Flow Analyzer
+interactionflow_enabled = True
+interactionflow_mode = Error
+# interactionflow_allowed_roots = System

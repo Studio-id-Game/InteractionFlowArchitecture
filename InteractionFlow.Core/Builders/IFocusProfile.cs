@@ -1,4 +1,4 @@
-﻿namespace InteractionFlow.Core.Builders
+namespace InteractionFlow.Core.Builders
 {
     public interface IFocusProfile
     {

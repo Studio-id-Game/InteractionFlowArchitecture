@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -9,7 +9,7 @@ namespace InteractionFlow.Analyzers
     internal static class LayerNames
     {
 
-        private readonly static StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
+        private static readonly StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
 
         public const string Builders = nameof(Builders);
         public const string Entities = nameof(Entities);
@@ -24,8 +24,8 @@ namespace InteractionFlow.Analyzers
         public const string StoragePorts = nameof(StoragePorts);
         public const string Storages = nameof(Storages);
 
-        private readonly static ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
-        private readonly static ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new ConcurrentDictionary<string, ImmutableHashSet<string>>(stringComparer);
+        private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
+        private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new ConcurrentDictionary<string, ImmutableHashSet<string>>(stringComparer);
 
 
         private static HashSet<string> GetAll() => new HashSet<string>(stringComparer)

@@ -1,4 +1,4 @@
-﻿namespace InteractionFlow.Core.MultiFunctionPorts
+namespace InteractionFlow.Core.MultiFunctionPorts
 {
     public interface IMemoryState
     {

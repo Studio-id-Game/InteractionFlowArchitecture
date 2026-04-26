@@ -1,4 +1,4 @@
-﻿using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Focuses;
 using InteractionFlow.Samples.Parrot.Interactions;
@@ -15,9 +15,9 @@ namespace InteractionFlow.Samples.Parrot
 {
     internal class Program
     {
-        private readonly static CancellationObject cancel;
-        private readonly static InitializeApplication initialize;
-        private readonly static SelectAndRunSample select;
+        private static readonly CancellationObject cancel;
+        private static readonly InitializeApplication initialize;
+        private static readonly SelectAndRunSample select;
 
         static Program()
         {

@@ -1,4 +1,4 @@
-﻿using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Storages;
 using InteractionFlow.Standard.Entities.Storages;
 using System;

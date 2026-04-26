@@ -1,4 +1,4 @@
-﻿using InteractionFlow.Core.ReactionPorts;
+using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Standard.Entities.Consoles;
 
 namespace InteractionFlow.Standard.ReactionPorts

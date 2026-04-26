@@ -1,4 +1,4 @@
-﻿namespace InteractionFlow.Samples.Parrot.Entities.SampleContexts
+namespace InteractionFlow.Samples.Parrot.Entities.SampleContexts
 {
     internal enum SampleMode
     {

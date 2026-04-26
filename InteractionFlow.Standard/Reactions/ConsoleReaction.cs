@@ -1,4 +1,4 @@
-﻿using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Core.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;

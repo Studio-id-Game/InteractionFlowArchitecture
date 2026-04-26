@@ -3,6 +3,15 @@ root = true
 # C#
 [*.cs]
 
+# Formatting Options
+indent_size = 4
+tab_size = 4
+max_line_length = 120
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
 # Interaction Flow Analyzer
 interactionflow_enabled = True
 interactionflow_mode = Error

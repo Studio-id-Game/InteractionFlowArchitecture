@@ -1,4 +1,4 @@
-﻿using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.Focuses;
 using InteractionFlow.Core.OperationPorts;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Core.StoragePorts;

@@ -55,6 +55,7 @@ namespace InteractionFlow.Analyzers
                 case Builders:
 
                     disallows.Remove(Focuses);
+                    disallows.Remove(Interactions);
                     disallows.Remove(MultiFunctions);
                     disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(Operations);
@@ -109,6 +110,7 @@ namespace InteractionFlow.Analyzers
 
             switch (sourceLayer)
             {
+                case Builders:
                 case Operations:
                 case Reactions:
                 case Storages:
@@ -118,7 +120,7 @@ namespace InteractionFlow.Analyzers
 
             foreach (var item in allowedRoots)
             {
-                if (target.Equals(item, StringComparison.OrdinalIgnoreCase) ||
+                if (stringComparer.Equals(target, item) ||
                     target.StartsWith($"{item}.", StringComparison.OrdinalIgnoreCase))
                 {
                     return false;

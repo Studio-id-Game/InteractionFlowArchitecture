@@ -22,7 +22,7 @@ namespace InteractionFlow.Standard.Reactions
 
         public ValueTask ReactToUserAsync(IFlowContext context, ConsoleOutput consoleOutput)
         {
-            context.CancellationToken.ThrowIfCancellationRequested();
+            context.Cancellation.GetToken().ThrowIfCancellationRequested();
 
             using (State.Use())
             {

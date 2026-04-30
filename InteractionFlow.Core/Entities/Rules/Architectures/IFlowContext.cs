@@ -1,6 +1,4 @@
-using InteractionFlow.Core.Entities.Contexts;
 using System;
-using System.Threading;
 
 namespace InteractionFlow.Core.Entities.Rules.Architectures
 {
@@ -16,9 +14,9 @@ namespace InteractionFlow.Core.Entities.Rules.Architectures
             public void Set(T? value);
         }
 
-        public UserToken UserToken { get; }
+        public UserObject User { get; }
 
-        public CancellationToken CancellationToken { get; }
+        public CancellationObject Cancellation { get; }
 
         public bool TryGet<T>(out T? value);
 

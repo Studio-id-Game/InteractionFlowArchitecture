@@ -1,7 +1,6 @@
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
@@ -20,9 +19,9 @@ namespace InteractionFlow.Core.Entities.Contexts
             subWritableContexts = new();
         }
 
-        public UserToken UserToken => mainContext.UserToken;
+        public UserObject User => mainContext.User;
 
-        public CancellationToken CancellationToken => mainContext.CancellationToken;
+        public CancellationObject Cancellation => mainContext.Cancellation;
 
         public FlowContextGroup Add<T>(T? value, out FlowContextImmutable<T> subContext)
         {

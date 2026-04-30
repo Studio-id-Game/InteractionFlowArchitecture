@@ -95,7 +95,7 @@ namespace InteractionFlow.Standard.Operations
 
         private async Task<TInput> UserOperateAsync<TInput>(IFlowContext context, Func<TInput> read)
         {
-            var cancellationToken = context.CancellationToken;
+            var cancellationToken = context.Cancellation.GetToken();
 
             /* # Cancel処理について
             // ConsoleのCancel処理は以下の順に行われる。

@@ -1,9 +1,12 @@
+using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
 
 namespace InteractionFlow.Core.ReactionPorts
 {
     public interface IExceptionPort : IReactionPort<Exception>
     {
-        public bool ThroughException { get; set; }
+        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
+
+        public bool ThrowException { get; set; }
     }
 }

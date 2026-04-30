@@ -7,13 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj"
-						  OutputItemType="Analyzer"
-						  ReferenceOutputAssembly="false" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Silentlntegrations\" />
-		<Folder Include="SilentlntegrationPorts\" />
+		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 </Project>

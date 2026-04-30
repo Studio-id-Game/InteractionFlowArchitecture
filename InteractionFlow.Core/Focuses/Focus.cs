@@ -1,35 +1,21 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Interactions;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Focuses
 {
-    public abstract class Focus<TContext> : IFocus<TContext>, IUserFlowHandler<TContext>
+    public abstract class Focus<TContext> : IFocus<TContext>
         where TContext : IFlowContext
     {
-        protected Focus(IUserFlowInvoker invoker)
+        public abstract IEnumerable<IInteraction> Interactions { get; }
+
+        public abstract Task<FlowEndToken> FlowWithUserAsync(TContext context);
+
+        protected Task<FlowEndToken> EndFlowAsync(IFlowContext context, IInteraction interaction)
         {
-            this.invoker = invoker;
-        }
-
-        private readonly IUserFlowInvoker invoker;
-
-        public async Task<FlowEndToken> UseUserFlowAsync(TContext context)
-        {
-            return await invoker.ExecuteUserFlowAsync(context, this);
-        }
-
-        protected abstract ValueTask<FlowEndToken> UserFlowCoreAsync(TContext context);
-
-        protected ValueTask<FlowEndToken> InteractAndGetEndToken(IFlowContext context, IInteraction interaction)
-        {
-            return interaction.UseSystemFlowAsync(context);
-        }
-
-        ValueTask<FlowEndToken> IUserFlowHandler<TContext>.UserFlowCoreAsync(TContext context)
-        {
-            return UserFlowCoreAsync(context);
+            return interaction.InteractWithUserAsync(context);
         }
     }
 }

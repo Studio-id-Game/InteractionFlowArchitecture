@@ -11,6 +11,6 @@ namespace InteractionFlow.Core.OperationPorts
 
     public interface IOperationPort<TInput> : IOperationPort
     {
-        public ValueTask<TInput> UserOperateAsync(IFlowContext context);
+        public ValueTask<TInput> OperateFromUserAsync(IFlowContext context);
     }
 }

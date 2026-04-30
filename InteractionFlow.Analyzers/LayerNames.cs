@@ -73,6 +73,7 @@ namespace InteractionFlow.Analyzers
 
                 case Interactions:
 
+                    disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);

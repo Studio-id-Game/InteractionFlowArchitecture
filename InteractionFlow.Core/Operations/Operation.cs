@@ -6,14 +6,10 @@ namespace InteractionFlow.Core.Operations
 {
     public abstract class Operation<TInput> : IOperationPort<TInput>
     {
-        protected Operation()
-        {
-        }
+        public abstract ValueTask<TInput> OperateFromUserAsync(IFlowContext context);
 
         public virtual void ForceResetMemoryState()
         {
         }
-
-        public abstract ValueTask<TInput> UserOperateAsync(IFlowContext context);
     }
 }

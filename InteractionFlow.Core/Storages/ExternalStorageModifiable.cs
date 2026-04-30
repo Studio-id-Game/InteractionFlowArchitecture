@@ -6,54 +6,88 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class ExternalStorageModifiable<TValue, TMemory> : IExternalStoragePortModifiable<TValue>
-        where TMemory : IMemoryStoragePortModifiable<TValue>, new()
+    public abstract class ExternalStorageModifiable<TValue, TStorage> : IStoragePortExternalModifiable<TValue>
+        where TStorage : IStoragePortModifiable<TValue>, new()
     {
-        readonly TMemory memory;
-
-        protected ExternalStorageModifiable()
-        {
-            memory = new();
-        }
+        public TStorage CacheStorage { get; } = new();
 
         public TValue? this[IFlowContext context]
         {
-            get => memory[context];
-            set => memory[context] = value;
+            get => CacheStorage[context];
+            set => CacheStorage[context] = value;
         }
 
-        public TValue CreateDefault(IFlowContext context)
+        public void ForceResetMemoryState()
         {
-            return memory.CreateDefault(context);
+            CacheStorage.ForceResetMemoryState();
         }
 
-        public TValue GetOrCreateDefault(IFlowContext context)
+        protected abstract Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context);
+
+        protected abstract Task<Result> SaveToPersistentCore(IFlowContext context, TValue value);
+
+        public async Task<Result<TValue>> LoadFromPersistent(IFlowContext context)
         {
-            return memory.GetOrCreateDefault(context);
+            var result = await LoadFromPersistentCore(context);
+
+            if (result)
+                CacheStorage[context] = result.Value;
+
+            return result;
         }
 
-        public async Task<Result> LoadFromPersistent(IFlowContext context)
+        public Task<Result<TValue>> TryGetOrLoad(IFlowContext context)
         {
-            return await Load(context, value => memory[context] = value);
+            if (TryGet(context, out var value))
+            {
+                return Task.FromResult(new Result<TValue>(value!));
+            }
+
+            return LoadFromPersistent(context);
         }
 
-        public async Task<Result> SaveToPersistent(IFlowContext context)
+        public Task<Result> SaveToPersistent(IFlowContext context)
         {
-            return await Save(context, memory[context]);
+            if (TryGet(context, out var value))
+            {
+                return SaveToPersistent(context, value!);
+            }
+            else
+            {
+                return Task.FromResult(Result.Error(new InvalidOperationException()));
+            }
         }
 
-        public virtual void ForceResetMemoryState()
+        public async Task<Result> SaveToPersistent(IFlowContext context, TValue value)
         {
-            memory.ForceResetMemoryState();
+            var result = await SaveToPersistentCore(context, value);
+
+            if (result)
+            {
+                CacheStorage[context] = value;
+            }
+
+            return result;
         }
 
-        protected abstract Task<Result> Load(IFlowContext context, Action<TValue> set);
-
-        protected abstract Task<Result> Save(IFlowContext context, TValue? value);
-
-        public TValue? TryGet(IFlowContext context)
+        public bool TryGet(IFlowContext context, out TValue? value)
         {
-            return memory.TryGet(context);
+            return CacheStorage.TryGet(context, out value);
+        }
+
+        public bool TryGetOrCreate(IFlowContext context, out TValue? value, Func<IFlowContext, (bool, TValue)> create)
+        {
+            return CacheStorage.TryGetOrCreate(context, out value, create);
+        }
+
+        public bool TryGetOrCreateDefault(IFlowContext context, out TValue? value)
+        {
+            return CacheStorage.TryGetOrCreateDefault(context, out value);
+        }
+
+        public bool TrySet(IFlowContext context, TValue? value)
+        {
+            return CacheStorage.TrySet(context, value);
         }
     }
 }

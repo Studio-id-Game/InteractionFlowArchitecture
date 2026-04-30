@@ -12,11 +12,11 @@ namespace InteractionFlow.Standard.Interactions
         private readonly IReactionPort<ConsoleOutput> reaction;
         private readonly ConsoleOutput reactionValue;
 
-        public ConsoleWrite(IExceptionPort exception, ICancellationPort cancellation, IReactionPort<ConsoleOutput> reaction, ConsoleOutput reactionValue)
+        public ConsoleWrite(IExceptionPort exception, ICancellationPort cancellation, IReactionPort<ConsoleOutput> reaction)
             : base(exception, cancellation)
         {
             this.reaction = reaction;
-            this.reactionValue = reactionValue;
+            this.reactionValue = new ConsoleOutput("Default ConsoleWrite Text.");
         }
 
         protected override ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)

@@ -1,20 +1,24 @@
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
-using System.Threading;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
     public class FlowContext : IFlowContext
     {
-        public FlowContext(UserToken userToken, CancellationToken cancellationToken)
+        public FlowContext(UserObject userToken)
         {
-            UserToken = userToken;
-            CancellationToken = cancellationToken;
+            User = userToken;
         }
 
-        public UserToken UserToken { get; }
+        public FlowContext(UserObject userToken, CancellationObject cancellation)
+        {
+            User = userToken;
+            Cancellation = cancellation;
+        }
 
-        public CancellationToken CancellationToken { get; }
+        public UserObject User { get; }
+
+        public CancellationObject Cancellation { get; } = new();
 
         public bool TryGet<T>(out T? value)
         {

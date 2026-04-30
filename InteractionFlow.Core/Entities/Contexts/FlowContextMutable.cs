@@ -1,6 +1,5 @@
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
-using System.Threading;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
@@ -15,9 +14,9 @@ namespace InteractionFlow.Core.Entities.Contexts
             this.value = value;
         }
 
-        public UserToken UserToken => mainContext.UserToken;
+        public UserObject User => mainContext.User;
 
-        public CancellationToken CancellationToken => mainContext.CancellationToken;
+        public CancellationObject Cancellation => mainContext.Cancellation;
 
         public void Get(out T? value) => value = this.value;
 

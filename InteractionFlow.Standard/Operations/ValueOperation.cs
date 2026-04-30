@@ -21,7 +21,7 @@ namespace InteractionFlow.Standard.Operations
 
         public ValueTask<TInput> UserOperateAsync(IFlowContext context)
         {
-            context.CancellationToken.ThrowIfCancellationRequested();
+            context.Cancellation.GetToken().ThrowIfCancellationRequested();
             return Func();
         }
     }

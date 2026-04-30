@@ -1,17 +1,15 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Focuses;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
 
 namespace InteractionFlow.Samples.Parrot.Focuses
 {
 
-    internal class InitializeApplication(CancellationObject cancellationObject, ConsoleWrite write) : Focus<IFlowContext>(write)
+    internal class InitializeApplication(ConsoleWrite write) : Focus<IFlowContext>(write)
     {
         private readonly ConsoleWrite write = write;
-        private readonly CancellationObject cancellationObject = cancellationObject;
 
         protected override async ValueTask<FlowEndToken> UserFlowCoreAsync(IFlowContext context)
         {
@@ -37,18 +35,13 @@ namespace InteractionFlow.Samples.Parrot.Focuses
                 await Task.Delay(50);
                 return res;
             }
-        }
 
-        private void CancelKeyPress(object? sender, ConsoleCancelEventArgs args)
-        {
-            if (cancellationObject.CurrentTask == null)
+            void CancelKeyPress(object? sender, ConsoleCancelEventArgs args)
             {
-                args.Cancel = false;
-                Environment.Exit(0);
-            }
-            else
-            {
-                cancellationObject.Cancel();
+                if (context.Cancellation.HasTask)
+                {
+                    context.Cancellation.Cancel();
+                }
                 args.Cancel = true;
             }
         }

@@ -8,23 +8,24 @@ namespace InteractionFlow.Core.Interactions
 {
     public abstract class Interaction : IInteraction
     {
-        protected Interaction(IExceptionPort exception, ICancellationPort cancellation)
+        protected readonly IExceptionPort exceptionPort;
+
+        protected readonly ICancellationPort cancellationPort;
+
+        protected Interaction(IExceptionPort exceptionPort, ICancellationPort cancellationPort)
         {
-            ExceptionPort = exception;
-            CancellationPort = cancellation;
+            this.exceptionPort = exceptionPort;
+            this.cancellationPort = cancellationPort;
         }
 
         public string Name => GetType().Name;
 
-        private IExceptionPort ExceptionPort { get; }
-
-        private ICancellationPort CancellationPort { get; }
-
         public async ValueTask<FlowEndToken> UseSystemFlowAsync(IFlowContext context)
         {
+            var cancellationToken = context.Cancellation.GetToken();
             try
             {
-                context.CancellationToken.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
                 return await SystemFlowCoreAsync(context);
             }
             catch (OperationCanceledException e)
@@ -47,12 +48,12 @@ namespace InteractionFlow.Core.Interactions
 
         protected virtual ValueTask<FlowEndToken> CancellationInteractAsync(IFlowContext context, OperationCanceledException e)
         {
-            return ReactAndGetEndToken(context, CancellationPort, e);
+            return ReactAndGetEndToken(context, cancellationPort, e);
         }
 
         protected virtual ValueTask<FlowEndToken> ExceptionInteractAsync(IFlowContext context, Exception e)
         {
-            return ReactAndGetEndToken(context, ExceptionPort, e);
+            return ReactAndGetEndToken(context, exceptionPort, e);
         }
 
         protected async ValueTask<FlowEndToken> ReactAndGetEndToken<T>(IFlowContext context, IReactionPort<T> reaction, T reactionValue)
@@ -63,18 +64,25 @@ namespace InteractionFlow.Core.Interactions
 
         async Task<FlowEndToken> IUserFlowInvoker.ExecuteUserFlowAsync<TContext>(TContext context, IUserFlowHandler<TContext> handler)
         {
+            var cancellationToken = context.Cancellation.GetToken();
             try
             {
-                context.CancellationToken.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
                 return await handler.UserFlowCoreAsync(context);
             }
             catch (OperationCanceledException e)
             {
-                return await CancellationInteractAsync(context, e);
+                var e2 = new InteractionCanceledException(this, e);
+                var end = await CancellationInteractAsync(context, e2);
+                end.CanceledException = e2;
+                return end;
             }
             catch (Exception e)
             {
-                return await ExceptionInteractAsync(context, e);
+                var e2 = new InteractionException(this, e);
+                var end = await ExceptionInteractAsync(context, e2);
+                end.Exception = e2;
+                return end;
             }
         }
     }

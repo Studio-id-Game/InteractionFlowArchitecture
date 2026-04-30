@@ -10,7 +10,13 @@ using InteractionFlow.Standard.ReactionPorts;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
-    internal class SelectSample(IExceptionPort exception, ICancellationPort cancellation, IConsoleReaction reaction, IConsoleOperation operation, ILastSelectMemory lastSelectMemory) : Interaction(exception, cancellation)
+    internal class SelectSample(
+        IExceptionPort exception,
+        ICancellationPort cancellation,
+        IConsoleReaction reaction,
+        IConsoleOperation operation,
+        ILastSelectMemory lastSelectMemory)
+        : Interaction(exception, cancellation)
     {
         protected override async ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)
         {
@@ -18,20 +24,19 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             await ReactAndGetEndToken(context, reaction, new ConsoleOutput("Enter sample name or index : "));
 
             var input = await operation.UserOperateTextAsync(context);
-            var sample = GetSample(input);
+            var sampleMode = GetSampleMode(input);
 
             await ReactAndGetEndToken(context, reaction, new ConsoleOutput(""));
 
-            if (sample == SampleMode.None)
+            if (sampleMode == SampleMode.None)
             {
                 await ReactAndGetEndToken(context, reaction, new ConsoleOutput("* Not found name and index."));
             }
             else
             {
+                var sampleID = new SampleID(sampleMode);
 
-                var sampleID = new SampleID(sample);
-
-                if (sample != SampleMode.RepeatLast)
+                if (sampleMode != SampleMode.RepeatLast)
                 {
                     lastSelectMemory[context] = sampleID;
                 }
@@ -39,14 +44,13 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 var selectedSample = new SampleSelected(sampleID);
                 context = new FlowContextGroup(context).Add(selectedSample, out _);
 
-
                 await ReactAndGetEndToken(context, reaction, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
             }
 
             return await ReactAndGetEndToken(context, reaction, new ConsoleOutput($""));
         }
 
-        private static SampleMode GetSample(ConsoleInputText input)
+        private static SampleMode GetSampleMode(ConsoleInputText input)
         {
             var text = input.text;
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
@@ -7,10 +7,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection"
+						  Version="10.0.7" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\InteractionFlow.Core\InteractionFlow.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj"
+						  OutputItemType="Analyzer"
+						  ReferenceOutputAssembly="false" />
 	</ItemGroup>
 </Project>

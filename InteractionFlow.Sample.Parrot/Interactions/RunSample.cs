@@ -5,7 +5,6 @@ using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.StoragePorts;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
@@ -13,7 +12,6 @@ using InteractionFlow.Standard.ReactionPorts;
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
     internal class RunSample(
-        CancellationObject cancellationObject,
         IExceptionPort exception,
         ICancellationPort cancellation,
         IConsoleOperation operation,
@@ -64,15 +62,16 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         {
             valueOperation.Text = new ConsoleInputText("I'm Auto Text to Parrot! ...?");
             var parrotTask = parrotAuto.UseSystemFlowAsync(context).AsTask();
-            var cancelTask = Task.Delay(10000, context.CancellationToken)
+            var cancelTask = Task.Delay(10000, context.Cancellation.GetToken())
                 .ContinueWith(async e =>
                 {
                     await e;
-                    cancellationObject.Cancel();
+                    context.Cancellation.Cancel();
                 });
 
             return await parrotTask;
         }
+
         private async Task<FlowEndToken> ParrotColorful(IFlowContext context)
         {
             var backgroundColor = ConsoleColor.DarkGreen;

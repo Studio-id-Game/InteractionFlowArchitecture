@@ -41,7 +41,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             do
             {
-                context.CancellationToken.ThrowIfCancellationRequested();
+                context.Cancellation.GetToken().ThrowIfCancellationRequested();
 
                 try
                 {
@@ -140,7 +140,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                 await reaction.ReactToUserAsync(context, new ConsoleOutput(item.ToString()));
                 await Task.Delay(50);
-                context.CancellationToken.ThrowIfCancellationRequested();
+                context.Cancellation.GetToken().ThrowIfCancellationRequested();
             }
 
             reactionState.Reset();

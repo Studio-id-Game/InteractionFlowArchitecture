@@ -1,8 +1,10 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Standard.Entities.Consoles;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Interactions
@@ -16,18 +18,47 @@ namespace InteractionFlow.Standard.Interactions
             : base(exception, cancellation)
         {
             this.reaction = reaction;
-            this.reactionValue = new ConsoleOutput("Default ConsoleWrite Text.");
+            reactionValue = new ConsoleOutput("Default ConsoleWrite Text.");
         }
 
-        protected override ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)
+        public override IEnumerable<IFlowNodePortLayer> Ports
         {
-            if (context.TryGet<ConsoleOutput>(out var consoleOutput))
+            get
             {
-                return ReactAndGetEndToken(context, reaction, consoleOutput);
+                foreach (var item in base.Ports)
+                {
+                    yield return item;
+                }
+
+                yield return reaction;
             }
-            else
+        }
+
+        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        {
+            try
             {
-                return ReactAndGetEndToken(context, reaction, reactionValue);
+                if (context.TryGetCanceledException(out var canceledException))
+                {
+                    return await EndInteractAsync(context, canceledException!);
+                }
+
+                if (context.TryGet<ConsoleOutput>(out var consoleOutput))
+                {
+                    return await EndInteractAsync(context, reaction, consoleOutput);
+                }
+                else
+                {
+                    return await EndInteractAsync(context, reaction, reactionValue);
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                return await EndInteractAsync(context, e);
+            }
+            catch (Exception e)
+            {
+                return await EndInteractAsync(context, e);
             }
         }
     }

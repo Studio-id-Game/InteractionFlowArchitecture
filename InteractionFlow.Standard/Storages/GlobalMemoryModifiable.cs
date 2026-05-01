@@ -1,41 +1,33 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Storages;
-using System;
 
 namespace InteractionFlow.Standard.Storages
 {
-    public class GlobalMemoryModifiable<TValue> : MemoryStorageModifiable<TValue>
-        where TValue : new()
+    public class GlobalMemoryModifiable<TValue> : StorageModifiable<TValue>
     {
         private TValue? value;
 
-        public Func<TValue>? Default { get; set; }
-
-        public override TValue? this[IFlowContext context]
+        public override bool TryGet(IFlowContext context, out TValue? value)
         {
-            get => value;
-            set => this.value = value;
+            value = this.value;
+            return value != null;
         }
 
-        public override TValue? TryGet(IFlowContext context)
+        public override bool TrySet(IFlowContext context, TValue? value)
         {
-            return value;
+            this.value = value;
+            return true;
+        }
+
+        protected override bool TryCreateDefault(IFlowContext context, out TValue? value)
+        {
+            value = default;
+            return value != null;
         }
 
         public override void ForceResetMemoryState()
         {
-            if (value is IDisposable disposable)
-            {
-                disposable.Dispose();
-            }
-
             value = default;
-            Default = null;
-        }
-
-        protected override TValue GetDefault(IFlowContext context)
-        {
-            return Default == null ? new() : Default();
         }
     }
 }

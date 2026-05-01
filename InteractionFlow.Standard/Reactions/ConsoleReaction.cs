@@ -1,4 +1,5 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Core.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -8,19 +9,19 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Reactions
 {
-    public class ConsoleReaction : Reaction, IConsoleReaction, IExceptionPort, ICancellationPort
+    public class ConsoleReaction : Reaction<ConsoleOutput>, IConsoleReaction, IExceptionPort, ICancellationPort
     {
+        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
+
         public ConsoleState State { get; set; } = ConsoleState.Default;
 
         public ConsoleState ErrorState { get; set; } = ConsoleState.Default;
 
         public ConsoleState CancelState { get; set; } = ConsoleState.Default;
 
-        public bool ThroughException { get; set; }
+        public bool ThrowException { get; set; }
 
-        public bool ThroughCancellationException { get; set; }
-
-        public ValueTask ReactToUserAsync(IFlowContext context, ConsoleOutput consoleOutput)
+        public override ValueTask ReactToUserAsync(IFlowContext context, ConsoleOutput consoleOutput)
         {
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
 
@@ -34,7 +35,7 @@ namespace InteractionFlow.Standard.Reactions
 
         public ValueTask ReactToUserAsync(IFlowContext context, Exception reactionValue)
         {
-            if (ThroughException)
+            if (ThrowException)
             {
                 throw reactionValue;
             }
@@ -53,7 +54,7 @@ namespace InteractionFlow.Standard.Reactions
 
         public ValueTask ReactToUserAsync(IFlowContext context, OperationCanceledException reactionValue)
         {
-            if (ThroughCancellationException)
+            if (ThrowException)
             {
                 throw reactionValue;
             }

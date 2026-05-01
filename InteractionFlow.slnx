@@ -1,13 +1,19 @@
 <Solution>
-  <Folder Name="/ソリューション項目/">
+  <Folder Name="/Analyzers/">
+    <Project Path="InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj" />
+    <Project Path="InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj" />
+  </Folder>
+  <Folder Name="/Main/">
+    <Project Path="InteractionFlow.Core/InteractionFlow.Core.csproj" />
+    <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
+  </Folder>
+  <Folder Name="/Samples/">
+    <Project Path="InteractionFlow.Sample.Parrot/InteractionFlow.Samples.Parrot.csproj" />
+  </Folder>
+  <Folder Name="/_RootItems/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path="LICENSE" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj" />
-  <Project Path="InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj" />
-  <Project Path="InteractionFlow.Core/InteractionFlow.Core.csproj" />
-  <Project Path="InteractionFlow.Sample.Parrot/InteractionFlow.Samples.Parrot.csproj" />
-  <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
 </Solution>

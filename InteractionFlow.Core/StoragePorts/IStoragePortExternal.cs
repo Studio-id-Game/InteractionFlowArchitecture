@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities.Rules.Architectures;
 using System.Threading.Tasks;
 

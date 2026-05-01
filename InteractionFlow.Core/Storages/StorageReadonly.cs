@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.StoragePorts;
 
 namespace InteractionFlow.Core.Storages

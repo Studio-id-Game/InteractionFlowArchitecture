@@ -1,5 +1,5 @@
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities.Rules.Architectures;
-using InteractionFlow.Core.MultiFunctionPorts;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.SilentlntegrationPorts

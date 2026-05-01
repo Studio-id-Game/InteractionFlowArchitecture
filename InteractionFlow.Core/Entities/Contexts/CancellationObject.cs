@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Core.Entities
+namespace InteractionFlow.Core.Entities.Contexts
 {
     public class CancellationObject
     {
@@ -12,6 +12,8 @@ namespace InteractionFlow.Core.Entities
         private readonly ConcurrentBag<Task> currentTasks = new();
 
         public bool HasTask => currentTasks.Any();
+
+        public bool IsCancellationRequested => tokenSource?.IsCancellationRequested ?? false;
 
         public void AddCancelableTask(Task task)
         {

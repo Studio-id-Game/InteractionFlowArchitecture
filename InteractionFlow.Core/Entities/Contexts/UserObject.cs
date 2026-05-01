@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Core.Entities
+namespace InteractionFlow.Core.Entities.Contexts
 {
     public class UserObject : IEquatable<UserObject>
 

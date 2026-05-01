@@ -1,6 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
-
-namespace InteractionFlow.Core.MultiFunctionPorts
+namespace InteractionFlow.Core.Entities.Rules.Architectures
 {
 
     public interface IFlowNodePortLayer : IFlowNode

@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Focuses;
 using InteractionFlow.Core.Interactions;
 

@@ -1,5 +1,5 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.ReactionPorts;
 using System;
 using System.Collections.Generic;

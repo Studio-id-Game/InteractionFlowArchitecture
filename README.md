@@ -60,7 +60,8 @@
 
 以下は、本アーキテクチャの構造の全体像です。
 
-![Architecture Overview](./docs/img/Interaction_Flow_Architecture__Overview.png)
+![Interaction_Flow_Architecture__Overview](./docs/img/Interaction_Flow_Architecture__Overview.png)
+代替テキスト：[Interaction_Flow_Architecture__Overview.Hint.md](./docs/img/Interaction_Flow_Architecture__Overview.Hint.md)
 
 ---
 
@@ -195,7 +196,8 @@ OS、Framework、ライブラリなどの外部要素です。
 
 以下は、本アーキテクチャにおけるフローの全体像です。
 
-![Architecture Flow](./docs/img/Interaction_Flow_Architecture__User_Flow.png)
+![Interaction_Flow_Architecture__User_Flow](./docs/img/Interaction_Flow_Architecture__User_Flow.png)
+代替テキスト：[Interaction_Flow_Architecture__User_Flow.Hint.md](./docs/img/Interaction_Flow_Architecture__User_Flow.Hint.md)
 
 ユーザー視点の処理は、以下の順で流れます：
 
@@ -217,7 +219,8 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 
 以下は、本アーキテクチャにおける依存関係の全体像です。
 
-![Architecture Flow](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.png)
+![Interaction_Flow_Architecture__Dependency_Diagram](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.png)
+代替テキスト：[Interaction_Flow_Architecture__Dependency_Diagram.Hint.md](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.Hint.md)
 
 依存関係は次のようになります：
 

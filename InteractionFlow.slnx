@@ -10,10 +10,12 @@
   <Folder Name="/Samples/">
     <Project Path="InteractionFlow.Sample.Parrot/InteractionFlow.Samples.Parrot.csproj" />
   </Folder>
+  <Folder Name="/_Documents/">
+    <Project Path="docs/IDEView.csproj" />
+  </Folder>
   <Folder Name="/_RootItems/">
     <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
     <File Path=".gitignore" />
-    <File Path="LICENSE" />
-    <File Path="README.md" />
   </Folder>
 </Solution>

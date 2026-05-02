@@ -119,4 +119,4 @@ Interaction Flow は、チューリングマシンの
 これにより、内部の計算構造と外部の意味構造を分離しつつ、一貫したモデルとして扱うことが可能になります。
 
 ---
-[Readme](../README.md#概念モデル) | [PageTop](#計算モデルとしての-interaction-flow-アーキテクチャ)
+[Readme](../README.md#計算モデルとしての-interaction-flow-アーキテクチャ) | [PageTop](#計算モデルとしての-interaction-flow-アーキテクチャ)

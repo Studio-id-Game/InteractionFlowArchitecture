@@ -2,6 +2,16 @@
 
 このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。
 
+## 目次
+[全体構成](#全体構成) 
+| [Layers](#layers)
+| [Blocks](#blocks)
+| [フローと依存関係](#フローと依存関係)
+| [概念モデル](#概念モデル)
+| [振る舞いの違い](#振る舞いの違い)
+| [制約とアンチパターン](#制約とアンチパターン)
+| [設計指針（名前空間）](#設計指針名前空間)
+
 ## Interaction Flow Architecture
 
 本プロジェクトが提唱する Interaction Flow Architecture は、クリーンアーキテクチャと同様の高いテスト耐性と拡張性を備えています。
@@ -9,11 +19,22 @@
 さらに、構造の認知しやすさと責任範囲の明確化を徹底することで、実装単位や責務、コードの配置が自然に導かれるよう設計されています。  
 開発者は「どこに何を書くべきか」を意識的に判断する必要がなくなり、設計の迷いを大きく減らすことができます。  
 
-また、この構造に従うことで、UX を損なわないフロー設計が自然に導かれます。
+また、この構造に従うことで、UX を損なわないフロー設計を行いやすくなります。
+
+## このアーキテクチャが向いているケース
+
+- 利用側とシステムの相互作用ベースのアプリケーション
+  >（対話的なアプリケーション、フレームループをもったアプリケーション等）
+
+- フローが複雑になりやすいシステム
+  >（ゲームシステム、複雑なコンテキストの更新をともなうシステム等）
+
+- UI / DB / 外部サービスの分離が重要な場合
+  >（複数の外部APIやデータストアを扱い、テストや差し替えが困難になりやすいシステム等）
 
 ## ソリューション構成
 
-本パッケージは、以下のプロジェクトで構成されています。
+本リポジトリは、以下のプロジェクトで構成されています。
 - `InteractionFlow.Core`  
   基礎となるインターフェースや構造を提供するライブラリ
 
@@ -26,6 +47,8 @@
 - `InteractionFlow.Sample.Parrot`  
   コンソールベースのオウム返しアプリケーションによる、基本構成のサンプル実装
 
+---
+
 # 全体構成
 
 本アーキテクチャは、以下の要素で構成されます：
@@ -37,7 +60,9 @@
 
 以下は、本アーキテクチャの構造の全体像です。
 
-![Architecture Overview](./docs/Interaction_Flow_Architecture__Overview.png)
+![Architecture Overview](./docs/img/Interaction_Flow_Architecture__Overview.png)
+
+---
 
 # Layers
 
@@ -85,7 +110,7 @@
 ## Function Port Layer
 
 **namespace**  
-`ProjectName.{Operation|Storage|Reaction}Ports.{PortName}`
+`ProjectName.{Operation|Storage|Reaction|SilentIntegration}Ports.{PortName}`
 
 **役割**  
 依存関係を逆転させるための抽象インターフェース群です。
@@ -97,7 +122,7 @@
 ## Function External Layer
 
 **namespace**  
-`ProjectName.{Operations|Storages|Reactions}.{ExternalFunctionName}`
+`ProjectName.{Operations|Storages|Reactions|SilentIntegrations}.{ExternalFunctionName}`
 
 **役割**  
 実際の処理を行う、外部依存の実装です。
@@ -112,6 +137,11 @@
 
 - **Reactions**  
   ユーザーに観測可能な出力を担当（UI / Presenter 相当）
+
+- **SilentIntegration**  
+  ユーザーに観測されない、外部実行環境との結合を担当（Service 相当）
+
+---
 
 # Blocks
 
@@ -146,6 +176,8 @@ DI コンテナのラッパーとして、Focus の構築を担います。
 - Function Port を介して Function External 実装を注入
 - Focus の実行環境を構成する
 
+> 詳細な構築手順や設計意図については、[Focus Builder の詳細](./docs/FocusBuilder.md) を参照してください。
+
 ## External Block
 
 **役割**  
@@ -153,21 +185,24 @@ OS、Framework、ライブラリなどの外部要素です。
 
 ※本アーキテクチャの管理対象外
 
+---
+
 # フローと依存関係
 
 このアーキテクチャでは、依存関係の逆転により実行フローと依存関係が明確に分離されます。
 
-## 実行フロー
+## 実行フローとContext（文脈）
 
 以下は、本アーキテクチャにおけるフローの全体像です。
 
-![Architecture Flow](./docs/Interaction_Flow_Architecture__User_Flow.png)
+![Architecture Flow](./docs/img/Interaction_Flow_Architecture__User_Flow.png)
 
 ユーザー視点の処理は、以下の順で流れます：
 
-    User(開始) → Focus → Interaction → Function Port → Function External → User(入力/観測/終了)
+> User(開始) → Focus → Interaction → Function Port → Function External → User(入力/観測/終了)
 
-このフローは、常に「Context（文脈）」を入力として開始されます。
+### Context（文脈）
+Focus からエントリーするユーザー視点のフローは、常に「Context（文脈）」を入力として開始されます。
 
 Context は現在のユーザーに関する状態や状況を表す文脈的情報で、初期に与えられた情報や、過去の処理によって更新された情報を含みます。  
 Focus はこの Context をもとに実行され、Interaction を通じて処理が進行します。
@@ -182,23 +217,27 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 
 以下は、本アーキテクチャにおける依存関係の全体像です。
 
-![Architecture Flow](./docs/Interaction_Flow_Architecture__Dependency_Diagram.png)
+![Architecture Flow](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.png)
 
 依存関係は次のようになります：
 
-    Focus → Interaction → Function Port ← Function External
+- Focus は Interaction に、Interaction と Function External は Function Port に依存します
+
+> Focus → Interaction → Function Port ← Function External
 
 - Function External のみが外部に依存します
 
-    Function External → External Block
+> Function External → External Block
 
-- Builder は以下に依存します
+- Builder は  Interaction と External Block を除くすべての要素に依存します
 
-    Focus Builder → Focus / Function Port / Function External
+> Focus Builder → Focus / Function Port / Function External
 
 - すべての要素は Domain に依存します
 
-    All Layers & Blocks → Domain
+> All Layers & Blocks → Domain
+
+---
 
 # 概念モデル
 
@@ -221,8 +260,18 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Operation（ユーザーからの入力）
 - Storage（状態管理）
 - Reaction（ユーザーへの出力）
+- SilentIntegration（ユーザーに見えない、外部実行環境とのやりとり）
 
 これらは Function Port によって抽象化され、Function External によって実装されます。
+
+## 計算モデルとしての Interaction Flow アーキテクチャ
+
+本アーキテクチャは、状態遷移とテープ操作を持つチューリングマシンのモデルとして解釈することもできます。
+この視点では、Interaction は状態遷移、Function はテープ操作として捉えることができます。
+この事は、計算モデルとしてのアーキテクチャ構造の必要十分性を保証します。
+
+> 詳細な解釈については、[計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
+
 
 # 振る舞いの違い
 
@@ -238,6 +287,8 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Focus / Interaction は Immutable
 
 また、Focus / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
+
+---
 
 # 制約とアンチパターン
 
@@ -258,7 +309,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Function Port に依存するが、Function External には依存しない
 - Focus に依存しない
 - システム内で単一の意味と目的を持つ
-- 必ず終了を示す Reaction を持つ
+- 必ず終了を示す Reaction を持つ（例外やキャンセルも含めて最終的にユーザーに結果を返す）
 
 ### アンチパターン
 
@@ -272,6 +323,8 @@ Function Port を介して複数の Function（機能）を実行し、それら
 Focus / Interaction の粒度はチームで調整可能です。
 ただし、前述したアンチパターンにならないように注意する必要があります。
 
+---
+
 # 設計指針（名前空間）
 
 各 Layer / Block は、名前空間およびディレクトリ構造と一致させることを推奨します。
@@ -283,3 +336,15 @@ Focus / Interaction の粒度はチームで調整可能です。
 - 構造とコードの対応が明確になる
 - 認知負荷が下がる
 - 保守性が向上する
+
+---
+
+[PageTop](#interaction-flow-c-package) 
+| [全体構成](#全体構成) 
+| [Layers](#layers)
+| [Blocks](#blocks)
+| [フローと依存関係](#フローと依存関係)
+| [概念モデル](#概念モデル)
+| [振る舞いの違い](#振る舞いの違い)
+| [制約とアンチパターン](#制約とアンチパターン)
+| [設計指針（名前空間）](#設計指針名前空間)

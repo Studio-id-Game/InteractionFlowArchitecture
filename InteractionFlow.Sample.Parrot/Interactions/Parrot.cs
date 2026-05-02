@@ -1,5 +1,4 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
@@ -21,58 +20,48 @@ namespace InteractionFlow.Samples.Parrot.Interactions
     {
         private static string DefaultHello => $"Hello! I'm Parrot, who are you?";
 
-        protected override async ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)
+        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
         {
             await reaction.ReactToUserAsync(context, new ConsoleOutput($"## Parrot"));
 
-            if (!context.TryGet<SampleSelected>(out var selectedSample))
-            {
-                await reaction.ReactToUserAsync(context, new ConsoleOutput($"* Sample not selected."));
-                return await ReactAndGetEndToken(context, reaction, new ConsoleOutput(""));
-            }
-            else
-            {
-                await reaction.ReactToUserAsync(context, new ConsoleOutput($"- {selectedSample}"));
-            }
+            var end = await TryCatchBlock(context, Init);
 
-            await Hello(context);
-
-            FlowEndToken? end;
+            if (end.HasException) return end;
 
             do
             {
-                context.Cancellation.GetToken().ThrowIfCancellationRequested();
+                end = await TryCatchBlock(context, SingleParrot);
 
-                try
-                {
-                    end = await SingleParrot(context);
-                }
-                catch (OperationCanceledException e)
-                {
-                    end = await CancellationInteractAsync(context, e);
-                }
-                catch (Exception e)
-                {
-                    end = await ExceptionInteractAsync(context, e);
-                }
-
-            } while (!end.HasCanceledException);
+            } while (!end.HasCanceled);
 
             return end;
         }
 
-        private async Task Hello(IFlowContext context)
+        private async Task<FlowEndToken> Init(IFlowContext context)
         {
-            if (!context.TryGet<ParrotHello>(out var hello) || hello.text == null)
+            if (!context.TryGet<SampleSelected>(out var selectedSample))
             {
-                hello = new ParrotHello(DefaultHello);
+                await reaction.ReactToUserAsync(context, new ConsoleOutput($"* Sample not selected."));
+                return await EndInteractAsync(context, reaction, new ConsoleOutput(""));
+            }
+            else
+            {
+                var end = await EndInteractAsync(context, reaction, new ConsoleOutput($"- {selectedSample}"));
+
+                if (!context.TryGet<ParrotHello>(out var hello) || hello.text == null)
+                {
+                    hello = new ParrotHello(DefaultHello);
+                }
+
+                if (!string.IsNullOrEmpty(hello.text))
+                {
+                    await NameHeader(context, "Parrot");
+                    end = await SlowTalk(context, hello.text);
+                }
+
+                return end;
             }
 
-            if (!string.IsNullOrEmpty(hello.text))
-            {
-                await NameHeader(context, "Parrot");
-                await SlowTalk(context, hello.text);
-            }
         }
 
         private async Task<FlowEndToken> SingleParrot(IFlowContext context)
@@ -125,7 +114,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         {
             using var reactionState = reaction.State.Customize(e => reaction.State = e);
             reactionState.Set(writeLine: false);
-            return await ReactAndGetEndToken(context, reaction, new ConsoleOutput($"{name} : "));
+            return await EndInteractAsync(context, reaction, new ConsoleOutput($"{name} : "));
 
         }
 
@@ -145,7 +134,8 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             reactionState.Reset();
 
-            return await ReactAndGetEndToken(context, reaction, new ConsoleOutput(""));
+            return await EndInteractAsync(context, reaction, new ConsoleOutput(""));
         }
+
     }
 }

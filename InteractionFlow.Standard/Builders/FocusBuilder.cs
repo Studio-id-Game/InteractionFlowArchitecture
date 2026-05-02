@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Builders;
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Focuses;
 using Microsoft.Extensions.DependencyInjection;
 using System;

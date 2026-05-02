@@ -1,16 +1,17 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.ReactionPorts;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
 {
     public abstract class Interaction : IInteraction
     {
-        protected readonly IExceptionPort exceptionPort;
+        private readonly IExceptionPort exceptionPort;
 
-        protected readonly ICancellationPort cancellationPort;
+        private readonly ICancellationPort cancellationPort;
 
         protected Interaction(IExceptionPort exceptionPort, ICancellationPort cancellationPort)
         {
@@ -18,71 +19,63 @@ namespace InteractionFlow.Core.Interactions
             this.cancellationPort = cancellationPort;
         }
 
-        public string Name => GetType().Name;
-
-        public async ValueTask<FlowEndToken> UseSystemFlowAsync(IFlowContext context)
+        public virtual IEnumerable<IFlowNodePortLayer> Ports
         {
-            var cancellationToken = context.Cancellation.GetToken();
-            try
+            get
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                return await SystemFlowCoreAsync(context);
-            }
-            catch (OperationCanceledException e)
-            {
-                var e2 = new InteractionCanceledException(this, e);
-                var end = await CancellationInteractAsync(context, e2);
-                end.CanceledException = e2;
-                return end;
-            }
-            catch (Exception e)
-            {
-                var e2 = new InteractionException(this, e);
-                var end = await ExceptionInteractAsync(context, e2);
-                end.Exception = e2;
-                return end;
+                yield return exceptionPort;
+                yield return cancellationPort;
             }
         }
 
-        protected abstract ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context);
+        public abstract Task<FlowEndToken> InteractWithUserAsync(IFlowContext context);
 
-        protected virtual ValueTask<FlowEndToken> CancellationInteractAsync(IFlowContext context, OperationCanceledException e)
+        protected Task<FlowEndToken> EndInteractAsync(IFlowContext context, OperationCanceledException e)
         {
-            return ReactAndGetEndToken(context, cancellationPort, e);
+            return EndInteractAsync(context, cancellationPort, e)
+                .ContinueWith(t =>
+                {
+                    var token = t.Result;
+                    token.Exception = e;
+                    return token;
+                });
         }
 
-        protected virtual ValueTask<FlowEndToken> ExceptionInteractAsync(IFlowContext context, Exception e)
+        protected Task<FlowEndToken> EndInteractAsync(IFlowContext context, Exception e)
         {
-            return ReactAndGetEndToken(context, exceptionPort, e);
+            return EndInteractAsync(context, exceptionPort, e)
+                .ContinueWith(t =>
+                {
+                    var token = t.Result;
+                    token.Exception = e;
+                    return token;
+                });
         }
 
-        protected async ValueTask<FlowEndToken> ReactAndGetEndToken<T>(IFlowContext context, IReactionPort<T> reaction, T reactionValue)
+        protected async Task<FlowEndToken> EndInteractAsync<T>(IFlowContext context, IReactionPort<T> reaction, T reactionValue)
         {
             await reaction.ReactToUserAsync(context, reactionValue);
             return new FlowEndToken(context);
         }
 
-        async Task<FlowEndToken> IUserFlowInvoker.ExecuteUserFlowAsync<TContext>(TContext context, IUserFlowHandler<TContext> handler)
+        protected async Task<FlowEndToken> TryCatchBlock(IFlowContext context, Func<IFlowContext, Task<FlowEndToken>> function)
         {
-            var cancellationToken = context.Cancellation.GetToken();
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                return await handler.UserFlowCoreAsync(context);
+                if (context.TryGetCanceledException(out var e))
+                {
+                    return await EndInteractAsync(context, e!);
+                }
+
+                return await function(context);
             }
             catch (OperationCanceledException e)
             {
-                var e2 = new InteractionCanceledException(this, e);
-                var end = await CancellationInteractAsync(context, e2);
-                end.CanceledException = e2;
-                return end;
+                return await EndInteractAsync(context, e);
             }
             catch (Exception e)
             {
-                var e2 = new InteractionException(this, e);
-                var end = await ExceptionInteractAsync(context, e2);
-                end.Exception = e2;
-                return end;
+                return await EndInteractAsync(context, e);
             }
         }
     }

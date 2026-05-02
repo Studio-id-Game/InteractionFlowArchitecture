@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
-using InteractionFlow.Core.MultiFunctionPorts;
+using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.OperationPorts
@@ -11,6 +11,6 @@ namespace InteractionFlow.Core.OperationPorts
 
     public interface IOperationPort<TInput> : IOperationPort
     {
-        public ValueTask<TInput> UserOperateAsync(IFlowContext context);
+        public ValueTask<TInput> OperateFromUserAsync(IFlowContext context);
     }
 }

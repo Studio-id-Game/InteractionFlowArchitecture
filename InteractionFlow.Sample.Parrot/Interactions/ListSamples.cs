@@ -1,5 +1,4 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
@@ -10,19 +9,22 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 {
     internal class ListSamples(IExceptionPort exception, ICancellationPort cancellation, IConsoleReaction console) : Interaction(exception, cancellation)
     {
-        protected override async ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)
+        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
         {
-            var names = Enum.GetNames<SampleMode>().ToList();
-            names.Remove(Enum.GetName(SampleMode.None) ?? string.Empty);
+            var token = await EndInteractAsync(context, console, new ConsoleOutput("## Samples [index] name"));
 
-            var token = await ReactAndGetEndToken(context, console, new ConsoleOutput("## Samples [index] name"));
-            ;
-            foreach (var (name, index) in names.Select((e, index) => (e, index)))
+            return await TryCatchBlock(context, async (context) =>
             {
-                token = await ReactAndGetEndToken(context, console, new ConsoleOutput($"- [{index}] {name}"));
-            }
+                var names = Enum.GetNames<SampleMode>().ToList();
+                names.Remove(Enum.GetName(SampleMode.None) ?? string.Empty);
 
-            return token = await ReactAndGetEndToken(context, console, new ConsoleOutput(""));
+                foreach (var (name, index) in names.Select((e, index) => (e, index)))
+                {
+                    token = await EndInteractAsync(context, console, new ConsoleOutput($"- [{index}] {name}"));
+                }
+
+                return token = await EndInteractAsync(context, console, new ConsoleOutput(""));
+            });
         }
     }
 }

@@ -1,0 +1,42 @@
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.StoragePorts;
+using System;
+
+namespace InteractionFlow.Core.Storages
+{
+    public abstract class StorageModifiable<TValue> : IStoragePortModifiable<TValue>
+    {
+        public TValue? this[IFlowContext context]
+        {
+            get => TryGet(context, out var value) ? value : default;
+            set => TrySet(context, value);
+        }
+
+        public abstract bool TrySet(IFlowContext context, TValue? value);
+
+        public abstract bool TryGet(IFlowContext context, out TValue? value);
+
+        public abstract void ForceResetMemoryState();
+
+        protected abstract bool TryCreateDefault(IFlowContext context, out TValue? value);
+
+        public bool TryGetOrCreate(IFlowContext context, out TValue? value, Func<IFlowContext, (bool, TValue)> create)
+        {
+            if (TryGet(context, out value))
+                return true;
+
+            var result = create(context);
+            value = result.Item2;
+            return result.Item1;
+        }
+
+        public bool TryGetOrCreateDefault(IFlowContext context, out TValue? value)
+        {
+            if (TryGet(context, out value))
+                return true;
+
+            return TryCreateDefault(context, out value);
+        }
+
+    }
+}

@@ -51,6 +51,9 @@ namespace InteractionFlow.Core.Entities
 
         public static Result Error(Exception exception) => new(exception);
 
+        public static Result<TValue> Error<TValue>(Exception exception) => new(exception);
+
+
         public static implicit operator bool(Result result) => result.IsValid;
 
         public static implicit operator Exception?(Result result) => result.Exception;

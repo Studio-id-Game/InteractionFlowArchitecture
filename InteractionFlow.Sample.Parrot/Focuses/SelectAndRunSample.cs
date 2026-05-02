@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.Interactions;
@@ -14,22 +14,32 @@ namespace InteractionFlow.Samples.Parrot.Focuses
         ListSamples listSamples,
         SelectSample selectSample,
         RunSample runSample)
-        : Focus<IFlowContext>(write)
+        : Focus<IFlowContext>
     {
-        protected override async ValueTask<FlowEndToken> UserFlowCoreAsync(IFlowContext context)
+        public override IEnumerable<IInteraction> Interactions
         {
-            //TODO : Cancelで中断した場合に、contextが更新されないため、予期せぬ不具合（endStateが無効）が発生
+            get
+            {
+                yield return write;
+                yield return listSamples;
+                yield return selectSample;
+                yield return runSample;
+            }
+        }
+
+        public override async Task<FlowEndToken> FlowWithUserAsync(IFlowContext context)
+        {
             context = new FlowContextGroup(context)
-                .AddMutable(new ConsoleOutput(), out var textContext)
-                .AddMutable(SelectAndRunSampleEndState.None, out var endState);
+                .Add(new ConsoleOutput(), out var textContext)
+                .Add(SelectAndRunSampleEndState.None, out var endState);
 
             await Write("# Select and Run Sample");
 
             // List
-            await listSamples.UseSystemFlowAsync(context);
+            await listSamples.InteractWithUserAsync(context);
 
             // Select
-            var selectTask = selectSample.UseSystemFlowAsync(context).AsTask();
+            var selectTask = selectSample.InteractWithUserAsync(context);
             context.Cancellation.AddCancelableTask(selectTask);
             var end = await selectTask;
             context = end.LastContext;
@@ -37,14 +47,14 @@ namespace InteractionFlow.Samples.Parrot.Focuses
             if (await context.Cancellation.TryWaitAndReset())
             {
                 await Write("[Exit Sample Select]");
-                endState.Set(SelectAndRunSampleEndState.CancelSelect);
+                endState.Value = SelectAndRunSampleEndState.CancelSelect;
                 return end;
             }
 
             // Run
             if (context.TryGet<SampleSelected>(out var selected) && selected.id.mode != SampleMode.None)
             {
-                var runTask = runSample.UseSystemFlowAsync(context).AsTask();
+                var runTask = runSample.InteractWithUserAsync(context);
                 context.Cancellation.AddCancelableTask(runTask);
                 end = await runTask;
 
@@ -52,26 +62,26 @@ namespace InteractionFlow.Samples.Parrot.Focuses
                 {
                     await Write("[Exit Sample]");
                     await Write("");
-                    endState.Set(SelectAndRunSampleEndState.CancelSample);
+                    endState.Value = SelectAndRunSampleEndState.CancelSample;
                     return end;
                 }
                 else
                 {
-                    endState.Set(SelectAndRunSampleEndState.Finish);
+                    endState.Value = SelectAndRunSampleEndState.Finish;
                     await Write("[Finish]");
                     return end;
                 }
             }
 
 
-            endState.Set(SelectAndRunSampleEndState.None);
+            endState.Value = SelectAndRunSampleEndState.None;
             Console.WriteLine("[None]");
             return end;
 
             async Task<FlowEndToken> Write(string text)
             {
-                textContext.Set(new ConsoleOutput(text));
-                var res = await write.UseSystemFlowAsync(context);
+                textContext.Value = new ConsoleOutput(text);
+                var res = await write.InteractWithUserAsync(context);
                 await Task.Delay(100);
                 return res;
             }

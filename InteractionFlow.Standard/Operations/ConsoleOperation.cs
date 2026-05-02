@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Operations;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
@@ -54,16 +54,16 @@ namespace InteractionFlow.Standard.Operations
             {
             }
 
-            public ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context) => valueAnyKey.UserOperateAsync(context);
+            public ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context) => valueAnyKey.OperateFromUserAsync(context);
 
-            public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context) => valueKeyInfo.UserOperateAsync(context);
+            public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context) => valueKeyInfo.OperateFromUserAsync(context);
 
-            public ValueTask<ConsoleInputText> UserOperateTextAsync(IFlowContext context) => valueText.UserOperateAsync(context);
+            public ValueTask<ConsoleInputText> UserOperateTextAsync(IFlowContext context) => valueText.OperateFromUserAsync(context);
         }
 
         public ConsoleState State { get; set; } = ConsoleState.DefaultNoLine;
 
-        public override ValueTask<ConsoleInputText> UserOperateAsync(IFlowContext context)
+        public override ValueTask<ConsoleInputText> OperateFromUserAsync(IFlowContext context)
         {
             return UserOperateTextAsync(context);
         }

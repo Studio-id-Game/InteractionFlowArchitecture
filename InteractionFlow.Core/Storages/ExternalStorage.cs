@@ -1,38 +1,47 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.StoragePorts;
-using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class ExternalStorage<TValue, TMemory> : IExternalStoragePort<TValue>
-        where TMemory : IMemoryStoragePortModifiable<TValue>, new()
+    public abstract class ExternalStorage<TValue, TStorage> : IStoragePortExternal<TValue>
+        where TStorage : IStoragePortModifiable<TValue>, new()
     {
-        private readonly TMemory memory;
+        public TStorage CacheStorage { get; } = new();
 
-        protected ExternalStorage()
+        public TValue? this[IFlowContext context] => CacheStorage[context];
+
+        public void ForceResetMemoryState()
         {
-            memory = new();
+            CacheStorage.ForceResetMemoryState();
         }
 
-        public TValue? this[IFlowContext context] => memory[context];
+        protected abstract Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context);
 
-        public async Task<Result> LoadFromPersistent(IFlowContext context)
+        public async Task<Result<TValue>> LoadFromPersistent(IFlowContext context)
         {
-            return await Load(context, value => memory[context] = value);
+            var result = await LoadFromPersistentCore(context);
+
+            if (result)
+                CacheStorage[context] = result.Value;
+
+            return result;
         }
 
-        public virtual void ForceResetMemoryState()
+        public bool TryGet(IFlowContext context, out TValue? value)
         {
-            memory.ForceResetMemoryState();
+            return CacheStorage.TryGet(context, out value);
         }
 
-        protected abstract Task<Result> Load(IFlowContext context, Action<TValue> set);
-
-        public TValue? TryGet(IFlowContext context)
+        public Task<Result<TValue>> TryGetOrLoad(IFlowContext context)
         {
-            return memory.TryGet(context);
+            if (TryGet(context, out var value))
+            {
+                return Task.FromResult(new Result<TValue>(value!));
+            }
+
+            return LoadFromPersistent(context);
         }
     }
 }

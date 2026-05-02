@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.OperationPorts;
 using InteractionFlow.Standard.Entities.Consoles;
 using System.Threading.Tasks;
@@ -30,18 +30,18 @@ namespace InteractionFlow.Standard.OperationPorts
 
         ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context);
 
-        ValueTask<ConsoleInputText> IOperationPort<ConsoleInputText>.UserOperateAsync(IFlowContext context)
+        ValueTask<ConsoleInputText> IOperationPort<ConsoleInputText>.OperateFromUserAsync(IFlowContext context)
         {
             return UserOperateTextAsync(context);
         }
 
 
-        ValueTask<ConsoleInputKeyInfo> IOperationPort<ConsoleInputKeyInfo>.UserOperateAsync(IFlowContext context)
+        ValueTask<ConsoleInputKeyInfo> IOperationPort<ConsoleInputKeyInfo>.OperateFromUserAsync(IFlowContext context)
         {
             return UserOperateKeyInfoAsync(context);
         }
 
-        ValueTask<ConsoleInputAnyKey> IOperationPort<ConsoleInputAnyKey>.UserOperateAsync(IFlowContext context)
+        ValueTask<ConsoleInputAnyKey> IOperationPort<ConsoleInputAnyKey>.OperateFromUserAsync(IFlowContext context)
         {
             return UserOperateAnyKeyAsync(context);
         }

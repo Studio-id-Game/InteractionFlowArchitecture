@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.OperationPorts;
 using System;
 using System.Threading.Tasks;
@@ -19,7 +19,7 @@ namespace InteractionFlow.Standard.Operations
         {
         }
 
-        public ValueTask<TInput> UserOperateAsync(IFlowContext context)
+        public ValueTask<TInput> OperateFromUserAsync(IFlowContext context)
         {
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             return Func();

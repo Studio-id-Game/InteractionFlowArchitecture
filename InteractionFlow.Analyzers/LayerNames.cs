@@ -21,6 +21,8 @@ namespace InteractionFlow.Analyzers
         public const string Operations = nameof(Operations);
         public const string ReactionPorts = nameof(ReactionPorts);
         public const string Reactions = nameof(Reactions);
+        public const string SilentlntegrationPorts = nameof(SilentlntegrationPorts);
+        public const string Silentlntegrations = nameof(Silentlntegrations);
         public const string StoragePorts = nameof(StoragePorts);
         public const string Storages = nameof(Storages);
 
@@ -34,14 +36,16 @@ namespace InteractionFlow.Analyzers
             Entities,
             Focuses,
             Interactions,
-            MultiFunctions,
             MultiFunctionPorts,
-            Operations,
+            MultiFunctions,
             OperationPorts,
-            Reactions,
+            Operations,
             ReactionPorts,
+            Reactions,
+            Silentlntegrations,
+            SilentlntegrationPorts,
+            StoragePorts,
             Storages,
-            StoragePorts
         };
 
         private static ImmutableHashSet<string> Disallows(string layerName)
@@ -73,13 +77,17 @@ namespace InteractionFlow.Analyzers
 
                 case Interactions:
 
+                    disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
+                    disallows.Remove(SilentlntegrationPorts);
                     break;
 
                 case MultiFunctions:
                 case MultiFunctionPorts:
+                case Silentlntegrations:
+                case SilentlntegrationPorts:
                 case Operations:
                 case OperationPorts:
                 case Reactions:
@@ -91,6 +99,7 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
+                    disallows.Remove(SilentlntegrationPorts);
                     break;
 
                 case Entities:

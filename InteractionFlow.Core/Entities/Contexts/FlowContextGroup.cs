@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
 using System.Collections.Generic;
 
@@ -6,49 +5,47 @@ namespace InteractionFlow.Core.Entities.Contexts
 {
     public class FlowContextGroup : IFlowContext
     {
-        private readonly List<IFlowContext> subReadableContexts;
-        private readonly List<IFlowContext> subWritableContexts;
+        private readonly List<IFlowContextValue> immutableValues;
+        private readonly List<IFlowContextValue> values;
 
         private readonly IFlowContext mainContext;
-
 
         public FlowContextGroup(IFlowContext mainContext)
         {
             this.mainContext = mainContext;
-            subReadableContexts = new();
-            subWritableContexts = new();
+            immutableValues = new();
+            values = new();
         }
 
         public UserObject User => mainContext.User;
 
         public CancellationObject Cancellation => mainContext.Cancellation;
 
-        public FlowContextGroup Add<T>(T? value, out FlowContextImmutable<T> subContext)
+        public FlowContextGroup AddImmutable<T>(T value, out FlowContextValueImmutable<T> contextValue)
         {
-            subContext = new FlowContextImmutable<T>(mainContext, value);
-            subReadableContexts.Insert(0, subContext);
+            contextValue = new FlowContextValueImmutable<T>(value);
+            immutableValues.Insert(0, contextValue);
 
             return this;
         }
 
-        public FlowContextGroup AddMutable<T>(T? value, out FlowContextMutable<T> subContext)
+        public FlowContextGroup Add<T>(T value, out FlowContextValue<T> contextValue)
         {
-            subContext = new FlowContextMutable<T>(mainContext, value);
-            subReadableContexts.Insert(0, subContext);
-            subWritableContexts.Insert(0, subContext);
-
+            contextValue = new FlowContextValue<T>(value);
+            immutableValues.Insert(0, contextValue);
+            values.Insert(0, contextValue);
             return this;
         }
 
-        public void Remove<T>(IFlowContext subContext)
+        public void Remove<T>(IFlowContextValue contextValue)
         {
-            subReadableContexts.Remove(subContext);
-            subWritableContexts.Remove(subContext);
+            immutableValues.Remove(contextValue);
+            values.Remove(contextValue);
         }
 
         public bool TryGet<T>(out T? value)
         {
-            foreach (var item in subReadableContexts)
+            foreach (var item in immutableValues)
             {
                 if (item.TryGet(out value))
                 {
@@ -66,7 +63,7 @@ namespace InteractionFlow.Core.Entities.Contexts
 
         public bool TrySet<T>(T? value)
         {
-            foreach (var item in subWritableContexts)
+            foreach (var item in values)
             {
                 if (item.TrySet(value))
                 {
@@ -84,7 +81,7 @@ namespace InteractionFlow.Core.Entities.Contexts
 
         public bool TrySet<T>(Func<T> select)
         {
-            foreach (var item in subWritableContexts)
+            foreach (var item in values)
             {
                 if (item.TrySet(select))
                 {

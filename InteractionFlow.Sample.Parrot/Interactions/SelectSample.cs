@@ -1,5 +1,4 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
@@ -18,36 +17,42 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         ILastSelectMemory lastSelectMemory)
         : Interaction(exception, cancellation)
     {
-        protected override async ValueTask<FlowEndToken> SystemFlowCoreAsync(IFlowContext context)
+
+        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
         {
-            await ReactAndGetEndToken(context, reaction, new ConsoleOutput("## Select Sample"));
-            await ReactAndGetEndToken(context, reaction, new ConsoleOutput("Enter sample name or index : "));
+            await EndInteractAsync(context, reaction, new ConsoleOutput("## Select Sample"));
 
-            var input = await operation.UserOperateTextAsync(context);
-            var sampleMode = GetSampleMode(input);
-
-            await ReactAndGetEndToken(context, reaction, new ConsoleOutput(""));
-
-            if (sampleMode == SampleMode.None)
+            return await TryCatchBlock(context, async (context) =>
             {
-                await ReactAndGetEndToken(context, reaction, new ConsoleOutput("* Not found name and index."));
-            }
-            else
-            {
-                var sampleID = new SampleID(sampleMode);
+                await EndInteractAsync(context, reaction, new ConsoleOutput("Enter sample name or index : "));
 
-                if (sampleMode != SampleMode.RepeatLast)
+                var input = await operation.UserOperateTextAsync(context);
+                var sampleMode = GetSampleMode(input);
+
+                await EndInteractAsync(context, reaction, new ConsoleOutput(""));
+
+                if (sampleMode == SampleMode.None)
                 {
-                    lastSelectMemory[context] = sampleID;
+                    await EndInteractAsync(context, reaction, new ConsoleOutput("* Not found name and index."));
+                }
+                else
+                {
+                    var sampleID = new SampleID(sampleMode);
+
+                    if (sampleMode != SampleMode.RepeatLast)
+                    {
+                        lastSelectMemory[context] = sampleID;
+                    }
+
+                    var selectedSample = new SampleSelected(sampleID);
+                    context = new FlowContextGroup(context)
+                        .AddImmutable(selectedSample, out _);
+
+                    await EndInteractAsync(context, reaction, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
                 }
 
-                var selectedSample = new SampleSelected(sampleID);
-                context = new FlowContextGroup(context).Add(selectedSample, out _);
-
-                await ReactAndGetEndToken(context, reaction, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
-            }
-
-            return await ReactAndGetEndToken(context, reaction, new ConsoleOutput($""));
+                return await EndInteractAsync(context, reaction, new ConsoleOutput($""));
+            });
         }
 
         private static SampleMode GetSampleMode(ConsoleInputText input)

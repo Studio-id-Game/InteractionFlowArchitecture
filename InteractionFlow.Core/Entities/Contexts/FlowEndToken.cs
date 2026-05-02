@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Rules.Architectures;
 using System;
 
 namespace InteractionFlow.Core.Entities.Contexts
@@ -7,13 +6,17 @@ namespace InteractionFlow.Core.Entities.Contexts
     {
         public IFlowContext LastContext { get; }
 
-        public OperationCanceledException? CanceledException { get; set; }
-
-        public bool HasCanceledException => CanceledException != null;
+        public OperationCanceledException? CanceledException
+        {
+            get => Exception as OperationCanceledException;
+            set => Exception = value;
+        }
 
         public Exception? Exception { get; set; }
 
         public bool HasException => Exception != null;
+
+        public bool HasCanceled => HasException && Exception is OperationCanceledException;
 
         internal FlowEndToken(IFlowContext lastContext)
         {

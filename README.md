@@ -268,7 +268,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 本アーキテクチャは、状態遷移とテープ操作を持つチューリングマシンのモデルとして解釈することもできます。
 この視点では、Interaction は状態遷移、Function はテープ操作として捉えることができます。
-このことは、アーキテクチャとしての構造の必要十分性を保証します。
+この事は、計算モデルとしてのアーキテクチャ構造の必要十分性を保証します。
 
 > 詳細な解釈については、[計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
 
@@ -338,7 +338,8 @@ Focus / Interaction の粒度はチームで調整可能です。
 - 保守性が向上する
 
 ---
-[PageTop](#) 
+
+[PageTop](#interaction-flow-c-package) 
 | [全体構成](#全体構成) 
 | [Layers](#layers)
 | [Blocks](#blocks)

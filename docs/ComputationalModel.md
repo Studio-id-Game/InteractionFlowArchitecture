@@ -1,4 +1,5 @@
- [Readme](../README.md)
+ [Readme](../README.md#概念モデル)
+
  ---
 
 # 計算モデルとしての Interaction Flow アーキテクチャ
@@ -38,8 +39,8 @@ Interaction Flow における主要な機能分類は以下の通りです：
   （状態や履歴など、内部情報の管理）
 
 - **Silent Integration**  
-  外部実行環境に読み書きされるテープへの書き込み  
-  （ユーザーには直接見えない形で外部システムに影響を与える）
+  外部実行環境に読み書きされるテープへの読み書き  
+  （ユーザーには直接見えない形で外部システムに影響を与える/与えられる）
 
 これらはすべて、「テープ」という共通のメタファーの上で統一的に理解できます。
 
@@ -54,7 +55,7 @@ Interaction は、このアーキテクチャにおける最小の動作単位�
 
 すなわち Interaction は、単一の処理ではなく、
 
-- 読み取り（Operation）
+- 読み取り（Operation / Silent Integration）
 - 内部更新（Storage）
 - 外部出力（Reaction / Silent Integration）
 
@@ -118,4 +119,4 @@ Interaction Flow は、チューリングマシンの
 これにより、内部の計算構造と外部の意味構造を分離しつつ、一貫したモデルとして扱うことが可能になります。
 
 ---
-[Readme](../README.md) | [PageTop](#) 
+[Readme](../README.md#概念モデル) | [PageTop](#計算モデルとしての-interaction-flow-アーキテクチャ)

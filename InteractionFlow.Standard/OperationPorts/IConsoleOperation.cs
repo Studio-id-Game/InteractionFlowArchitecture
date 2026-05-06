@@ -24,9 +24,13 @@ namespace InteractionFlow.Standard.OperationPorts
 
         ConsoleState State { get; set; }
 
+        public int CancelWaitTime { get; set; }
+
         ValueTask<ConsoleInputText> UserOperateTextAsync(IFlowContext context);
 
         ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context);
+
+        ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context, bool hideChar);
 
         ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context);
 

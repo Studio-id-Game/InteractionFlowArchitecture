@@ -6,9 +6,14 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Core.Storages
 {
     public abstract class ExternalStorage<TValue, TStorage> : IStoragePortExternal<TValue>
-        where TStorage : IStoragePortModifiable<TValue>, new()
+        where TStorage : IStoragePortModifiable<TValue>
     {
-        public TStorage CacheStorage { get; } = new();
+        protected ExternalStorage(TStorage cacheStorage)
+        {
+            CacheStorage = cacheStorage;
+        }
+
+        public TStorage CacheStorage { get; }
 
         public TValue? this[IFlowContext context] => CacheStorage[context];
 

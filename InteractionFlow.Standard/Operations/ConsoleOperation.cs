@@ -17,6 +17,7 @@ namespace InteractionFlow.Standard.Operations
         {
             private readonly ValueOperation<ConsoleInputAnyKey> valueAnyKey;
             private readonly ValueOperation<ConsoleInputKeyInfo> valueKeyInfo;
+            private readonly ValueOperation<ConsoleInputKeyInfo> valueKeyInfoHide;
             private readonly ValueOperation<ConsoleInputText> valueText;
 
             public Dummy()
@@ -33,7 +34,11 @@ namespace InteractionFlow.Standard.Operations
                     Console.WriteLine("<AutoKeyInfo>" + KeyInfo.key);
                     return KeyInfo;
                 });
-
+                valueKeyInfoHide = new(async () =>
+                {
+                    await Task.Delay(DelayTime);
+                    return KeyInfo;
+                });
                 valueText = new(async () =>
                 {
                     await Task.Delay(DelayTime);
@@ -49,12 +54,13 @@ namespace InteractionFlow.Standard.Operations
             public int DelayTime { get; set; } = 250;
 
             public ConsoleState State { get; set; }
-
+            public int CancelWaitTime { get; set; } = 100;
             public void ForceResetMemoryState()
             {
             }
-
             public ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context) => valueAnyKey.OperateFromUserAsync(context);
+
+            public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context, bool hideChar) => (hideChar ? valueKeyInfoHide : valueKeyInfo).OperateFromUserAsync(context);
 
             public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context) => valueKeyInfo.OperateFromUserAsync(context);
 
@@ -62,7 +68,7 @@ namespace InteractionFlow.Standard.Operations
         }
 
         public ConsoleState State { get; set; } = ConsoleState.DefaultNoLine;
-
+        public int CancelWaitTime { get; set; } = 100;
         public override ValueTask<ConsoleInputText> OperateFromUserAsync(IFlowContext context)
         {
             return UserOperateTextAsync(context);
@@ -81,6 +87,21 @@ namespace InteractionFlow.Standard.Operations
             return await UserOperateAsync(context, () =>
             {
                 return new ConsoleInputKeyInfo(Console.ReadKey());
+            });
+        }
+
+        public async ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context, bool hideChar)
+        {
+            return await UserOperateAsync(context, () =>
+            {
+                if (hideChar)
+                {
+                    return new ConsoleInputKeyInfo(Console.ReadKey(true));
+                }
+                else
+                {
+                    return new ConsoleInputKeyInfo(Console.ReadKey());
+                }
             });
         }
 
@@ -144,7 +165,7 @@ namespace InteractionFlow.Standard.Operations
             .ContinueWith(async t =>
             {
                 // これにより、入力終了+100ms秒の間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(CancelWaitTime, cancellationToken);
                 return t.Result;
             })
             .Unwrap();
@@ -180,6 +201,5 @@ namespace InteractionFlow.Standard.Operations
         {
             State = ConsoleState.DefaultNoLine;
         }
-
     }
 }

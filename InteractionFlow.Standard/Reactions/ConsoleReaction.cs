@@ -71,6 +71,14 @@ namespace InteractionFlow.Standard.Reactions
             return default;
         }
 
+        public ValueTask ReactToUserAsync(IFlowContext context, ConsolePositionAccess reactionValue)
+        {
+            var pos = (Console.CursorLeft, Console.CursorTop);
+            (Console.CursorLeft, Console.CursorTop) = reactionValue.update(pos);
+
+            return default;
+        }
+
         public override void ForceResetMemoryState()
         {
             State = ConsoleState.Default;

@@ -16,12 +16,17 @@ namespace InteractionFlow.Standard.Silentlntegrations
 
             void CancelKeyPress(object? sender, ConsoleCancelEventArgs args)
             {
-                if (context.Cancellation.HasTask)
-                {
-                    context.Cancellation.Cancel();
-                }
-                args.Cancel = true;
+                this.CancelKeyPress(context, args);
             }
+        }
+
+        protected virtual void CancelKeyPress(IFlowContext context, ConsoleCancelEventArgs args)
+        {
+            if (context.Cancellation.HasTask)
+            {
+                context.Cancellation.Cancel();
+            }
+            args.Cancel = true;
         }
     }
 }

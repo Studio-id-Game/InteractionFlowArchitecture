@@ -2,23 +2,15 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net10.0</TargetFramework>
-		<ImplicitUsings>disable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+		<TargetFramework>net9.0</TargetFramework>
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\InteractionFlow.Core\InteractionFlow.Core.csproj" />
 		<ProjectReference Include="..\InteractionFlow.Standard\InteractionFlow.Standard.csproj" />
-		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="OperationPorts\" />
-	  <Folder Include="Operations\" />
-	  <Folder Include="ReactionPorts\" />
-	  <Folder Include="Reactions\" />
-	  <Folder Include="SilentlntegrationPorts\" />
-	  <Folder Include="Silentlntegrations\" />
+		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj"
+						  OutputItemType="Analyzer"
+						  ReferenceOutputAssembly="false" />
 	</ItemGroup>
 </Project>

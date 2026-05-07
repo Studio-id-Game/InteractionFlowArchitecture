@@ -1,0 +1,30 @@
+<Project>
+	<PropertyGroup>
+
+		<LangVersion>12.0</LangVersion>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<CoreVersion>0.4.0</CoreVersion>
+		<StandardVersion>0.1.0</StandardVersion>
+		<AnalyzerVersion>0.1.0</AnalyzerVersion>
+		
+		<Title>$(AssemblyName)</Title>
+		<Authors>StudioIdGames</Authors>
+		<Company>StudioIdGames</Company>
+		<DescriptionHead>このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。</DescriptionHead>
+		<PackageProjectUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</RepositoryUrl>
+		<PackageTags>
+			core-$(CoreVersion)
+		</PackageTags>
+
+	</PropertyGroup>
+	<ItemGroup>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
+</Project>

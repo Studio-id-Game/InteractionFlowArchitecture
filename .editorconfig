@@ -17,4 +17,8 @@ trim_trailing_whitespace = true
 # Interaction Flow Analyzer
 interactionflow_enabled = True
 interactionflow_mode = Error
-# interactionflow_allowed_roots = System
+## interactionflow_allowed_roots = System
+
+# CodeStyle
+# dotnet_diagnostic.IDE0028.severity = warning
+# dotnet_diagnostic.IDE0290.severity = warning

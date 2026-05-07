@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+		<TargetFramework>net9.0</TargetFramework>
 		<IsPackable>false</IsPackable>
+		<VersionPrefix>$(AnalyzerVersion)</VersionPrefix>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" />
 		<PackageReference Include="coverlet.collector"
 						  Version="10.0.0">
 			<PrivateAssets>all</PrivateAssets>
@@ -31,13 +31,4 @@
 		<PackageReference Include="xunit.v3"
 						  Version="3.2.2" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Using Include="Xunit" />
-	</ItemGroup>
-
 </Project>

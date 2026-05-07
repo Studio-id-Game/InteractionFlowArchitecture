@@ -1,11 +1,15 @@
+using System;
+
 namespace InteractionFlow.Core.Entities.Architectures
 {
     public interface IFlowNode
     {
-        public string Name => GetType().Name;
+        string Name => GetType().Name;
 
-        public FlowLayerTypes Layer { get; }
+        FlowLayerTypes Layer { get; }
 
-        public FunctionPortTypes FunctionTypes { get; }
+        FunctionPortTypes FunctionTypes { get; }
+
+        ReadOnlySpan<IFlowNode> Dependency { get; }
     }
 }

@@ -5,7 +5,7 @@ namespace InteractionFlow.Core.Entities.Architectures
         None = 0,
         Operation,
         Reaction,
-        SilentIntegration,
+        SilentExternal,
         Storage,
     }
 }

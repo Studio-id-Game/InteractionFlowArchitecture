@@ -1,20 +1,19 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Interactions;
-using System.Collections.Generic;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Focuses
 {
-    public abstract class Focus<TContext> : IFocus<TContext>
+    public abstract class Focus(params IFlowNode[] dependency) : Focus<IFlowContext>(dependency)
+    {
+    }
+
+    public abstract class Focus<TContext>(params IFlowNode[] dependency) : IFocus<TContext>
         where TContext : IFlowContext
     {
-        public abstract IEnumerable<IInteraction> Interactions { get; }
+        public ReadOnlySpan<IFlowNode> Dependency => dependency;
 
         public abstract Task<FlowEndToken> FlowWithUserAsync(TContext context);
-
-        protected Task<FlowEndToken> EndFlowAsync(IFlowContext context, IInteraction interaction)
-        {
-            return interaction.InteractWithUserAsync(context);
-        }
     }
 }

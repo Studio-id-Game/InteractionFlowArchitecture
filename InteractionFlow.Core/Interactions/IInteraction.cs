@@ -1,6 +1,5 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
@@ -10,8 +9,6 @@ namespace InteractionFlow.Core.Interactions
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.Interaction;
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.None;
-
-        IEnumerable<IFlowNodePortLayer> Ports { get; }
 
         Task<FlowEndToken> InteractWithUserAsync(IFlowContext context);
     }

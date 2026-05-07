@@ -2,50 +2,38 @@ using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ReactionPorts;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
 {
-    public abstract class Interaction(IExceptionPort exceptionPort, ICancellationPort cancellationPort) : IInteraction
+    public abstract class Interaction(
+        IExceptionPort<Exception> exceptionPort,
+        ICancellationPort cancellationPort,
+        params IFlowNode[] dependency)
+        : Interaction<Exception>(exceptionPort, cancellationPort, dependency)
     {
-        public virtual IEnumerable<IFlowNodePortLayer> Ports
-        {
-            get
-            {
-                yield return exceptionPort;
-                yield return cancellationPort;
-            }
-        }
+
+    }
+
+    public abstract class Interaction<TException>(
+    IExceptionPort<TException> exceptionPort,
+    ICancellationPort cancellationPort,
+    params IFlowNode[] dependency)
+    : IInteraction
+    where TException : Exception
+    {
+        public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[exceptionPort, cancellationPort, .. dependency];
 
         public abstract Task<FlowEndToken> InteractWithUserAsync(IFlowContext context);
 
-        protected Task<FlowEndToken> EndInteractAsync(IFlowContext context, OperationCanceledException e)
+        protected async Task<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException e)
         {
-            return EndInteractAsync(context, cancellationPort, e)
-                .ContinueWith(t =>
-                {
-                    var token = t.Result;
-                    token.Exception = e;
-                    return token;
-                });
+            return await cancellationPort.HandleCancellation(context, e);
         }
 
-        protected Task<FlowEndToken> EndInteractAsync(IFlowContext context, Exception e)
+        protected async Task<FlowEndToken> HandleExceptionAsync(IFlowContext context, TException e)
         {
-            return EndInteractAsync(context, exceptionPort, e)
-                .ContinueWith(t =>
-                {
-                    var token = t.Result;
-                    token.Exception = e;
-                    return token;
-                });
-        }
-
-        protected async Task<FlowEndToken> EndInteractAsync<T>(IFlowContext context, IReactionPort<T> reaction, T reactionValue)
-        {
-            await reaction.ReactToUserAsync(context, reactionValue);
-            return new FlowEndToken(context);
+            return await exceptionPort.HandleExceptionAsync(context, e);
         }
 
         protected async Task<FlowEndToken> TryCatchBlock(IFlowContext context, Func<IFlowContext, Task<FlowEndToken>> function)
@@ -54,18 +42,18 @@ namespace InteractionFlow.Core.Interactions
             {
                 if (context.TryGetCanceledException(out var e))
                 {
-                    return await EndInteractAsync(context, e!);
+                    return await HandleCancellationAsync(context, e!);
                 }
 
                 return await function(context);
             }
             catch (OperationCanceledException e)
             {
-                return await EndInteractAsync(context, e);
+                return await HandleCancellationAsync(context, e);
             }
-            catch (Exception e)
+            catch (TException e)
             {
-                return await EndInteractAsync(context, e);
+                return await HandleExceptionAsync(context, e);
             }
         }
     }

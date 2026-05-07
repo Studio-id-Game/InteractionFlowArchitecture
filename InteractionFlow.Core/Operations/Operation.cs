@@ -1,15 +1,17 @@
-using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.OperationPorts;
-using System.Threading.Tasks;
+using System;
 
 namespace InteractionFlow.Core.Operations
 {
-    public abstract class Operation<TInput> : IOperationPort<TInput>
+    public abstract class Operation(params IFlowNode[] dependency) : IOperationPort
     {
-        public abstract ValueTask<TInput> OperateFromUserAsync(IFlowContext context);
+        public ReadOnlySpan<IFlowNode> Dependency => dependency;
 
-        public virtual void ForceResetMemoryState()
-        {
-        }
+        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
+
+        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Operation;
+
+        public abstract void ForceResetMemoryState();
     }
 }

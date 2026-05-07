@@ -71,28 +71,16 @@ namespace InteractionFlow.Core.Entities
         public static Result operator &(Result left, Result right) => left ? right : left;
     }
 
-    public readonly struct Result<TEntity>
+    public readonly struct Result<TEntity>(TEntity? value, Result result)
     {
-        private readonly TEntity? value;
+        private readonly TEntity? value = value;
 
-        private readonly Result result;
-
-        public Result(TEntity value) : this()
+        public Result(TEntity value) : this(value, true)
         {
-            this.value = value;
-            result = true;
         }
 
-        public Result(Exception exception) : this()
+        public Result(Exception exception) : this(default, exception)
         {
-            value = default;
-            result = exception;
-        }
-
-        public Result(TEntity? value, Result result)
-        {
-            this.value = value;
-            this.result = result;
         }
 
         public readonly TEntity? Value

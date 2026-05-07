@@ -10,6 +10,7 @@ using InteractionFlow.Standard.Builders.Profiles;
 using InteractionFlow.Standard.Interactions;
 using InteractionFlow.Standard.SilentlntegrationPorts;
 using InteractionFlow.Standard.Silentlntegrations;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
 {

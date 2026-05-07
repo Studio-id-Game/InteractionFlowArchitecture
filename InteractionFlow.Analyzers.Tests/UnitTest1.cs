@@ -1,6 +1,10 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Xunit;
 namespace InteractionFlow.Analyzers.Tests;
 
 public class InteractionFlowAnalyzersAnalyzerTests

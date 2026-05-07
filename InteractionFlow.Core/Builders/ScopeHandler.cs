@@ -3,27 +3,19 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Core.Builders
 {
-    public sealed class ScopeHandler : IServiceProvider, IDisposable
+    public sealed class ScopeHandler(IDisposable scope, IServiceProvider scopedProvider, params ScopeHandler[] parents) : IServiceProvider, IDisposable
     {
-        private IDisposable? scope;
-        private IServiceProvider? scopedProvider;
-        private readonly ScopeHandler[] parents;
+        private IDisposable? scope = scope;
+        private IServiceProvider? scopedProvider = scopedProvider;
 
         public bool IsDisposed => scope == null;
-
-        public ScopeHandler(IDisposable scope, IServiceProvider scopedProvider, params ScopeHandler[] parents)
-        {
-            this.scope = scope;
-            this.scopedProvider = scopedProvider;
-            this.parents = parents;
-        }
 
         public object? GetService(Type serviceType)
         {
             if (scope == null)
                 throw new InvalidOperationException(nameof(scope));
 
-            return GetServiceNotVisited(serviceType, new HashSet<ScopeHandler>());
+            return GetServiceNotVisited(serviceType, []);
         }
 
         private object? GetServiceNotVisited(Type serviceType, HashSet<ScopeHandler> visited)

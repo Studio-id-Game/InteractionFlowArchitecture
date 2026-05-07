@@ -2,13 +2,8 @@ using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public readonly struct ConsolePositionAccess
+    public readonly struct ConsolePositionAccess(Func<(int, int), (int, int)> update)
     {
-        public readonly Func<(int, int), (int, int)> update;
-
-        public ConsolePositionAccess(Func<(int, int), (int, int)> update)
-        {
-            this.update = update;
-        }
+        public readonly Func<(int, int), (int, int)> update = update;
     }
 }

@@ -9,17 +9,10 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Interactions
 {
-    public class ConsoleWrite : Interaction
+    public class ConsoleWrite(IExceptionPort exception, ICancellationPort cancellation, IReactionPort<ConsoleOutput> reaction) : Interaction(exception, cancellation)
     {
-        private readonly IReactionPort<ConsoleOutput> reaction;
-        private readonly ConsoleOutput reactionValue;
-
-        public ConsoleWrite(IExceptionPort exception, ICancellationPort cancellation, IReactionPort<ConsoleOutput> reaction)
-            : base(exception, cancellation)
-        {
-            this.reaction = reaction;
-            reactionValue = new ConsoleOutput("Default ConsoleWrite Text.");
-        }
+        private readonly IReactionPort<ConsoleOutput> reaction = reaction;
+        private readonly ConsoleOutput reactionValue = new("Default ConsoleWrite Text.");
 
         public override IEnumerable<IFlowNodePortLayer> Ports
         {

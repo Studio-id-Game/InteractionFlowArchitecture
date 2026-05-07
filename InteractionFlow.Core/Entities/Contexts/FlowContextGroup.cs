@@ -3,19 +3,10 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
-    public class FlowContextGroup : IFlowContext
+    public class FlowContextGroup(IFlowContext mainContext) : IFlowContext
     {
-        private readonly List<IFlowContextValue> immutableValues;
-        private readonly List<IFlowContextValue> values;
-
-        private readonly IFlowContext mainContext;
-
-        public FlowContextGroup(IFlowContext mainContext)
-        {
-            this.mainContext = mainContext;
-            immutableValues = new();
-            values = new();
-        }
+        private readonly List<IFlowContextValue> immutableValues = [];
+        private readonly List<IFlowContextValue> values = [];
 
         public UserObject User => mainContext.User;
 

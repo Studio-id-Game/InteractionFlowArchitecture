@@ -7,18 +7,8 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
 {
-    public abstract class Interaction : IInteraction
+    public abstract class Interaction(IExceptionPort exceptionPort, ICancellationPort cancellationPort) : IInteraction
     {
-        private readonly IExceptionPort exceptionPort;
-
-        private readonly ICancellationPort cancellationPort;
-
-        protected Interaction(IExceptionPort exceptionPort, ICancellationPort cancellationPort)
-        {
-            this.exceptionPort = exceptionPort;
-            this.cancellationPort = cancellationPort;
-        }
-
         public virtual IEnumerable<IFlowNodePortLayer> Ports
         {
             get

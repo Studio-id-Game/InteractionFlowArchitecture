@@ -6,14 +6,9 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Standard.Operations
 {
 
-    public class ValueOperation<TInput> : IValueOperation<TInput>
+    public class ValueOperation<TInput>(Func<ValueTask<TInput>> func) : IValueOperation<TInput>
     {
-        public ValueOperation(Func<ValueTask<TInput>> func)
-        {
-            Func = func;
-        }
-
-        public Func<ValueTask<TInput>> Func { get; }
+        public Func<ValueTask<TInput>> Func { get; } = func;
 
         public void ForceResetMemoryState()
         {

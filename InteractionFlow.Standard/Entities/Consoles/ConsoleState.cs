@@ -2,7 +2,7 @@ using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public struct ConsoleState
+    public struct ConsoleState(ConsoleColor foregroundColor, ConsoleColor backgroundColor, bool writeLine)
     {
         internal readonly struct UseScope : IDisposable
         {
@@ -32,16 +32,10 @@ namespace InteractionFlow.Standard.Entities.Consoles
             }
         }
 
-        public readonly struct CustomizeScope : IDisposable
+        public readonly struct CustomizeScope(ConsoleState currentState, Action<ConsoleState> setter) : IDisposable
         {
-            private readonly ConsoleState defaultState;
-            private readonly Action<ConsoleState> setter;
-
-            public CustomizeScope(ConsoleState currentState, Action<ConsoleState> setter)
-            {
-                defaultState = currentState;
-                this.setter = setter;
-            }
+            private readonly ConsoleState defaultState = currentState;
+            private readonly Action<ConsoleState> setter = setter;
 
             public void Set(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
             {
@@ -76,18 +70,11 @@ namespace InteractionFlow.Standard.Entities.Consoles
 
 
 
-        public ConsoleColor foregroundColor;
+        public ConsoleColor foregroundColor = foregroundColor;
 
-        public ConsoleColor backgroundColor;
+        public ConsoleColor backgroundColor = backgroundColor;
 
-        public bool writeLine;
-
-        public ConsoleState(ConsoleColor foregroundColor, ConsoleColor backgroundColor, bool writeLine)
-        {
-            this.foregroundColor = foregroundColor;
-            this.backgroundColor = backgroundColor;
-            this.writeLine = writeLine;
-        }
+        public bool writeLine = writeLine;
 
         internal readonly UseScope Use() => new(this);
 

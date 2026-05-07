@@ -6,20 +6,13 @@ using System.Linq;
 
 namespace InteractionFlow.Analyzers
 {
-    internal class OptionValues
+    internal class OptionValues(AnalyzerConfigOptions? options)
     {
-        public OptionValues(AnalyzerConfigOptions options)
-        {
-            Enabled = GetEnabled(options);
-            Mode = GetMode(options);
-            AllowedRoots = GetAllowedRoots(options);
-        }
+        public bool Enabled { get; } = GetEnabled(options);
 
-        public bool Enabled { get; }
+        public DiagnosticSeverity Mode { get; } = GetMode(options);
 
-        public DiagnosticSeverity Mode { get; }
-
-        public IEnumerable<string> AllowedRoots { get; }
+        public IEnumerable<string> AllowedRoots { get; } = GetAllowedRoots(options);
 
         public static class Keys
         {
@@ -28,7 +21,7 @@ namespace InteractionFlow.Analyzers
             public const string interactionflow_allowed_roots = nameof(interactionflow_allowed_roots);
         }
 
-        public static bool GetEnabled(AnalyzerConfigOptions options)
+        public static bool GetEnabled(AnalyzerConfigOptions? options)
         {
             if (options == null)
             {
@@ -49,7 +42,7 @@ namespace InteractionFlow.Analyzers
         }
 
 
-        public static DiagnosticSeverity GetMode(AnalyzerConfigOptions options)
+        public static DiagnosticSeverity GetMode(AnalyzerConfigOptions? options)
         {
             if (options == null)
             {
@@ -69,7 +62,7 @@ namespace InteractionFlow.Analyzers
             }
         }
 
-        public static string[] GetAllowedRoots(AnalyzerConfigOptions options)
+        public static string[] GetAllowedRoots(AnalyzerConfigOptions? options)
         {
             var roots = "System";
             if (options != null && options.TryGetValue(Keys.interactionflow_allowed_roots, out var value))
@@ -77,12 +70,11 @@ namespace InteractionFlow.Analyzers
                 roots = $"{roots}, {value}";
             }
 
-            return roots
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            return [.. roots
+                .Split([','], StringSplitOptions.RemoveEmptyEntries)
                 .Select(e => e.Trim())
                 .Where(e => !string.IsNullOrEmpty(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
         }
     }
 }

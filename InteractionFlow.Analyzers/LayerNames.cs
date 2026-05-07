@@ -27,10 +27,10 @@ namespace InteractionFlow.Analyzers
         public const string Storages = nameof(Storages);
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
-        private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new ConcurrentDictionary<string, ImmutableHashSet<string>>(stringComparer);
+        private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
 
 
-        private static HashSet<string> GetAll() => new HashSet<string>(stringComparer)
+        private static HashSet<string> GetAll() => new(stringComparer)
         {
             Builders,
             Entities,

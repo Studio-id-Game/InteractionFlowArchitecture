@@ -1,3 +1,5 @@
+using System;
+
 namespace InteractionFlow.Samples.Parrot.Entities.SampleContexts
 {
     internal readonly struct SampleID(SampleMode sample)

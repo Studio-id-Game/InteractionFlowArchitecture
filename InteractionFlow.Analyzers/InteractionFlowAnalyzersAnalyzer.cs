@@ -29,7 +29,7 @@ namespace InteractionFlow.Analyzers
         //private static readonly LocalizableString Description = "Interaction Flow Architecture - Invalid layer dependency";
         private const string Category = "Architecture";
 
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        private static readonly DiagnosticDescriptor Rule = new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         private static DiagnosticDescriptor GetRule(DiagnosticSeverity severity)
         {
@@ -253,23 +253,15 @@ namespace InteractionFlow.Analyzers
 
         private sealed class AnalyzerExecutionContext
         {
-            private class DisallowReferenceInfo
+            private class DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
             {
-                public DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
-                {
-                    TargetNamespace = targetNamespace;
-                    IsDisallow = isDisallow;
-                    SourceShowName = sourceShowName;
-                    TargetShowName = targetShowName;
-                }
+                public string TargetNamespace { get; } = targetNamespace;
 
-                public string TargetNamespace { get; }
+                public bool IsDisallow { get; } = isDisallow;
 
-                public bool IsDisallow { get; }
+                public string SourceShowName { get; } = sourceShowName;
 
-                public string SourceShowName { get; }
-
-                public string TargetShowName { get; }
+                public string TargetShowName { get; } = targetShowName;
             }
 
 
@@ -285,7 +277,7 @@ namespace InteractionFlow.Analyzers
 
             private readonly HashSet<ITypeSymbol> visited;
 
-            private readonly Dictionary<string, DisallowReferenceInfo> disallowReferenceCach = new Dictionary<string, DisallowReferenceInfo>(StringComparer.Ordinal);
+            private readonly Dictionary<string, DisallowReferenceInfo> disallowReferenceCach = new(StringComparer.Ordinal);
 
             public AnalyzerExecutionContext(AnalysisContextBase context, Location location, string sourceNamespace)
             {
@@ -350,18 +342,16 @@ namespace InteractionFlow.Analyzers
         {
             public abstract void ReportDiagnostic(Diagnostic diagnostic);
 
-            public abstract AnalyzerConfigOptions GetOptions();
+            public abstract AnalyzerConfigOptions? GetOptions();
         }
 
-        private class SymbolContextWrapper : AnalysisContextBase
+        private class SymbolContextWrapper(SymbolAnalysisContext context) : AnalysisContextBase
         {
-            private readonly SymbolAnalysisContext _context;
-
-            public SymbolContextWrapper(SymbolAnalysisContext context) => _context = context;
+            private readonly SymbolAnalysisContext _context = context;
 
             public override void ReportDiagnostic(Diagnostic diagnostic) => _context.ReportDiagnostic(diagnostic);
 
-            public override AnalyzerConfigOptions GetOptions()
+            public override AnalyzerConfigOptions? GetOptions()
             {
                 var location = _context.Symbol.Locations.FirstOrDefault();
                 if (location == null || !location.IsInSource) return null;
@@ -374,11 +364,9 @@ namespace InteractionFlow.Analyzers
 
         }
 
-        private class OperationContextWrapper : AnalysisContextBase
+        private class OperationContextWrapper(OperationAnalysisContext context) : AnalysisContextBase
         {
-            private readonly OperationAnalysisContext _context;
-
-            public OperationContextWrapper(OperationAnalysisContext context) => _context = context;
+            private readonly OperationAnalysisContext _context = context;
 
             public override void ReportDiagnostic(Diagnostic diagnostic) => _context.ReportDiagnostic(diagnostic);
 

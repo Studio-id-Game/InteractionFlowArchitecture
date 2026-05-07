@@ -2,17 +2,11 @@ using System;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
-    public class UserObject : IEquatable<UserObject>
-
+    public class UserObject(string? id) : IEquatable<UserObject>
     {
-        private readonly string? id;
+        private readonly string? id = id;
 
         public string Id => id ?? "Unknown User";
-
-        public UserObject(string? id)
-        {
-            this.id = id;
-        }
 
         public override bool Equals(object? obj)
         {

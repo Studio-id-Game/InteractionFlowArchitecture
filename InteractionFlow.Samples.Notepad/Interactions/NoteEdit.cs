@@ -278,8 +278,8 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                     await MoveLine(-_currentLine);
                     await MoveRightTo(0);
 
-                    await Write(context, string.Join(Environment.NewLine,
-                        [.. textLines.Select(e => e + LineClear), Separater, LineClear]));
+                    string[] lines = [.. textLines.Select(e => e + LineClear), Separater, LineClear];
+                    await Write(context, string.Join(Environment.NewLine, lines));
                     currentLine = textLines.Count + 1; // 後置の Separater と LineClear のLine増加分も考慮
                     currentLeft = textLines.Last().Length;
 

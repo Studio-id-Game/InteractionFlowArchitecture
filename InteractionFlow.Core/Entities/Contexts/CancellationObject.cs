@@ -9,7 +9,7 @@ namespace InteractionFlow.Core.Entities.Contexts
     {
         private CancellationTokenSource? tokenSource;
 
-        private readonly ConcurrentBag<Task> currentTasks = new();
+        private readonly ConcurrentBag<Task> currentTasks = [];
 
         public bool HasTask => currentTasks.Any();
 

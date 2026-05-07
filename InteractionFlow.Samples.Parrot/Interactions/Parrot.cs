@@ -6,6 +6,8 @@ using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
+using System;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {

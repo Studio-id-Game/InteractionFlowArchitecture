@@ -1,12 +1,7 @@
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public readonly struct ConsoleOutput
+    public readonly struct ConsoleOutput(string text)
     {
-        public readonly string text;
-
-        public ConsoleOutput(string text)
-        {
-            this.text = text;
-        }
+        public readonly string text = text;
     }
 }

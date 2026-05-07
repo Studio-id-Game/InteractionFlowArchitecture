@@ -9,15 +9,10 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Storages
 {
-    public abstract class DirectoryStorageModifiable<TValue, TStorage>
-        : ExternalStorageModifiable<TValue, TStorage>
+    public abstract class DirectoryStorageModifiable<TValue, TStorage>(TStorage cacheStorage)
+        : ExternalStorageModifiable<TValue, TStorage>(cacheStorage)
         where TStorage : IStoragePortModifiable<TValue>
     {
-        public DirectoryStorageModifiable(TStorage cacheStorage) : base(cacheStorage)
-        {
-
-        }
-
         protected override async Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context)
         {
             var directory = GetDirectoryInfo(context);
@@ -60,7 +55,7 @@ namespace InteractionFlow.Standard.Storages
 
         protected static void MakeDirectory(DirectoryInfo? dir)
         {
-            List<DirectoryInfo> mkDir = new();
+            List<DirectoryInfo> mkDir = [];
             while (dir != null && !dir.Exists)
             {
                 mkDir.Insert(0, dir);

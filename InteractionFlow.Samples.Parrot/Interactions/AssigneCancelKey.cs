@@ -4,6 +4,7 @@ using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
 using InteractionFlow.Standard.SilentlntegrationPorts;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {

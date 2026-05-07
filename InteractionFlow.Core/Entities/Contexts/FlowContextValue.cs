@@ -2,14 +2,9 @@ using System;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
-    public sealed class FlowContextValue<T> : IFlowContextValue
+    public sealed class FlowContextValue<T>(T value) : IFlowContextValue
     {
-        public T Value { get; set; }
-
-        public FlowContextValue(T value)
-        {
-            Value = value;
-        }
+        public T Value { get; set; } = value;
 
         public bool TryGet<T1>(out T1? value)
         {

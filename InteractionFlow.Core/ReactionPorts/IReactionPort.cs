@@ -1,18 +1,11 @@
 using InteractionFlow.Core.Entities.Architectures;
-using InteractionFlow.Core.Entities.Contexts;
-using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.ReactionPorts
 {
-    public interface IReactionPort : IFlowNodePortLayer
+    public interface IReactionPort : IFlowNodeStateful
     {
-        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
-    }
+        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 
-    public interface IReactionPort<in TOutput> : IReactionPort
-    {
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
-
-        public ValueTask ReactToUserAsync(IFlowContext context, TOutput reactionValue);
     }
 }

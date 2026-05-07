@@ -1,19 +1,23 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ReactionPorts;
-using System.Threading.Tasks;
+using System;
 
 namespace InteractionFlow.Core.Reactions
 {
-    public abstract class Reaction<TOutput> : IReactionPort<TOutput>
+    public abstract class Reaction(params IFlowNode[] dependency) : IReactionPort
     {
-        protected Reaction()
-        {
-        }
+        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 
-        public abstract ValueTask ReactToUserAsync(IFlowContext context, TOutput reactionValue);
+        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
 
-        public virtual void ForceResetMemoryState()
+        public ReadOnlySpan<IFlowNode> Dependency => dependency;
+
+        public abstract void ForceResetMemoryState();
+
+        protected static FlowEndToken CreateFlowEndToken(IFlowContext context)
         {
+            return new(context);
         }
     }
 }

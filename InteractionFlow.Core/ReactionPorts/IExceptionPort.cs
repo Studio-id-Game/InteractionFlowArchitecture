@@ -1,12 +1,19 @@
 using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
 using System;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.ReactionPorts
 {
-    public interface IExceptionPort : IReactionPort<Exception>
+    public interface IExceptionPort<in T> : IReactionPort
+        where T : Exception
     {
+        public bool ThrowException { get; set; }
+
+        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
+
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
 
-        public bool ThrowException { get; set; }
+        ValueTask<FlowEndToken> HandleExceptionAsync(IFlowContext context, T exception);
     }
 }

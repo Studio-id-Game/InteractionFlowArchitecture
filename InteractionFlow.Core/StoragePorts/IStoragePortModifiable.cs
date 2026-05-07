@@ -4,9 +4,10 @@ using System;
 
 namespace InteractionFlow.Core.StoragePorts
 {
-
     public interface IStoragePortModifiable<TValue> : IStoragePort<TValue>
     {
+        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
+
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Storage;
 
         TValue? IStoragePort<TValue>.this[IFlowContext context]

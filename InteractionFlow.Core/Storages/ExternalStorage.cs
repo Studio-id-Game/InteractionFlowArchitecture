@@ -1,18 +1,22 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.StoragePorts;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class ExternalStorage<TValue, TStorage>(TStorage cacheStorage) : IStoragePortExternal<TValue>
+    public abstract class ExternalStorage<TValue, TStorage>(TStorage cacheStorage, params IFlowNode[] dependency) : IExternalStoragePort<TValue>
         where TStorage : IStoragePortModifiable<TValue>
     {
-        public TStorage CacheStorage { get; } = cacheStorage;
+        public TStorage CacheStorage => cacheStorage;
+
+        public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[cacheStorage, .. dependency];
 
         public TValue? this[IFlowContext context] => CacheStorage[context];
 
-        public void ForceResetMemoryState()
+        public virtual void ForceResetMemoryState()
         {
             CacheStorage.ForceResetMemoryState();
         }

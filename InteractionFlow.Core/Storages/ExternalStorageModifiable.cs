@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.StoragePorts;
 using System;
@@ -6,71 +7,22 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class ExternalStorageModifiable<TValue, TStorage>(TStorage cacheStorage) : IStoragePortExternalModifiable<TValue>
+    public abstract class ExternalStorageModifiable<TValue, TStorage>(
+        TStorage cacheStorage,
+        params IFlowNode[] dependency)
+        : ExternalStorage<TValue, TStorage>(cacheStorage, dependency),
+        IExternalStoragePortModifiable<TValue>
         where TStorage : IStoragePortModifiable<TValue>
     {
-        public TStorage CacheStorage { get; } = cacheStorage;
-
-        public TValue? this[IFlowContext context]
+        public new TValue? this[IFlowContext context]
         {
-            get => CacheStorage[context];
+            get => base[context];
             set => CacheStorage[context] = value;
         }
 
-        public void ForceResetMemoryState()
-        {
-            CacheStorage.ForceResetMemoryState();
-        }
+        public abstract Task<Result> SaveToPersistent(IFlowContext context, TValue value);
 
-        protected abstract Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context);
-
-        protected abstract Task<Result> SaveToPersistentCore(IFlowContext context, TValue value);
-
-        public async Task<Result<TValue>> LoadFromPersistent(IFlowContext context)
-        {
-            var result = await LoadFromPersistentCore(context);
-
-            if (result)
-                CacheStorage[context] = result.Value;
-
-            return result;
-        }
-
-        public Task<Result<TValue>> TryGetOrLoad(IFlowContext context)
-        {
-            if (TryGet(context, out var value))
-            {
-                return Task.FromResult(new Result<TValue>(value!));
-            }
-
-            return LoadFromPersistent(context);
-        }
-
-        public Task<Result> SaveToPersistent(IFlowContext context)
-        {
-            if (TryGet(context, out var value))
-            {
-                return SaveToPersistent(context, value!);
-            }
-            else
-            {
-                return Task.FromResult(Result.Error(new InvalidOperationException()));
-            }
-        }
-
-        public async Task<Result> SaveToPersistent(IFlowContext context, TValue value)
-        {
-            var result = await SaveToPersistentCore(context, value);
-
-            if (result)
-            {
-                CacheStorage[context] = value;
-            }
-
-            return result;
-        }
-
-        public bool TryGet(IFlowContext context, out TValue? value)
+        public new bool TryGet(IFlowContext context, out TValue? value)
         {
             return CacheStorage.TryGet(context, out value);
         }

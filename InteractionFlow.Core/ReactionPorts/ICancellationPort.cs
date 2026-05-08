@@ -12,5 +12,10 @@ namespace InteractionFlow.Core.ReactionPorts
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
 
         ValueTask<FlowEndToken> HandleCancellation(IFlowContext context, OperationCanceledException exception);
+
+        ValueTask<FlowEndToken> IExceptionPort<OperationCanceledException>.HandleExceptionAsync(IFlowContext context, OperationCanceledException exception)
+        {
+            return HandleCancellation(context, exception);
+        }
     }
 }

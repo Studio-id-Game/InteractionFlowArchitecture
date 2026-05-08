@@ -1,5 +1,6 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Operations;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using System;
@@ -8,113 +9,46 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Operations
 {
-    public class ConsoleOperation : Operation<ConsoleInputText>, IConsoleOperation
+    public class ConsoleOperation : Operation, IConsoleOperation
     {
-        public class Dummy : IConsoleOperation.IDummy,
-            IValueOperation<ConsoleInputAnyKey>,
-            IValueOperation<ConsoleInputKeyInfo>,
-            IValueOperation<ConsoleInputText>
+        public ConsoleOperation()
         {
-            private readonly ValueOperation<ConsoleInputAnyKey> valueAnyKey;
-            private readonly ValueOperation<ConsoleInputKeyInfo> valueKeyInfo;
-            private readonly ValueOperation<ConsoleInputKeyInfo> valueKeyInfoHide;
-            private readonly ValueOperation<ConsoleInputText> valueText;
-
-            public Dummy()
-            {
-                valueAnyKey = new(async () =>
-                {
-                    await Task.Delay(DelayTime);
-                    Console.WriteLine("<AutoAnyKey>");
-                    return new ConsoleInputAnyKey();
-                });
-                valueKeyInfo = new(async () =>
-                {
-                    await Task.Delay(DelayTime);
-                    Console.WriteLine("<AutoKeyInfo>" + KeyInfo.key);
-                    return KeyInfo;
-                });
-                valueKeyInfoHide = new(async () =>
-                {
-                    await Task.Delay(DelayTime);
-                    return KeyInfo;
-                });
-                valueText = new(async () =>
-                {
-                    await Task.Delay(DelayTime);
-                    Console.WriteLine("<AutoText>" + Text.text);
-                    return Text;
-                });
-            }
-
-            public ConsoleInputText Text { get; set; } = new("Dummy Text");
-
-            public ConsoleInputKeyInfo KeyInfo { get; set; } = new(new('A', ConsoleKey.A, true, false, false));
-
-            public int DelayTime { get; set; } = 250;
-
-            public ConsoleState State { get; set; }
-            public int CancelWaitTime { get; set; } = 100;
-            public void ForceResetMemoryState()
-            {
-            }
-            public ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context) => valueAnyKey.OperateFromUserAsync(context);
-
-            public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context, bool hideChar) => (hideChar ? valueKeyInfoHide : valueKeyInfo).OperateFromUserAsync(context);
-
-            public ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context) => valueKeyInfo.OperateFromUserAsync(context);
-
-            public ValueTask<ConsoleInputText> UserOperateTextAsync(IFlowContext context) => valueText.OperateFromUserAsync(context);
+            ForceResetMemoryState();
         }
 
-        public ConsoleState State { get; set; } = ConsoleState.DefaultNoLine;
-        public int CancelWaitTime { get; set; } = 100;
-        public override ValueTask<ConsoleInputText> OperateFromUserAsync(IFlowContext context)
+        public override void ForceResetMemoryState()
         {
-            return UserOperateTextAsync(context);
+            State = ConsoleState.Default;
+
+            CancelWaitTime = 100;
         }
 
-        public async ValueTask<ConsoleInputText> UserOperateTextAsync(IFlowContext context)
+        public ConsoleState State { get; set; }
+
+        public int CancelWaitTime { get; set; }
+
+        public ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
         {
-            return await UserOperateAsync(context, () =>
+            return new(CancelableConsoleReadAsync<ConsoleInputText>(context, () =>
             {
-                return new ConsoleInputText(Console.ReadLine());
-            });
+                return new(Console.ReadLine());
+            }));
         }
 
-        public async ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context)
+        public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
         {
-            return await UserOperateAsync(context, () =>
-            {
-                return new ConsoleInputKeyInfo(Console.ReadKey());
-            });
+            return WaitUserKeyAsync(context, false);
         }
 
-        public async ValueTask<ConsoleInputKeyInfo> UserOperateKeyInfoAsync(IFlowContext context, bool hideChar)
+        public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
         {
-            return await UserOperateAsync(context, () =>
+            return new(CancelableConsoleReadAsync<ConsoleInputKeyInfo>(context, () =>
             {
-                if (hideChar)
-                {
-                    return new ConsoleInputKeyInfo(Console.ReadKey(true));
-                }
-                else
-                {
-                    return new ConsoleInputKeyInfo(Console.ReadKey());
-                }
-            });
+                return new(Console.ReadKey(hideChar));
+            }));
         }
 
-        public async ValueTask<ConsoleInputAnyKey> UserOperateAnyKeyAsync(IFlowContext context)
-        {
-            return await UserOperateAsync(context, () =>
-            {
-                Console.ReadKey();
-                return new ConsoleInputAnyKey();
-            });
-        }
-
-        private async Task<TInput> UserOperateAsync<TInput>(IFlowContext context, Func<TInput> read)
+        private async Task<TInput> CancelableConsoleReadAsync<TInput>(IFlowContext context, Func<TInput> read)
         {
             var cancellationToken = context.Cancellation.GetToken();
 
@@ -151,20 +85,16 @@ namespace InteractionFlow.Standard.Operations
             var cancellationTask = Task.Delay(Timeout.Infinite, cancellationToken);
             var consoleTask = Task.Run(() =>
             {
-                if (State.writeLine)
-                    Console.WriteLine();
-
-                TInput res;
-                using (State.Use())
+                return Read(() =>
                 {
-                    res = read();
+                    var result = read();
                     keyEnd = true;
-                }
-                return res;
+                    return result;
+                });
             })
             .ContinueWith(async t =>
             {
-                // これにより、入力終了+100ms秒の間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
+                // これにより、入力終了+CancelWaitTimeの間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
                 await Task.Delay(CancelWaitTime, cancellationToken);
                 return t.Result;
             })
@@ -178,10 +108,7 @@ namespace InteractionFlow.Standard.Operations
                 if (!keyEnd)
                 {
                     Console.WriteLine();
-                    using (State.Use())
-                    {
-                        Console.Write("[Cancel requested] Press Enter to abort...");
-                    }
+                    Write("[Cancel requested] Press Enter to abort...");
                     Console.WriteLine();
                 }
 
@@ -197,9 +124,117 @@ namespace InteractionFlow.Standard.Operations
             }
         }
 
-        public override void ForceResetMemoryState()
+        private T Read<T>(Func<T> read)
         {
-            State = ConsoleState.DefaultNoLine;
+            T result;
+            using (GetStateScope())
+            {
+                Console.BackgroundColor = State.backgroundColor;
+                Console.ForegroundColor = State.foregroundColor;
+
+                if (State.writeLine)
+                {
+                    result = read();
+                    Console.WriteLine();
+                }
+                else
+                {
+                    result = read();
+                }
+            }
+
+            Console.BackgroundColor = State.backgroundColor;
+            Console.ForegroundColor = State.foregroundColor;
+
+            return result;
+        }
+
+        private void Write(string text)
+        {
+            using (GetStateScope())
+            {
+                Console.BackgroundColor = State.backgroundColor;
+                Console.ForegroundColor = State.foregroundColor;
+
+                if (State.writeLine)
+                {
+                    Console.WriteLine(text);
+                }
+                else
+                {
+                    Console.Write(text);
+                }
+            }
+
+            Console.BackgroundColor = State.backgroundColor;
+            Console.ForegroundColor = State.foregroundColor;
+        }
+
+        public StateScope<ConsoleOperation, ConsoleState> GetStateScope()
+        {
+            return State.GetScope(this, (e, value) => e.State = value);
+        }
+
+        public class Dummy : Operation, IConsoleOperation.IDummy
+        {
+            public Dummy()
+            {
+                ForceResetMemoryState();
+            }
+
+            public override void ForceResetMemoryState()
+            {
+                State = ConsoleState.Default;
+
+                CancelWaitTime = 100;
+
+                DummyText = new("Dummy Text");
+
+                DummyKeyInfo = new(new('A', ConsoleKey.A, true, false, false));
+
+                InputDelayTime = 250;
+            }
+
+            public ConsoleInputText DummyText { get; set; }
+
+            public ConsoleInputKeyInfo DummyKeyInfo { get; set; }
+
+            public int InputDelayTime { get; set; }
+
+            public ConsoleState State { get; set; }
+
+            public int CancelWaitTime { get; set; }
+
+
+            public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
+            {
+                await Task.Delay(InputDelayTime);
+                Console.WriteLine("<AutoKeyInfo>" + DummyKeyInfo.key);
+                return DummyKeyInfo;
+            }
+
+            public ValueTask<ConsoleInputKeyInfo> WaitUserText(IFlowContext context)
+            {
+                return WaitUserKeyAsync(context, false);
+
+            }
+
+            public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
+            {
+                await Task.Delay(InputDelayTime);
+                if (!hideChar)
+                {
+                    Console.WriteLine("<AutoKeyInfo>" + DummyKeyInfo.key);
+                }
+                return DummyKeyInfo;
+            }
+
+            public async ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
+            {
+                await Task.Delay(InputDelayTime);
+                Console.WriteLine("<AutoText>" + DummyText.text);
+                return DummyText;
+            }
         }
     }
 }

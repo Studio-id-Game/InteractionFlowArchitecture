@@ -16,13 +16,16 @@ namespace InteractionFlow.Standard.Reactions
             State = ConsoleState.Default;
         }
 
+        public void OnStateApply()
+        {
+            Console.ForegroundColor = State.foregroundColor;
+            Console.BackgroundColor = State.backgroundColor;
+        }
+
         public ValueTask<FlowEndToken> Write(IFlowContext context, ConsoleOutput consoleOutput)
         {
-            using (this.GetStateScope())
+            using (this.GetStateScope(true))
             {
-                Console.ForegroundColor = State.foregroundColor;
-                Console.BackgroundColor = State.backgroundColor;
-
                 if (State.writeLine)
                 {
                     Console.WriteLine(consoleOutput.text);

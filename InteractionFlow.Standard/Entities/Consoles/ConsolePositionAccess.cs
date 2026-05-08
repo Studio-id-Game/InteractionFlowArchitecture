@@ -1,9 +1,9 @@
-using System;
-
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public readonly struct ConsolePositionAccess(Func<(int, int), (int, int)> update)
+    public readonly struct ConsoleCursorPosition(int? left, int? top)
     {
-        public readonly Func<(int, int), (int, int)> update = update;
+        public int? Left { get; } = left;
+
+        public int? Top { get; } = top;
     }
 }

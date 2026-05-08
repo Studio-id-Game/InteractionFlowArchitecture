@@ -6,5 +6,7 @@ namespace InteractionFlow.Standard.ReactionPorts
     public interface IConsoleReaction : IReactionPort
     {
         public ConsoleState State { get; set; }
+
+        public void OnStateApply();
     }
 }

@@ -15,13 +15,16 @@ namespace InteractionFlow.Standard.Reactions
         {
         }
 
+        public void OnStateApply()
+        {
+            Console.ForegroundColor = State.foregroundColor;
+            Console.BackgroundColor = State.backgroundColor;
+        }
+
         protected override ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
         {
-            using (this.GetStateScope())
+            using (this.GetStateScope(true))
             {
-                Console.ForegroundColor = State.foregroundColor;
-                Console.BackgroundColor = State.backgroundColor;
-
                 if (State.writeLine)
                 {
                     Console.WriteLine();

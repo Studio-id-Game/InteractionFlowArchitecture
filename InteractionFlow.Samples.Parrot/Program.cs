@@ -6,10 +6,9 @@ using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Samples.Parrot.StoragePorts;
 using InteractionFlow.Samples.Parrot.Storages;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.Builders.Profiles;
 using InteractionFlow.Standard.Interactions;
-using InteractionFlow.Standard.SilentlntegrationPorts;
-using InteractionFlow.Standard.Silentlntegrations;
+using InteractionFlow.Standard.SilentExternalPorts;
+using InteractionFlow.Standard.SilentExternals;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
@@ -21,16 +20,16 @@ namespace InteractionFlow.Samples.Parrot
             var globalScopeBuilder = new ScopeBuilder();
 
             // Console Reactions & Operations
-            globalScopeBuilder.Apply(ConsoleFunction.Profile);
+            globalScopeBuilder.Apply(ConsoleBuilder.Profile);
 
             // Storages
             globalScopeBuilder.UseFunction<ILastSelectMemory, LastSelectMemory>();
 
             // Silentlntegrations
-            globalScopeBuilder.UseFunction<ICancelKeyAssigne, ConsoleCancelKeyAssigne>();
+            globalScopeBuilder.UseFunction<ICancellationWithConsole, CancellationWithConsole>();
 
             // Interactions
-            globalScopeBuilder.UseInteraction<ConsoleWrite>();
+            globalScopeBuilder.UseInteraction<ConsoleWriting>();
             globalScopeBuilder.UseInteraction<ListSamples>();
             globalScopeBuilder.UseInteraction<SelectSample>();
             globalScopeBuilder.UseInteraction<RunSample>();

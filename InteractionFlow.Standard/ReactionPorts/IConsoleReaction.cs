@@ -3,10 +3,8 @@ using InteractionFlow.Standard.Entities.Consoles;
 
 namespace InteractionFlow.Standard.ReactionPorts
 {
-    public interface IConsoleReaction : IReactionPort<ConsoleOutput>, IReactionPort<ConsolePositionAccess>
+    public interface IConsoleReaction : IReactionPort
     {
         public ConsoleState State { get; set; }
-        public ConsoleState ErrorState { get; set; }
-        public ConsoleState CancelState { get; set; }
     }
 }

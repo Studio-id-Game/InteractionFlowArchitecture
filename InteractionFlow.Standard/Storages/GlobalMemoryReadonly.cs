@@ -3,7 +3,7 @@ using InteractionFlow.Core.Storages;
 
 namespace InteractionFlow.Standard.Storages
 {
-    public class GlobalMemoryReadonly<TValue> : StorageReadonly<TValue>
+    public class GlobalMemoryReadonly<TValue> : Storage<TValue>
         where TValue : new()
     {
         private TValue value = new();

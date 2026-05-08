@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Standard.Storages
 {
-    public class KeyedMemoryReadonly<TContextKey, TValue> : StorageReadonly<TValue>
+    public class KeyedMemoryReadonly<TContextKey, TValue> : Storage<TValue>
         where TValue : IKeyedMemoryValue<TContextKey>, new()
     {
         protected Dictionary<TContextKey, TValue> Dictionary { get; } = new(EqualityComparer<TContextKey>.Default);

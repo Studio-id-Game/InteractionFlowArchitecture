@@ -20,7 +20,17 @@ namespace InteractionFlow.Core.Storages
             set => CacheStorage[context] = value;
         }
 
-        public abstract Task<Result> SaveToPersistent(IFlowContext context, TValue value);
+        public async Task<Result> SaveToPersistent(IFlowContext context, TValue value)
+        {
+            var result = await SaveToPersistentCore(context, value);
+
+            if (result)
+                CacheStorage[context] = value;
+
+            return result;
+        }
+
+        protected abstract Task<Result> SaveToPersistentCore(IFlowContext context, TValue value);
 
         public new bool TryGet(IFlowContext context, out TValue? value)
         {

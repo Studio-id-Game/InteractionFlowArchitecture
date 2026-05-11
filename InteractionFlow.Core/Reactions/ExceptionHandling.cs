@@ -13,7 +13,7 @@ namespace InteractionFlow.Core.Reactions
     public abstract class ExceptionHandling<TException>(params IFlowNode[] dependency) : Reaction(dependency), IExceptionPort<TException>
         where TException : Exception
     {
-        public bool ThrowException { get; set; } = true;
+        public bool ThrowException { get; set; } = false;
 
         public ValueTask<FlowEndToken> HandleExceptionAsync(IFlowContext context, TException exception)
         {
@@ -28,12 +28,5 @@ namespace InteractionFlow.Core.Reactions
         }
 
         protected abstract ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, TException exception);
-
-        protected static ValueTask<FlowEndToken> CreateFlowEndTokenAsync(IFlowContext context, TException exception)
-        {
-            var flowEndToken = CreateFlowEndToken(context);
-            flowEndToken.Exception = exception;
-            return new(flowEndToken);
-        }
     }
 }

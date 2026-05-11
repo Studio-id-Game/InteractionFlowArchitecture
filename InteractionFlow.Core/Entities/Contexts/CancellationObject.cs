@@ -29,18 +29,25 @@ namespace InteractionFlow.Core.Entities.Contexts
                 tokenSource.Cancel();
         }
 
-        public async Task<bool> TryWaitAndReset()
+        public ValueTask<bool> TryWaitAndResetAsync()
         {
             if (tokenSource == null || !tokenSource.IsCancellationRequested)
-                return false;
+                return new(false);
 
-            await Task.WhenAll(currentTasks);
-            currentTasks.Clear();
+            return new(WaitAllAsync());
 
-            tokenSource?.Dispose();
-            tokenSource = null;
+            async Task<bool> WaitAllAsync()
+            {
+                while (currentTasks.TryTake(out var task))
+                {
+                    await task;
+                }
 
-            return true;
+                tokenSource?.Dispose();
+                tokenSource = null;
+
+                return true;
+            }
         }
 
         public CancellationToken GetToken()

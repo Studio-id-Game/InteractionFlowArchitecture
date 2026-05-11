@@ -5,8 +5,18 @@ using System;
 
 namespace InteractionFlow.Core.Reactions
 {
-    public abstract class Reaction(params IFlowNode[] dependency) : IReactionPort
+    public abstract class Reaction : IReactionPort
     {
+        private readonly IFlowNode[] dependency;
+
+        private FlowEndToken? lastFlowEndToken;
+
+        public Reaction(params IFlowNode[] dependency)
+        {
+            this.dependency = dependency;
+            ForceResetMemoryState();
+        }
+
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
@@ -15,9 +25,17 @@ namespace InteractionFlow.Core.Reactions
 
         public abstract void ForceResetMemoryState();
 
-        protected static FlowEndToken CreateFlowEndToken(IFlowContext context)
+        protected FlowEndToken CreateFlowEndToken(IFlowContext context, Exception? exception = null)
         {
-            return new(context);
+            if (lastFlowEndToken == null || lastFlowEndToken.LastContext != context)
+            {
+                return lastFlowEndToken = new(context) { Exception = exception };
+            }
+            else
+            {
+                lastFlowEndToken.Exception = exception;
+                return lastFlowEndToken;
+            }
         }
     }
 }

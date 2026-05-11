@@ -5,8 +5,16 @@ using System;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class Storage<TValue>(params IFlowNode[] dependency) : IStoragePort<TValue>
+    public abstract class Storage<TValue> : IStoragePort<TValue>
     {
+        private readonly IFlowNode[] dependency;
+
+        public Storage(params IFlowNode[] dependency)
+        {
+            this.dependency = dependency;
+            ForceResetMemoryState();
+        }
+
         public ReadOnlySpan<IFlowNode> Dependency => dependency;
 
         public TValue? this[IFlowContext context]

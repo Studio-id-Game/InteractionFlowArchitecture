@@ -4,8 +4,16 @@ using System;
 
 namespace InteractionFlow.Core.Operations
 {
-    public abstract class Operation(params IFlowNode[] dependency) : IOperationPort
+    public abstract class Operation : IOperationPort
     {
+        private readonly IFlowNode[] dependency;
+
+        public Operation(params IFlowNode[] dependency)
+        {
+            this.dependency = dependency;
+            ForceResetMemoryState();
+        }
+
         public ReadOnlySpan<IFlowNode> Dependency => dependency;
 
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;

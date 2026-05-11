@@ -7,9 +7,19 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Storages
 {
-    public abstract class ExternalStorage<TValue, TStorage>(TStorage cacheStorage, params IFlowNode[] dependency) : IExternalStoragePort<TValue>
+    public abstract class ExternalStorage<TValue, TStorage> : IExternalStoragePort<TValue>
         where TStorage : IStoragePortModifiable<TValue>
     {
+        private readonly TStorage cacheStorage;
+        private readonly IFlowNode[] dependency;
+
+        public ExternalStorage(TStorage cacheStorage, params IFlowNode[] dependency)
+        {
+            this.cacheStorage = cacheStorage;
+            this.dependency = dependency;
+            ForceResetMemoryState();
+        }
+
         public TStorage CacheStorage => cacheStorage;
 
         public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[cacheStorage, .. dependency];

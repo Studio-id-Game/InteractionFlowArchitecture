@@ -25,15 +25,15 @@ namespace InteractionFlow.Core.Reactions
 
         public abstract void ForceResetMemoryState();
 
-        protected FlowEndToken CreateFlowEndToken(IFlowContext context, Exception? exception = null)
+        protected FlowEndToken CreateFlowEndToken(IFlowContext context)
         {
             if (lastFlowEndToken == null || lastFlowEndToken.LastContext != context)
             {
-                return lastFlowEndToken = new(context) { Exception = exception };
+                return lastFlowEndToken = new(context);
             }
             else
             {
-                lastFlowEndToken.Exception = exception;
+                lastFlowEndToken.Exception = null;
                 return lastFlowEndToken;
             }
         }

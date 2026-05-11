@@ -13,6 +13,9 @@ namespace InteractionFlow.Standard.Reactions
 
         public override void ForceResetMemoryState()
         {
+            ThrowException = false;
+            var state = ConsoleState.Default;
+            State = state.Update(foregroundColor: ConsoleColor.Red);
         }
 
         public void OnStateApply()
@@ -31,6 +34,7 @@ namespace InteractionFlow.Standard.Reactions
                     Console.WriteLine($"* Exception: {exception.GetType().FullName}:");
                     Console.WriteLine($"\t{exception.Message},");
                     Console.WriteLine($"\t{exception.Source};");
+                    Console.WriteLine();
                 }
                 else
                 {
@@ -38,7 +42,7 @@ namespace InteractionFlow.Standard.Reactions
                 }
             }
 
-            return default;
+            return new(CreateFlowEndToken(context));
         }
     }
 }

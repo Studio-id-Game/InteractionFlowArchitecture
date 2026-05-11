@@ -11,11 +11,6 @@ namespace InteractionFlow.Standard.Operations
 {
     public class ConsoleOperation : Operation, IConsoleOperation
     {
-        public ConsoleOperation()
-        {
-            ForceResetMemoryState();
-        }
-
         public override void ForceResetMemoryState()
         {
             State = ConsoleState.Default;
@@ -27,12 +22,12 @@ namespace InteractionFlow.Standard.Operations
 
         public int CancelWaitTime { get; set; }
 
-        public ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
+        public async ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
         {
-            return new(CancelableConsoleReadAsync<ConsoleInputText>(context, () =>
+            return await CancelableConsoleReadAsync<ConsoleInputText>(context, () =>
             {
                 return new(Console.ReadLine());
-            }));
+            });
         }
 
         public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
@@ -40,12 +35,12 @@ namespace InteractionFlow.Standard.Operations
             return WaitUserKeyAsync(context, false);
         }
 
-        public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
+        public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
         {
-            return new(CancelableConsoleReadAsync<ConsoleInputKeyInfo>(context, () =>
+            return await CancelableConsoleReadAsync<ConsoleInputKeyInfo>(context, () =>
             {
                 return new(Console.ReadKey(hideChar));
-            }));
+            });
         }
 
         private async Task<TInput> CancelableConsoleReadAsync<TInput>(IFlowContext context, Func<TInput> read)
@@ -83,26 +78,23 @@ namespace InteractionFlow.Standard.Operations
 
             bool keyEnd = false;
             var cancellationTask = Task.Delay(Timeout.Infinite, cancellationToken);
-            var consoleTask = Task.Run(() =>
+            var consoleTask = Task.Run(async () =>
             {
-                return Read(() =>
+                var result = Read(() =>
                 {
                     var result = read();
                     keyEnd = true;
                     return result;
                 });
-            })
-            .ContinueWith(async t =>
-            {
+
                 // これにより、入力終了+CancelWaitTimeの間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
                 await Task.Delay(CancelWaitTime, cancellationToken);
-                return t.Result;
-            })
-            .Unwrap();
+                return result;
+            });
 
             var endTask = await Task.WhenAny(cancellationTask, consoleTask);
 
-            if (cancellationToken.IsCancellationRequested)
+            if (endTask.IsCanceled)
             {
                 // consoleTaskが終了していない場合は、ユーザー入力を待機して正常終了する。
                 if (!keyEnd)
@@ -115,13 +107,9 @@ namespace InteractionFlow.Standard.Operations
                 while (Console.KeyAvailable)
                     Console.ReadKey(true);
 
-                await consoleTask;
-                throw new OperationCanceledException(cancellationToken);
             }
-            else
-            {
-                return await consoleTask;
-            }
+
+            return await consoleTask;
         }
 
         private T Read<T>(Func<T> read)
@@ -177,11 +165,6 @@ namespace InteractionFlow.Standard.Operations
 
         public class Dummy : Operation, IConsoleOperation.IDummy
         {
-            public Dummy()
-            {
-                ForceResetMemoryState();
-            }
-
             public override void ForceResetMemoryState()
             {
                 State = ConsoleState.Default;

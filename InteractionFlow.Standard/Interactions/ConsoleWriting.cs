@@ -16,13 +16,15 @@ namespace InteractionFlow.Standard.Interactions
     {
         private ConsoleOutput DefaultReactionValue => new("Default ConsoleWrite Text.");
 
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public sealed override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
         {
-            return await TryCatchBlock(context, async (context) =>
-            {
-                var output = context.TryGet<ConsoleOutput>(out var _output) ? _output : DefaultReactionValue;
-                return await consoleWrite.Write(context, output);
-            });
+            return await TryCatchBlock(context, InteractWithUserAsyncCore);
+        }
+
+        protected virtual async Task<FlowEndToken> InteractWithUserAsyncCore(IFlowContext context)
+        {
+            var output = context.TryGet<ConsoleOutput>(out var _output) ? _output : DefaultReactionValue;
+            return await consoleWrite.Write(context, output);
         }
     }
 }

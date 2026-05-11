@@ -13,7 +13,9 @@ namespace InteractionFlow.Standard.Reactions
 
         public override void ForceResetMemoryState()
         {
-            State = ConsoleState.Default;
+            ThrowException = false;
+            var state = ConsoleState.Default;
+            State = state.Update(foregroundColor: ConsoleColor.Yellow);
         }
 
         public void OnStateApply()
@@ -22,23 +24,40 @@ namespace InteractionFlow.Standard.Reactions
             Console.BackgroundColor = State.backgroundColor;
         }
 
-        protected override ValueTask<FlowEndToken> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
+        protected override ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
             using (this.GetStateScope(true))
             {
                 if (State.writeLine)
                 {
                     Console.WriteLine();
-                    Console.WriteLine($"* Cancel: {exception.Message}");
-                    Console.WriteLine();
+                    Console.WriteLine($"* Cancel... : {exception.Message}");
                 }
                 else
                 {
-                    Console.Write($"* Cancel: {exception.Message}");
+                    Console.Write($"* Cancel... : {exception.Message} ");
                 }
             }
 
             return default;
+        }
+
+        protected override ValueTask<FlowEndToken> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
+        {
+            using (this.GetStateScope(true))
+            {
+                if (State.writeLine)
+                {
+                    Console.WriteLine($"> Cancel Completed.");
+                    Console.WriteLine();
+                }
+                else
+                {
+                    Console.Write($"> Cancel Completed.");
+                }
+            }
+
+            return new(CreateFlowEndToken(context));
         }
     }
 }

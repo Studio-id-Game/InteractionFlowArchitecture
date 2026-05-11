@@ -12,7 +12,10 @@ namespace InteractionFlow.Standard.SilentExternals
 
         public ValueTask Setup(IFlowContext context)
         {
-            Console.CancelKeyPress -= cancelKeyPress;
+            if (cancelKeyPress != null)
+            {
+                Console.CancelKeyPress -= cancelKeyPress;
+            }
 
             cancelKeyPress = (sender, args) =>
             {

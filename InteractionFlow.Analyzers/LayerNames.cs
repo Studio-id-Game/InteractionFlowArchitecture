@@ -21,8 +21,8 @@ namespace InteractionFlow.Analyzers
         public const string Operations = nameof(Operations);
         public const string ReactionPorts = nameof(ReactionPorts);
         public const string Reactions = nameof(Reactions);
-        public const string SilentlntegrationPorts = nameof(SilentlntegrationPorts);
-        public const string Silentlntegrations = nameof(Silentlntegrations);
+        public const string SilentExternalPorts = nameof(SilentExternalPorts);
+        public const string SilentExternals = nameof(SilentExternals);
         public const string StoragePorts = nameof(StoragePorts);
         public const string Storages = nameof(Storages);
 
@@ -42,8 +42,8 @@ namespace InteractionFlow.Analyzers
             Operations,
             ReactionPorts,
             Reactions,
-            Silentlntegrations,
-            SilentlntegrationPorts,
+            SilentExternals,
+            SilentExternalPorts,
             StoragePorts,
             Storages,
         };
@@ -81,13 +81,13 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentlntegrationPorts);
+                    disallows.Remove(SilentExternalPorts);
                     break;
 
                 case MultiFunctions:
                 case MultiFunctionPorts:
-                case Silentlntegrations:
-                case SilentlntegrationPorts:
+                case SilentExternals:
+                case SilentExternalPorts:
                 case Operations:
                 case OperationPorts:
                 case Reactions:
@@ -99,7 +99,7 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentlntegrationPorts);
+                    disallows.Remove(SilentExternalPorts);
                     break;
 
                 case Entities:

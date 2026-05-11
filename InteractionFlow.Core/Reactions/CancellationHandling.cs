@@ -10,14 +10,37 @@ namespace InteractionFlow.Core.Reactions
     {
         public ValueTask<FlowEndToken> HandleCancellation(IFlowContext context, OperationCanceledException exception)
         {
-            return HandleExceptionAsync(context, exception);
+            var _BeforeCancellationCoreAsync = BeforeCancellationCoreAsync(context, exception);
+            if (!_BeforeCancellationCoreAsync.IsCompletedSuccessfully)
+            {
+                return SlowPathAsync(this, _BeforeCancellationCoreAsync, context, exception);
+
+                static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
+                {
+                    await before;
+                    await context.Cancellation.TryWaitAndResetAsync();
+                    return await @this.AfterCancellationCoreAsync(context, exception);
+                }
+            }
+
+            var _TryWaitAndResetAsync = context.Cancellation.TryWaitAndResetAsync();
+            if (!_TryWaitAndResetAsync.IsCompletedSuccessfully)
+            {
+                return SlowPathAsync(this, _TryWaitAndResetAsync, context, exception);
+
+                static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask<bool> before, IFlowContext context, OperationCanceledException exception)
+                {
+                    await before;
+                    return await @this.AfterCancellationCoreAsync(context, exception);
+                }
+            }
+
+            return AfterCancellationCoreAsync(context, exception);
         }
 
-        protected sealed override async ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, OperationCanceledException exception)
+        protected sealed override ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            await BeforeCancellationCoreAsync(context, exception);
-            await context.Cancellation.TryWaitAndReset();
-            return await AfterCancellationCoreAsync(context, exception);
+            return HandleCancellation(context, exception);
         }
 
         protected virtual ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)

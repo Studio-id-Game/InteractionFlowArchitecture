@@ -6,13 +6,13 @@ namespace InteractionFlow.Core.Entities.Contexts
     {
         public IFlowContext LastContext { get; }
 
+        public Exception? Exception { get; set; }
+
         public OperationCanceledException? CanceledException
         {
             get => Exception as OperationCanceledException;
             set => Exception = value;
         }
-
-        public Exception? Exception { get; set; }
 
         public bool HasException => Exception != null;
 

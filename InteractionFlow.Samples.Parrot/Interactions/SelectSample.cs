@@ -13,30 +13,28 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
     internal class SelectSample(
-        IExceptionPort exception,
+        IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
-        IConsoleReaction reaction,
+        IConsoleWriter reaction,
         IConsoleOperation operation,
         ILastSelectMemory lastSelectMemory)
-        : Interaction(exception, cancellation)
+        : Interaction(exception, cancellation, reaction, operation, lastSelectMemory)
     {
-
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            await EndInteractAsync(context, reaction, new ConsoleOutput("## Select Sample"));
+            reaction.State = ConsoleState.Default;
+            await reaction.Write(context, new ConsoleOutput("## Select Sample"));
 
-            return await TryCatchBlock(context, async (context) =>
+            return await TryCatchBlockAsync(context, async (context) =>
             {
-                await EndInteractAsync(context, reaction, new ConsoleOutput("Enter sample name or index : "));
+                await reaction.Write(context, new ConsoleOutput("Enter sample name or index : "));
 
-                var input = await operation.UserOperateTextAsync(context);
+                var input = await operation.WaitUserTextAsync(context);
                 var sampleMode = GetSampleMode(input);
-
-                await EndInteractAsync(context, reaction, new ConsoleOutput(""));
 
                 if (sampleMode == SampleMode.None)
                 {
-                    await EndInteractAsync(context, reaction, new ConsoleOutput("* Not found name and index."));
+                    await reaction.Write(context, new ConsoleOutput("* Not found name and index."));
                 }
                 else
                 {
@@ -51,10 +49,14 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                     context = new FlowContextGroup(context)
                         .AddImmutable(selectedSample, out _);
 
-                    await EndInteractAsync(context, reaction, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
+                    await reaction.Write(context, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
                 }
 
-                return await EndInteractAsync(context, reaction, new ConsoleOutput($""));
+                return await reaction.Write(context, new ConsoleOutput($""));
+            },
+            async () =>
+            {
+                await Task.Delay(1000);
             });
         }
 

@@ -3,6 +3,7 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
@@ -14,25 +15,28 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
 
     internal class Parrot(
-        IExceptionPort exception,
+        IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleOperation operation,
-        IConsoleReaction reaction)
-        : Interaction(exception, cancellation), IInteraction
+        IConsoleWriter reaction)
+        : Interaction(exception, cancellation, operation, reaction)
     {
         private static string DefaultHello => $"Hello! I'm Parrot, who are you?";
 
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            await reaction.ReactToUserAsync(context, new ConsoleOutput($"## Parrot"));
+            await reaction.Write(context, new ConsoleOutput($"## Parrot"));
 
-            var end = await TryCatchBlock(context, Init);
+            var end = await TryCatchBlockAsync(context, Init);
 
             if (end.HasException) return end;
 
             do
             {
-                end = await TryCatchBlock(context, SingleParrot);
+                end = await TryCatchBlockAsync(context, SingleParrot, async () =>
+                {
+                    await Task.Delay(500);
+                });
 
             } while (!end.HasCanceled);
 
@@ -43,12 +47,12 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         {
             if (!context.TryGet<SampleSelected>(out var selectedSample))
             {
-                await reaction.ReactToUserAsync(context, new ConsoleOutput($"* Sample not selected."));
-                return await EndInteractAsync(context, reaction, new ConsoleOutput(""));
+                await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
+                return await reaction.Write(context, new ConsoleOutput(""));
             }
             else
             {
-                var end = await EndInteractAsync(context, reaction, new ConsoleOutput($"- {selectedSample}"));
+                var end = await reaction.Write(context, new ConsoleOutput($"- {selectedSample}"));
 
                 if (!context.TryGet<ParrotHello>(out var hello) || hello.text == null)
                 {
@@ -72,7 +76,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             if (string.IsNullOrWhiteSpace(input.text))
             {
-                throw new ArgumentException("No blank fields allowed.");
+                throw new InvalidOperationException("No blank fields allowed.");
             }
 
             string outputText = GetReactionText(input);
@@ -85,10 +89,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         private async Task<ConsoleInputText> Input(IFlowContext context)
         {
             await NameHeader(context, "You");
-
-            using var operationState = operation.State.Customize(e => operation.State = e);
-            operationState.Set(writeLine: false);
-            return await operation.UserOperateTextAsync(context);
+            return await operation.WaitUserTextAsync(context);
         }
 
         private static string GetReactionText(ConsoleInputText input)
@@ -114,30 +115,28 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<FlowEndToken> NameHeader(IFlowContext context, string name)
         {
-            using var reactionState = reaction.State.Customize(e => reaction.State = e);
-            reactionState.Set(writeLine: false);
-            return await EndInteractAsync(context, reaction, new ConsoleOutput($"{name} : "));
+            using var reactionState = reaction.GetStateScope();
+            reaction.State = reaction.State.Update(writeLine: false);
+            return await reaction.Write(context, new ConsoleOutput($"{name} : "));
 
         }
 
         private async Task<FlowEndToken> SlowTalk(IFlowContext context, string outputText)
         {
-            using var reactionState = reaction.State.Customize(e => reaction.State = e);
+            using var reactionState = reaction.GetStateScope();
 
-            reactionState.Set(writeLine: false);
+            reaction.State = reaction.State.Update(writeLine: false);
 
             foreach (var item in outputText)
             {
-
-                await reaction.ReactToUserAsync(context, new ConsoleOutput(item.ToString()));
+                await reaction.Write(context, new ConsoleOutput(item.ToString()));
                 await Task.Delay(50);
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
             }
 
-            reactionState.Reset();
+            reaction.State = reaction.State.Update(writeLine: true);
 
-            return await EndInteractAsync(context, reaction, new ConsoleOutput(""));
+            return await reaction.Write(context, new ConsoleOutput(""));
         }
-
     }
 }

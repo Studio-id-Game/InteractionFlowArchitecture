@@ -4,6 +4,7 @@ using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.StoragePorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
@@ -13,27 +14,27 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
     internal class RunSample(
-        IExceptionPort exception,
+        IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleOperation operation,
-        IConsoleOperation.IDummy valueOperation,
-        IConsoleReaction reaction,
+        IConsoleOperation.IDummy operationDummy,
+        IConsoleWriter reaction,
         ILastSelectMemory lastSelectMemory)
-        : Interaction(exception, cancellation), IInteraction
+        : Interaction(exception, cancellation, operation, operationDummy, reaction, lastSelectMemory), IInteraction
     {
         private readonly Parrot parrot = new(exception, cancellation, operation, reaction);
-        private readonly Parrot parrotAuto = new(exception, cancellation, valueOperation, reaction);
+        private readonly Parrot parrotAuto = new(exception, cancellation, operationDummy, reaction);
 
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            await reaction.ReactToUserAsync(context, new ConsoleOutput($"## Run Sample"));
+            await reaction.Write(context, new ConsoleOutput($"## Run Sample (Press Ctrl + C to cancel the sample.)"));
 
-            return await TryCatchBlock(context, async (context) =>
+            return await TryCatchBlockAsync(context, async (context) =>
             {
                 if (!context.TryGet<SampleSelected>(out var selected) || selected.id.mode == SampleMode.None)
                 {
-                    await reaction.ReactToUserAsync(context, new ConsoleOutput($"* Sample not selected."));
-                    return await EndInteractAsync(context, reaction, new ConsoleOutput(""));
+                    await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
+                    return await reaction.Write(context, new ConsoleOutput(""));
                 }
 
                 var mode = selected.id.mode;
@@ -46,12 +47,12 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                 return mode switch
                 {
-                    SampleMode.Parrot => await parrot.InteractWithUserAsync(context),
+                    SampleMode.Parrot => await parrot.ExecuteAsync(context),
                     SampleMode.ParrotAuto => await ParrotAuto(context),
                     SampleMode.ParrotAutoAndKill => await ParrotAutoAndKill(context),
                     SampleMode.ParrotColorful => await ParrotColorful(context),
                     SampleMode.ParrotCustomContext => await ParrotCustomContext(context),
-                    _ => await EndInteractAsync(context, reaction, new ConsoleOutput("Error")),
+                    _ => await reaction.Write(context, new ConsoleOutput("Error")),
                 };
             });
         }
@@ -59,14 +60,14 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<FlowEndToken> ParrotAuto(IFlowContext context)
         {
-            valueOperation.Text = new ConsoleInputText("I'm Auto Text to Parrot!");
-            return await parrotAuto.InteractWithUserAsync(context);
+            operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot!");
+            return await parrotAuto.ExecuteAsync(context);
         }
 
         private async Task<FlowEndToken> ParrotAutoAndKill(IFlowContext context)
         {
-            valueOperation.Text = new ConsoleInputText("I'm Auto Text to Parrot! ...?");
-            var parrotTask = parrotAuto.InteractWithUserAsync(context);
+            operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot! ...?");
+            var parrotTask = parrotAuto.ExecuteAsync(context);
             var cancelTask = Task.Delay(10000, context.Cancellation.GetToken())
                 .ContinueWith(async e =>
                 {
@@ -79,20 +80,33 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<FlowEndToken> ParrotColorful(IFlowContext context)
         {
-            var backgroundColor = ConsoleColor.DarkGreen;
+            var mainBackColor = ConsoleColor.DarkCyan;
             var mainColor = ConsoleColor.Cyan;
-            var errorColor = ConsoleColor.Magenta;
+            var errorBackColor = ConsoleColor.DarkMagenta;
+            var errorColor = ConsoleColor.Red;
+            var cancelBackColor = ConsoleColor.DarkYellow;
             var cancelColor = ConsoleColor.Yellow;
+            var opBackColor = ConsoleColor.DarkBlue;
+            var opColor = ConsoleColor.Blue;
 
-            using var main = reaction.State.Customize(e => reaction.State = e);
-            using var cancel = reaction.CancelState.Customize(e => reaction.CancelState = e);
-            using var error = reaction.ErrorState.Customize(e => reaction.ErrorState = e);
+            var _cancellation = CancellationPort as IConsoleReaction;
+            var _exception = ExceptionPort as IConsoleReaction;
 
-            main.Set(foregroundColor: mainColor, backgroundColor: backgroundColor);
-            cancel.Set(foregroundColor: errorColor, backgroundColor: backgroundColor);
-            error.Set(foregroundColor: cancelColor, backgroundColor: backgroundColor);
+            using var main = reaction.GetStateScope();
+            reaction.State = reaction.State.Update(foregroundColor: mainColor, backgroundColor: mainBackColor);
 
-            return await parrot.InteractWithUserAsync(context);
+            using var cancel = _cancellation?.GetStateScope();
+            if (_cancellation != null)
+                _cancellation.State = _cancellation.State.Update(foregroundColor: cancelColor, backgroundColor: cancelBackColor);
+
+            using var error = _exception?.GetStateScope();
+            if (_exception != null)
+                _exception.State = _exception.State.Update(foregroundColor: errorColor, backgroundColor: errorBackColor);
+
+            using var op = operation.GetStateScope();
+            operation.State = operation.State.Update(foregroundColor: opColor, backgroundColor: opBackColor);
+
+            return await parrot.ExecuteAsync(context);
         }
 
         private async Task<FlowEndToken> ParrotCustomContext(IFlowContext context)
@@ -100,7 +114,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             var newContext = new FlowContextGroup(context)
                 .AddImmutable(new ParrotHello($"Hello! I'm Parrot with Custom Context, who are you?"), out _);
             context = newContext;
-            return await parrot.InteractWithUserAsync(context);
+            return await parrot.ExecuteAsync(context);
         }
     }
 }

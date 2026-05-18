@@ -1,53 +1,44 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Focuses;
-using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Focuses
 {
     internal class SelectAndRunSample(
-        ConsoleWrite write,
+        ConsoleWriting writing,
         ListSamples listSamples,
         SelectSample selectSample,
         RunSample runSample)
-        : Focus<IFlowContext>
+        : Focus<IFlowContext>(writing, listSamples, selectSample, runSample)
     {
-        public override IEnumerable<IInteraction> Interactions
-        {
-            get
-            {
-                yield return write;
-                yield return listSamples;
-                yield return selectSample;
-                yield return runSample;
-            }
-        }
-
-        public override async Task<FlowEndToken> FlowWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
             context = new FlowContextGroup(context)
-                .Add(new ConsoleOutput(), out var textContext)
                 .Add(SelectAndRunSampleEndState.None, out var endState);
 
-            await Write("# Select and Run Sample");
+            async Task<FlowEndToken> Write(string text)
+            {
+                var res = await writing.ExecuteAsync(context, (new ConsoleOutput(text), null));
+                await Task.Delay(100);
+                return res;
+            }
+
+            await Write("# Select and Run Sample (Press Ctrl + C to cancel the selection.)");
 
             // List
-            await listSamples.InteractWithUserAsync(context);
+            await listSamples.ExecuteAsync(context);
 
             // Select
-            var selectTask = selectSample.InteractWithUserAsync(context);
-            context.Cancellation.AddCancelableTask(selectTask);
-            var end = await selectTask;
+            var end = await selectSample.ExecuteAsync(context);
             context = end.LastContext;
 
-            if (await context.Cancellation.TryWaitAndReset())
+            if (end.HasCanceled)
             {
                 await Write("[Exit Sample Select]");
                 endState.Value = SelectAndRunSampleEndState.CancelSelect;
@@ -57,11 +48,9 @@ namespace InteractionFlow.Samples.Parrot.Focuses
             // Run
             if (context.TryGet<SampleSelected>(out var selected) && selected.id.mode != SampleMode.None)
             {
-                var runTask = runSample.InteractWithUserAsync(context);
-                context.Cancellation.AddCancelableTask(runTask);
-                end = await runTask;
+                end = await runSample.ExecuteAsync(context);
 
-                if (await context.Cancellation.TryWaitAndReset())
+                if (end.HasCanceled)
                 {
                     await Write("[Exit Sample]");
                     await Write("");
@@ -76,18 +65,9 @@ namespace InteractionFlow.Samples.Parrot.Focuses
                 }
             }
 
-
             endState.Value = SelectAndRunSampleEndState.None;
             Console.WriteLine("[None]");
             return end;
-
-            async Task<FlowEndToken> Write(string text)
-            {
-                textContext.Value = new ConsoleOutput(text);
-                var res = await write.InteractWithUserAsync(context);
-                await Task.Delay(100);
-                return res;
-            }
 
         }
     }

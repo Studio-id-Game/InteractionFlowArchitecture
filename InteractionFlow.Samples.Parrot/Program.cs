@@ -7,8 +7,6 @@ using InteractionFlow.Samples.Parrot.StoragePorts;
 using InteractionFlow.Samples.Parrot.Storages;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
-using InteractionFlow.Standard.SilentExternalPorts;
-using InteractionFlow.Standard.SilentExternals;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
@@ -19,21 +17,19 @@ namespace InteractionFlow.Samples.Parrot
         {
             var globalScopeBuilder = new ScopeBuilder();
 
-            // Console Reactions & Operations
-            globalScopeBuilder.Apply(ConsoleBuilder.Profile);
+            // Console Functions
+            globalScopeBuilder
+                .Apply(ConsoleBuilder.ProfileUseCancellation)
 
             // Storages
-            globalScopeBuilder.UseFunction<ILastSelectMemory, LastSelectMemory>();
-
-            // Silentlntegrations
-            globalScopeBuilder.UseFunction<ICancellationWithConsole, CancellationWithConsole>();
+                .UseFunction<ILastSelectMemory, LastSelectMemory>()
 
             // Interactions
-            globalScopeBuilder.UseInteraction<ConsoleWriting>();
-            globalScopeBuilder.UseInteraction<ListSamples>();
-            globalScopeBuilder.UseInteraction<SelectSample>();
-            globalScopeBuilder.UseInteraction<RunSample>();
-            globalScopeBuilder.UseInteraction<AssigneCancelKey>();
+                .UseInteraction<ConsoleWriting>()
+                .UseInteraction<ListSamples>()
+                .UseInteraction<SelectSample>()
+                .UseInteraction<RunSample>()
+                .UseInteraction<ConsoleSetup>();
 
             return globalScopeBuilder.BuildScope();
         }
@@ -48,18 +44,16 @@ namespace InteractionFlow.Samples.Parrot
                 var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
                 var context = new FlowContext(user);
 
-                FlowEndToken end;
-
+                using (var initializeApplication = globalScope.BuildFocus<InitializeApplication, IFlowContext>())
                 {
-                    using var initializeApplication = globalScope.BuildFocus<InitializeApplication, IFlowContext>();
-                    end = await initializeApplication.UseUserFlowAsync(context);
+                    await initializeApplication.ExecuteAsync(context);
                 }
 
                 using var selectAndRunSample = globalScope.BuildFocus<SelectAndRunSample, IFlowContext>();
 
                 while (true)
                 {
-                    end = await selectAndRunSample.UseUserFlowAsync(context);
+                    var end = await selectAndRunSample.ExecuteAsync(context);
                     var endState = end.LastContext.TryGet<SelectAndRunSampleEndState>(out var _endState) ?
                         _endState : SelectAndRunSampleEndState.None;
 

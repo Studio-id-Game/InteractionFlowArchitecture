@@ -1,6 +1,6 @@
 namespace InteractionFlow.Standard.Entities
 {
-    public interface IClonableState<TSelf>
+    public interface IFunctionState<TSelf>
     {
         public TSelf Copy();
     }

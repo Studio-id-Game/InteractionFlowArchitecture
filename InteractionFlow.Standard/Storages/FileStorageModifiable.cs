@@ -12,7 +12,7 @@ namespace InteractionFlow.Standard.Storages
         : ExternalStorageModifiable<TValue, TStorage>(cacheStorage)
         where TStorage : IStoragePortModifiable<TValue>
     {
-        protected override async Task<Result<TValue>> LoadFromPersistentCoreAsync(IFlowContext context)
+        protected sealed override async Task<Result<TValue>> LoadFromPersistentCoreAsync(IFlowContext context)
         {
             var file = GetFileInfo(context);
 
@@ -32,8 +32,11 @@ namespace InteractionFlow.Standard.Storages
             return ValidateNormalize(valueResult.Value!);
         }
 
-        protected override async Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue value)
+        protected sealed override async Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue? value)
         {
+            if (value == null)
+                return new InvalidOperationException($"Value is null.");
+
             var valueResult = ValidateNormalize(value);
             if (!valueResult)
                 return valueResult.AsResult;

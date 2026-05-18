@@ -12,5 +12,7 @@ namespace InteractionFlow.Standard.StoragePorts
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Storage;
 
         Task<Result> SaveToPersistentAsync(IFlowContext context, TValue value);
+
+        Task<Result> SaveToPersistentAsync(IFlowContext context);
     }
 }

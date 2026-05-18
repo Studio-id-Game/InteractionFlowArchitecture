@@ -30,7 +30,12 @@ namespace InteractionFlow.Standard.Storages
             return result;
         }
 
-        protected abstract Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue value);
+        public Task<Result> SaveToPersistentAsync(IFlowContext context)
+        {
+            return SaveToPersistentCoreAsync(context, CacheStorage[context]);
+        }
+
+        protected abstract Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue? value);
 
         public new bool TryGet(IFlowContext context, out TValue? value)
         {
@@ -51,5 +56,6 @@ namespace InteractionFlow.Standard.Storages
         {
             return CacheStorage.TrySet(context, value);
         }
+
     }
 }

@@ -14,8 +14,6 @@ namespace InteractionFlow.Analyzers
         public const string Builders = nameof(Builders);
         public const string Entities = nameof(Entities);
         public const string Focuses = nameof(Focuses);
-        public const string MultiFunctions = nameof(MultiFunctions);
-        public const string MultiFunctionPorts = nameof(MultiFunctionPorts);
         public const string Interactions = nameof(Interactions);
         public const string OperationPorts = nameof(OperationPorts);
         public const string Operations = nameof(Operations);
@@ -25,6 +23,7 @@ namespace InteractionFlow.Analyzers
         public const string SilentExternals = nameof(SilentExternals);
         public const string StoragePorts = nameof(StoragePorts);
         public const string Storages = nameof(Storages);
+        public const string UtilityFunctions = nameof(UtilityFunctions);
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
         private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
@@ -36,16 +35,15 @@ namespace InteractionFlow.Analyzers
             Entities,
             Focuses,
             Interactions,
-            MultiFunctionPorts,
-            MultiFunctions,
             OperationPorts,
             Operations,
             ReactionPorts,
             Reactions,
-            SilentExternals,
             SilentExternalPorts,
+            SilentExternals,
             StoragePorts,
             Storages,
+            UtilityFunctions
         };
 
         private static ImmutableHashSet<string> Disallows(string layerName)
@@ -60,8 +58,6 @@ namespace InteractionFlow.Analyzers
 
                     disallows.Remove(Focuses);
                     disallows.Remove(Interactions);
-                    disallows.Remove(MultiFunctions);
-                    disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(Operations);
                     disallows.Remove(OperationPorts);
                     disallows.Remove(Reactions);
@@ -77,15 +73,12 @@ namespace InteractionFlow.Analyzers
 
                 case Interactions:
 
-                    disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
                     disallows.Remove(SilentExternalPorts);
                     break;
 
-                case MultiFunctions:
-                case MultiFunctionPorts:
                 case SilentExternals:
                 case SilentExternalPorts:
                 case Operations:
@@ -95,11 +88,11 @@ namespace InteractionFlow.Analyzers
                 case Storages:
                 case StoragePorts:
 
-                    disallows.Remove(MultiFunctionPorts);
                     disallows.Remove(OperationPorts);
                     disallows.Remove(ReactionPorts);
                     disallows.Remove(StoragePorts);
                     disallows.Remove(SilentExternalPorts);
+                    disallows.Remove(UtilityFunctions);
                     break;
 
                 case Entities:
@@ -123,7 +116,7 @@ namespace InteractionFlow.Analyzers
                 case Operations:
                 case Reactions:
                 case Storages:
-
+                case UtilityFunctions:
                     return false;
             }
 

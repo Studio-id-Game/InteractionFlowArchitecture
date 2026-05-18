@@ -1,9 +1,10 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.StoragePorts;
+using InteractionFlow.Core.Storages;
+using InteractionFlow.Standard.StoragePorts;
 using System;
 
-namespace InteractionFlow.Core.Storages
+namespace InteractionFlow.Standard.Storages
 {
     public abstract class StorageModifiable<TValue>(params IFlowNode[] dependency) : Storage<TValue>(dependency), IStoragePortModifiable<TValue>
     {

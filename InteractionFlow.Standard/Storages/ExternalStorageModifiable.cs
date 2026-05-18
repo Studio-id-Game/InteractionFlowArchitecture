@@ -1,11 +1,11 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.StoragePorts;
+using InteractionFlow.Standard.StoragePorts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Core.Storages
+namespace InteractionFlow.Standard.Storages
 {
     public abstract class ExternalStorageModifiable<TValue, TStorage>(
         TStorage cacheStorage,
@@ -20,9 +20,9 @@ namespace InteractionFlow.Core.Storages
             set => CacheStorage[context] = value;
         }
 
-        public async Task<Result> SaveToPersistent(IFlowContext context, TValue value)
+        public async Task<Result> SaveToPersistentAsync(IFlowContext context, TValue value)
         {
-            var result = await SaveToPersistentCore(context, value);
+            var result = await SaveToPersistentCoreAsync(context, value);
 
             if (result)
                 CacheStorage[context] = value;
@@ -30,7 +30,7 @@ namespace InteractionFlow.Core.Storages
             return result;
         }
 
-        protected abstract Task<Result> SaveToPersistentCore(IFlowContext context, TValue value);
+        protected abstract Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue value);
 
         public new bool TryGet(IFlowContext context, out TValue? value)
         {

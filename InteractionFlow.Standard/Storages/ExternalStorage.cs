@@ -1,11 +1,11 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.StoragePorts;
+using InteractionFlow.Standard.StoragePorts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Core.Storages
+namespace InteractionFlow.Standard.Storages
 {
     public abstract class ExternalStorage<TValue, TStorage> : IExternalStoragePort<TValue>
         where TStorage : IStoragePortModifiable<TValue>
@@ -31,11 +31,11 @@ namespace InteractionFlow.Core.Storages
             CacheStorage.ForceResetMemoryState();
         }
 
-        protected abstract Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context);
+        protected abstract Task<Result<TValue>> LoadFromPersistentCoreAsync(IFlowContext context);
 
-        public async Task<Result<TValue>> LoadFromPersistent(IFlowContext context)
+        public async Task<Result<TValue>> LoadFromPersistentAsync(IFlowContext context)
         {
-            var result = await LoadFromPersistentCore(context);
+            var result = await LoadFromPersistentCoreAsync(context);
 
             if (result)
                 CacheStorage[context] = result.Value;
@@ -48,14 +48,14 @@ namespace InteractionFlow.Core.Storages
             return CacheStorage.TryGet(context, out value);
         }
 
-        public Task<Result<TValue>> TryGetOrLoad(IFlowContext context)
+        public Task<Result<TValue>> TryGetOrLoadAsync(IFlowContext context)
         {
             if (TryGet(context, out var value))
             {
                 return Task.FromResult(new Result<TValue>(value!));
             }
 
-            return LoadFromPersistent(context);
+            return LoadFromPersistentAsync(context);
         }
     }
 }

@@ -1,9 +1,10 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.SilentExternalPorts;
+using InteractionFlow.Core.SilentExternals;
+using InteractionFlow.Standard.SilentExternalPorts;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Core.SilentExternals
+namespace InteractionFlow.Standard.SilentExternals
 {
     public abstract class SilentRequest<TResult, TArg>(params IFlowNode[] dependency) : SilentExternal(dependency), ISilentRequestPort<TResult, TArg>
     {

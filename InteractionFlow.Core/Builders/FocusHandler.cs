@@ -10,10 +10,10 @@ namespace InteractionFlow.Core.Builders
         private ScopeHandler? scope = scope;
         private IFocus<TContext>? focus = focus;
 
-        public async Task<FlowEndToken> UseUserFlowAsync(TContext context)
+        public async Task<FlowEndToken> ExecuteAsync(TContext context)
         {
             var focus = this.focus ?? throw new InvalidOperationException();
-            return await focus.FlowWithUserAsync(context);
+            return await focus.ExecuteAsync(context);
         }
 
         public void Dispose()

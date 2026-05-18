@@ -10,30 +10,20 @@ namespace InteractionFlow.Core.Interactions
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         params IFlowNode[] dependency)
-        : Interaction<Exception>(exceptionPort, cancellationPort, dependency)
-    {
-
-    }
-
-    public abstract class Interaction<TException>(
-    IExceptionPort<TException> exceptionPort,
-    ICancellationPort cancellationPort,
-    params IFlowNode[] dependency)
-    : IInteraction
-    where TException : Exception
+        : IInteraction
     {
         public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[ExceptionPort, CancellationPort, .. dependency];
-        protected IExceptionPort<TException> ExceptionPort => exceptionPort;
+        protected IExceptionPort<Exception> ExceptionPort => exceptionPort;
         protected ICancellationPort CancellationPort => cancellationPort;
 
-        public abstract Task<FlowEndToken> InteractWithUserAsync(IFlowContext context);
+        public abstract Task<FlowEndToken> ExecuteAsync(IFlowContext context);
 
         protected async Task<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException e)
         {
-            return await CancellationPort.HandleCancellation(context, e);
+            return await CancellationPort.HandleCancellationAsync(context, e);
         }
 
-        protected async Task<FlowEndToken> HandleExceptionAsync(IFlowContext context, TException e)
+        protected async Task<FlowEndToken> HandleExceptionAsync(IFlowContext context, Exception e)
         {
             return await ExceptionPort.HandleExceptionAsync(context, e);
         }
@@ -63,11 +53,11 @@ namespace InteractionFlow.Core.Interactions
         /// <returns>
         /// Railway 変換後の <see cref="FlowEndToken"/> を返します。
         /// </returns>
-        protected async Task<FlowEndToken> TryCatchBlock(IFlowContext context, Func<IFlowContext, Task<FlowEndToken>> function, Func<ValueTask>? attachCancellation = null)
+        protected async Task<FlowEndToken> TryCatchBlockAsync(IFlowContext context, Func<IFlowContext, Task<FlowEndToken>> function, Func<ValueTask>? attachCancellation = null)
         {
             try
             {
-                if (context.TryGetCanceledException(out var e))
+                if (context.Cancellation.TryGetCanceledException(out var e))
                 {
                     throw e!;
                 }
@@ -108,7 +98,7 @@ namespace InteractionFlow.Core.Interactions
                 end.Exception = e;
                 return end;
             }
-            catch (TException e)
+            catch (Exception e)
             {
                 var end = await HandleExceptionAsync(context, e);
                 end.Exception = e;

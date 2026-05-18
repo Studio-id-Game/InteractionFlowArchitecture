@@ -14,6 +14,6 @@ namespace InteractionFlow.Core.Focuses
     {
         public ReadOnlySpan<IFlowNode> Dependency => dependency;
 
-        public abstract Task<FlowEndToken> FlowWithUserAsync(TContext context);
+        public abstract Task<FlowEndToken> ExecuteAsync(TContext context);
     }
 }

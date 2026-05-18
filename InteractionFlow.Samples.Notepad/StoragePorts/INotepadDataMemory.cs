@@ -1,5 +1,5 @@
-using InteractionFlow.Core.StoragePorts;
 using InteractionFlow.Samples.Notepad.Entities.Datas;
+using InteractionFlow.Standard.StoragePorts;
 
 namespace InteractionFlow.Samples.Notepad.StoragePorts
 {

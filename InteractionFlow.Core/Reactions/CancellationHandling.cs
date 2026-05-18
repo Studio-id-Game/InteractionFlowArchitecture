@@ -8,7 +8,7 @@ namespace InteractionFlow.Core.Reactions
 {
     public abstract class CancellationHandling(params IFlowNode[] dependency) : ExceptionHandling<OperationCanceledException>(dependency), ICancellationPort
     {
-        public ValueTask<FlowEndToken> HandleCancellation(IFlowContext context, OperationCanceledException exception)
+        public ValueTask<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException exception)
         {
             var _BeforeCancellationCoreAsync = BeforeCancellationCoreAsync(context, exception);
             if (!_BeforeCancellationCoreAsync.IsCompletedSuccessfully)
@@ -40,7 +40,7 @@ namespace InteractionFlow.Core.Reactions
 
         protected sealed override ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            return HandleCancellation(context, exception);
+            return HandleCancellationAsync(context, exception);
         }
 
         protected virtual ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)

@@ -10,6 +10,6 @@ namespace InteractionFlow.Core.Interactions
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.None;
 
-        Task<FlowEndToken> InteractWithUserAsync(IFlowContext context);
+        Task<FlowEndToken> ExecuteAsync(IFlowContext context);
     }
 }

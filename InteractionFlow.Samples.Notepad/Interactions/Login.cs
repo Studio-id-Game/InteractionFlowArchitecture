@@ -4,9 +4,11 @@ using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
 using InteractionFlow.Samples.Notepad.StoragePorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,27 +16,30 @@ namespace InteractionFlow.Samples.Notepad.Interactions
 {
 
     internal class Login(
-        IExceptionPort exceptionPort,
+        IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        IConsoleReaction consoleReaction,
+        IConsoleWriter consoleReaction,
         IConsoleOperation consoleOperation,
         INotepadUserDataFiles notepadUserDataFiles) :
-        Interaction(exceptionPort, cancellationPort)
+        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
     {
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            return await TryCatchBlock(context, async context =>
+            return await TryCatchBlockAsync(context, async context =>
             {
+                using var scope = consoleReaction.GetStateScope();
+                scope.State = scope.State.Update(writeLine: true);
+
                 string userID;
                 do
                 {
-                    await consoleReaction.ReactToUserAsync(context, new ConsoleOutput("# Login - Enter your id (if Empty, use public note) :"));
+                    await Write(context, "# Login - Enter your id (if Empty, use public note) :");
 
-                    userID = (await consoleOperation.UserOperateTextAsync(context)).text;
+                    userID = (await consoleOperation.WaitUserTextAsync(context)).text;
 
                     if (!new NotepadUserKey(userID).IsValid)
                     {
-                        await consoleReaction.ReactToUserAsync(context, new ConsoleOutput("- Invalid user id, Retry enter your id :"));
+                        await Write(context, "- Invalid user id, Retry enter your id :");
                         continue;
                     }
                     else if (string.IsNullOrEmpty(userID))
@@ -50,13 +55,18 @@ namespace InteractionFlow.Samples.Notepad.Interactions
 
                 } while (true);
 
-                var load = notepadUserDataFiles.LoadFromPersistent(context);
-                await consoleReaction.ReactToUserAsync(context, new ConsoleOutput("> Loading User dada..."));
+                var load = notepadUserDataFiles.LoadFromPersistentAsync(context);
+                await Write(context, "> Loading User dada...");
                 var result = await load;
 
                 var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
-                return await EndInteractAsync(context, consoleReaction, new ConsoleOutput($"> Logined - {viewName} ({result.Value!.Count()} Notes)"));
+                return await Write(context, $"> Logined - {viewName} ({result.Value!.Count()} Notes)");
             });
+        }
+
+        private async Task<FlowEndToken> Write(IFlowContext context, string text)
+        {
+            return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }
 }

@@ -15,49 +15,6 @@ namespace InteractionFlow.Samples.Notepad.Storages
     internal class NotepadUserDataDirectories(INotepadUserDataMemory memory, INotepadDataFiles notepadDataFiles)
         : DirectoryStorageModifiable<NotepadUserData, INotepadUserDataMemory>(memory), INotepadUserDataFiles
     {
-        protected override async Task<Result> SaveToPersistentCore(IFlowContext context, NotepadUserData value)
-        {
-            if (!context.TryGet(out NotepadUserKey notepadUserKey))
-            {
-                return new InvalidOperationException("NotepadUserId not found context");
-            }
-
-            var userId = notepadUserKey.Id;
-            var userDirectory = notepadUserKey.GetUserDirectory();
-
-            if (userDirectory == null)
-                return new InvalidOperationException("Can not get directory");
-
-            if (!userDirectory.Exists)
-            {
-                MakeDirectory(userDirectory);
-            }
-            else
-            {
-                var oldFiles = userDirectory.EnumerateFiles()
-                    .Select(x => (file: x, name: x.Name))
-                    .Where(x => x.name.EndsWith(NotepadRule.Extention))
-                    .Select(x => (x.file, name: Path.GetFileNameWithoutExtension(x.name)))
-                    .Where(x => value.All(y => y.NoteId != x.name));
-
-                foreach (var file in oldFiles)
-                {
-                    file.file.Delete();
-                }
-            }
-
-            var fileContext = new FlowContextGroup(context)
-                .Add(NotepadDataKey.Empty, out var notepadDataKey);
-
-            foreach (var key in value)
-            {
-                notepadDataKey.Value = key;
-                await notepadDataFiles.SaveToPersistent(fileContext);
-            }
-
-            return true;
-        }
-
         public bool Exist(NotepadDataKey dataKey)
         {
             if (!dataKey.IsValid) return false;
@@ -141,7 +98,7 @@ namespace InteractionFlow.Samples.Notepad.Storages
                 foreach (var key in value)
                 {
                     notepadDataKey.Value = key;
-                    await notepadDataFiles.SaveToPersistent(fileContext);
+                    await notepadDataFiles.SaveToPersistentAsync(fileContext);
                 }
 
                 return true;

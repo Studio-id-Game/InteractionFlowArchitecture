@@ -3,37 +3,42 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
 using InteractionFlow.Samples.Notepad.StoragePorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Interactions
 {
     internal class NoteCreate(
-        IExceptionPort exceptionPort,
+        IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        IConsoleReaction consoleReaction,
+        IConsoleWriter consoleReaction,
         IConsoleOperation consoleOperation,
         INotepadUserDataFiles notepadUserDataFiles) :
-        Interaction(exceptionPort, cancellationPort)
+        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
     {
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            await TryCatchBlock(context, async context =>
+            await TryCatchBlockAsync(context, async context =>
             {
+                using var scope = consoleReaction.GetStateScope();
+                scope.State = scope.State.Update(writeLine: true);
+
                 await Write(context, "# Note Create - Enter new note name:");
 
                 if (!context.TryGet(out NotepadUserKey userKey))
                 {
-                    return await EndInteractAsync(context, consoleReaction, new ConsoleOutput("> Not found NotepadUserKey in context."));
+                    return await Write(context, "> Not found NotepadUserKey in context.");
                 }
 
                 var dataKey = NotepadDataKey.Empty;
 
                 do
                 {
-                    var newName = (await consoleOperation.UserOperateTextAsync(context)).text;
+                    var newName = (await consoleOperation.WaitUserTextAsync(context)).text;
 
                     dataKey = new NotepadDataKey(userKey.Id, newName);
 
@@ -62,27 +67,27 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                 }
                 else
                 {
-                    return await EndInteractAsync(context, consoleReaction, new ConsoleOutput("> Can not Create Note."));
+                    return await Write(context, "> Can not Create Note.");
                 }
 
-                var saveResult = await notepadUserDataFiles.SaveToPersistent(context);
+                var saveResult = await notepadUserDataFiles.SaveToPersistentAsync(context);
 
                 if (saveResult)
                 {
-                    return await EndInteractAsync(context, consoleReaction, new ConsoleOutput($"> Note created as '{dataKey.UserKey.Name}/{dataKey.NoteId}'"));
+                    return await Write(context, $"> Note created as '{dataKey.UserKey.Name}/{dataKey.NoteId}'");
                 }
                 else
                 {
-                    return await EndInteractAsync(context, consoleReaction, new ConsoleOutput("> Can not Save Note."));
+                    return await Write(context, "> Can not Save Note.");
                 }
             });
 
-            return await EndInteractAsync(context, consoleReaction, new ConsoleOutput($"> End of Create"));
+            return await Write(context, $"> End of Create");
         }
 
         private async Task<FlowEndToken> Write(IFlowContext context, string text)
         {
-            return await EndInteractAsync(context, consoleReaction, new ConsoleOutput(text));
+            return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }
 }

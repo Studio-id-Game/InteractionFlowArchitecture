@@ -2,26 +2,29 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Interactions.Rules;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.SilentExternalPorts;
 using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Interactions
 {
     internal class SelectUserAction(
-        IExceptionPort exceptionPort,
+        IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        IConsoleReaction consoleReaction,
+        IConsoleWriter consoleReaction,
+        IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
         NoteCreate noteCreate,
         NoteDelete noteDelete,
         NoteEdit noteEdit,
         Login login) :
-        Interaction(exceptionPort, cancellationPort)
+        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, noteCreate, noteDelete, noteEdit, login)
     {
-        private readonly ConsoleSelectItem<IInteraction> userActions = new(consoleReaction, consoleOperation, new()
+        private readonly ConsoleSelectItem<IInteraction> userActions = new(consoleReaction, consoleCursorPositionAccess, consoleOperation, new()
         {
             ["1. Edit Exist Note"] = noteEdit,
             ["2. Create New Note"] = noteCreate,
@@ -35,23 +38,26 @@ namespace InteractionFlow.Samples.Notepad.Interactions
             Console.CursorTop = 0;
         }
 
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            return await TryCatchBlock(context, async context =>
+            return await TryCatchBlockAsync(context, async context =>
             {
+                using var scope = consoleReaction.GetStateScope();
+                scope.State = scope.State.Update(writeLine: true);
+
                 await Write(context, "# Select your action :");
 
                 var (select, action) = await userActions.GetSelectAsync(context);
 
                 await Write(context, $"> UserAction - {select}");
 
-                return await action.InteractWithUserAsync(context);
+                return await action.ExecuteAsync(context);
             });
         }
 
         private async Task Write(IFlowContext context, string text)
         {
-            await consoleReaction.ReactToUserAsync(context, new ConsoleOutput(text));
+            await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }
 }

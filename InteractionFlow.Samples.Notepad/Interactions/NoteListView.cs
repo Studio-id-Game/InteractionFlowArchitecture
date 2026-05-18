@@ -3,31 +3,36 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
 using InteractionFlow.Samples.Notepad.StoragePorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Interactions
 {
     internal class NoteListView(
-        IExceptionPort exceptionPort,
+        IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        IConsoleReaction consoleReaction,
+        IConsoleWriter consoleReaction,
         INotepadUserDataFiles notepadUserDataFiles,
         INotepadDataFiles notepadDataFiles) :
-        Interaction(exceptionPort, cancellationPort)
+        Interaction(exceptionPort, cancellationPort, consoleReaction, notepadUserDataFiles, notepadDataFiles)
     {
-        public override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            return await TryCatchBlock(context, async context =>
+            return await TryCatchBlockAsync(context, async context =>
             {
-                await WriteLine(context, "# Note List View :");
+                using var scope = consoleReaction.GetStateScope();
+                scope.State = scope.State.Update(writeLine: true);
 
-                var userDataLoadResult = await notepadUserDataFiles.LoadFromPersistent(context);
+                await Write(context, "# Note List View :");
+
+                var userDataLoadResult = await notepadUserDataFiles.LoadFromPersistentAsync(context);
 
                 if (!userDataLoadResult)
                 {
-                    return await EndInteractAsync(context, consoleReaction, new ConsoleOutput("> Can not load NotepadUserData."));
+                    return await Write(context, "> Can not load NotepadUserData.");
                 }
 
                 var userData = userDataLoadResult.Value!;
@@ -38,24 +43,22 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                 foreach (var noteDataKey in userData)
                 {
                     noteDataKeyContext.Value = noteDataKey;
-                    var noteDataLoadResult = await notepadDataFiles.LoadFromPersistent(noteContext);
+                    var noteDataLoadResult = await notepadDataFiles.LoadFromPersistentAsync(noteContext);
                     if (noteDataLoadResult)
                     {
                         var fileName = noteDataKey.NoteId;
                         var title = noteDataLoadResult.Value!.Title;
-                        await WriteLine(context, $"  - '{fileName}' (title:{title})");
+                        await Write(context, $"  - '{fileName}' (title:{title})");
                     }
                 }
 
-                return await EndInteractAsync(context, consoleReaction, new ConsoleOutput("> End of List."));
+                return await Write(context, "> End of List.");
             });
         }
 
-        private async Task WriteLine(IFlowContext context, string text)
+        private async Task<FlowEndToken> Write(IFlowContext context, string text)
         {
-            using var scope = consoleReaction.State.Customize(e => consoleReaction.State = e);
-            scope.Set(writeLine: true);
-            await consoleReaction.ReactToUserAsync(context, new ConsoleOutput(text));
+            return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }
 }

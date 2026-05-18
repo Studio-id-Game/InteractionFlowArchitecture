@@ -1,7 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
 using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.SilentExternalPorts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +12,8 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Interactions.Rules
 {
     internal readonly struct ConsoleSelectItem<T>(
-        IConsoleReaction consoleReaction,
+        IConsoleWriter consoleReaction,
+        IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
         Dictionary<string, T> items
         )
@@ -21,6 +24,9 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
         {
             int index = 0;
             var keys = Items.Keys.Order().ToArray();
+
+            using var co = consoleOperation.GetStateScope();
+            co.State = co.State.Update(writeLine: false);
 
             do
             {
@@ -42,7 +48,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
 
                 await Write(context, keyList.Trim('\n'));
 
-                var input = await consoleOperation.UserOperateKeyInfoAsync(context);
+                var input = await consoleOperation.WaitUserKeyAsync(context);
 
                 var inputKey = input.key.Key;
 
@@ -65,44 +71,49 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
                         index++;
                     }
                 }
-                else if (TryGetIndex(input, out var newIndex))
+                else if (TryGetIndex(input, index, out var newIndex))
                 {
                     index = newIndex;
                 }
 
-                await MoveToHead(context, keys);
+                await MoveToHead(keys);
 
-                bool TryGetIndex(ConsoleInputKeyInfo key, out int index)
+                bool TryGetIndex(ConsoleInputKeyInfo key, int currentIndex, out int newIndex)
                 {
                     var c = key.key.KeyChar;
 
-                    foreach (var item in keys.Index())
+                    var sort = keys
+                        .Index()
+                        .Select(e => (e.Index, HitIndex: e.Item.IndexOf(c, StringComparison.OrdinalIgnoreCase)))
+                        .OrderBy(e => e.HitIndex)
+                        .ToArray();
+
+
+                    foreach (var item in sort)
                     {
-                        if (item.Item[0] == c)
-                        {
-                            index = item.Index;
-                            return true;
-                        }
+                        if (item.HitIndex < 0)
+                            continue;
+
+                        newIndex = item.Index;
+                        return true;
                     }
 
-                    index = -1;
+                    newIndex = 0;
                     return false;
                 }
             }
             while (true);
         }
 
-        private async Task MoveToHead(IFlowContext context, string[] keys)
+        private async Task MoveToHead(string[] keys)
         {
-            await consoleReaction.ReactToUserAsync(context, new ConsolePositionAccess((lefttop) =>
-            {
-                return (0, lefttop.Item2 - keys.Length);
-            }));
+            var top = consoleCursorPositionAccess.Position.Top.GetValueOrDefault();
+            consoleCursorPositionAccess.Position = new(0, top - keys.Length);
         }
 
         private async Task Write(IFlowContext context, string text)
         {
-            await consoleReaction.ReactToUserAsync(context, new ConsoleOutput(text));
+            await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }
 }

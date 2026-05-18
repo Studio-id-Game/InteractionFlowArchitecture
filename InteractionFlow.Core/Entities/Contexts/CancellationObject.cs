@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
@@ -54,6 +55,21 @@ namespace InteractionFlow.Core.Entities.Contexts
         {
             tokenSource ??= new();
             return tokenSource.Token;
+        }
+
+        public bool TryGetCanceledException(out OperationCanceledException? canceledException)
+        {
+            if (IsCancellationRequested)
+            {
+                var token = GetToken();
+                canceledException = new OperationCanceledException(token);
+                return true;
+            }
+            else
+            {
+                canceledException = null;
+                return false;
+            }
         }
     }
 }

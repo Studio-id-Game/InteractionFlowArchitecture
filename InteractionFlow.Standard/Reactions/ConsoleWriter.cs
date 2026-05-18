@@ -1,7 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Reactions;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.UtilityFunctions;
 using System;
 using System.Threading.Tasks;
 
@@ -16,24 +18,18 @@ namespace InteractionFlow.Standard.Reactions
             State = ConsoleState.Default;
         }
 
-        public void OnStateApply()
-        {
-            Console.ForegroundColor = State.foregroundColor;
-            Console.BackgroundColor = State.backgroundColor;
-        }
-
         public ValueTask<FlowEndToken> Write(IFlowContext context, ConsoleOutput consoleOutput)
         {
-            using (this.GetStateScope(true))
+            using var cc = new ConsoleColorScope().GetStateScope();
+            cc.State = State.colorSet;
+
+            if (State.writeLine)
             {
-                if (State.writeLine)
-                {
-                    Console.WriteLine(consoleOutput.text);
-                }
-                else
-                {
-                    Console.Write(consoleOutput.text);
-                }
+                Console.WriteLine(consoleOutput.text);
+            }
+            else
+            {
+                Console.Write(consoleOutput.text);
             }
 
             return new(CreateFlowEndToken(context));

@@ -1,12 +1,10 @@
 using InteractionFlow.Core.ReactionPorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 
 namespace InteractionFlow.Standard.ReactionPorts
 {
-    public interface IConsoleReaction : IReactionPort
+    public interface IConsoleReaction : IReactionPort, IHasFunctionState<ConsoleState>
     {
-        public ConsoleState State { get; set; }
-
-        public void OnStateApply();
     }
 }

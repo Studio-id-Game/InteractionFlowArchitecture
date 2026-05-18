@@ -1,7 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Reactions;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.UtilityFunctions;
 using System;
 using System.Threading.Tasks;
 
@@ -14,29 +16,25 @@ namespace InteractionFlow.Standard.Reactions
         public override void ForceResetMemoryState()
         {
             ThrowException = false;
-            var state = ConsoleState.Default;
-            State = state.Update(foregroundColor: ConsoleColor.Yellow);
-        }
-
-        public void OnStateApply()
-        {
-            Console.ForegroundColor = State.foregroundColor;
-            Console.BackgroundColor = State.backgroundColor;
+            State = ConsoleState.Default.Update(foregroundColor: ConsoleColor.Yellow);
         }
 
         protected override ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            using (this.GetStateScope(true))
+            using (var cc = new ConsoleColorScope().GetStateScope())
             {
+                cc.State = State.colorSet;
                 if (State.writeLine)
                 {
                     Console.WriteLine();
-                    Console.WriteLine($"* Cancel... : {exception.Message}");
                 }
-                else
-                {
-                    Console.Write($"* Cancel... : {exception.Message} ");
-                }
+
+                Console.Write($"* Cancel... : {exception.Message} ");
+            }
+
+            if (State.writeLine)
+            {
+                Console.WriteLine();
             }
 
             return default;
@@ -44,17 +42,20 @@ namespace InteractionFlow.Standard.Reactions
 
         protected override ValueTask<FlowEndToken> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            using (this.GetStateScope(true))
+            using (var cc = new ConsoleColorScope().GetStateScope())
             {
+                cc.State = State.colorSet;
                 if (State.writeLine)
                 {
-                    Console.WriteLine($"> Cancel Completed.");
                     Console.WriteLine();
                 }
-                else
-                {
-                    Console.Write($"> Cancel Completed.");
-                }
+
+                Console.Write($"> Cancel Completed.");
+            }
+
+            if (State.writeLine)
+            {
+                Console.WriteLine();
             }
 
             return new(CreateFlowEndToken(context));

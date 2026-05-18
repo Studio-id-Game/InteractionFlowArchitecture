@@ -3,6 +3,7 @@ using InteractionFlow.Core.Operations;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.OperationPorts;
+using InteractionFlow.Standard.UtilityFunctions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,53 +115,30 @@ namespace InteractionFlow.Standard.Operations
 
         private T Read<T>(Func<T> read)
         {
-            T result;
-            using (GetStateScope())
-            {
-                Console.BackgroundColor = State.backgroundColor;
-                Console.ForegroundColor = State.foregroundColor;
+            using var cc = new ConsoleColorScope().GetStateScope();
+            cc.State = State.colorSet;
 
-                if (State.writeLine)
-                {
-                    result = read();
-                    Console.WriteLine();
-                }
-                else
-                {
-                    result = read();
-                }
+            var readResult = read();
+            if (State.writeLine)
+            {
+                Console.WriteLine();
             }
 
-            Console.BackgroundColor = State.backgroundColor;
-            Console.ForegroundColor = State.foregroundColor;
-
-            return result;
+            return readResult;
         }
 
         private void Write(string text)
         {
-            using (GetStateScope())
+            using var cc = new ConsoleColorScope().GetStateScope();
+            cc.State = State.colorSet;
+            if (State.writeLine)
             {
-                Console.BackgroundColor = State.backgroundColor;
-                Console.ForegroundColor = State.foregroundColor;
-
-                if (State.writeLine)
-                {
-                    Console.WriteLine(text);
-                }
-                else
-                {
-                    Console.Write(text);
-                }
+                Console.WriteLine(text);
             }
-
-            Console.BackgroundColor = State.backgroundColor;
-            Console.ForegroundColor = State.foregroundColor;
-        }
-
-        public StateScope<ConsoleOperation, ConsoleState> GetStateScope()
-        {
-            return State.GetScope(this, (e, value) => e.State = value);
+            else
+            {
+                Console.Write(text);
+            }
         }
 
         public class Dummy : Operation, IConsoleOperation.IDummy

@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.ReactionPorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
 using System;
@@ -12,18 +12,24 @@ namespace InteractionFlow.Standard.Interactions
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleWriter consoleWrite)
-        : Interaction(exception, cancellation, consoleWrite)
+        : InteractionOptionalArg<(ConsoleOutput?, ConsoleState?)>(exception, cancellation, consoleWrite)
     {
-        private ConsoleOutput DefaultReactionValue => new("Default ConsoleWrite Text.");
+        protected override (ConsoleOutput?, ConsoleState?) DefaultOption => (DefaultOutput, DefaultState);
+        protected virtual ConsoleOutput DefaultOutput => new("Default ConsoleWrite Text.");
+        protected virtual ConsoleState DefaultState => ConsoleState.Default;
 
-        public sealed override async Task<FlowEndToken> InteractWithUserAsync(IFlowContext context)
+        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
-            return await TryCatchBlock(context, InteractWithUserAsyncCore);
+            return await TryCatchBlock(context, option, InteractWithUserAsyncCore);
         }
 
-        protected virtual async Task<FlowEndToken> InteractWithUserAsyncCore(IFlowContext context)
+        protected virtual async Task<FlowEndToken> InteractWithUserAsyncCore(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
-            var output = context.TryGet<ConsoleOutput>(out var _output) ? _output : DefaultReactionValue;
+            var output = option.Item1 ?? (context.TryGet<ConsoleOutput>(out var _output) ? _output : DefaultOutput);
+            var state = option.Item2 ?? (context.TryGet<ConsoleState>(out var _state) ? _state : DefaultState);
+
+            using var scope = consoleWrite.GetStateScope();
+            consoleWrite.State = state;
             return await consoleWrite.Write(context, output);
         }
     }

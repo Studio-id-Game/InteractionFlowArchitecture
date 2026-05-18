@@ -1,11 +1,12 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.OperationPorts;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.OperationPorts
 {
-    public interface IConsoleOperation : IOperationPort
+    public interface IConsoleOperation : IOperationPort, IHasFunctionState<ConsoleState>
     {
         public interface IDummy : IConsoleOperation
         {
@@ -15,8 +16,6 @@ namespace InteractionFlow.Standard.OperationPorts
 
             int InputDelayTime { get; set; }
         }
-
-        ConsoleState State { get; set; }
 
         public int CancelWaitTime { get; set; }
 

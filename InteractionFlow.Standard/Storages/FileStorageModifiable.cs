@@ -1,7 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.StoragePorts;
-using InteractionFlow.Core.Storages;
+using InteractionFlow.Standard.StoragePorts;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +12,7 @@ namespace InteractionFlow.Standard.Storages
         : ExternalStorageModifiable<TValue, TStorage>(cacheStorage)
         where TStorage : IStoragePortModifiable<TValue>
     {
-        protected override async Task<Result<TValue>> LoadFromPersistentCore(IFlowContext context)
+        protected override async Task<Result<TValue>> LoadFromPersistentCoreAsync(IFlowContext context)
         {
             var file = GetFileInfo(context);
 
@@ -33,7 +32,7 @@ namespace InteractionFlow.Standard.Storages
             return ValidateNormalize(valueResult.Value!);
         }
 
-        protected override async Task<Result> SaveToPersistentCore(IFlowContext context, TValue value)
+        protected override async Task<Result> SaveToPersistentCoreAsync(IFlowContext context, TValue value)
         {
             var valueResult = ValidateNormalize(value);
             if (!valueResult)

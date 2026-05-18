@@ -1,7 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Reactions;
+using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.UtilityFunctions;
 using System;
 using System.Threading.Tasks;
 
@@ -14,32 +16,30 @@ namespace InteractionFlow.Standard.Reactions
         public override void ForceResetMemoryState()
         {
             ThrowException = false;
-            var state = ConsoleState.Default;
-            State = state.Update(foregroundColor: ConsoleColor.Red);
-        }
-
-        public void OnStateApply()
-        {
-            Console.ForegroundColor = State.foregroundColor;
-            Console.BackgroundColor = State.backgroundColor;
+            State = ConsoleState.Default.Update(foregroundColor: ConsoleColor.Red);
         }
 
         protected override ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
         {
-            using (this.GetStateScope(true))
+            using (var cc = new ConsoleColorScope().GetStateScope())
             {
+                cc.State = State.colorSet;
                 if (State.writeLine)
                 {
                     Console.WriteLine();
                     Console.WriteLine($"* Exception: {exception.GetType().FullName}:");
                     Console.WriteLine($"\t{exception.Message},");
-                    Console.WriteLine($"\t{exception.Source};");
-                    Console.WriteLine();
+                    Console.Write($"\t{exception.Source};");
                 }
                 else
                 {
                     Console.Write($"* Exception: {exception.GetType().FullName}: {exception.Message}, {exception.Source}; ");
                 }
+            }
+
+            if (State.writeLine)
+            {
+                Console.WriteLine();
             }
 
             return new(CreateFlowEndToken(context));

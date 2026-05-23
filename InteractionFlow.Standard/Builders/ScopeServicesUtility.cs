@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Architectures;
-using InteractionFlow.Core.Focuses;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ProgramFlows;
 using System.Runtime.CompilerServices;
 
 namespace InteractionFlow.Standard.Builders

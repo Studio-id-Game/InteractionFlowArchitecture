@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 

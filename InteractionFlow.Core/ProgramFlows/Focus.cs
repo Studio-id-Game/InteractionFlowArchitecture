@@ -3,7 +3,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Core.Focuses
+namespace InteractionFlow.Core.ProgramFlows
 {
     public abstract class Focus(params IFlowNode[] dependency) : Focus<IFlowContext>(dependency)
     {

@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 
 namespace InteractionFlow.Standard.Builders
 {

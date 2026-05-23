@@ -3,7 +3,6 @@ using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.FunctionUtilities;
 using System;
 using System.Threading.Tasks;
 

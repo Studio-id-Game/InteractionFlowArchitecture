@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 using System;
 using System.Threading.Tasks;
 

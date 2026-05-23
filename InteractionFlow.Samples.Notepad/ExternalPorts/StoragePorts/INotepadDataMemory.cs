@@ -5,5 +5,6 @@ namespace InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts
 {
     internal interface INotepadDataMemory : IStoragePortModifiable<NotepadData>
     {
+        public void Clear();
     }
 }

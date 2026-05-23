@@ -90,5 +90,10 @@ namespace InteractionFlow.Samples.Notepad.Externals.Storages
                 return new InvalidOperationException("Invalid NotepadData");
             }
         }
+
+        public void Clear()
+        {
+            CacheStorage.Clear();
+        }
     }
 }

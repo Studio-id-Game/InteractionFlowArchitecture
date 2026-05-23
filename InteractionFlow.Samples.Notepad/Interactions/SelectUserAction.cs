@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Interactions.Rules;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -18,11 +19,12 @@ namespace InteractionFlow.Samples.Notepad.Interactions
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
+        INotepadDataFiles notepadDataFiles,
         NoteCreate noteCreate,
         NoteDelete noteDelete,
         NoteEdit noteEdit,
         Login login) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, noteCreate, noteDelete, noteEdit, login)
+        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadDataFiles, noteCreate, noteDelete, noteEdit, login)
     {
         private readonly ConsoleSelectItem<IInteraction> userActions = new(consoleReaction, consoleCursorPositionAccess, consoleOperation, new()
         {
@@ -42,16 +44,23 @@ namespace InteractionFlow.Samples.Notepad.Interactions
         {
             return await TryCatchBlockAsync(context, async context =>
             {
-                using var scope = consoleReaction.GetStateScope();
-                scope.State.Update(writeLine: true);
+                try
+                {
+                    using var scope = consoleReaction.GetStateScope();
+                    scope.State.Update(writeLine: true);
 
-                await Write(context, "# Select your action :");
+                    await Write(context, "# Select your action :");
 
-                var (select, action) = await userActions.GetSelectAsync(context);
+                    var (select, action) = await userActions.GetSelectAsync(context);
 
-                await Write(context, $"> UserAction - {select}");
+                    await Write(context, $"> UserAction - {select}");
 
-                return await action.ExecuteAsync(context);
+                    return await action.ExecuteAsync(context);
+                }
+                finally
+                {
+                    notepadDataFiles.Clear();
+                }
             });
         }
 

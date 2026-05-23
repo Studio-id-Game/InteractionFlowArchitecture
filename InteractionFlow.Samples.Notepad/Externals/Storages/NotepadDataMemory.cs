@@ -7,6 +7,9 @@ namespace InteractionFlow.Samples.Notepad.Externals.Storages
 {
     internal class NotepadDataMemory : KeyedMemoryModifiable<NotepadDataKey, NotepadData>, INotepadDataMemory
     {
-
+        public void Clear()
+        {
+            Dictionary.Clear();
+        }
     }
 }

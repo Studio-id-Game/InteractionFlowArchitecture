@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 using InteractionFlow.Samples.Notepad.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -7,14 +7,14 @@ using InteractionFlow.Standard.Interactions;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Focuses
+namespace InteractionFlow.Samples.Notepad.ProgramFlows
 {
     internal class MainLoop(
         Login login,
         NoteListView noteListView,
         SelectUserAction selectUserAction,
         ConsoleWriting consoleWrite)
-        : Focus<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
+        : ProgramFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
     {
 
         public override async Task<FlowEndToken> ExecuteAsync(NotepadContext context)

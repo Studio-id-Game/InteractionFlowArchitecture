@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.Interactions;
@@ -8,14 +8,14 @@ using InteractionFlow.Standard.Interactions;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Parrot.Focuses
+namespace InteractionFlow.Samples.Parrot.ProgramFlows
 {
     internal class SelectAndRunSample(
         ConsoleWriting writing,
         ListSamples listSamples,
         SelectSample selectSample,
         RunSample runSample)
-        : Focus<IFlowContext>(writing, listSamples, selectSample, runSample)
+        : ProgramFlow<IFlowContext>(writing, listSamples, selectSample, runSample)
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {

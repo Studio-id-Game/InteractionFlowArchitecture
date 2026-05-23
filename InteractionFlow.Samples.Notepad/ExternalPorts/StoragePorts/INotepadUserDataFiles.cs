@@ -1,7 +1,7 @@
 using InteractionFlow.Samples.Notepad.Entities.Datas;
-using InteractionFlow.Standard.StoragePorts;
+using InteractionFlow.Standard.ExternalPorts.StoragePorts;
 
-namespace InteractionFlow.Samples.Notepad.StoragePorts
+namespace InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts
 {
     internal interface INotepadUserDataFiles : INotepadUserDataMemory, IExternalStoragePortModifiable<NotepadUserData>
     {

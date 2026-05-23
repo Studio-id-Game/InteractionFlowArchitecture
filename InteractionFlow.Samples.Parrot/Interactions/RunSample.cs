@@ -1,13 +1,13 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
-using InteractionFlow.Samples.Parrot.StoragePorts;
+using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 
@@ -89,22 +89,19 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             var opBackColor = ConsoleColor.DarkBlue;
             var opColor = ConsoleColor.Blue;
 
-            var _cancellation = CancellationPort as IConsoleReaction;
-            var _exception = ExceptionPort as IConsoleReaction;
-
             using var main = reaction.GetStateScope();
-            reaction.State = reaction.State.Update(foregroundColor: mainColor, backgroundColor: mainBackColor);
+            reaction.State.Update(foregroundColor: mainColor, backgroundColor: mainBackColor);
 
+            var _cancellation = CancellationPort as IConsoleReaction;
             using var cancel = _cancellation?.GetStateScope();
-            if (_cancellation != null)
-                _cancellation.State = _cancellation.State.Update(foregroundColor: cancelColor, backgroundColor: cancelBackColor);
+            _cancellation?.State.Update(foregroundColor: cancelColor, backgroundColor: cancelBackColor);
 
+            var _exception = ExceptionPort as IConsoleReaction;
             using var error = _exception?.GetStateScope();
-            if (_exception != null)
-                _exception.State = _exception.State.Update(foregroundColor: errorColor, backgroundColor: errorBackColor);
+            _exception?.State.Update(foregroundColor: errorColor, backgroundColor: errorBackColor);
 
             using var op = operation.GetStateScope();
-            operation.State = operation.State.Update(foregroundColor: opColor, backgroundColor: opBackColor);
+            operation.State.Update(foregroundColor: opColor, backgroundColor: opBackColor);
 
             return await parrot.ExecuteAsync(context);
         }

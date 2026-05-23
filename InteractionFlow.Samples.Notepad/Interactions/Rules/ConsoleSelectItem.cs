@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
-using InteractionFlow.Standard.SilentExternalPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentPorts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,8 +25,11 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
             int index = 0;
             var keys = Items.Keys.Order().ToArray();
 
-            using var co = consoleOperation.GetStateScope();
-            co.State = co.State.Update(writeLine: false);
+            using var reactionScope = consoleReaction.GetStateScope();
+            reactionScope.State.Update(writeLine: true);
+
+            using var operationScope = consoleOperation.GetStateScope();
+            operationScope.State.Update(writeLine: false);
 
             do
             {

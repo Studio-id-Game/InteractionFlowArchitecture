@@ -1,10 +1,11 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
-using InteractionFlow.Standard.SilentExternalPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentPorts;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,7 +15,8 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
     internal readonly struct ConsoleSelectNotepadData(
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
-        IConsoleOperation consoleOperation)
+        IConsoleOperation consoleOperation,
+        INotepadDataFiles notepadDataFiles)
     {
         public async Task<KeyValuePair<string, NotepadDataKey>> GetSelectAsync(IFlowContext context, NotepadUserData userData)
         {
@@ -28,9 +30,16 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
                 ["0. Cancel"] = NotepadDataKey.Empty
             };
 
+            var loadContext = new FlowContextGroup(context)
+                .Add(NotepadDataKey.Empty, out var dataKey);
+
             foreach (var (index, item) in userData.OrderBy(e => e.NoteId).Index())
             {
-                fileDict[$"{index + 1}. {item.UserKey.Name}/{item.NoteId}"] = item;
+                dataKey.Value = item;
+                var titleResult = await notepadDataFiles.LoadFromPersistentAsync(loadContext);
+                var title = titleResult ? titleResult.Value!.Title : "Title Error";
+
+                fileDict[$"{index + 1}. {title} ({item.UserKey.Name}/{item.NoteId})"] = item;
             }
 
             var detaKeySelect = new ConsoleSelectItem<NotepadDataKey>(consoleReaction, consoleCursorPositionAccess, consoleOperation, fileDict);

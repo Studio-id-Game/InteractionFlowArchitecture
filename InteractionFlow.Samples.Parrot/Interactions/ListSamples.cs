@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

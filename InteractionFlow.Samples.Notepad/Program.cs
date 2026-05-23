@@ -1,8 +1,8 @@
 using InteractionFlow.Samples.Notepad.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Focuses;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Externals.Storages;
 using InteractionFlow.Samples.Notepad.Interactions;
-using InteractionFlow.Samples.Notepad.StoragePorts;
-using InteractionFlow.Samples.Notepad.Storages;
+using InteractionFlow.Samples.Notepad.ProgramFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
 using System;
@@ -31,7 +31,7 @@ namespace InteractionFlow.Samples.Notepad
 
             var scope = scopeBuilder.BuildScope();
 
-            var mainLoop = scope.BuildFocus<MainLoop, NotepadContext>();
+            var mainLoop = scope.BuildFlow<MainLoop, NotepadContext>();
 
             var context = new NotepadContext(NotepadUserObject.Public);
 

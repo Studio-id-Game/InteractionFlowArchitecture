@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
-using InteractionFlow.Samples.Notepad.StoragePorts;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 
@@ -25,7 +25,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions
             await TryCatchBlockAsync(context, async context =>
             {
                 using var scope = consoleReaction.GetStateScope();
-                scope.State = scope.State.Update(writeLine: true);
+                scope.State.Update(writeLine: true);
 
                 await Write(context, "# Note Create - Enter new note name:");
 

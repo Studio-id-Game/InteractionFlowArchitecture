@@ -1,14 +1,14 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Interactions.Rules;
-using InteractionFlow.Samples.Notepad.StoragePorts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
-using InteractionFlow.Standard.SilentExternalPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentPorts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +31,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions
             await TryCatchBlockAsync(context, async context =>
             {
 
-                await WriteLine(context, "# Note Edit - Enter exist note name:");
+                await WriteLine(context, "# Note Edit - Select exist note name:");
 
                 if (!context.TryGet(out NotepadUserKey userKey))
                 {
@@ -47,7 +47,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions
 
                 var userData = userDataResult.Value!;
 
-                var detaKeySelect = new ConsoleSelectNotepadData(consoleReaction, consoleCursorPositionAccess, consoleOperation);
+                var detaKeySelect = new ConsoleSelectNotepadData(consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadDataFiles);
 
                 var (select, dataKey) = await detaKeySelect.GetSelectAsync(context, userData);
 
@@ -75,10 +75,6 @@ namespace InteractionFlow.Samples.Notepad.Interactions
 
                 await WriteLine(context, Separater);
 
-                using var co = consoleOperation.GetStateScope();
-                co.State = co.State.Update(writeLine: false);
-                var oldCancelWaitTime = consoleOperation.CancelWaitTime;
-                consoleOperation.CancelWaitTime = 0;
 
                 int currentLine = 0;
                 int currentLeft = 0;
@@ -86,6 +82,9 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                 while (true)
                 {
                     await ReWriteAsync();
+
+                    using var scope = consoleOperation.GetStateScope();
+                    scope.State.Update(writeLine: false, cancelWaitTime: 0);
 
                     var key = await consoleOperation.WaitUserKeyAsync(context, true);
 
@@ -145,8 +144,6 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                     }
                 }
 
-                consoleOperation.CancelWaitTime = oldCancelWaitTime;
-
                 MoveToEndLine();
 
                 notepad.Title = textLines[0];
@@ -174,7 +171,13 @@ namespace InteractionFlow.Samples.Notepad.Interactions
                     MoveRightTo(0);
 
                     string[] lines = [.. textLines.Select(e => e + LineClear), Separater, LineClear];
-                    await Write(context, string.Join(Environment.NewLine, lines));
+
+                    using (var titleScope = consoleReaction.GetStateScope())
+                    {
+                        titleScope.State.Update(foregroundColor: ConsoleColor.Green);
+                        await WriteLine(context, lines[0]);
+                    }
+                    await Write(context, string.Join(Environment.NewLine, lines[1..]));
                     currentLine = textLines.Count + 1; // 後置の Separater と LineClear のLine増加分も考慮
                     currentLeft = textLines.Last().Length;
 
@@ -301,14 +304,14 @@ namespace InteractionFlow.Samples.Notepad.Interactions
         private async Task<FlowEndToken> WriteLine(IFlowContext context, string text)
         {
             using var scope = consoleReaction.GetStateScope();
-            scope.State = scope.State.Update(writeLine: true);
+            scope.State.Update(writeLine: true);
             return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
 
         private async Task<FlowEndToken> Write(IFlowContext context, string text)
         {
             using var scope = consoleReaction.GetStateScope();
-            scope.State = scope.State.Update(writeLine: false);
+            scope.State.Update(writeLine: false);
             return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
     }

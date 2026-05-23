@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ReactionPorts;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 
@@ -116,7 +116,8 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         private async Task<FlowEndToken> NameHeader(IFlowContext context, string name)
         {
             using var reactionState = reaction.GetStateScope();
-            reaction.State = reaction.State.Update(writeLine: false);
+            reaction.State.Update(writeLine: false);
+
             return await reaction.Write(context, new ConsoleOutput($"{name} : "));
 
         }
@@ -124,8 +125,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         private async Task<FlowEndToken> SlowTalk(IFlowContext context, string outputText)
         {
             using var reactionState = reaction.GetStateScope();
-
-            reaction.State = reaction.State.Update(writeLine: false);
+            reaction.State.Update(writeLine: false);
 
             foreach (var item in outputText)
             {
@@ -134,7 +134,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
             }
 
-            reaction.State = reaction.State.Update(writeLine: true);
+            reaction.State.Update(writeLine: true);
 
             return await reaction.Write(context, new ConsoleOutput(""));
         }

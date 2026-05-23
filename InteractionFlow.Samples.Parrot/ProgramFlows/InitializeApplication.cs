@@ -1,16 +1,16 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Focuses;
+using InteractionFlow.Core.ProgramFlows;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Standard.Interactions;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Parrot.Focuses
+namespace InteractionFlow.Samples.Parrot.ProgramFlows
 {
 
     internal class InitializeApplication(
         ConsoleWriting writing,
         ConsoleSetup assigneCancelKey)
-        : Focus<IFlowContext>(writing, assigneCancelKey)
+        : ProgramFlow<IFlowContext>(writing, assigneCancelKey)
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {

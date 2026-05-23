@@ -3,14 +3,14 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Entities.Rules;
-using InteractionFlow.Samples.Notepad.StoragePorts;
-using InteractionFlow.Standard.Storages;
+using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Standard.Externals.Storages;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Storages
+namespace InteractionFlow.Samples.Notepad.Externals.Storages
 {
     internal class NotepadUserDataDirectories(INotepadUserDataMemory memory, INotepadDataFiles notepadDataFiles)
         : DirectoryStorageModifiable<NotepadUserData, INotepadUserDataMemory>(memory), INotepadUserDataFiles

@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.ProgramFlows
 {
-    public abstract class Focus(params IFlowNode[] dependency) : Focus<IFlowContext>(dependency)
+    public abstract class ProgramFlow(params IFlowNode[] dependency) : ProgramFlow<IFlowContext>(dependency)
     {
     }
 
-    public abstract class Focus<TContext>(params IFlowNode[] dependency) : IFocus<TContext>
+    public abstract class ProgramFlow<TContext>(params IFlowNode[] dependency) : IProgramFlow<TContext>
         where TContext : IFlowContext
     {
         public ReadOnlySpan<IFlowNode> Dependency => dependency;

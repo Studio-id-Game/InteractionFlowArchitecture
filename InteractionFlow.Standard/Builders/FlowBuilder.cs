@@ -6,7 +6,7 @@ using System;
 
 namespace InteractionFlow.Standard.Builders
 {
-    public class FocusBuilder<TContext> : ScopeServices, IFocusBuilder<TContext>
+    public class FlowBuilder<TContext> : ScopeServices, IFlowBuilder<TContext>
         where TContext : IFlowContext
     {
         private ScopeHandler BuildScope(params ScopeHandler[] parents)
@@ -25,24 +25,24 @@ namespace InteractionFlow.Standard.Builders
             }
         }
 
-        public FocusHandler<TContext> BuildFocus<TFocus>(params ScopeHandler[] parents)
-            where TFocus : IFocus<TContext>
+        public FlowHandler<TContext> BuildFlow<TFocus>(params ScopeHandler[] parents)
+            where TFocus : IProgramFlow<TContext>
         {
             var scope = BuildScope(parents);
             var focus = ActivatorUtilities.CreateInstance<TFocus>(scope)
                 ?? throw new InvalidOperationException();
 
-            return new FocusHandler<TContext>(scope, focus);
+            return new FlowHandler<TContext>(scope, focus);
         }
 
-        public FocusHandler<TContext> BuildFocus<TFocus>(object[] parameters, params ScopeHandler[] parents)
-            where TFocus : IFocus<TContext>
+        public FlowHandler<TContext> BuildFlow<TFocus>(object[] parameters, params ScopeHandler[] parents)
+            where TFocus : IProgramFlow<TContext>
         {
             var scope = BuildScope(parents);
             var focus = ActivatorUtilities.CreateInstance<TFocus>(scope, parameters)
                 ?? throw new InvalidOperationException();
 
-            return new FocusHandler<TContext>(scope, focus);
+            return new FlowHandler<TContext>(scope, focus);
         }
     }
 }

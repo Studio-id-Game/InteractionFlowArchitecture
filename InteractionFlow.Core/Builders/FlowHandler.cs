@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Builders
 {
-    public sealed class FocusHandler<TContext>(ScopeHandler scope, IFocus<TContext> focus) : IDisposable where TContext : IFlowContext
+    public sealed class FlowHandler<TContext>(ScopeHandler scope, IProgramFlow<TContext> focus) : IDisposable where TContext : IFlowContext
     {
         private ScopeHandler? scope = scope;
-        private IFocus<TContext>? focus = focus;
+        private IProgramFlow<TContext>? focus = focus;
 
         public async Task<FlowEndToken> ExecuteAsync(TContext context)
         {

@@ -18,7 +18,7 @@ namespace InteractionFlow.Standard.Builders
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IScopeServices UseFocus<TImplementation>(this IScopeServices @this)
-            where TImplementation : class, IFocus
+            where TImplementation : class, IProgramFlow
         {
 
             return @this.Use<TImplementation>();

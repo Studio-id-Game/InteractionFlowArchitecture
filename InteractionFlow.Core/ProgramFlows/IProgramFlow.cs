@@ -4,14 +4,14 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.ProgramFlows
 {
-    public interface IFocus : IFlowNode
+    public interface IProgramFlow : IFlowNode
     {
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.Focus;
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.None;
     }
 
-    public interface IFocus<in TContext> : IFocus
+    public interface IProgramFlow<in TContext> : IProgramFlow
         where TContext : IFlowContext
     {
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.Focus;

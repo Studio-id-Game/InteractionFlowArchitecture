@@ -1,11 +1,14 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.Entities.Rules;
 using InteractionFlow.Standard.Entities.Storages;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Datas
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
 {
-    internal class NotepadData(NotepadDataKey noteKey) : IKeyedMemoryValue<NotepadDataKey>
+    public class NotepadData(NotepadDataKey noteKey) : IKeyedMemoryValue<NotepadDataKey>
     {
+        public static string Extention => NotepadRule.Extention;
+
         private string title = "New Note";
         private string text = string.Empty;
         private bool hasChenged = false;

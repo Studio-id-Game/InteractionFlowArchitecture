@@ -1,9 +1,8 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Entities.Datas;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
-using InteractionFlow.Samples.Notepad.Entities.Rules;
-using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Externals.Storages;
 using System;
 using System.IO;
@@ -50,7 +49,7 @@ namespace InteractionFlow.Samples.Notepad.Externals.Storages
 
                     foreach (var file in directory.EnumerateFiles())
                     {
-                        if (!file.Name.EndsWith(NotepadRule.Extention))
+                        if (!file.Name.EndsWith(NotepadData.Extention))
                             continue;
 
                         var noteId = Path.GetFileNameWithoutExtension(file.Name);
@@ -82,7 +81,7 @@ namespace InteractionFlow.Samples.Notepad.Externals.Storages
                 {
                     foreach (var file in directory.EnumerateFiles())
                     {
-                        if (!file.Name.EndsWith(NotepadRule.Extention))
+                        if (!file.Name.EndsWith(NotepadData.Extention))
                             continue;
 
                         if (value.Any(y => y.NoteId == file.Name))

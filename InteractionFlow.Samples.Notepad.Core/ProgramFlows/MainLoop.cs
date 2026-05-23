@@ -1,15 +1,15 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ProgramFlows;
-using InteractionFlow.Samples.Notepad.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Interactions;
+using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
+using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.ProgramFlows
+namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
 {
-    internal class MainLoop(
+    public class MainLoop(
         Login login,
         NoteListView noteListView,
         SelectUserAction selectUserAction,

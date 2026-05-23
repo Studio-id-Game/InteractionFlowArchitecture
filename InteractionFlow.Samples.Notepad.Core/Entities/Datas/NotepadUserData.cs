@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Standard.Entities.Storages;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Datas
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
 {
-    internal class NotepadUserData : IKeyedMemoryValue<NotepadUserKey>, IEnumerable<NotepadDataKey>
+    public class NotepadUserData : IKeyedMemoryValue<NotepadUserKey>, IEnumerable<NotepadDataKey>
     {
         public NotepadUserKey UserId { get; private set; } = NotepadUserKey.Public;
 

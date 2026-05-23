@@ -1,14 +1,17 @@
-using InteractionFlow.Samples.Notepad.Entities.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities.Rules;
 using System;
 using System.IO;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Keys
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Keys
 {
-    internal readonly record struct NotepadDataKey(string UserId, string NoteId)
+    public readonly record struct NotepadDataKey(string UserId, string NoteId)
     {
         public static NotepadDataKey CreateNew(NotepadUserKey userKey) => new(userKey.Id, Guid.NewGuid().ToString());
 
         public static NotepadDataKey Empty { get; } = new(new(string.Empty), string.Empty);
+
+        public string UserId { get; } = UserId;
+        public string NoteId { get; } = NoteId;
 
         public readonly bool IsEmpty => this == Empty;
 

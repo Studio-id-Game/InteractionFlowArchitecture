@@ -1,10 +1,10 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using System;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Contexts
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
 {
-    internal class NotepadContext(NotepadUserObject userObject) : FlowContext(userObject)
+    public class NotepadContext(NotepadUserObject userObject) : FlowContext(userObject)
     {
         public NotepadContext() : this(NotepadUserObject.Public)
         {

@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Entities.Datas;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
-using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Interactions.Rules
+namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
 {
     internal readonly struct ConsoleSelectNotepadData(
         IConsoleWriter consoleReaction,
@@ -33,7 +33,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
             var loadContext = new FlowContextGroup(context)
                 .Add(NotepadDataKey.Empty, out var dataKey);
 
-            foreach (var (index, item) in userData.OrderBy(e => e.NoteId).Index())
+            foreach (var (index, item) in userData.OrderBy(e => e.NoteId).Select((item, index) => (index, item)))
             {
                 dataKey.Value = item;
                 var titleResult = await notepadDataFiles.LoadFromPersistentAsync(loadContext);

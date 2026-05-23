@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Interactions.Rules
+namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
 {
     internal readonly struct ConsoleSelectItem<T>(
         IConsoleWriter consoleReaction,
@@ -23,7 +23,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
         public async Task<KeyValuePair<string, T>> GetSelectAsync(IFlowContext context)
         {
             int index = 0;
-            var keys = Items.Keys.Order().ToArray();
+            var keys = Items.Keys.OrderBy(e => e, StringComparer.Ordinal).ToArray();
 
             using var reactionScope = consoleReaction.GetStateScope();
             reactionScope.State.Update(writeLine: true);
@@ -86,7 +86,7 @@ namespace InteractionFlow.Samples.Notepad.Interactions.Rules
                     var c = key.key.KeyChar;
 
                     var sort = keys
-                        .Index()
+                        .Select((Item, Index) => (Item, Index))
                         .Select(e => (e.Index, HitIndex: e.Item.IndexOf(c, StringComparison.OrdinalIgnoreCase)))
                         .OrderBy(e => e.HitIndex)
                         .ToArray();

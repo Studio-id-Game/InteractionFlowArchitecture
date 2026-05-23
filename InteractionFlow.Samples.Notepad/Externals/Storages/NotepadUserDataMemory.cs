@@ -1,6 +1,6 @@
-using InteractionFlow.Samples.Notepad.Entities.Datas;
-using InteractionFlow.Samples.Notepad.Entities.Keys;
-using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
+using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Externals.Storages;
 using System.Linq;
 

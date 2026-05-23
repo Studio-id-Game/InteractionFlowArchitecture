@@ -1,8 +1,8 @@
-using InteractionFlow.Samples.Notepad.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.Interactions;
+using InteractionFlow.Samples.Notepad.Core.ProgramFlows;
 using InteractionFlow.Samples.Notepad.Externals.Storages;
-using InteractionFlow.Samples.Notepad.Interactions;
-using InteractionFlow.Samples.Notepad.ProgramFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
 using System;

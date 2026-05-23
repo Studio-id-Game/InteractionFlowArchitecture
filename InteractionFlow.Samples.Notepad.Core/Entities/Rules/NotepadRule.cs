@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Rules
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Rules
 {
 
     internal static class NotepadRule

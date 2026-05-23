@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\InteractionFlow.Core\InteractionFlow.Core.csproj" />
+		<ProjectReference Include="..\InteractionFlow.Samples.Notepad.Core\InteractionFlow.Samples.Notepad.Core.csproj" />
 		<ProjectReference Include="..\InteractionFlow.Standard\InteractionFlow.Standard.csproj" />
 		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>

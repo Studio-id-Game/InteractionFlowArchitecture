@@ -1,12 +1,14 @@
-using InteractionFlow.Samples.Notepad.Entities.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities.Rules;
 using System;
 using System.IO;
 
-namespace InteractionFlow.Samples.Notepad.Entities.Keys
+namespace InteractionFlow.Samples.Notepad.Core.Entities.Keys
 {
-    internal readonly record struct NotepadUserKey(string Id)
+    public readonly record struct NotepadUserKey(string Id)
     {
         public static NotepadUserKey Public => new("");
+
+        public string Id { get; } = Id;
 
         public bool IsPublic => string.IsNullOrWhiteSpace(Id);
 

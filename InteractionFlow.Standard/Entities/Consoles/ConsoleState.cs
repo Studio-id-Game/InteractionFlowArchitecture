@@ -2,48 +2,48 @@ using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public struct ConsoleState(ConsoleColorSet colorSet, bool writeLine) : IFunctionState<ConsoleState>
+    public class ConsoleState(ConsoleColor backgroundColor, ConsoleColor foregroundColor, bool writeLine) : IFunctionState<ConsoleState>
     {
-        public static ConsoleState Default { get; } = new ConsoleState()
+        public ConsoleState(ConsoleColorSet colorSet, bool writeLine) : this(colorSet.Background, colorSet.Foreground, writeLine)
         {
-            colorSet = ConsoleColorSet.Default,
-            writeLine = true,
-        };
 
-        public static ConsoleState DefaultNoLine { get; } = new ConsoleState()
-        {
-            colorSet = ConsoleColorSet.Default,
-            writeLine = false,
-        };
+        }
 
-        public ConsoleColorSet colorSet = colorSet;
+        public static ConsoleState Default => new(ConsoleColorSet.Default, true);
+
+        public static ConsoleState DefaultNoLine => new(ConsoleColorSet.Default, false);
+
+        public ConsoleColor backgroundColor = backgroundColor;
+
+        public ConsoleColor foregroundColor = foregroundColor;
 
         public bool writeLine = writeLine;
 
-        public readonly ConsoleColor BackgroundColor => colorSet.Background;
-
-        public readonly ConsoleColor ForegroundColor => colorSet.Foreground;
-
-        public ConsoleState Update(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
+        public ConsoleColorSet ColorSet
         {
-            if (foregroundColor != null && backgroundColor != null)
-                colorSet = new(foregroundColor.Value, backgroundColor.Value);
+            get => new(foregroundColor, backgroundColor);
+            set
+            {
+                foregroundColor = value.Foreground;
+                backgroundColor = value.Background;
+            }
+        }
 
-            else if (foregroundColor != null)
-                colorSet = new(foregroundColor.Value, BackgroundColor);
+        public void Update(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
+        {
+            if (backgroundColor != null)
+                this.backgroundColor = backgroundColor.Value;
 
-            else if (backgroundColor != null)
-                colorSet = new(ForegroundColor, backgroundColor.Value);
+            if (foregroundColor != null)
+                this.foregroundColor = foregroundColor.Value;
 
             if (writeLine != null)
                 this.writeLine = writeLine.Value;
-
-            return this;
         }
 
-        public readonly ConsoleState Copy()
+        public ConsoleState Copy()
         {
-            return this;
+            return new(backgroundColor, foregroundColor, writeLine);
         }
     }
 }

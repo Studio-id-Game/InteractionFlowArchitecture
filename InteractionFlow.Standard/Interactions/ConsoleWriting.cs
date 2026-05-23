@@ -1,8 +1,8 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.ReactionPorts;
+using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 
@@ -25,11 +25,11 @@ namespace InteractionFlow.Standard.Interactions
 
         protected virtual async Task<FlowEndToken> InteractWithUserAsyncCore(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
-            var output = option.Item1 ?? (context.TryGet<ConsoleOutput>(out var _output) ? _output : DefaultOutput);
-            var state = option.Item2 ?? (context.TryGet<ConsoleState>(out var _state) ? _state : DefaultState);
+            var output = option.Item1 ?? (context.TryGet<ConsoleOutput>(out var _output) ? _output! : DefaultOutput);
+            var state = option.Item2 ?? (context.TryGet<ConsoleState>(out var _state) ? _state! : DefaultState);
 
             using var scope = consoleWrite.GetStateScope();
-            consoleWrite.State = state;
+            scope.State = state;
             return await consoleWrite.Write(context, output);
         }
     }

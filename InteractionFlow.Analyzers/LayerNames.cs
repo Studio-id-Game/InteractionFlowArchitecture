@@ -57,14 +57,14 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(ExternalPorts);
                     break;
 
-                case ProgramFlows:
-
-                    disallows.Remove(Interactions);
-                    break;
-
                 case Interactions:
 
                     disallows.Remove(ExternalPorts);
+                    break;
+
+                case ProgramFlows:
+
+                    disallows.Remove(Interactions);
                     break;
 
                 default:

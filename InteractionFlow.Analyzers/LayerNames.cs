@@ -8,22 +8,14 @@ namespace InteractionFlow.Analyzers
 {
     internal static class LayerNames
     {
-
         private static readonly StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
 
         public const string Builders = nameof(Builders);
         public const string Entities = nameof(Entities);
-        public const string Focuses = nameof(Focuses);
+        public const string ExternalPorts = nameof(ExternalPorts);
+        public const string Externals = nameof(Externals);
         public const string Interactions = nameof(Interactions);
-        public const string OperationPorts = nameof(OperationPorts);
-        public const string Operations = nameof(Operations);
-        public const string ReactionPorts = nameof(ReactionPorts);
-        public const string Reactions = nameof(Reactions);
-        public const string SilentExternalPorts = nameof(SilentExternalPorts);
-        public const string SilentExternals = nameof(SilentExternals);
-        public const string StoragePorts = nameof(StoragePorts);
-        public const string Storages = nameof(Storages);
-        public const string UtilityFunctions = nameof(UtilityFunctions);
+        public const string ProgramFlows = nameof(ProgramFlows);
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
         private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
@@ -33,17 +25,10 @@ namespace InteractionFlow.Analyzers
         {
             Builders,
             Entities,
-            Focuses,
+            ExternalPorts,
+            Externals,
             Interactions,
-            OperationPorts,
-            Operations,
-            ReactionPorts,
-            Reactions,
-            SilentExternalPorts,
-            SilentExternals,
-            StoragePorts,
-            Storages,
-            UtilityFunctions
+            ProgramFlows,
         };
 
         private static ImmutableHashSet<string> Disallows(string layerName)
@@ -56,46 +41,32 @@ namespace InteractionFlow.Analyzers
             {
                 case Builders:
 
-                    disallows.Remove(Focuses);
+                    disallows.Remove(ExternalPorts);
+                    disallows.Remove(Externals);
                     disallows.Remove(Interactions);
-                    disallows.Remove(Operations);
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(Reactions);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(Storages);
-                    disallows.Remove(StoragePorts);
+                    disallows.Remove(ProgramFlows);
                     break;
 
-                case Focuses:
+                case Entities:
+                case ExternalPorts:
+
+                    break;
+
+                case Externals:
+
+                    disallows.Remove(ExternalPorts);
+                    break;
+
+                case ProgramFlows:
 
                     disallows.Remove(Interactions);
                     break;
 
                 case Interactions:
 
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentExternalPorts);
+                    disallows.Remove(ExternalPorts);
                     break;
 
-                case SilentExternals:
-                case SilentExternalPorts:
-                case Operations:
-                case OperationPorts:
-                case Reactions:
-                case ReactionPorts:
-                case Storages:
-                case StoragePorts:
-
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentExternalPorts);
-                    disallows.Remove(UtilityFunctions);
-                    break;
-
-                case Entities:
                 default:
                     break;
             }
@@ -113,10 +84,7 @@ namespace InteractionFlow.Analyzers
             switch (sourceLayer)
             {
                 case Builders:
-                case Operations:
-                case Reactions:
-                case Storages:
-                case UtilityFunctions:
+                case Externals:
                     return false;
             }
 

@@ -44,8 +44,17 @@
 - `InteractionFlow.Analyzers`  
   アーキテクチャの依存関係ルールを検証し、設計違反を検出する Roslyn アナライザー
 
-- `InteractionFlow.Sample.Parrot`  
+- `InteractionFlow.Samples.Parrot`  
   コンソールベースのオウム返しアプリケーションによる、基本構成のサンプル実装
+
+- `InteractionFlow.Samples.Notepad.Core`  
+  Notepad サンプルの中核となるプロジェクトです。Entity / Port / Interaction / ProgramFlow をまとめ、ノート一覧・作成・編集・削除などの処理を提供します。
+
+- `InteractionFlow.Samples.Notepad`  
+  Notepad サンプルの実行用プロジェクトです。`Core` のフローをコンソールアプリとして組み立て、標準的なストレージ実装を注入して起動します。
+
+- `InteractionFlow.Samples.Notepad.Secure`  
+  Notepad サンプルの拡張版です。`Core` の構成に加えて、パスワードベースの暗号化や安全なユーザーデータ管理を扱う実装を追加します。
 
 ---
 
@@ -70,7 +79,7 @@
 ## Focus Layer
 
 **namespace**  
-`ProjectName.Focuses.{FocusName}`
+`{ProjectName}.ProgramFlows.{ProgramFlowName}`
 
 **役割**  
 ユーザーの目的を達成するためのフロー単位です。  
@@ -82,7 +91,7 @@
 ## Interaction Layer
 
 **namespace**  
-`ProjectName.Interactions.{InteractionName}`
+`{ProjectName}.Interactions.{InteractionName}`
 
 **役割**  
 システム内部の目的を達成するためのフロー単位です。  
@@ -100,18 +109,18 @@
 ### Interaction Rules
 
 **namespace**  
-`ProjectName.Interactions.Rules.{InteractionRuleName}`
+`{ProjectName}.Interactions.Rules.{InteractionRuleName}`
 
 **役割**  
 複数の Interaction 間で共有されるべきルールを定義します。
 
 **制約**
-- `ProjectName.Interactions` 内からのみ参照可能
+- `{ProjectName}.Interactions` 内からのみ参照可能
 
 ## Function Port Layer
 
 **namespace**  
-`ProjectName.{Operation|Storage|Reaction|SilentIntegration}Ports.{PortName}`
+`{ProjectName}.ExternalPorts.{OperationPorts|ReactionPorts|SilentExternalPorts|StoragePorts}.{PortName}`
 
 **役割**  
 依存関係を逆転させるための抽象インターフェース群です。
@@ -123,7 +132,7 @@
 ## Function External Layer
 
 **namespace**  
-`ProjectName.{Operations|Storages|Reactions|SilentIntegrations}.{ExternalFunctionName}`
+`{ProjectName}.Externals.{Operations|Reactions|SilentExternals|Storages}.{ExternalFunctionName}`
 
 **役割**  
 実際の処理を行う、外部依存の実装です。
@@ -149,7 +158,7 @@
 ## Domain Block
 
 **namespace**  
-`ProjectName.Entities.{EntityName}`
+`{ProjectName}.Entities.{EntityName}`
 
 **役割**  
 システムの前提となるデータ構造（エンティティ）を定義します。
@@ -157,18 +166,18 @@
 ### Entity Rules
 
 **namespace**  
-`ProjectName.Entities.Rules.{EntityRuleName}`
+`{ProjectName}.Entities.Rules.{EntityRuleName}`
 
 **役割**  
 エンティティに対する制約やルールを定義します。
 
 **制約**
-- `ProjectName.Entities` 内からのみ参照可能
+- `{ProjectName}.Entities` 内からのみ参照可能
 
 ## Focus Builder Block
 
 **namespace**  
-`ProjectName.Builders`
+`{ProjectName}.Builders`
 
 **役割**  
 DI コンテナのラッパーとして、Focus の構築を担います。

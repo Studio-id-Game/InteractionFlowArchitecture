@@ -79,7 +79,7 @@
 ## Focus Layer
 
 **namespace**  
-`{ProjectName}.ProgramFlows.{ProgramFlowName}`
+`{ProjectName}.ProgramFlows`
 
 **役割**  
 ユーザーの目的を達成するためのフロー単位です。  
@@ -91,7 +91,7 @@
 ## Interaction Layer
 
 **namespace**  
-`{ProjectName}.Interactions.{InteractionName}`
+`{ProjectName}.Interactions`
 
 **役割**  
 システム内部の目的を達成するためのフロー単位です。  
@@ -109,7 +109,7 @@
 ### Interaction Rules
 
 **namespace**  
-`{ProjectName}.Interactions.Rules.{InteractionRuleName}`
+`{ProjectName}.Interactions.Rules`
 
 **役割**  
 複数の Interaction 間で共有されるべきルールを定義します。
@@ -120,7 +120,7 @@
 ## Function Port Layer
 
 **namespace**  
-`{ProjectName}.ExternalPorts.{OperationPorts|ReactionPorts|SilentExternalPorts|StoragePorts}.{PortName}`
+`{ProjectName}.ExternalPorts.{OperationPorts|ReactionPorts|SilentExternalPorts|StoragePorts}`
 
 **役割**  
 依存関係を逆転させるための抽象インターフェース群です。
@@ -132,7 +132,7 @@
 ## Function External Layer
 
 **namespace**  
-`{ProjectName}.Externals.{Operations|Reactions|SilentExternals|Storages}.{ExternalFunctionName}`
+`{ProjectName}.Externals.{Operations|Reactions|SilentExternals|Storages}`
 
 **役割**  
 実際の処理を行う、外部依存の実装です。
@@ -158,7 +158,7 @@
 ## Domain Block
 
 **namespace**  
-`{ProjectName}.Entities.{EntityName}`
+`{ProjectName}.Entities`
 
 **役割**  
 システムの前提となるデータ構造（エンティティ）を定義します。
@@ -166,7 +166,7 @@
 ### Entity Rules
 
 **namespace**  
-`{ProjectName}.Entities.Rules.{EntityRuleName}`
+`{ProjectName}.Entities.Rules`
 
 **役割**  
 エンティティに対する制約やルールを定義します。

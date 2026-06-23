@@ -19,13 +19,30 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,
         IConsoleOperation consoleOperation,
-        INotepadUserDataFiles notepadUserDataFiles) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
+        INotepadUserDataFiles notepadUserDataFiles,
+        INotepadDataFiles notepadDataFiles) :
+        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles, notepadDataFiles)
     {
+        public async Task<FlowEndToken> ExecuteRetryLoopAsync(IFlowContext context)
+        {
+            while (true)
+            {
+                var end = await ExecuteAsync(context);
+                await Write(context, "");
+
+                if (end.HasCanceled || !end.HasException)
+                {
+                    return end;
+                }
+            }
+        }
+
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
             return await TryCatchBlockAsync(context, async context =>
             {
+                await OnBeforeLoginAsync();
+
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
 
@@ -48,19 +65,37 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     }
                     else
                     {
-                        context = new NotepadContext(new(new(userID)));
+                        var userKey = new NotepadUserKey(userID);
+                        var userObject = new NotepadUserObject(userKey);
+                        context = new NotepadContext(userObject);
                         break;
                     }
 
                 } while (true);
 
+                await OnBeforeLoadingUserDataAsync(context);
+
                 var load = notepadUserDataFiles.LoadFromPersistentAsync(context);
-                await Write(context, "> Loading User dada...");
+                await Write(context, "> Loading User data...");
                 var result = await load;
 
                 var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
                 return await Write(context, $"> Logined - {viewName} ({result.Value!.Count()} Notes)");
             });
+        }
+
+        protected virtual ValueTask OnBeforeLoginAsync()
+        {
+            // セキュリティのためのメモリリセット
+            notepadUserDataFiles.ForceResetMemoryState();
+            notepadDataFiles.ForceResetMemoryState();
+
+            return default;
+        }
+
+        protected virtual ValueTask OnBeforeLoadingUserDataAsync(IFlowContext context)
+        {
+            return default;
         }
 
         private async Task<FlowEndToken> Write(IFlowContext context, string text)

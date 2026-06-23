@@ -55,7 +55,14 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
                     await Write(context, $"> UserAction - {select}");
 
-                    return await action.ExecuteAsync(context);
+                    if (action is Login login)
+                    {
+                        return await login.ExecuteRetryLoopAsync(context);
+                    }
+                    else
+                    {
+                        return await action.ExecuteAsync(context);
+                    }
                 }
                 finally
                 {

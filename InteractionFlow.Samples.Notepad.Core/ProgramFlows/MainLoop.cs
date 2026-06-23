@@ -19,8 +19,13 @@ namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
 
         public override async Task<FlowEndToken> ExecuteAsync(NotepadContext context)
         {
-            var end = await login.ExecuteAsync(context);
-            await Write("");
+            FlowEndToken end;
+            end = await login.ExecuteRetryLoopAsync(context);
+
+            if (end.HasCanceled)
+            {
+                return end;
+            }
 
             do
             {

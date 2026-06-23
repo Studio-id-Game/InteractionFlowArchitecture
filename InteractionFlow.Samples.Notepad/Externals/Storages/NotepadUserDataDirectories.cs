@@ -63,9 +63,9 @@ namespace InteractionFlow.Samples.Notepad.Externals.Storages
                     return new InvalidOperationException("Invalid DirectoryInfo");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                return e;
             }
         }
 

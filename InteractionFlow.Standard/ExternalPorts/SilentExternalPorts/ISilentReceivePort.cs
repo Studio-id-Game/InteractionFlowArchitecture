@@ -3,14 +3,14 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.SilentExternalPorts;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.SilentPorts
+namespace InteractionFlow.Standard.ExternalPorts.SilentExternalPorts
 {
-    public interface ISilentSendPort<in TArg> : ISilentExternalPort
+    public interface ISilentReceivePort<TResult> : ISilentExternalPort
     {
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.SilentExternal;
 
-        public ValueTask ExecuteAsync(IFlowContext context, TArg arguments);
+        public ValueTask<TResult> ExecuteAsync(IFlowContext context);
     }
 }

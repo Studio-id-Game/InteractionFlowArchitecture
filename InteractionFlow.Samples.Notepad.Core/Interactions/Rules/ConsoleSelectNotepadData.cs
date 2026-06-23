@@ -5,7 +5,7 @@ using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ExternalPorts.SilentPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

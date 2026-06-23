@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Standard.ExternalPorts.SilentPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.Externals.Silents
+namespace InteractionFlow.Standard.Externals.SilentExternals
 {
     public class ConsoleColorAccess : SilentRequest<(ConsoleColor foreground, ConsoleColor background), (ConsoleColor? foreground, ConsoleColor? background)>, IConsoleColorAccess
     {

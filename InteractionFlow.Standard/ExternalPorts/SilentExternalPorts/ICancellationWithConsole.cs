@@ -2,7 +2,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.SilentExternalPorts;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.SilentPorts
+namespace InteractionFlow.Standard.ExternalPorts.SilentExternalPorts
 {
     public interface ICancellationWithConsole : ISilentExternalPort
     {

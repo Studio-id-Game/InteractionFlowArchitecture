@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Standard.ExternalPorts.SilentPorts
+namespace InteractionFlow.Standard.ExternalPorts.SilentExternalPorts
 {
     public interface IConsoleColorAccess : ISilentRequestPort<(ConsoleColor foreground, ConsoleColor background), (ConsoleColor? foreground, ConsoleColor? background)>
     {

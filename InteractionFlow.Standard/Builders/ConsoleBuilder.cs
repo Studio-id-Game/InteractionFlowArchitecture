@@ -2,10 +2,10 @@ using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ExternalPorts.SilentPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using InteractionFlow.Standard.Externals.Operations;
 using InteractionFlow.Standard.Externals.Reactions;
-using InteractionFlow.Standard.Externals.Silents;
+using InteractionFlow.Standard.Externals.SilentExternals;
 using System;
 
 namespace InteractionFlow.Standard.Builders

@@ -3,7 +3,7 @@ using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ExternalPorts.SilentPorts;
+using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using System;
 using System.Threading.Tasks;
 

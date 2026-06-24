@@ -76,7 +76,7 @@
 
 # Layers
 
-## Focus Layer
+## ProgramFlow Layer
 
 **namespace**  
 `{ProjectName}.ProgramFlows`
@@ -148,7 +148,7 @@
 - **Reactions**  
   ユーザーに観測可能な出力を担当（UI / Presenter 相当）
 
-- **SilentIntegration**  
+- **SilentExternals**  
   ユーザーに観測されない、外部実行環境との結合を担当（Service 相当）
 
 ---
@@ -174,19 +174,19 @@
 **制約**
 - `{ProjectName}.Entities` 内からのみ参照可能
 
-## Focus Builder Block
+## ProgramFlow Builder Block
 
 **namespace**  
 `{ProjectName}.Builders`
 
 **役割**  
-DI コンテナのラッパーとして、Focus の構築を担います。
+DI コンテナのラッパーとして、ProgramFlow の構築を担います。
 
 **特徴**
 - Function Port を介して Function External 実装を注入
-- Focus の実行環境を構成する
+- ProgramFlow の実行環境を構成する
 
-> 詳細な構築手順や設計意図については、[Focus Builder の詳細](./docs/FocusBuilder.md) を参照してください。
+> 詳細な構築手順や設計意図については、[ProgramFlow Builder の詳細](./docs/ProgramFlowBuilder.md) を参照してください。
 
 ## External Block
 
@@ -210,16 +210,16 @@ OS、Framework、ライブラリなどの外部要素です。
 
 ユーザー視点の処理は、以下の順で流れます：
 
-> User(開始) → Focus → Interaction → Function Port → Function External → User(入力/観測/終了)
+> User(開始) → ProgramFlow → Interaction → Function Port → Function External → User(入力/観測/終了)
 
 ### Context（文脈）
-Focus からエントリーするユーザー視点のフローは、常に「Context（文脈）」を入力として開始されます。
+ProgramFlow からエントリーするユーザー視点のフローは、常に「Context（文脈）」を入力として開始されます。
 
 Context は現在のユーザーに関する状態や状況を表す文脈的情報で、初期に与えられた情報や、過去の処理によって更新された情報を含みます。  
-Focus はこの Context をもとに実行され、Interaction を通じて処理が進行します。
+ProgramFlow はこの Context をもとに実行され、Interaction を通じて処理が進行します。
 
 処理の過程で、Function External を介した操作や状態更新が行われ、その結果として Context は更新されます。  
-また、Context の更新は Focus / Interaction 内で行われる場合もあります。
+また、Context の更新は ProgramFlow / Interaction 内で行われる場合もあります。
 
 更新された Context は、必要に応じて次のフローの入力として再利用されます。  
 これにより、連続したユーザー体験が構成されます。
@@ -233,9 +233,9 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 
 依存関係は次のようになります：
 
-- Focus は Interaction に、Interaction と Function External は Function Port に依存します
+- ProgramFlow は Interaction に、Interaction と Function External は Function Port に依存します
 
-> Focus → Interaction → Function Port ← Function External
+> ProgramFlow → Interaction → Function Port ← Function External
 
 - Function External のみが外部に依存します
 
@@ -243,7 +243,7 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 
 - Builder は  Interaction と External Block を除くすべての要素に依存します
 
-> Focus Builder → Focus / Function Port / Function External
+> ProgramFlow Builder → ProgramFlow / Function Port / Function External
 
 - すべての要素は Domain に依存します
 
@@ -253,9 +253,9 @@ Focus はこの Context をもとに実行され、Interaction を通じて処�
 
 # 概念モデル
 
-## Focus / Interaction / Function
+## ProgramFlow / Interaction / Function
 
-### Focus（焦点）
+### ProgramFlow（プログラムフロー）
 
 ユーザーにとっての意味単位です。  
 複数の Interaction を組み合わせてユーザーフローを構成します。
@@ -272,7 +272,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 - Operation（ユーザーからの入力）
 - Storage（状態管理）
 - Reaction（ユーザーへの出力）
-- SilentIntegration（ユーザーに見えない、外部実行環境とのやりとり）
+- SilentExternals（ユーザーに見えない、外部実行環境とのやりとり）
 
 これらは Function Port によって抽象化され、Function External によって実装されます。
 
@@ -290,21 +290,21 @@ Function Port を介して複数の Function（機能）を実行し、それら
 ## 中断
 
 - Function は中断（例外・キャンセル）を持つ
-- Focus / Interaction は中断を持たない
+- ProgramFlow / Interaction は中断を持たない
 
-> 正確には、Focus / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
+> 正確には、ProgramFlow / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
 
 ## 状態
 - Function（Operation / Storage / Reaction）のみが、必要に応じて Mutable な状態を持つことができる
-- Focus / Interaction は Immutable
+- ProgramFlow / Interaction は Immutable
 
-また、Focus / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
+また、ProgramFlow / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
 
 ---
 
 # 制約とアンチパターン
 
-## Focus の制約
+## ProgramFlow の制約
 
 - Function Port および Function External に依存しない
 - ユーザーにとって単一の意味と目的を持つ
@@ -312,14 +312,14 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ### アンチパターン
 
-- ユーザーの目的を意味しない Focus
+- ユーザーの目的を意味しない ProgramFlow
 
-> ユーザーの目的と対応する場合は、単一の Interaction をラップする Focus であってもよい。
+> ユーザーの目的と対応する場合は、単一の Interaction をラップする ProgramFlow であってもよい。
 
 ## Interaction の制約
 
 - Function Port に依存するが、Function External には依存しない
-- Focus に依存しない
+- ProgramFlow に依存しない
 - システム内で単一の意味と目的を持つ
 - 必ず終了を示す Reaction を持つ（例外やキャンセルも含めて最終的にユーザーに結果を返す）
 
@@ -332,7 +332,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ## 補足
 
-Focus / Interaction の粒度はチームで調整可能です。
+ProgramFlow / Interaction の粒度はチームで調整可能です。
 ただし、前述したアンチパターンにならないように注意する必要があります。
 
 ---

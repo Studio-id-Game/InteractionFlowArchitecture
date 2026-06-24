@@ -65,14 +65,14 @@ Interaction は、このアーキテクチャにおける最小の動作単位�
 
 ---
 
-## 意味の単位としての Focus
+## 意味の単位としての ProgramFlow
 
-Interaction が内部の構造であるのに対し、Focus は外部から見た意味の単位です。
+Interaction が内部の構造であるのに対し、ProgramFlow は外部から見た意味の単位です。
 
-- **Focus**  
+- **ProgramFlow**  
   内部構造を隠蔽し、外部的な意味として再構成する Interaction 操作列
 
-Focus は複数の Interaction を束ね、それを一つの「意味ある振る舞い」として提示します。
+ProgramFlow は複数の Interaction を束ね、それを一つの「意味ある振る舞い」として提示します。
 
 これは、以下のような役割を持ちます：
 
@@ -88,7 +88,7 @@ Focus は複数の Interaction を束ね、それを一つの「意味ある振�
 
 Interaction Flow アーキテクチャにおける実行は、以下の流れで理解されます：
 
-    Focus → Interaction → テープ操作（Operation / Storage / Reaction / Silent Integration）
+    ProgramFlow → Interaction → テープ操作（Operation / Storage / Reaction / Silent Integration）
 
 この流れは常に、
 
@@ -114,7 +114,7 @@ Interaction Flow は、チューリングマシンの
 
 - すべての処理を「テープ操作」として統一的に捉える
 - 状態遷移を Interaction として明示化する
-- 意味の単位を Focus として分離する
+- 意味の単位を ProgramFlow として分離する
 
 これにより、内部の計算構造と外部の意味構造を分離しつつ、一貫したモデルとして扱うことが可能になります。
 

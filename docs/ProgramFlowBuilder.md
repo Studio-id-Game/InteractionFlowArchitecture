@@ -1,16 +1,16 @@
-[Readme](../README.md#focus-builder-block)
+[Readme](../README.md#programflow-builder-block)
 
  ---
 
-# Focus Builder の詳細
+# ProgramFlow Builder の詳細
 
-本ドキュメントでは、Interaction Flow Architecture における **Focus Builder** の構造と設計意図について説明します。
+本ドキュメントでは、Interaction Flow Architecture における **ProgramFlow Builder** の構造と設計意図について説明します。
 
 ---
 
 ## 概要
 
-Focus Builder は、**Focus の実行単位とその依存関係を構築・管理するための仕組み**です。
+ProgramFlow Builder は、**ProgramFlow の実行単位とその依存関係を構築・管理するための仕組み**です。
 
 本アーキテクチャでは、Dependency Injection（DI）とライフタイム管理を明確に分離し、
 **スコープ単位での依存関係管理**を可能にしています。
@@ -18,10 +18,10 @@ Focus Builder は、**Focus の実行単位とその依存関係を構築・管�
 この仕組みは、以下の2つのビルダーによって構成されます：
 
 * ScopeBuilder
-* FocusBuilder
+* ProgramFlowBuilder
 
 ScopeBuilder は再利用可能なスコープの構築に使用され、  
-FocusBuilder は再利用可能な Focus の実行単位を構築するために使用されます。
+ProgramFlowBuilder は再利用可能な ProgramFlow の実行単位を構築するために使用されます。
 
 ---
 
@@ -62,31 +62,31 @@ public interface IScopeBuilder : IScopeServices
 ```
 ---
 
-## FocusBuilder
+## ProgramFlowBuilder
 
 ### 役割
 
-FocusBuilder は、**Focus とその実行スコープを一体として構築・管理するビルダー**です。
+ProgramFlowBuilder は、**ProgramFlow とその実行スコープを一体として構築・管理するビルダー**です。
 
-* Focus に対応するスコープを生成
-* Focus とスコープのライフタイムを一致させる
-* Dependency Injection を適用して `FocusHandler` を生成
+* ProgramFlow に対応するスコープを生成
+* ProgramFlow とスコープのライフタイムを一致させる
+* Dependency Injection を適用して `ProgramFlowHandler` を生成
 
 ### インターフェース
 
 ```csharp
-public interface IFocusBuilder<TContext> : IScopeServices
+public interface IProgramFlowBuilder<TContext> : IScopeServices
     where TContext : IFlowContext
 {
-    FocusHandler<TContext> BuildFocus<TFocus>(params ScopeHandler[] parents)
-        where TFocus : IFocus<TContext>;
+    ProgramFlowHandler<TContext> BuildProgramFlow<TProgramFlow>(params ScopeHandler[] parents)
+        where TProgramFlow : IProgramFlow<TContext>;
     ...
 }
 ```
 
 ### 特徴
 
-* Focus のライフタイムはスコープと完全に一致する
+* ProgramFlow のライフタイムはスコープと完全に一致する
 * 親スコープを指定することで、外部依存や共有リソースを注入できる
 * ScopeBuilder と同様に、依存関係は「子優先」で解決される
 
@@ -94,11 +94,11 @@ public interface IFocusBuilder<TContext> : IScopeServices
 
 ## ライフタイムと破棄
 
-FocusHandler および ScopeHandler は、それぞれが管理するスコープのライフタイムを持ちます。  
+ProgramFlowHandler および ScopeHandler は、それぞれが管理するスコープのライフタイムを持ちます。  
 これらは `IDisposable` を実装しており、**開発者が明示的に破棄する必要があります**。
 
 ```csharp
-using var focus = focusBuilder.BuildFocus<SomeFocus>(...);
+using var programFlow = programFlowBuilder.BuildProgramFlow<SomeProgramFlow>(...);
 ```
 
 スコープの破棄により、そのスコープに直接属する依存オブジェクトも同時に解放されます。
@@ -106,18 +106,18 @@ using var focus = focusBuilder.BuildFocus<SomeFocus>(...);
 
 ---
 
-## FocusHandlerを通じたFocusの実行
+## ProgramFlowHandlerを通じたProgramFlowの実行
 
-FocusHandler は、生成された Focus インスタンスを内部に保持し、その Focus によって定義されたユーザーフローを実行する責務を持ちます。
+ProgramFlowHandler は、生成された ProgramFlow インスタンスを内部に保持し、その ProgramFlow によって定義されたユーザーフローを実行する責務を持ちます。
 
 ```csharp
 //endToken は、フローの終了状態（例：正常終了/キャンセル）および新しい Context を持つオブジェクト
-var endToken = await focus.UseUserFlowAsync(currentContext);
+var endToken = await programFlow.ExecuteAsync(currentContext);
 ```
 
 これにより：
 
-- Focus は純粋にフローの定義に集中できる
+- ProgramFlow は純粋にフローの定義に集中できる
 - 実行環境（依存関係・ライフタイム）は Handler 側に分離される
 
 という役割分担が実現されます。
@@ -126,14 +126,14 @@ var endToken = await focus.UseUserFlowAsync(currentContext);
 
 ## スコープ構造と依存関係
 
-ScopeBuilder / FocusBuilder は、スコープを**単なるツリーではなくグラフ構造**として扱います。
+ScopeBuilder / ProgramFlowBuilder は、スコープを**単なるツリーではなくグラフ構造**として扱います。
 
 ```text
         [Parent Scope A]
                ↑
         [Parent Scope B]
                ↑
-           [Focus Scope]
+           [ProgramFlow Scope]
 ```
 
 この構造により：
@@ -150,7 +150,7 @@ ScopeBuilder / FocusBuilder は、スコープを**単なるツリーではな�
 
 ### 1. 再利用性の確保
 
-* Focus を再利用したい
+* ProgramFlow を再利用したい
 * Function（外部実装）も可能であれば再利用したい
 
 しかし、自動的なライフタイム管理に依存すると：
@@ -167,12 +167,12 @@ ScopeBuilder / FocusBuilder は、スコープを**単なるツリーではな�
 ### 2. ライフタイムのグループ管理
 
 * 複数の依存オブジェクトをまとめて管理したい
-* Focus 独自の依存オブジェクトは Focus と同一のライフタイムで扱いたい
+* ProgramFlow 独自の依存オブジェクトは ProgramFlow と同一のライフタイムで扱いたい
 
 これを実現するために、
 
 - **スコープ単位でライフタイムを管理**
-- **Focus 独自の依存オブジェクトは Focus と束ねて同期**
+- **ProgramFlow 独自の依存オブジェクトは ProgramFlow と束ねて同期**
 
 ---
 
@@ -180,7 +180,7 @@ ScopeBuilder / FocusBuilder は、スコープを**単なるツリーではな�
 
 本アーキテクチャでは、依存関係が一方向かつ隣接した層に制限されています：
 
-> Focus → Interaction → Function Port ← Function External
+> ProgramFlow → Interaction → Function Port ← Function External
 
 この性質により：
 
@@ -195,16 +195,16 @@ ScopeBuilder / FocusBuilder は、スコープを**単なるツリーではな�
 といった柔軟な構成が可能になります。
 
 例えば、Scope Builder を用いて共通の Function を親として構築し、
-Focus Builder を用いて個別の Focus ごとに差分のみを持つスコープを生成する、といった使い方が可能です。
+ProgramFlow Builder を用いて個別の ProgramFlow ごとに差分のみを持つスコープを生成する、といった使い方が可能です。
 
 ---
 
 ## まとめ
 
-Focus Builder は、以下の特徴を持つ構築機構です：
+ProgramFlow Builder は、以下の特徴を持つ構築機構です：
 
 * スコープ単位での Dependency Injection
-* Focus と Focus 内スコープのライフタイム同期
+* ProgramFlow と ProgramFlow 内スコープのライフタイム同期
 * 親子関係による依存関係の合成
 * 子優先の依存解決
 * 部分ビルドによる高い再利用性
@@ -212,4 +212,4 @@ Focus Builder は、以下の特徴を持つ構築機構です：
 これにより、本アーキテクチャにおける「構造の明確さ」と「実装の柔軟性」を両立しています。
 
 ---
-[Readme](../README.md#focus-builder-block) | [PageTop](#focus-builder-の詳細) 
+[Readme](../README.md#programflow-builder-block) | [PageTop](#programflow-builder-の詳細) 

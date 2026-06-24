@@ -5,22 +5,22 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Builders
 {
-    public sealed class FlowHandler<TContext>(ScopeHandler scope, IProgramFlow<TContext> focus) : IDisposable where TContext : IFlowContext
+    public sealed class ProgramFlowHandler<TContext>(ScopeHandler scope, IProgramFlow<TContext> programFlow) : IDisposable where TContext : IFlowContext
     {
         private ScopeHandler? scope = scope;
-        private IProgramFlow<TContext>? focus = focus;
+        private IProgramFlow<TContext>? programFlow = programFlow;
 
         public async Task<FlowEndToken> ExecuteAsync(TContext context)
         {
-            var focus = this.focus ?? throw new InvalidOperationException();
-            return await focus.ExecuteAsync(context);
+            var programFlow = this.programFlow ?? throw new InvalidOperationException();
+            return await programFlow.ExecuteAsync(context);
         }
 
         public void Dispose()
         {
             scope?.Dispose();
             scope = null;
-            focus = null;
+            programFlow = null;
         }
     }
 }

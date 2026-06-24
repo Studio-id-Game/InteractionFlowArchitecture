@@ -31,7 +31,7 @@ namespace InteractionFlow.Samples.Notepad
 
             var scope = scopeBuilder.BuildScope();
 
-            var mainLoop = scope.BuildFlow<MainLoop, NotepadContext>();
+            var mainLoop = scope.BuildProgramFlow<MainLoop, NotepadContext>();
 
             var context = new NotepadContext(NotepadUserObject.Public);
 

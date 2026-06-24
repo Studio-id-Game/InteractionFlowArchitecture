@@ -39,12 +39,12 @@ namespace InteractionFlow.Samples.Parrot
             var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
             var context = new FlowContext(user);
 
-            using (var initializeApplication = globalScope.BuildFlow<InitializeApplication, IFlowContext>())
+            using (var initializeApplication = globalScope.BuildProgramFlow<InitializeApplication, IFlowContext>())
             {
                 await initializeApplication.ExecuteAsync(context);
             }
 
-            using var selectAndRunSample = globalScope.BuildFlow<SelectAndRunSample, IFlowContext>();
+            using var selectAndRunSample = globalScope.BuildProgramFlow<SelectAndRunSample, IFlowContext>();
 
             while (true)
             {

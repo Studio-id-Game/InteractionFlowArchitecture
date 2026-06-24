@@ -6,7 +6,7 @@ using System;
 
 namespace InteractionFlow.Standard.Builders
 {
-    public class FlowBuilder<TContext> : ScopeServices, IFlowBuilder<TContext>
+    public class ProgramFlowBuilder<TContext> : ScopeServices, IProgramFlowBuilder<TContext>
         where TContext : IFlowContext
     {
         private ScopeHandler BuildScope(params ScopeHandler[] parents)
@@ -25,24 +25,24 @@ namespace InteractionFlow.Standard.Builders
             }
         }
 
-        public FlowHandler<TContext> BuildFlow<TFocus>(params ScopeHandler[] parents)
-            where TFocus : IProgramFlow<TContext>
+        public ProgramFlowHandler<TContext> BuildProgramFlow<TProgramFlow>(params ScopeHandler[] parents)
+            where TProgramFlow : IProgramFlow<TContext>
         {
             var scope = BuildScope(parents);
-            var focus = ActivatorUtilities.CreateInstance<TFocus>(scope)
+            var programFlow = ActivatorUtilities.CreateInstance<TProgramFlow>(scope)
                 ?? throw new InvalidOperationException();
 
-            return new FlowHandler<TContext>(scope, focus);
+            return new ProgramFlowHandler<TContext>(scope, programFlow);
         }
 
-        public FlowHandler<TContext> BuildFlow<TFocus>(object[] parameters, params ScopeHandler[] parents)
-            where TFocus : IProgramFlow<TContext>
+        public ProgramFlowHandler<TContext> BuildProgramFlow<TProgramFlow>(object[] parameters, params ScopeHandler[] parents)
+            where TProgramFlow : IProgramFlow<TContext>
         {
             var scope = BuildScope(parents);
-            var focus = ActivatorUtilities.CreateInstance<TFocus>(scope, parameters)
+            var programFlow = ActivatorUtilities.CreateInstance<TProgramFlow>(scope, parameters)
                 ?? throw new InvalidOperationException();
 
-            return new FlowHandler<TContext>(scope, focus);
+            return new ProgramFlowHandler<TContext>(scope, programFlow);
         }
     }
 }

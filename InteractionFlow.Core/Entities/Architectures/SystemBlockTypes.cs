@@ -6,6 +6,6 @@ namespace InteractionFlow.Core.Entities.Architectures
         Domain,
         Layers,
         External,
-        FocusBuilder,
+        ProgramFlowBuilder,
     }
 }

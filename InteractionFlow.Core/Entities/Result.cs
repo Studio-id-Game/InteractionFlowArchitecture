@@ -41,19 +41,6 @@ namespace InteractionFlow.Core.Entities
             }
         }
 
-        public readonly Result<T> AsResultValue<T>(Func<T> value) => IsValid ? new Result<T>(value()) : new Result<T>(exception!);
-
-        public readonly Result<T> AsResultValue<T>(T value) => IsValid ? new Result<T>(value) : new Result<T>(exception!);
-
-        public readonly Result<T> AsResultValue<T>(in T value) => IsValid ? new Result<T>(value) : new Result<T>(exception!);
-
-        public static Result Success { get; } = new(true);
-
-        public static Result Error(Exception exception) => new(exception);
-
-        public static Result<TValue> Error<TValue>(Exception exception) => new(exception);
-
-
         public static implicit operator bool(Result result) => result.IsValid;
 
         public static implicit operator Exception?(Result result) => result.Exception;
@@ -92,11 +79,7 @@ namespace InteractionFlow.Core.Entities
             }
         }
 
-        public Result<TEntity2> With<TEntity2>(TEntity2? newValue) => new(newValue, result);
-
         public readonly Exception? Exception => result.Exception;
-
-        public readonly Result AsResult => result;
 
         public readonly bool IsValid => result.IsValid;
 

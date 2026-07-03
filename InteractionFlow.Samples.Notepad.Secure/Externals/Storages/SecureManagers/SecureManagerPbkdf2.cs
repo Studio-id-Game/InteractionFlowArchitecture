@@ -39,7 +39,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManage
                     EncryptBytes(fileId, bytes, cipherBytes, fileKey.Value);
                 }
 
-                return Result.Success;
+                return true;
             }
             catch (Exception e)
             {
@@ -60,7 +60,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManage
 
                 GetDataFromBytes(data, bytes);
 
-                return Result.Success;
+                return true;
             }
             catch (Exception e)
             {

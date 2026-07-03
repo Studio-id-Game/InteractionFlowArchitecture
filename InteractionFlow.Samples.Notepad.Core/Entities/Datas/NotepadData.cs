@@ -1,20 +1,14 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using InteractionFlow.Samples.Notepad.Core.Entities.Rules;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
 {
     public class NotepadData(NotepadDataKey noteKey)
     {
-        public static string Extention => NotepadRule.Extention;
+        public NotepadDataKey NoteKey { get; } = noteKey;
 
         private string title = "New Note";
         private string text = string.Empty;
         private bool hasChenged = false;
-
-        public NotepadData() : this(NotepadDataKey.Empty)
-        {
-        }
 
         public bool HasChenged => hasChenged;
 
@@ -49,12 +43,5 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
             hasChenged = false;
         }
 
-        public NotepadDataKey NoteKey { get; private set; } = noteKey;
-
-        public bool TryInitialize(IFlowContext context, NotepadDataKey contextKey)
-        {
-            NoteKey = contextKey;
-            return true;
-        }
     }
 }

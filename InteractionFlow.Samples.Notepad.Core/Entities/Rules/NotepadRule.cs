@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -9,11 +8,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Rules
     {
         private static HashSet<char> InvalidChars => [.. Path.GetInvalidFileNameChars(), .. Path.GetInvalidPathChars()];
 
-        public static DirectoryInfo RootDirectoryInfo => new(Path.Combine(Environment.CurrentDirectory, "Notes"));
-
         public static string PublicUserName => "Public";
-
-        public static string Extention => ".ifnote";
 
         public static bool IsValidID(string id)
         {

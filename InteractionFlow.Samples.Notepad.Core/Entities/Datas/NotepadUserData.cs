@@ -1,21 +1,18 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using InteractionFlow.Standard.Entities.Storages;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
 {
-    public class NotepadUserData : IKeyedMemoryValue<NotepadUserKey>, IEnumerable<NotepadDataKey>
+    public class NotepadUserData(NotepadUserKey notepadUserKey) : IEnumerable<NotepadDataKey>
     {
-        public NotepadUserKey UserId { get; private set; } = NotepadUserKey.Public;
+        public NotepadUserKey UserId { get; } = notepadUserKey;
 
         private HashSet<NotepadDataKey> Notes { get; } = [];
 
-        public bool TryInitialize(IFlowContext context, NotepadUserKey contextKey)
+        public bool Contains(NotepadDataKey notepad)
         {
-            UserId = contextKey;
-            return true;
+            return Notes.Contains(notepad);
         }
 
         public bool Add(NotepadDataKey notepad)
@@ -26,6 +23,19 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
         public bool Remove(NotepadDataKey notepad)
         {
             return Notes.Remove(notepad);
+        }
+
+        public bool Clear()
+        {
+            if (Notes.Count == 0)
+            {
+                return false;
+            }
+            else
+            {
+                Notes.Clear();
+                return true;
+            }
         }
 
         public IEnumerator<NotepadDataKey> GetEnumerator()

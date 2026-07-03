@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
@@ -16,7 +17,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
-        INotepadDataFiles notepadDataFiles)
+        INotepadDataStoragePort notepadDataFiles,
+        INotepadDataPersistencePort notepadDataPersistence)
     {
         public async Task<KeyValuePair<string, NotepadDataKey>> GetSelectAsync(IFlowContext context, NotepadUserData userData)
         {
@@ -36,8 +38,20 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
             foreach (var (index, item) in userData.OrderBy(e => e.NoteId).Select((item, index) => (index, item)))
             {
                 dataKey.Value = item;
-                var titleResult = await notepadDataFiles.LoadFromPersistentAsync(loadContext);
-                var title = titleResult ? titleResult.Value!.Title : "Title Error";
+
+                var notepadEntityResult = notepadDataFiles.GetOrCreate(item);
+                if (!notepadEntityResult)
+                    throw notepadEntityResult.Exception!;
+                var notepadEntity = notepadEntityResult.Value!;
+
+                var notepadDataResult = await notepadEntity.Load(notepadDataPersistence);
+                if (!notepadEntityResult)
+                    throw notepadEntityResult.Exception!;
+                var notepadData = notepadEntityResult.Value!.NotepadData;
+
+                var title = notepadData.Title;
+
+                notepadDataFiles.RemoveAndDispose(item);
 
                 fileDict[$"{index + 1}. {title} ({item.UserKey.Name}/{item.NoteId})"] = item;
             }

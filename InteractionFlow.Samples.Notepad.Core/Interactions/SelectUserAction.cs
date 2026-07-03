@@ -19,7 +19,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
-        INotepadDataFiles notepadDataFiles,
+        INotepadDataStoragePort notepadDataFiles,
         NoteCreate noteCreate,
         NoteDelete noteDelete,
         NoteEdit noteEdit,
@@ -66,7 +66,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 }
                 finally
                 {
-                    notepadDataFiles.Clear();
+                    notepadDataFiles.ClearWithoutDispose();
                 }
             });
         }

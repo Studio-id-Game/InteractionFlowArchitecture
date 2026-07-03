@@ -3,6 +3,8 @@ using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
@@ -17,7 +19,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,
         IConsoleOperation consoleOperation,
-        INotepadUserDataFiles notepadUserDataFiles) :
+        INotepadUserDataStoragePort notepadUserDataFiles,
+        INotepadUserDataPersistencePort notepadUserDataPersistence,
+        INotepadDataStoragePort notepadDataFiles,
+        INotepadDataPersistencePort notepadDataPersistence) :
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
@@ -27,54 +32,63 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
 
-                await Write(context, "# Note Create - Enter new note name:");
-
-                if (!context.TryGet(out NotepadUserKey userKey))
+                await Write(context, "# Note Create");
+                await Write(context, "> Loading User data...");
+                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
+                if (!userDataResult)
                 {
-                    return await Write(context, "> Not found NotepadUserKey in context.");
+                    throw userDataResult.Exception!;
                 }
+                var userData = userDataResult.Value!;
 
-                var dataKey = NotepadDataKey.Empty;
+                var notepadDataKey = NotepadDataKey.Empty;
 
                 do
                 {
-                    var newName = (await consoleOperation.WaitUserTextAsync(context)).text;
+                    await Write(context, "- Enter new note name:");
+                    var newNoteName = (await consoleOperation.WaitUserTextAsync(context)).text;
 
-                    dataKey = new NotepadDataKey(userKey.Id, newName);
-
-                    if (newName == string.Empty)
+                    if (newNoteName == string.Empty)
                     {
                         return await Write(context, $"> Create Cancel");
                     }
-                    else if (!dataKey.IsValid)
+
+                    notepadDataKey = new NotepadDataKey(userData.UserId.Id, newNoteName);
+
+                    if (!notepadDataKey.IsValid)
                     {
                         await Write(context, "> The name invalid - Retry enter new note name:");
                     }
-                    else if (notepadUserDataFiles.Exist(dataKey))
+                    else if (userData.Contains(notepadDataKey))
                     {
                         await Write(context, "> The name already exist - Retry enter new note name:");
                     }
                     else
                     {
-                        await Write(context, $"> Create - '{newName}'");
+                        await Write(context, $"> Create - '{newNoteName}'");
                         break;
                     }
+
                 } while (true);
 
-                if (notepadUserDataFiles.TryGetOrCreateDefault(context, out var userData))
+                var notepadEntityResult = notepadDataFiles.GetOrCreate(notepadDataKey);
+                if (!notepadEntityResult)
                 {
-                    userData!.Add(dataKey);
-                }
-                else
-                {
-                    return await Write(context, "> Can not Create Note.");
+                    throw new InvalidOperationException("> Can not get or create notepad data.");
                 }
 
-                var saveResult = await notepadUserDataFiles.SaveToPersistentAsync(context);
+                var notepadEntity = notepadEntityResult.Value!;
+                var notepadData = notepadEntity.NotepadData;
+
+                await Write(context, "- Enter new note title:");
+                var newNoteTitle = (await consoleOperation.WaitUserTextAsync(context)).text;
+                notepadData.Title = newNoteTitle;
+
+                var saveResult = await notepadEntity.Save(notepadDataPersistence);
 
                 if (saveResult)
                 {
-                    return await Write(context, $"> Note created as '{dataKey.UserKey.Name}/{dataKey.NoteId}'");
+                    return await Write(context, $"> Note Saved as '{notepadDataPersistence.GetViewName(notepadDataKey)}'");
                 }
                 else
                 {

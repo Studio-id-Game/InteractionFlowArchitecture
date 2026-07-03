@@ -41,8 +41,16 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                 if (mode == SampleMode.RepeatLast)
                 {
-                    var lastSelect = lastSelectMemory[context] ?? new SampleID(SampleMode.Parrot);
-                    mode = lastSelect.mode;
+                    var key = lastSelectMemory.GetKey(context);
+                    if (!key) throw key.Exception!;
+
+                    var lastSelect = lastSelectMemory.GetOrCreate(key.Value!);
+                    if (!lastSelect) throw lastSelect.Exception!;
+
+                    if (lastSelect.Value != null)
+                    {
+                        mode = lastSelect.Value.Value.mode;
+                    }
                 }
 
                 return mode switch

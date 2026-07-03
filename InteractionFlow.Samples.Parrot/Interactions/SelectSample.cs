@@ -42,7 +42,13 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                     if (sampleMode != SampleMode.RepeatLast)
                     {
-                        lastSelectMemory[context] = sampleID;
+                        var key = lastSelectMemory.GetKey(context);
+                        if (!key) throw key.Exception!;
+
+                        var result = lastSelectMemory.GetOrCreate(key.Value!);
+                        if (!result) throw result.Exception!;
+
+                        result.Value!.Value = sampleID;
                     }
 
                     var selectedSample = new SampleSelected(sampleID);

@@ -1,18 +1,15 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
-using InteractionFlow.Samples.Notepad.Secure.Entities.Datas;
-using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.Silents;
+using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
 using System;
 using System.Buffers.Binary;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace InteractionFlow.Samples.Notepad.Secure.Externals.Silents
+namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManagers
 {
-    public class SecureManagerPbkdf2 : ISecureManager
+    public class SecureManagerPbkdf2 : ISecureManagerPort
     {
         private const int SaltSize = 16;
         private const int KeySize = 32; // 256bit
@@ -20,8 +17,6 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Silents
         private const int TagSize = 16;
         private const int Iterations = 100_000;
         private const int HeaderSize = 16; // 16byte Guid
-
-        public ReadOnlySpan<IFlowNode> Dependency => [];
 
         public int GetCipherBytesSize(NotepadData data)
         {
@@ -73,23 +68,16 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Silents
             }
         }
 
-        public SecretBuffer GetUserKey(ReadOnlySpan<char> password, NotepadUserSecureData notepadUserSecureData)
+        public byte[] GetNewUserSalt()
         {
-            notepadUserSecureData.UserSalt ??= RandomNumberGenerator.GetBytes(SaltSize);
-            var userKey = new SecretBuffer(Pbkdf2(password, notepadUserSecureData.UserSalt));
-            notepadUserSecureData.LastUserKey = userKey.Value.ToArray();
+            return RandomNumberGenerator.GetBytes(SaltSize);
+        }
+
+        public SecretBuffer GetUserKey(ReadOnlySpan<char> password, UserSecureData userSecureData)
+        {
+            var userKey = new SecretBuffer(Pbkdf2(password, userSecureData.UserSalt!));
+            userSecureData.LastUserKey = userKey.Value.ToArray();
             return userKey;
-        }
-
-        public bool TryGetLastUserKey(NotepadUserSecureData notepadUserSecureData, out SecretBuffer userKey)
-        {
-            var key = notepadUserSecureData.LastUserKey;
-            userKey = new(key?.ToArray() ?? []);
-            return key != null;
-        }
-
-        public void ForceResetMemoryState()
-        {
         }
 
         private static int GetBytesSize(int cipherBytesSize)

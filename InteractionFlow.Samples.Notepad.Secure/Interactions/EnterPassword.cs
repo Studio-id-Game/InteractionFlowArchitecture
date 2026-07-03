@@ -1,9 +1,8 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Secure.Entities.Datas;
-using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.Silents;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
@@ -21,15 +20,15 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             IConsoleWriter consoleReaction,
             IConsoleCursorPositionAccess consoleCursorPositionAccess,
             IConsoleOperation consoleOperation,
-            INotepadUserSecureDataFiles notepadUserSecureDataFiles,
-            ISecureManager secureManager)
+            ICurrentUserStoragePort currentUserStorage,
+            ISecureManagerPort secureManager)
         : Interaction(
             exceptionPort,
             cancellationPort,
             consoleReaction,
             consoleCursorPositionAccess,
             consoleOperation,
-            notepadUserSecureDataFiles)
+            currentUserStorage)
     {
         public override Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
@@ -40,32 +39,22 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                 consoleReactionScope.State.Update(writeLine: true);
                 consoleOperationScope.State.Update(writeLine: true);
 
-                var userSecureDataResult = await notepadUserSecureDataFiles.LoadFromPersistentAsync(context);
-                NotepadUserSecureData userSecureData;
-                if (userSecureDataResult)
+                var userResult = currentUserStorage.GetKey(context);
+                if (!userResult)
                 {
-                    userSecureData = userSecureDataResult.Value!;
-
-                    var pass = await EnterPassAsync(context, consoleReactionScope);
-                    secureManager.GetUserKey(pass, userSecureData).Dispose();
+                    throw userResult.Exception!;
                 }
-                else
+                var user = userResult.Value!;
+
+                var currentUserResult = currentUserStorage.GetOrCreate(user);
+                if (!currentUserResult)
                 {
-                    consoleReactionScope.State.Update(writeLine: true);
-                    await consoleReaction.Write(context, new("> Create New UserFile"));
-                    consoleReactionScope.State.Update(writeLine: false);
-                    userSecureData = new NotepadUserSecureData();
-
-                    var pass = await EnterPassAsync(context, consoleReactionScope);
-                    secureManager.GetUserKey(pass, userSecureData).Dispose();
-
-                    await notepadUserSecureDataFiles.SaveToPersistentAsync(context, userSecureData);
+                    throw currentUserResult.Exception!;
                 }
+                var currentUser = currentUserResult.Value!.Value!;
 
-                if (userSecureData.LastUserKey == null)
-                {
-                    throw new InvalidOperationException("userSecureData.LastUserKey == null");
-                }
+                var pass = await EnterPassAsync(context, consoleReactionScope);
+                secureManager.GetUserKey(pass, currentUser);
 
                 consoleReactionScope.State.Update(writeLine: true);
                 return await consoleReaction.Write(context, new("> Password Entered."));

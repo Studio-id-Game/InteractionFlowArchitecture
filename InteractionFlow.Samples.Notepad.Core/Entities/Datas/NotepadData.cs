@@ -1,11 +1,10 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.Entities.Rules;
-using InteractionFlow.Standard.Entities.Storages;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Datas
 {
-    public class NotepadData(NotepadDataKey noteKey) : IKeyedMemoryValue<NotepadDataKey>
+    public class NotepadData(NotepadDataKey noteKey)
     {
         public static string Extention => NotepadRule.Extention;
 

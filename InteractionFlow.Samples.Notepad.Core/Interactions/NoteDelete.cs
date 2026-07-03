@@ -1,8 +1,8 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -20,8 +20,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
-        INotepadUserDataFiles notepadUserDataFiles,
-        INotepadDataFiles notepadDataFiles) :
+        INotepadUserDataStoragePort notepadUserDataFiles,
+        INotepadUserDataPersistencePort notepadUserDataPersistence,
+        INotepadDataStoragePort notepadDataFiles,
+        INotepadDataPersistencePort notepadDataPersistence) :
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadUserDataFiles, notepadDataFiles)
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
@@ -31,24 +33,24 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
 
-                await Write(context, "# Note Delete - Select note to delete:");
+                await Write(context, "# Note Delete");
 
-                if (!context.TryGet(out NotepadUserKey userKey))
-                {
-                    return await Write(context, "> Not found NotepadUserKey in context.");
-                }
-
-                var userDataResult = await notepadUserDataFiles.LoadFromPersistentAsync(context);
-
+                await Write(context, "> Loading User data...");
+                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
                 if (!userDataResult)
                 {
-                    return await Write(context, "> Not found NotepadUserData.");
+                    throw userDataResult.Exception!;
                 }
-
                 var userData = userDataResult.Value!;
 
-                var detaKeySelect = new ConsoleSelectNotepadData(consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadDataFiles);
+                var detaKeySelect = new ConsoleSelectNotepadData(
+                    consoleReaction,
+                    consoleCursorPositionAccess,
+                    consoleOperation,
+                    notepadDataFiles,
+                    notepadDataPersistence);
 
+                await Write(context, "- Select note to delete:");
                 var (select, detaKey) = await detaKeySelect.GetSelectAsync(context, userData);
 
                 if (detaKey.IsEmpty)
@@ -56,23 +58,24 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     return await Write(context, "> Cancel.");
                 }
 
-                if (userData.Remove(detaKey))
+                await Write(context, $"> Delete.. - '{notepadDataPersistence.GetViewName(detaKey)}'");
+                var deleteResult = await notepadDataPersistence.Delete(detaKey);
+                if (!deleteResult)
                 {
-                    await Write(context, $"> Remove - '{detaKey.UserKey.Name}/{detaKey.NoteId}'");
-                }
-                else
-                {
-                    return await Write(context, "> Can not Remove Note.");
+                    throw deleteResult.Exception!;
                 }
 
-                if (await notepadUserDataFiles.SaveToPersistentAsync(context))
+                await Write(context, $"> Remove from cache.. - '{detaKey.NoteId}'");
+
+                var removeResult = notepadDataFiles.RemoveWithoutDispose(detaKey);
+
+                await Write(context, $"> Remove from user data.. - '{detaKey.NoteId}'");
+                if (!userData.Remove(detaKey))
                 {
-                    return await Write(context, $"> Save changed");
+                    throw new InvalidOperationException("userData.Remove");
                 }
-                else
-                {
-                    return await Write(context, "> Can not Save Note.");
-                }
+
+                return await Write(context, $"> Note Deleted.");
             });
 
             return await Write(context, $"> End of Delete");

@@ -1,8 +1,8 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -22,52 +22,61 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleWriter consoleReaction,
         IConsoleCursorPositionAccess consoleCursorPositionAccess,
         IConsoleOperation consoleOperation,
-        INotepadUserDataFiles notepadUserDataFiles,
-        INotepadDataFiles notepadDataFiles) :
+        INotepadUserDataStoragePort notepadUserDataFiles,
+        INotepadDataStoragePort notepadDataFiles,
+        INotepadUserDataPersistencePort notepadUserDataPersistence,
+        INotepadDataPersistencePort notepadDataPersistence) :
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadUserDataFiles, notepadDataFiles)
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
             await TryCatchBlockAsync(context, async context =>
             {
+                await WriteLine(context, "# Note Edit");
 
-                await WriteLine(context, "# Note Edit - Select exist note name:");
-
-                if (!context.TryGet(out NotepadUserKey userKey))
-                {
-                    return await consoleReaction.Write(context, new ConsoleOutput("> Not found NotepadUserKey in context."));
-                }
-
-                var userDataResult = await notepadUserDataFiles.LoadFromPersistentAsync(context);
-
+                await Write(context, "> Loading User data...");
+                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
                 if (!userDataResult)
                 {
-                    return await consoleReaction.Write(context, new ConsoleOutput("> Not found NotepadUserData."));
+                    throw userDataResult.Exception!;
                 }
-
                 var userData = userDataResult.Value!;
 
-                var detaKeySelect = new ConsoleSelectNotepadData(consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadDataFiles);
+                var detaKeySelect = new ConsoleSelectNotepadData(
+                    consoleReaction,
+                    consoleCursorPositionAccess,
+                    consoleOperation,
+                    notepadDataFiles,
+                    notepadDataPersistence);
 
-                var (select, dataKey) = await detaKeySelect.GetSelectAsync(context, userData);
+                await WriteLine(context, "- Select exist note name:");
+                var (select, notepadDataKey) = await detaKeySelect.GetSelectAsync(context, userData);
 
-                if (dataKey.IsEmpty)
+                if (notepadDataKey.IsEmpty)
                 {
                     return await consoleReaction.Write(context, new ConsoleOutput("> Cancel."));
                 }
 
-                if (!context.TrySet(dataKey))
+                var notepadEntryResult = notepadDataFiles.GetOrCreate(notepadDataKey);
+
+                if (!notepadEntryResult)
                 {
-                    return await consoleReaction.Write(context, new ConsoleOutput("> Can not set NotepadDataKey in context."));
+                    throw notepadEntryResult.Exception!;
                 }
 
-                var loadResult = await notepadDataFiles.LoadFromPersistentAsync(context);
+                var notepadEntry = notepadEntryResult.Value!;
+
+                var loadResult = await notepadEntry.Load(notepadDataPersistence);
+
                 if (!loadResult)
                 {
-                    return await consoleReaction.Write(context, new ConsoleOutput("> Can not load NotepadData."));
+                    throw loadResult.Exception!;
                 }
 
                 var notepad = loadResult.Value!;
+
+
+
                 List<string> textLines = [notepad.Title, .. notepad.Text.Split('\n').Select(e => e.Trim('\r'))];
 
                 const string LineClear = "                                                                       ";
@@ -151,15 +160,15 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
                 await WriteLine(context, "> Save note ...");
                 await Task.Delay(500);
-                var saveResult = await notepadDataFiles.SaveToPersistentAsync(context);
+                var saveResult = await notepadEntry.Save(notepadDataPersistence);
 
                 if (saveResult)
                 {
-                    return await WriteLine(context, $"> Saved note as '{dataKey.UserKey.Name}/{dataKey.NoteId}'");
+                    return await WriteLine(context, $"> Saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'");
                 }
                 else
                 {
-                    return await WriteLine(context, $"> Can not saved note as '{dataKey.UserKey.Name}/{dataKey.NoteId}'");
+                    return await WriteLine(context, $"> Can not saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'");
                 }
 
                 async Task ReWriteAsync()

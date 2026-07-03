@@ -1,8 +1,12 @@
 using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.SerializerPorts;
+using InteractionFlow.Samples.Notepad.Core.Externals.Storages;
+using InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.ProgramFlows;
-using InteractionFlow.Samples.Notepad.Externals.Storages;
+using InteractionFlow.Samples.Notepad.Externals.Serializers;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
 using System;
@@ -17,10 +21,11 @@ namespace InteractionFlow.Samples.Notepad
             var scopeBuilder = new ScopeBuilder();
 
             scopeBuilder.Apply(ConsoleBuilder.Profile)
-                .UseFunction<INotepadUserDataMemory, NotepadUserDataMemory>()
-                .UseFunction<INotepadUserDataFiles, NotepadUserDataDirectories>()
-                .UseFunction<INotepadDataMemory, NotepadDataMemory>()
-                .UseFunction<INotepadDataFiles, NotepadDataFiles>()
+                .UseFunction<INotepadDataStoragePort, NotepadDataStorage>()
+                .UseFunction<INotepadUserDataStoragePort, NotepadUserDataStorage>()
+                .Use<INotepadDataPersistencePort, NotepadDataFilePersistence>()
+                .Use<INotepadUserDataPersistencePort, NotepadUserDataDirectoryPersistence>()
+                .Use<INotepadDataSerializerPort, NotepadDataSimpleSerializer>()
                 .UseInteraction<Login>()
                 .UseInteraction<NoteCreate>()
                 .UseInteraction<NoteDelete>()

@@ -4,6 +4,8 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
@@ -19,10 +21,13 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,
         IConsoleOperation consoleOperation,
-        INotepadUserDataFiles notepadUserDataFiles,
-        INotepadDataFiles notepadDataFiles) :
+        INotepadUserDataStoragePort notepadUserDataFiles,
+        INotepadDataStoragePort notepadDataFiles,
+        INotepadUserDataPersistencePort notepadUserDataPersistence) :
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles, notepadDataFiles)
     {
+        protected IConsoleWriter ConsoleReaction => consoleReaction;
+
         public async Task<FlowEndToken> ExecuteRetryLoopAsync(IFlowContext context)
         {
             while (true)
@@ -41,12 +46,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             return await TryCatchBlockAsync(context, async context =>
             {
+                // セキュリティのためのメモリリセット
+                notepadUserDataFiles.ForceResetMemoryState();
+                notepadDataFiles.ForceResetMemoryState();
+
                 await OnBeforeLoginAsync();
 
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
 
                 string userID;
+                NotepadUserKey userKey = default;
                 do
                 {
                     await Write(context, "# Login - Enter your id (if Empty, use public note) :");
@@ -65,7 +75,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     }
                     else
                     {
-                        var userKey = new NotepadUserKey(userID);
+                        userKey = new NotepadUserKey(userID);
                         var userObject = new NotepadUserObject(userKey);
                         context = new NotepadContext(userObject);
                         break;
@@ -75,21 +85,21 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
                 await OnBeforeLoadingUserDataAsync(context);
 
-                var load = notepadUserDataFiles.LoadFromPersistentAsync(context);
                 await Write(context, "> Loading User data...");
-                var result = await load;
+                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
+                if (!userDataResult)
+                {
+                    throw userDataResult.Exception!;
+                }
 
                 var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
-                return await Write(context, $"> Logined - {viewName} ({result.Value!.Count()} Notes)");
+                return await Write(context, $"> Logined - {viewName} ({userDataResult.Value!.Count()} Notes)");
             });
         }
 
         protected virtual ValueTask OnBeforeLoginAsync()
         {
             // セキュリティのためのメモリリセット
-            notepadUserDataFiles.ForceResetMemoryState();
-            notepadDataFiles.ForceResetMemoryState();
-
             return default;
         }
 

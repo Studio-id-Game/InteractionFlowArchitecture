@@ -1,5 +1,7 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
+using System.Collections.Generic;
 
 namespace InteractionFlow.Core.ExternalPorts.StoragePorts
 {
@@ -8,16 +10,27 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Storage;
+
+        Result ClearAndDispose();
+
+        Result ClearWithoutDispose();
     }
 
-    public interface IStoragePort<TValue> : IStoragePort
+    public interface IStoragePort<TKey> : IStoragePort
     {
-        FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
+        Result<TKey> GetKey(IFlowContext context);
 
-        FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Storage;
+        bool ContainsKey(TKey key);
 
-        TValue? this[IFlowContext context] { get; }
+        Result RemoveAndDispose(TKey key);
 
-        bool TryGet(IFlowContext context, out TValue? value);
+        Result RemoveWithoutDispose(TKey key);
+    }
+
+    public interface IStoragePort<TKey, TValue> : IStoragePort<TKey>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>
+    {
+        Result<TValue> Get(TKey key);
+
+        Result<TValue> GetOrCreate(TKey key);
     }
 }

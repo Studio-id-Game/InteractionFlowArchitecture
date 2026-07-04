@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Core.Entities
 {
@@ -21,7 +22,7 @@ namespace InteractionFlow.Core.Entities
         public Result(bool isValid)
         {
             this.isValid = isValid;
-            exception = null;
+            exception = isValid ? null : new InvalidException();
         }
 
         public Result(Exception exception)
@@ -41,9 +42,58 @@ namespace InteractionFlow.Core.Entities
             }
         }
 
-        public static implicit operator bool(Result result) => result.IsValid;
+        public bool Try([MaybeNullWhen(true)] out Exception e)
+        {
+            if (IsValid)
+            {
+                e = default;
+                return true;
+            }
+            else
+            {
+                e = exception!;
+                return false;
+            }
+        }
 
-        public static implicit operator Exception?(Result result) => result.Exception;
+        public void ThrowIfError()
+        {
+            if (!IsValid)
+                throw Exception!;
+        }
+
+        public Result Or(Result right)
+        {
+            return IsValid ? this : right;
+        }
+
+        public Result And(Result right)
+        {
+            if (Try(out var e1))
+            {
+                if (right.Try(out var e2))
+                {
+                    return true;
+                }
+                else
+                {
+                    return e2;
+                }
+            }
+            else
+            {
+                if (right.Try(out var e2))
+                {
+                    return e1;
+                }
+                else
+                {
+                    return new AggregateException(e1, e2);
+                }
+            }
+        }
+
+        public static implicit operator bool(Result result) => result.IsValid;
 
         public static implicit operator Result(bool isValid) => new(isValid);
 
@@ -53,50 +103,80 @@ namespace InteractionFlow.Core.Entities
 
         public static bool operator false(Result result) => !result;
 
-        public static Result operator |(Result left, Result right) => left ? left : right;
+        public static Result operator |(Result left, Result right)
+        {
+            return left.Or(right);
+        }
 
-        public static Result operator &(Result left, Result right) => left ? right : left;
+        public static Result operator &(Result left, Result right)
+        {
+            return left.And(right);
+        }
     }
 
-    public readonly struct Result<TEntity>(TEntity? value, Result result)
+    public readonly struct Result<TValue>
     {
-        private readonly TEntity? value = value;
+        private readonly TValue? value;
+        private readonly Result result;
 
-        public Result(TEntity value) : this(value, true)
+        public Result(TValue value)
         {
+            this.value = value;
+            result = true;
         }
 
-        public Result(Exception exception) : this(default, exception)
+        public Result(Exception exception)
         {
+            value = default;
+            result = exception;
         }
 
-        public readonly TEntity? Value
-        {
-            get
-            {
-                if (IsValid) return value;
-                throw Exception!;
-            }
-        }
+        public readonly TValue? Value => value;
 
         public readonly Exception? Exception => result.Exception;
 
         public readonly bool IsValid => result.IsValid;
 
-        public static implicit operator bool(Result<TEntity> result) => result.IsValid;
+        public bool Try([MaybeNullWhen(false)] out TValue value, [MaybeNullWhen(true)] out Exception e)
+        {
+            if (IsValid)
+            {
+                e = default;
+                value = Value!;
+                return true;
+            }
+            else
+            {
+                e = result.Exception!;
+                value = default;
+                return false;
+            }
+        }
 
-        public static implicit operator Exception?(Result<TEntity> result) => result.Exception;
+        public void ThrowIfError()
+        {
+            if (!IsValid)
+                throw Exception!;
+        }
 
-        public static implicit operator Result<TEntity>(TEntity value) => new(value);
+        public Result<TValue> Or(Result<TValue> right)
+        {
+            return IsValid ? this : right;
+        }
 
-        public static implicit operator Result<TEntity>(Exception exception) => new(exception);
+        public static implicit operator bool(Result<TValue> result) => result.IsValid;
 
-        public static bool operator true(Result<TEntity> result) => result;
+        public static implicit operator Result<TValue>(TValue value) => new(value);
 
-        public static bool operator false(Result<TEntity> result) => !result;
+        public static implicit operator Result<TValue>(Exception exception) => new(exception);
 
-        public static Result<TEntity> operator |(Result<TEntity> left, Result<TEntity> right) => left ? left : right;
+        public static bool operator true(Result<TValue> result) => result;
 
-        public static Result<TEntity> operator &(Result<TEntity> left, Result<TEntity> right) => left ? right : left;
+        public static bool operator false(Result<TValue> result) => !result;
+
+        public static Result<TValue> operator |(Result<TValue> left, Result<TValue> right)
+        {
+            return left.Or(right);
+        }
     }
 }

@@ -36,62 +36,52 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
 
         protected override async Task<Result<NotepadUserData>> LoadDirectory(string path, NotepadUserKey id, Result<NotepadUserData> oldValue)
         {
-            if (!oldValue)
-            {
-                return oldValue.Exception!;
-            }
+            return await oldValue.StartAsync()
+                .ThenAsync(async userData =>
+                {
+                    userData.Clear();
+                    var fileIds = filePersistence.GetAlllIdWithUser(id);
+                    foreach (var fileId in fileIds)
+                    {
+                        userData.Add(fileId);
+                    }
 
-            var data = oldValue.Value!;
-
-            data.Clear();
-
-            var fileIds = filePersistence.GetAlllIdWithUser(id);
-
-            foreach (var fileId in fileIds)
-            {
-                data.Add(fileId);
-            }
-
-            return oldValue;
+                    return userData.AsResult();
+                });
         }
 
         protected override async Task<Result> SaveDirectory(string path, NotepadUserKey id, Result<NotepadUserData> value)
         {
-            if (!value)
-            {
-                return value.Exception!;
-            }
-
-            var data = value.Value!;
-
-            var fileIds = filePersistence.GetAlllIdWithUser(id);
-
-            //Delete old items
-            foreach (var fileId in fileIds)
-            {
-                if (!data.Contains(fileId))
+            return await value.StartAsync()
+                .ThenAsync(async userData =>
                 {
-                    await filePersistence.Delete(fileId);
-                }
-            }
+                    var fileIds = filePersistence.GetAlllIdWithUser(id);
 
-            //Save or Add items
-            foreach (var fileId in data)
-            {
-                var entry = notepadStorage.GetOrCreate(fileId);
-                if (!entry)
-                {
-                    return entry.Exception!;
-                }
+                    //Delete old items
+                    foreach (var fileId in fileIds)
+                    {
+                        if (!userData.Contains(fileId))
+                        {
+                            await filePersistence.Delete(fileId);
+                        }
+                    }
 
-                var save = await entry.Value!.SaveIfChanged(filePersistence);
-                if (!save)
-                {
-                    return save.Exception!;
-                }
-            }
+                    var result = Result.Success;
 
-            return true;
+                    //Save or Add items
+                    foreach (var fileId in userData)
+                    {
+                        result = await notepadStorage.GetOrCreate(fileId).StartAsync()
+                            .ThenAsync(async entry => await entry.SaveIfChanged(filePersistence));
+
+                        if (!result.Try(out _))
+                        {
+                            break;
+                        }
+                    }
+
+                    return result;
+                });
         }
     }
 }

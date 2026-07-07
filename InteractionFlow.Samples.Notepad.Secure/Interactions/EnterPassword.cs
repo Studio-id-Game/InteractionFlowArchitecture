@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -39,25 +40,31 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                 consoleReactionScope.State.Update(writeLine: true);
                 consoleOperationScope.State.Update(writeLine: true);
 
-                var userResult = currentUserStorage.GetKey(context);
-                if (!userResult)
-                {
-                    throw userResult.Exception!;
-                }
-                var user = userResult.Value!;
-
-                var currentUserResult = currentUserStorage.GetOrCreate(user);
-                if (!currentUserResult)
-                {
-                    throw currentUserResult.Exception!;
-                }
-                var currentUser = currentUserResult.Value!.Value!;
-
-                var pass = await EnterPassAsync(context, consoleReactionScope);
-                secureManager.GetUserKey(pass, currentUser);
-
-                consoleReactionScope.State.Update(writeLine: true);
-                return await consoleReaction.Write(context, new("> Password Entered."));
+                return await currentUserStorage.GetKey(context).StartAsync()
+                    .ThenAsync(async userKey =>
+                    {
+                        return currentUserStorage.GetOrCreate(userKey);
+                    })
+                    .ThenAsync(async currentUser =>
+                    {
+                        if (currentUser.Value == null)
+                        {
+                            return new NullReferenceException("currentUser.Value == null");
+                        }
+                        var pass = await EnterPassAsync(context, consoleReactionScope);
+                        secureManager.GetUserKey(pass, currentUser.Value);
+                        consoleReactionScope.State.Update(writeLine: true);
+                        return Result.Success;
+                    })
+                    .ResolveAsync(
+                    onSuccess: async () =>
+                    {
+                        return await consoleReaction.Write(context, new("> Password Entered."));
+                    },
+                    onFailure: async e =>
+                    {
+                        return await consoleReaction.Write(context, new($"> Password Error : {e.Message}"));
+                    });
             });
         }
 

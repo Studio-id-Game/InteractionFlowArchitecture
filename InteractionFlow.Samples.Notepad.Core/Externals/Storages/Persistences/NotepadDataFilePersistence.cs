@@ -41,7 +41,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
 
         public override string GetFileName(NotepadDataKey fileID)
         {
-            return Path.Combine(fileID.UserId, fileID.NoteId);
+
+
+            return Path.Combine(new NotepadUserKey(fileID.UserId).Name, fileID.NoteId);
         }
 
         public string GetViewName(NotepadDataKey key)

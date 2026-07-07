@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -33,31 +34,48 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 await Write(context, "# Note List View :");
 
                 await Write(context, "> Loading User data...");
-                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
-                if (!userDataResult)
-                {
-                    throw userDataResult.Exception!;
-                }
 
-                var userData = userDataResult.Value!;
+                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
+                    .ThenAsync(async userData =>
+                    {
+                        Result result = Result.Success;
 
-                foreach (var noteDataKey in userData)
-                {
-                    var notepadDataResult = notepadDataFiles.GetOrCreate(noteDataKey);
-                    if (!notepadDataResult) continue;
-                    var notepadData = notepadDataResult.Value!;
+                        foreach (var noteDataKey in userData)
+                        {
+                            var fileName = noteDataKey.NoteId;
 
-                    var loadResult = await notepadData.Load(notepadDataPersistence);
-                    if (!loadResult) continue;
+                            result = await notepadDataFiles.GetOrCreate(noteDataKey).StartAsync()
+                               .ThenAsync(async notepadEntry =>
+                               {
+                                   return await notepadEntry.Load(notepadDataPersistence);
+                               })
+                               .ThenAsync(async notepadData =>
+                               {
+                                   var title = notepadData.Title;
+                                   await Write(context, $"  - '{fileName}' (title:{title})");
 
-                    var fileName = noteDataKey.NoteId;
-                    var title = notepadData.Value!.Title;
-                    await Write(context, $"  - '{fileName}' (title:{title})");
+                                   return notepadDataFiles.RemoveWithoutDispose(noteDataKey);
+                               });
 
-                    notepadDataFiles.RemoveWithoutDispose(noteDataKey);
-                }
+                            if (!result.Try(out _))
+                            {
+                                await Write(context, $"  - '{fileName}' (Error)");
+                                break;
+                            }
 
-                return await Write(context, "> End of List.");
+                        }
+
+                        return result;
+                    }).ResolveAsync(
+                    onSuccess: async () =>
+                    {
+                        return await Write(context, "> End of List.");
+                    },
+                    onFailure: async e =>
+                    {
+                        return await Write(context, $"> List Error : {e.Message}");
+                    });
+
             });
         }
 

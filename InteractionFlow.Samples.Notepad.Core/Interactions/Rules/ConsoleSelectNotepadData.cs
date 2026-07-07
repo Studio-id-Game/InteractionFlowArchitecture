@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
@@ -20,7 +21,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
         INotepadDataStoragePort notepadDataFiles,
         INotepadDataPersistencePort notepadDataPersistence)
     {
-        public async Task<KeyValuePair<string, NotepadDataKey>> GetSelectAsync(IFlowContext context, NotepadUserData userData)
+        public async Task<KeyValuePair<string, NotepadDataKey>> GetSelectAsync(IFlowContext context, NotepadUserData userData, bool includeErrorItem)
         {
             if (!userData.Any())
             {
@@ -39,21 +40,35 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
             {
                 dataKey.Value = item;
 
-                var notepadEntityResult = notepadDataFiles.GetOrCreate(item);
-                if (!notepadEntityResult)
-                    throw notepadEntityResult.Exception!;
-                var notepadEntity = notepadEntityResult.Value!;
+                var _notepadDataPersistence = notepadDataPersistence;
+                var _notepadDataFiles = notepadDataFiles;
 
-                var notepadDataResult = await notepadEntity.Load(notepadDataPersistence);
-                if (!notepadEntityResult)
-                    throw notepadEntityResult.Exception!;
-                var notepadData = notepadEntityResult.Value!.NotepadData;
+                var result = await notepadDataFiles.GetOrCreate(item).StartAsync()
+                    .ThenAsync(async notepadEntity => await notepadEntity.Load(_notepadDataPersistence))
+                    .ThenAsync(async notepadData =>
+                    {
+                        var title = notepadData.Title;
 
-                var title = notepadData.Title;
+                        _notepadDataFiles.RemoveAndDispose(item);
 
-                notepadDataFiles.RemoveAndDispose(item);
+                        fileDict[$"{index + 1}. {title} ({item.UserKey.Name}/{item.NoteId})"] = item;
 
-                fileDict[$"{index + 1}. {title} ({item.UserKey.Name}/{item.NoteId})"] = item;
+                        return Result.Success;
+                    })
+                    .ThenErrorAsync(async e =>
+                    {
+                        if (includeErrorItem)
+                        {
+                            fileDict[$"{index + 1}. Error ({item.UserKey.Name}/{item.NoteId})"] = item;
+                            return Result.Success;
+                        }
+                        else
+                        {
+                            return e;
+                        }
+                    });
+
+                //result.ThrowIfError();
             }
 
             var detaKeySelect = new ConsoleSelectItem<NotepadDataKey>(consoleReaction, consoleCursorPositionAccess, consoleOperation, fileDict);

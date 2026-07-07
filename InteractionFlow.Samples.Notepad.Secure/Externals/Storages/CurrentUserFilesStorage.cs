@@ -13,7 +13,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages
 
         protected override Result CanRemoveValue(NotepadUserKey key, PersistentEntry<NotepadUserKey, UserSecureData> value)
         {
-            return true;
+            return Result.Success;
         }
 
         protected override Result<PersistentEntry<NotepadUserKey, UserSecureData>> CreateNewValue(NotepadUserKey key)

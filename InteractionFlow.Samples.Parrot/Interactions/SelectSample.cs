@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -42,13 +43,17 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                     if (sampleMode != SampleMode.RepeatLast)
                     {
-                        var key = lastSelectMemory.GetKey(context);
-                        if (!key) throw key.Exception!;
-
-                        var result = lastSelectMemory.GetOrCreate(key.Value!);
-                        if (!result) throw result.Exception!;
-
-                        result.Value!.Value = sampleID;
+                        lastSelectMemory.GetKey(context)
+                            .Then(key =>
+                            {
+                                return lastSelectMemory.GetOrCreate(key);
+                            })
+                            .Then(refEntry =>
+                            {
+                                refEntry.Value = sampleID;
+                                return refEntry.AsResult();
+                            })
+                            .ThrowIfError();
                     }
 
                     var selectedSample = new SampleSelected(sampleID);

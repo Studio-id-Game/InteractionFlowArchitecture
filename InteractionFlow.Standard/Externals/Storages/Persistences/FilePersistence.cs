@@ -57,24 +57,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
                     bufferSize: 81920,
                     useAsync: true);
 
-                var streamResult = await serializer.Serialize(value, stream);
-
-                if (!streamResult)
-                {
-                    throw streamResult.Exception!;
-                }
-
-                var stream2 = streamResult.Value!;
-
-                await stream.FlushAsync();
-
-                if (stream2 != stream)
-                {
-                    await stream2.FlushAsync();
-                    await stream2.DisposeAsync();
-                }
-
-                return true;
+                return await serializer.Serialize(value, stream)
+                    .ThenAsync(async stream2 =>
+                    {
+                        return Result.Success;
+                    });
             }
             catch (Exception e)
             {
@@ -127,7 +114,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
                     File.Delete(path);
                 }
 
-                return Task.FromResult<Result>(true);
+                return Task.FromResult(Result.Success);
             }
             catch (Exception e)
             {
@@ -143,7 +130,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
 
                 if (File.Exists(path))
                 {
-                    return Task.FromResult<Result>(true);
+                    return Task.FromResult(Result.Success);
                 }
                 else
                 {

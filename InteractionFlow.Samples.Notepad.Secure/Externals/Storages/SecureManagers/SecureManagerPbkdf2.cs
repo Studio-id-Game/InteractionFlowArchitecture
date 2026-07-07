@@ -34,12 +34,10 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManage
                 GetBytesFromData(data, bytes);
 
                 var fileId = Guid.NewGuid().ToByteArray();
-                using (var fileKey = GetFileKey(userkey, fileId))
-                {
-                    EncryptBytes(fileId, bytes, cipherBytes, fileKey.Value);
-                }
+                using var fileKey = GetFileKey(userkey, fileId);
+                EncryptBytes(fileId, bytes, cipherBytes, fileKey.Value);
 
-                return true;
+                return Result.Success;
             }
             catch (Exception e)
             {
@@ -60,7 +58,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManage
 
                 GetDataFromBytes(data, bytes);
 
-                return true;
+                return Result.Success;
             }
             catch (Exception e)
             {

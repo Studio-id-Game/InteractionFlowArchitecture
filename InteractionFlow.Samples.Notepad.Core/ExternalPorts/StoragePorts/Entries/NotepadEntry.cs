@@ -40,7 +40,7 @@ namespace InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Entrie
             }
             else
             {
-                return true;
+                return Result.Success;
             }
         }
     }

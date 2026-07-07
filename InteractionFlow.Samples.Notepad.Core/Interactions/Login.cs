@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -27,6 +28,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles, notepadDataFiles)
     {
         protected IConsoleWriter ConsoleReaction => consoleReaction;
+        protected IConsoleOperation ConsoleOperation => consoleOperation;
+        protected INotepadUserDataStoragePort NotepadUserDataFiles => notepadUserDataFiles;
+        protected INotepadDataStoragePort NotepadDataFiles => notepadDataFiles;
+        protected INotepadUserDataPersistencePort NotepadUserDataPersistence => notepadUserDataPersistence;
 
         public async Task<FlowEndToken> ExecuteRetryLoopAsync(IFlowContext context)
         {
@@ -86,14 +91,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 await OnBeforeLoadingUserDataAsync(context);
 
                 await Write(context, "> Loading User data...");
-                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
-                if (!userDataResult)
-                {
-                    throw userDataResult.Exception!;
-                }
-
-                var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
-                return await Write(context, $"> Logined - {viewName} ({userDataResult.Value!.Count()} Notes)");
+                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
+                    .ResolveAsync(
+                        onSuccess: async userData =>
+                        {
+                            var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
+                            return await Write(context, $"> Logined - {viewName} ({userData.Count()} Notes)");
+                        },
+                        onFailure: async e =>
+                        {
+                            return await Write(context, $"> Login error : {e.Message}");
+                        });
             });
         }
 

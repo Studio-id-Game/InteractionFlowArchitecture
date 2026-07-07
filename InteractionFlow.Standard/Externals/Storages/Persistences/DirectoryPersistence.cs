@@ -26,7 +26,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
                     Directory.Delete(path);
                 }
 
-                return Task.FromResult<Result>(true);
+                return Task.FromResult(Result.Success);
             }
             catch (Exception e)
             {
@@ -42,7 +42,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
 
                 if (Directory.Exists(path))
                 {
-                    return Task.FromResult<Result>(true);
+                    return Task.FromResult(Result.Success);
                 }
                 else
                 {

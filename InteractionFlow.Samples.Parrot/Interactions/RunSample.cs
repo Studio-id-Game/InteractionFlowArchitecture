@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -41,16 +42,17 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
                 if (mode == SampleMode.RepeatLast)
                 {
-                    var key = lastSelectMemory.GetKey(context);
-                    if (!key) throw key.Exception!;
-
-                    var lastSelect = lastSelectMemory.GetOrCreate(key.Value!);
-                    if (!lastSelect) throw lastSelect.Exception!;
-
-                    if (lastSelect.Value != null)
-                    {
-                        mode = lastSelect.Value.Value.mode;
-                    }
+                    lastSelectMemory.GetKey(context)
+                        .Then(key =>
+                        {
+                            return lastSelectMemory.GetOrCreate(key);
+                        })
+                        .Then(lastMode =>
+                        {
+                            mode = lastMode.Value.mode;
+                            return lastMode.AsResult();
+                        })
+                        .ThrowIfError();
                 }
 
                 return mode switch

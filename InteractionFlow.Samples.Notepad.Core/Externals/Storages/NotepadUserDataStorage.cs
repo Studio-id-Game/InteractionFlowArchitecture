@@ -11,7 +11,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages
     {
         protected override Result CanRemoveValue(NotepadUserKey key, NotepadUserEntry value)
         {
-            return true;
+            return Result.Success;
         }
 
         protected override Result<NotepadUserEntry> CreateNewValue(NotepadUserKey key)

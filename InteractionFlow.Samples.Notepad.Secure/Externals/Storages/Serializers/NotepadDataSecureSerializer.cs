@@ -14,7 +14,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
 {
     internal class NotepadDataSecureSerializer(ISecureManagerPort secureManager, ICurrentUserStoragePort currentUserStorage) : StreamSerializer<NotepadData>, INotepadDataSerializerPort
     {
-        protected SecretBuffer GetUserKey()
+        private SecretBuffer GetUserKey()
         {
             var lastUser = currentUserStorage.LastUser;
 
@@ -25,78 +25,77 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
 
             var dataResult = currentUserStorage.GetOrCreate(lastUser);
 
-            if (!dataResult)
+            if (dataResult.Try(out var entry, out var e))
             {
-                throw dataResult.Exception!;
+                return new(entry.Value!.LastUserKey!.ToArray());
             }
-
-            var data = dataResult.Value!;
-
-            return new(data.Value!.LastUserKey!.ToArray());
+            else
+            {
+                throw e;
+            }
         }
 
         public override async Task<Result<NotepadData>> Deserialize(Result<Stream> inputData, Result<NotepadData> refValue)
         {
-            if (!inputData)
-                return inputData.Exception!;
-            if (!refValue)
-                return refValue.Exception!;
+            return await inputData.StartAsync()
+                .ThenAsync(async stream =>
+                {
+                    return refValue.Then(notepad => (stream, notepad).AsResult());
+                })
+                .ThenAsync(async value =>
+                {
+                    var (stream, notepad) = value;
+                    try
+                    {
+                        await using var memory = new MemoryStream();
+                        await stream.CopyToAsync(memory);
+                        var bytes = memory.ToArray();
+                        return (notepad, bytes).AsResult();
+                    }
+                    catch (Exception e)
+                    {
+                        return e;
+                    }
+                })
+                .ThenAsync(async value =>
+                {
+                    var (notepad, bytes) = value;
 
-            var notepad = refValue.Value!;
-            var stream = inputData.Value!;
-            byte[] bytes;
-
-            try
-            {
-                using var memory = new MemoryStream();
-                await stream.CopyToAsync(memory);
-                bytes = memory.ToArray();
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
-
-            var decryptRsult = secureManager.DecryptNotepadData(notepad, GetUserKey(), bytes);
-
-            if (!decryptRsult)
-            {
-                return decryptRsult.Exception!;
-            }
-
-            return notepad;
+                    return secureManager.DecryptNotepadData(notepad, GetUserKey(), bytes)
+                        .Then(() => notepad.AsResult());
+                });
         }
 
         public override async Task<Result<Stream>> Serialize(Result<NotepadData> inputValue, Result<Stream> refData)
         {
-            if (!inputValue)
-                return inputValue.Exception!;
-            if (!refData)
-                return refData.Exception!;
+            return await refData.StartAsync()
+                .ThenAsync(async stream =>
+                {
+                    return inputValue.Then(notepad => (stream, notepad).AsResult());
+                })
+                .ThenAsync(async value =>
+                {
+                    var (stream, notepad) = value;
 
-            var notepad = inputValue.Value!;
-            var stream = refData.Value!;
+                    var size = secureManager.GetCipherBytesSize(notepad);
+                    var cipherBytes = new byte[size];
+                    return secureManager.EncryptNotepadData(notepad, GetUserKey(), cipherBytes)
+                        .Then(() => (stream, cipherBytes).AsResult());
+                })
+                .ThenAsync(async value =>
+                {
+                    var (stream, cipherBytes) = value;
+                    try
+                    {
+                        await stream.WriteAsync(cipherBytes);
 
-            var size = secureManager.GetCipherBytesSize(notepad);
-            var cipherBytes = new byte[size];
-
-            var encryptResult = secureManager.EncryptNotepadData(notepad, GetUserKey(), cipherBytes);
-
-            if (!encryptResult)
-            {
-                return encryptResult.Exception!;
-            }
-
-            try
-            {
-                await stream.WriteAsync(cipherBytes);
-
-                return stream;
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
+                        return stream.AsResult();
+                    }
+                    catch (Exception e)
+                    {
+                        return e;
+                    }
+                });
         }
     }
 }

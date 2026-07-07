@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using System;
 
 namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
 {
@@ -7,26 +8,18 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
     {
         public Result<TEntry> GetEntry(Result<TValue> value)
         {
-            if (value)
-            {
-                return NewEntry(value.Value);
-            }
-            else
-            {
-                return value.Exception!;
-            }
+            return value.Then(v => NewEntry(v).AsResult());
         }
 
         public Result<TValue> GetValue(Result<TEntry> entry)
         {
-            if (entry && entry.Value != null && entry.Value.Value != null)
+            return entry.Then(e =>
             {
-                return entry.Value.Value;
-            }
-            else
-            {
-                return entry.Exception!;
-            }
+                if (e.Value == null)
+                    return new NullReferenceException();
+                else
+                    return e.Value.AsResult();
+            });
         }
 
         public abstract TEntry NewEntry(TValue? baseValue);

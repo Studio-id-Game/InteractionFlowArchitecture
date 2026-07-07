@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -28,7 +29,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            await TryCatchBlockAsync(context, async context =>
+            return await TryCatchBlockAsync(context, async context =>
             {
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
@@ -36,49 +37,60 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 await Write(context, "# Note Delete");
 
                 await Write(context, "> Loading User data...");
-                var userDataResult = await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context);
-                if (!userDataResult)
+                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
+                .ThenAsync(async userData =>
                 {
-                    throw userDataResult.Exception!;
-                }
-                var userData = userDataResult.Value!;
 
-                var detaKeySelect = new ConsoleSelectNotepadData(
-                    consoleReaction,
-                    consoleCursorPositionAccess,
-                    consoleOperation,
-                    notepadDataFiles,
-                    notepadDataPersistence);
+                    var detaKeySelect = new ConsoleSelectNotepadData(
+                        consoleReaction,
+                        consoleCursorPositionAccess,
+                        consoleOperation,
+                        notepadDataFiles,
+                        notepadDataPersistence);
 
-                await Write(context, "- Select note to delete:");
-                var (select, detaKey) = await detaKeySelect.GetSelectAsync(context, userData);
+                    await Write(context, "- Select note to delete:");
+                    var (select, dataKey) = await detaKeySelect.GetSelectAsync(context, userData, true);
+                    if (dataKey.IsEmpty)
+                    {
+                        return new Exception("Cancel");
+                    }
 
-                if (detaKey.IsEmpty)
+                    await Write(context, $"> Delete.. - '{notepadDataPersistence.GetViewName(dataKey)}'");
+                    return await notepadDataPersistence.Delete(dataKey)
+                        .ThenAsync(async () => (userData, dataKey).AsResult());
+                })
+                .ThenAsync(async (value) =>
                 {
-                    return await Write(context, "> Cancel.");
-                }
+                    var (userData, dataKey) = value;
+                    if (notepadDataFiles.ContainsKey(dataKey))
+                    {
+                        await Write(context, $"> Remove from cache.. - '{dataKey.NoteId}'");
+                        notepadDataFiles.RemoveWithoutDispose(dataKey);
+                    }
 
-                await Write(context, $"> Delete.. - '{notepadDataPersistence.GetViewName(detaKey)}'");
-                var deleteResult = await notepadDataPersistence.Delete(detaKey);
-                if (!deleteResult)
+                    return value.AsResult();
+                })
+                .ThenAsync(async value =>
                 {
-                    throw deleteResult.Exception!;
-                }
+                    var (userData, dataKey) = value;
+                    if (userData.Contains(dataKey))
+                    {
+                        await Write(context, $"> Remove from user data.. - '{dataKey.NoteId}'");
+                        userData.Remove(dataKey);
+                    }
 
-                await Write(context, $"> Remove from cache.. - '{detaKey.NoteId}'");
-
-                var removeResult = notepadDataFiles.RemoveWithoutDispose(detaKey);
-
-                await Write(context, $"> Remove from user data.. - '{detaKey.NoteId}'");
-                if (!userData.Remove(detaKey))
-                {
-                    throw new InvalidOperationException("userData.Remove");
-                }
-
-                return await Write(context, $"> Note Deleted.");
+                    return Result.Success;
+                })
+                .ResolveAsync(
+                    onSuccess: async () =>
+                    {
+                        return await Write(context, $"> End of Delete : Note Deleted.");
+                    },
+                    onFailure: async e =>
+                    {
+                        return await Write(context, $"> End of Delete : Note can not Deleted : {e.Message}, {e.StackTrace}");
+                    });
             });
-
-            return await Write(context, $"> End of Delete");
         }
 
         private async Task<FlowEndToken> Write(IFlowContext context, string text)

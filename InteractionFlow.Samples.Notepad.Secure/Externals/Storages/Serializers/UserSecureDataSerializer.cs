@@ -8,51 +8,51 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
 {
-
     public class UserSecureDataSerializer : StreamSerializer<UserSecureData>, IUserSecureDataSerializerPort
     {
         public override async Task<Result<UserSecureData>> Deserialize(Result<Stream> inputData, Result<UserSecureData> refValue)
         {
-            if (!inputData)
-                return inputData.Exception!;
+            return await inputData.StartAsync()
+                .ThenAsync(async stream =>
+                {
+                    return refValue
+                        .ThenError(e => new UserSecureData())
+                        .Then(data => (stream, data).AsResult());
+                })
+                .ThenAsync(async value =>
+                {
+                    var (stream, data) = value;
 
-            var data = refValue ? refValue.Value! : new();
-            var stream = inputData.Value!;
-
-            try
-            {
-                using var memory = new MemoryStream();
-                await stream.CopyToAsync(memory);
-                data.UserSalt = memory.ToArray();
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
-
-            return data;
+                    try
+                    {
+                        await using var memory = new MemoryStream();
+                        await stream.CopyToAsync(memory);
+                        data.UserSalt = memory.ToArray();
+                        return data.AsResult();
+                    }
+                    catch (Exception e)
+                    {
+                        return e;
+                    }
+                });
         }
 
         public override async Task<Result<Stream>> Serialize(Result<UserSecureData> inputValue, Result<Stream> refData)
         {
-            if (!inputValue)
-                return inputValue.Exception!;
-            if (!refData)
-                return refData.Exception!;
+            return await inputValue.StartAsync()
+                .ThenAsync(async data =>
+                {
+                    return refData
+                        .Then(stream => (data, stream).AsResult());
+                })
+                .ThenAsync(async e =>
+                {
+                    var (data, stream) = e;
 
-            var data = inputValue.Value!;
-            var stream = refData.Value!;
+                    await stream.WriteAsync(data.UserSalt);
 
-            try
-            {
-                await stream.WriteAsync(data.UserSalt);
-
-                return stream;
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
+                    return stream.AsResult();
+                });
         }
     }
 }

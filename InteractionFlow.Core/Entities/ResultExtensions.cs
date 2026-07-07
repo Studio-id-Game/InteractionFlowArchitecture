@@ -5,27 +5,27 @@ namespace InteractionFlow.Core.Entities
     public static class ResultExtensions
     {
         /// <summary>
-        /// 成功時に副作用を実行し、結果はそのまま返します。
+        /// Result型 への暗黙的キャストを明示的に呼び出します。
         /// </summary>
-        public static Result OnSuccess(
-            this Result result,
-            Action action)
+        /// <param name="e"></param>
+        /// <returns></returns>
+        public static Result AsResult(this Exception e)
         {
-            if (result.IsValid)
-                action();
-
-            return result;
+            return e;
         }
 
         /// <summary>
-        /// 失敗時に副作用を実行し、結果はそのまま返します。
+        /// 成功時に副作用を実行し、そのまま伝播します。
         /// </summary>
-        public static Result OnError(
+        public static Result OnSuccess(
             this Result result,
-            Action<Exception> action)
+            Action onSuccess)
         {
-            if (!result.Try(out var e))
-                action(e);
+            if (result.Try(out _))
+            {
+                onSuccess();
+            }
+
             return result;
         }
 
@@ -41,6 +41,45 @@ namespace InteractionFlow.Core.Entities
                 return onSuccess();
             else
                 return onError(e);
+        }
+
+        /// <summary>
+        /// 成功時の値をもとに次のResultを生成し、失敗はそのまま伝播します。
+        /// </summary>
+        public static Result Then(
+            this Result result,
+            Func<Result> binder)
+        {
+            if (result.Try(out var error))
+                return binder();
+            else
+                return error;
+        }
+
+        /// <summary>
+        /// 成功時の値をもとに次のResultを生成し、失敗はそのまま伝播します。
+        /// </summary>
+        public static Result<U> Then<U>(
+            this Result result,
+            Func<Result<U>> binder)
+        {
+            if (result.Try(out var error))
+                return binder();
+            else
+                return error;
+        }
+
+        /// <summary>
+        /// 失敗時の値をもとに次のResultを生成し、成功はそのまま伝播します。
+        /// </summary>
+        public static Result ThenError(
+            this Result result,
+            Func<Exception, Result> binder)
+        {
+            if (result.Try(out var error))
+                return result;
+            else
+                return binder(error);
         }
     }
 }

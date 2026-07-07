@@ -31,25 +31,23 @@ namespace InteractionFlow.Core.Externals.Storages
         {
             foreach (var (key, value) in items)
             {
-                var canRemove = CanRemoveValue(key, value);
-                if (!canRemove)
+                if (!CanRemoveValue(key, value).Try(out var e))
                 {
-                    return canRemove;
+                    return e;
                 }
             }
 
             items.Clear();
-            return true;
+            return Result.Success;
         }
 
         public Result ClearAndDispose()
         {
             foreach (var (key, value) in items)
             {
-                var canRemove = CanRemoveValue(key, value);
-                if (!canRemove)
+                if (!CanRemoveValue(key, value).Try(out var e))
                 {
-                    return canRemove;
+                    return e;
                 }
             }
 
@@ -62,7 +60,7 @@ namespace InteractionFlow.Core.Externals.Storages
             }
 
             items.Clear();
-            return true;
+            return Result.Success;
         }
 
         public bool ContainsKey(TKey key)
@@ -101,35 +99,27 @@ namespace InteractionFlow.Core.Externals.Storages
 
         public Result<TValue> GetOrCreate(TKey key)
         {
-            var getResult = Get(key);
-            if (getResult)
-            {
-                return getResult;
-            }
-
-            var createResult = CreateNewValue(key);
-
-            if (createResult)
-            {
-                items.Add(key, createResult.Value!);
-                return createResult;
-            }
-
-            return createResult;
+            return Get(key)
+                .ThenError(_ =>
+                {
+                    //OnSuccess() を入れ子にしているのは、CreateNewValue() のルートでのみ items.Add() を実行するため
+                    return CreateNewValue(key)
+                        .OnSuccess(newValue =>
+                        {
+                            items.Add(key, newValue);
+                        });
+                });
         }
 
         public Result RemoveWithoutDispose(TKey key)
         {
             if (items.TryGetValue(key, out var value))
             {
-                var canRemove = CanRemoveValue(key, value);
-
-                if (canRemove)
-                {
-                    items.Remove(key);
-                }
-
-                return canRemove;
+                return CanRemoveValue(key, value)
+                    .OnSuccess(() =>
+                    {
+                        items.Remove(key);
+                    });
             }
             else
             {
@@ -141,19 +131,16 @@ namespace InteractionFlow.Core.Externals.Storages
         {
             if (items.TryGetValue(key, out var value))
             {
-                var canRemove = CanRemoveValue(key, value);
+                return CanRemoveValue(key, value)
+                    .OnSuccess(() =>
+                    {
+                        items.Remove(key);
 
-                if (canRemove)
-                {
-                    items.Remove(key);
-                }
-
-                if (value is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-
-                return canRemove;
+                        if (value is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+                    });
             }
             else
             {

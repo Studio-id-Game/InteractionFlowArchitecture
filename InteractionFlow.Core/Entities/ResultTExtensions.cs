@@ -5,26 +5,28 @@ namespace InteractionFlow.Core.Entities
     public static class ResultTExtensions
     {
         /// <summary>
-        /// 成功時に副作用を実行し、結果はそのまま返します。
+        /// Result型 への暗黙的キャストを明示的に呼び出します。
         /// </summary>
-        public static Result<T> OnSuccess<T>(
-            this Result<T> result,
-            Action<T> action)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static Result<T> AsResult<T>(this T value)
         {
-            if (result.Try(out var value, out _))
-                action(value);
-            return result;
+            return value;
         }
 
         /// <summary>
-        /// 失敗時に副作用を実行し、結果はそのまま返します。
+        /// 成功時に副作用を実行し、そのまま伝播します。
         /// </summary>
-        public static Result<T> OnError<T>(
+        public static Result<T> OnSuccess<T>(
             this Result<T> result,
-            Action<Exception> action)
+            Action<T> onSuccess)
         {
-            if (!result.Try(out _, out var error))
-                action(error);
+            if (result.Try(out var t, out _))
+            {
+                onSuccess(t);
+            }
+
             return result;
         }
 
@@ -45,6 +47,19 @@ namespace InteractionFlow.Core.Entities
         /// <summary>
         /// 成功時の値をもとに次のResultを生成し、失敗はそのまま伝播します。
         /// </summary>
+        public static Result Then<T>(
+            this Result<T> result,
+            Func<T, Result> binder)
+        {
+            if (result.Try(out var value, out var error))
+                return binder(value);
+            else
+                return error;
+        }
+
+        /// <summary>
+        /// 成功時の値をもとに次のResultを生成し、失敗はそのまま伝播します。
+        /// </summary>
         public static Result<U> Then<T, U>(
             this Result<T> result,
             Func<T, Result<U>> binder)
@@ -56,16 +71,16 @@ namespace InteractionFlow.Core.Entities
         }
 
         /// <summary>
-        /// 成功時の値を取得し、失敗時は指定されたデフォルト値を返します。
+        /// 失敗時の値をもとに次のResultを生成し、成功はそのまま伝播します。
         /// </summary>
-        public static T OrDefault<T>(
+        public static Result<T> ThenError<T>(
             this Result<T> result,
-            T defaultValue)
+            Func<Exception, Result<T>> binder)
         {
-            if (result.Try(out var value, out _))
+            if (result.Try(out var value, out var error))
                 return value;
             else
-                return defaultValue;
+                return binder(error);
         }
     }
 }

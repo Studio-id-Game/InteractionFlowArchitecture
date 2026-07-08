@@ -1,6 +1,7 @@
 # Interaction Flow C# Package
 
 このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。
+自動編集エージェント向けの補足は [.AGENTS.md](./.AGENTS.md) を参照してください。
 
 ## 目次
 [全体構成](#全体構成) 

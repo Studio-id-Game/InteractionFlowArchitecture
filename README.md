@@ -56,6 +56,8 @@
 - `InteractionFlow.Samples.Notepad.Secure`  
   Notepad サンプルの拡張版です。`Core` の構成に加えて、パスワードベースの暗号化や安全なユーザーデータ管理を扱う実装を追加します。
 
+>.Core/.Standard/.Samples の各役割については、[.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
+
 ---
 
 # 全体構成

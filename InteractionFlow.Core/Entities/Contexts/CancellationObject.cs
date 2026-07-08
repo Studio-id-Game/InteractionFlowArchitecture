@@ -6,22 +6,38 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
+    /// <summary>
+    /// フロー実行中のキャンセル要求と、キャンセル対象タスクの待機・リセットを管理します。
+    /// </summary>
     public class CancellationObject
     {
         private CancellationTokenSource? tokenSource;
 
         private readonly ConcurrentBag<Task> currentTasks = [];
 
+        /// <summary>
+        /// 登録済みのキャンセル対象タスクが存在するかどうかを取得します。
+        /// </summary>
         public bool HasTask => currentTasks.Any();
 
+        /// <summary>
+        /// 現在のキャンセルトークンにキャンセルが要求されているかどうかを取得します。
+        /// </summary>
         public bool IsCancellationRequested => tokenSource?.IsCancellationRequested ?? false;
 
+        /// <summary>
+        /// キャンセル時に完了を待機する対象タスクを登録します。
+        /// </summary>
+        /// <param name="task">キャンセル後のリセット時に待機するタスク。</param>
         public void AddCancelableTask(Task task)
         {
             tokenSource ??= new();
             currentTasks.Add(task);
         }
 
+        /// <summary>
+        /// 現在のキャンセルトークンにキャンセルを要求します。
+        /// </summary>
         public void Cancel()
         {
             tokenSource ??= new();
@@ -30,6 +46,10 @@ namespace InteractionFlow.Core.Entities.Contexts
                 tokenSource.Cancel();
         }
 
+        /// <summary>
+        /// キャンセル要求がある場合、登録済みタスクをすべて待機してキャンセル状態をリセットします。
+        /// </summary>
+        /// <returns>リセットを実行した場合は <see langword="true"/>、キャンセル要求がない場合は <see langword="false"/>。</returns>
         public ValueTask<bool> TryWaitAndResetAsync()
         {
             if (tokenSource == null || !tokenSource.IsCancellationRequested)
@@ -51,12 +71,21 @@ namespace InteractionFlow.Core.Entities.Contexts
             }
         }
 
+        /// <summary>
+        /// 現在のキャンセルトークンを取得します。未作成の場合は新しく作成します。
+        /// </summary>
+        /// <returns>キャンセル制御に使用するトークン。</returns>
         public CancellationToken GetToken()
         {
             tokenSource ??= new();
             return tokenSource.Token;
         }
 
+        /// <summary>
+        /// キャンセル要求がある場合、そのトークンに紐づく <see cref="OperationCanceledException"/> を作成します。
+        /// </summary>
+        /// <param name="canceledException">キャンセル要求がある場合に作成された例外。</param>
+        /// <returns>キャンセル要求がある場合は <see langword="true"/>。</returns>
         public bool TryGetCanceledException(out OperationCanceledException? canceledException)
         {
             if (IsCancellationRequested)

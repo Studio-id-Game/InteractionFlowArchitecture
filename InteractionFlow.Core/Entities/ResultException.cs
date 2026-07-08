@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace InteractionFlow.Core.Entities
 {
+    /// <summary>
+    /// <see cref="Result"/> または <see cref="Result{TValue}"/> が失敗を保持するために使用する例外です。
+    /// </summary>
     public class ResultException : Exception
     {
         internal ResultException(Exception inner) : base($"ResultMessage : {inner.Message}", inner)
@@ -15,8 +18,14 @@ namespace InteractionFlow.Core.Entities
         }
 
 # if DEBUG
+        /// <summary>
+        /// DEBUG ビルド時に、Result が作成された位置のスタックトレースを取得します。
+        /// </summary>
         public StackTrace? ResultCreationStackTrace { get; } = new(3, true);
 #else
+        /// <summary>
+        /// DEBUG ビルド時に、Result が作成された位置のスタックトレースを取得します。
+        /// </summary>
         public StackTrace? ResultCreationStackTrace { get; } = null;
 #endif
     }

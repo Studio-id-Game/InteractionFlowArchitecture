@@ -26,11 +26,11 @@
 - `Interactions.Rules`
 - `OperationPort`
 - `ReactionPort`
-- `SilentIntegrationPort`
+- `SilentExternalPort`
 - `StoragePort`
 - `Operation`
 - `Reaction`
-- `SilentIntegration`
+- `SilentExternal`
 - `Storage`
 - `Entities`
 - `Entities.Rules`

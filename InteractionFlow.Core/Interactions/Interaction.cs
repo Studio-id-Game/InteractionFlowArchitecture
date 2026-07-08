@@ -6,23 +6,57 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
 {
+    /// <summary>
+    /// <see cref="IInteraction"/> のデフォルト実装基底クラスです。
+    /// </summary>
+    /// <param name="exceptionPort">通常の例外をフロー終了時の反応へ変換するポート。</param>
+    /// <param name="cancellationPort">キャンセルをフロー終了時の反応へ変換するポート。</param>
+    /// <param name="dependency">この Interaction が明示的に依存するフローノード。</param>
     public abstract class Interaction(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         params IFlowNode[] dependency)
         : IInteraction
     {
+        /// <summary>
+        /// 例外処理ポート、キャンセル処理ポート、および派生クラスから渡された依存ノードを取得します。
+        /// </summary>
         public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[ExceptionPort, CancellationPort, .. dependency];
+
+        /// <summary>
+        /// 通常の例外を処理する Reaction ポートを取得します。
+        /// </summary>
         protected IExceptionPort<Exception> ExceptionPort => exceptionPort;
+
+        /// <summary>
+        /// キャンセルを処理する Reaction ポートを取得します。
+        /// </summary>
         protected ICancellationPort CancellationPort => cancellationPort;
 
+        /// <summary>
+        /// 指定されたコンテキストで Interaction を実行します。
+        /// </summary>
+        /// <param name="context">Interaction に渡すフローコンテキスト。</param>
+        /// <returns>Interaction の終了結果。</returns>
         public abstract Task<FlowEndToken> ExecuteAsync(IFlowContext context);
 
+        /// <summary>
+        /// 指定されたキャンセル例外をキャンセル処理ポートへ委譲します。
+        /// </summary>
+        /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
+        /// <param name="e">処理するキャンセル例外。</param>
+        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
         protected async Task<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException e)
         {
             return await CancellationPort.HandleCancellationAsync(context, e);
         }
 
+        /// <summary>
+        /// 指定された例外を例外処理ポートへ委譲します。
+        /// </summary>
+        /// <param name="context">例外が発生した時点のフローコンテキスト。</param>
+        /// <param name="e">処理する例外。</param>
+        /// <returns>例外処理後のフロー終了トークン。</returns>
         protected async Task<FlowEndToken> HandleExceptionAsync(IFlowContext context, Exception e)
         {
             return await ExceptionPort.HandleExceptionAsync(context, e);
@@ -31,7 +65,7 @@ namespace InteractionFlow.Core.Interactions
         /// <summary>
         /// Interaction の実行本体を、ライブラリ標準の例外ハンドリング内で実行します。
         /// <para>
-        /// <see cref="OperationCanceledException"/> および <typeparamref name="TException"/> は捕捉され、
+        /// <see cref="OperationCanceledException"/> およびその他の <see cref="Exception"/> は捕捉され、
         /// <see cref="FlowEndToken"/> に変換されます。
         /// </para>
         /// <para>

@@ -2,16 +2,30 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<IsPackable>false</IsPackable>
+		<PackageId>InteractionFlow.Analyzers</PackageId>
 		<VersionPrefix>$(AnalyzerVersion)</VersionPrefix>
 		<Description>$(DescriptionHead)特に、アーキテクチャの規則を静的に解析して警告するアナライザーライブラリを提供します。</Description>
+		<PackageTags>$(PackageTags);analyzer;roslyn;diagnostics;architecture-rules</PackageTags>
+		<PackageReleaseNotes>Interaction Flow Architecture の依存関係ルールを検証する Analyzer 0.4.1 リリースです。</PackageReleaseNotes>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<IncludeSymbols>false</IncludeSymbols>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers"
-						  Version="2.9.8" />
+						  Version="2.9.8"
+						  PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp"
-						  Version="3.3.1" />
+						  Version="3.3.1"
+						  PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)$(AssemblyName).dll"
+			  Pack="true"
+			  PackagePath="analyzers/dotnet/cs"
+			  Visible="false" />
 	</ItemGroup>
 
 	<ItemGroup>

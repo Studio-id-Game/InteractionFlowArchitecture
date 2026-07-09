@@ -1,0 +1,6 @@
+<Project>
+	<PropertyGroup>
+		<GenerateDocumentationFile Condition="'$(IsPackable)' == 'false'">false</GenerateDocumentationFile>
+		<NoWarn Condition="'$(IsPackable)' == 'false'">$(NoWarn);CS1591</NoWarn>
+	</PropertyGroup>
+</Project>

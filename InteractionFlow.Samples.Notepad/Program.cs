@@ -1,14 +1,14 @@
-using InteractionFlow.Core.Builders;
-using InteractionFlow.Samples.Notepad.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Focuses;
-using InteractionFlow.Samples.Notepad.Interactions;
-using InteractionFlow.Samples.Notepad.StoragePorts;
-using InteractionFlow.Samples.Notepad.Storages;
+using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.SerializerPorts;
+using InteractionFlow.Samples.Notepad.Core.Externals.Storages;
+using InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences;
+using InteractionFlow.Samples.Notepad.Core.Interactions;
+using InteractionFlow.Samples.Notepad.Core.ProgramFlows;
+using InteractionFlow.Samples.Notepad.Externals.Serializers;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.Builders.Profiles;
 using InteractionFlow.Standard.Interactions;
-using InteractionFlow.Standard.OperationPorts;
-using InteractionFlow.Standard.Operations;
 using System;
 using System.Threading.Tasks;
 
@@ -20,27 +20,27 @@ namespace InteractionFlow.Samples.Notepad
         {
             var scopeBuilder = new ScopeBuilder();
 
-            scopeBuilder.UseFunction<IConsoleOperation, ConsoleOperation>()
-                .Apply(ConsoleFunction.Profile)
-                .UseFunction<INotepadUserDataMemory, NotepadUserDataMemory>()
-                .UseFunction<INotepadUserDataFiles, NotepadUserDataDirectories>()
-                .UseFunction<INotepadDataMemory, NotepadDataMemory>()
-                .UseFunction<INotepadDataFiles, NotepadDataFiles>()
+            scopeBuilder.Apply(ConsoleBuilder.Profile)
+                .UseFunction<INotepadDataStoragePort, NotepadDataStorage>()
+                .UseFunction<INotepadUserDataStoragePort, NotepadUserDataStorage>()
+                .Use<INotepadDataPersistencePort, NotepadDataFilePersistence>()
+                .Use<INotepadUserDataPersistencePort, NotepadUserDataDirectoryPersistence>()
+                .Use<INotepadDataSerializerPort, NotepadDataSimpleSerializer>()
                 .UseInteraction<Login>()
                 .UseInteraction<NoteCreate>()
                 .UseInteraction<NoteDelete>()
                 .UseInteraction<NoteEdit>()
                 .UseInteraction<NoteListView>()
                 .UseInteraction<SelectUserAction>()
-                .UseInteraction<ConsoleWrite>();
+                .UseInteraction<ConsoleWriting>();
 
             var scope = scopeBuilder.BuildScope();
 
-            var mainLoop = scope.BuildFocus<MainLoop, NotepadContext>();
+            var mainLoop = scope.BuildProgramFlow<MainLoop, NotepadContext>();
 
             var context = new NotepadContext(NotepadUserObject.Public);
 
-            var end = await mainLoop.UseUserFlowAsync(context);
+            var end = await mainLoop.ExecuteAsync(context);
 
             end.LastContext.TryGet<NotepadUserObject>(out var notepadUser);
 

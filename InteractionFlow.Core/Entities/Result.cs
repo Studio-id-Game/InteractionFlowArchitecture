@@ -1,131 +1,140 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Core.Entities
 {
+    /// <summary>
+    /// 値を持たない処理結果を表し、成功または例外による失敗を保持します。
+    /// </summary>
     public readonly struct Result
     {
-        public class InvalidException : Exception
+        private readonly ResultException? exception;
+
+        private Result(Exception? exception)
         {
-            public InvalidException() : base("Invalid Result Exception")
+            if (exception is null)
             {
+                this.exception = null;
             }
-
-            public InvalidException(string message) : base(message)
+            else
             {
-            }
-        }
-
-        private readonly Exception? exception;
-        private readonly bool isValid;
-
-        public Result(bool isValid)
-        {
-            this.isValid = isValid;
-            exception = null;
-        }
-
-        public Result(Exception exception)
-        {
-            this.exception = exception;
-            isValid = false;
-        }
-
-        public readonly bool IsValid => isValid;
-
-        public readonly Exception? Exception
-        {
-            get
-            {
-                if (IsValid) return null;
-                return exception ?? new InvalidException();
+                if (exception is ResultException resultException)
+                {
+                    this.exception = resultException;
+                }
+                else
+                {
+                    this.exception = new ResultException(exception);
+                }
             }
         }
 
-        public readonly Result<T> AsResultValue<T>(Func<T> value) => IsValid ? new Result<T>(value()) : new Result<T>(exception!);
+        /// <summary>
+        /// 結果が成功かどうかを判定し、失敗時は保持している例外を取得します。
+        /// </summary>
+        /// <param name="e">失敗時に保持されている例外。成功時は <see langword="null"/>。</param>
+        /// <returns>成功の場合は <see langword="true"/>、失敗の場合は <see langword="false"/>。</returns>
+        public readonly bool Try([MaybeNullWhen(true)] out ResultException e)
+        {
+            if (exception == null)
+            {
+                e = default;
+                return true;
+            }
+            else
+            {
+                e = exception;
+                return false;
+            }
+        }
 
-        public readonly Result<T> AsResultValue<T>(T value) => IsValid ? new Result<T>(value) : new Result<T>(exception!);
+        /// <summary>
+        /// 失敗結果の場合、保持している例外を送出します。
+        /// </summary>
+        /// <exception cref="ResultException">この結果が失敗を表している場合に発生します。</exception>
+        public readonly void ThrowIfError()
+        {
+            if (exception != null)
+                throw exception;
+        }
 
-        public readonly Result<T> AsResultValue<T>(in T value) => IsValid ? new Result<T>(value) : new Result<T>(exception!);
+        /// <summary>
+        /// 成功を表す結果を取得します。
+        /// </summary>
+        public static Result Success { get; } = new(null);
 
-        public static Result Success { get; } = new(true);
-
-        public static Result Error(Exception exception) => new(exception);
-
-        public static Result<TValue> Error<TValue>(Exception exception) => new(exception);
-
-
-        public static implicit operator bool(Result result) => result.IsValid;
-
-        public static implicit operator Exception?(Result result) => result.Exception;
-
-        public static implicit operator Result(bool isValid) => new(isValid);
-
+        /// <summary>
+        /// 例外を失敗結果へ変換します。
+        /// </summary>
+        /// <param name="exception">失敗として保持する例外。</param>
         public static implicit operator Result(Exception exception) => new(exception);
-
-        public static bool operator true(Result result) => result;
-
-        public static bool operator false(Result result) => !result;
-
-        public static Result operator |(Result left, Result right) => left ? left : right;
-
-        public static Result operator &(Result left, Result right) => left ? right : left;
     }
 
-    public readonly struct Result<TEntity>
+    /// <summary>
+    /// 値を持つ処理結果を表し、成功時の値または例外による失敗を保持します。
+    /// </summary>
+    /// <typeparam name="TValue">成功時に保持する値の型。</typeparam>
+    public readonly struct Result<TValue>
     {
-        private readonly TEntity? value;
-
+        private readonly TValue? value;
         private readonly Result result;
 
-        public Result(TEntity value) : this()
+        private Result(TValue value)
         {
             this.value = value;
-            result = true;
+            result = Result.Success;
         }
 
-        public Result(Exception exception) : this()
+        private Result(Exception exception)
         {
             value = default;
-            result = exception;
+            result = exception ?? throw new ArgumentNullException(nameof(exception));
         }
 
-        public Result(TEntity? value, Result result)
-        {
-            this.value = value;
-            this.result = result;
-        }
+        /// <summary>
+        /// 値を取り除いた成功または失敗の結果を取得します。
+        /// </summary>
+        public readonly Result WithoutValue => result;
 
-        public readonly TEntity? Value
+        /// <summary>
+        /// 結果が成功かどうかを判定し、成功時の値または失敗時の例外を取得します。
+        /// </summary>
+        /// <param name="value">成功時に保持されている値。失敗時は既定値。</param>
+        /// <param name="e">失敗時に保持されている例外。成功時は <see langword="null"/>。</param>
+        /// <returns>成功の場合は <see langword="true"/>、失敗の場合は <see langword="false"/>。</returns>
+        public readonly bool Try([MaybeNullWhen(false)] out TValue value, [MaybeNullWhen(true)] out ResultException e)
         {
-            get
+            if (result.Try(out e))
             {
-                if (IsValid) return value;
-                throw Exception!;
+                value = this.value!;
+                return true;
+            }
+            else
+            {
+                value = default;
+                return false;
             }
         }
 
-        public Result<TEntity2> With<TEntity2>(TEntity2? newValue) => new(newValue, result);
+        /// <summary>
+        /// 失敗結果の場合、保持している例外を送出します。
+        /// </summary>
+        /// <exception cref="ResultException">この結果が失敗を表している場合に発生します。</exception>
+        public readonly void ThrowIfError()
+        {
+            result.ThrowIfError();
+        }
 
-        public readonly Exception? Exception => result.Exception;
+        /// <summary>
+        /// 値を成功結果へ変換します。
+        /// </summary>
+        /// <param name="value">成功結果として保持する値。</param>
+        public static implicit operator Result<TValue>(TValue value) => new(value);
 
-        public readonly Result AsResult => result;
-
-        public readonly bool IsValid => result.IsValid;
-
-        public static implicit operator bool(Result<TEntity> result) => result.IsValid;
-
-        public static implicit operator Exception?(Result<TEntity> result) => result.Exception;
-
-        public static implicit operator Result<TEntity>(TEntity value) => new(value);
-
-        public static implicit operator Result<TEntity>(Exception exception) => new(exception);
-
-        public static bool operator true(Result<TEntity> result) => result;
-
-        public static bool operator false(Result<TEntity> result) => !result;
-
-        public static Result<TEntity> operator |(Result<TEntity> left, Result<TEntity> right) => left ? left : right;
-
-        public static Result<TEntity> operator &(Result<TEntity> left, Result<TEntity> right) => left ? right : left;
+        /// <summary>
+        /// 例外を失敗結果へ変換します。
+        /// </summary>
+        /// <param name="exception">失敗として保持する例外。</param>
+        public static implicit operator Result<TValue>(Exception exception) => new(exception);
     }
 }

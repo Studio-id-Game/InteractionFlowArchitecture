@@ -8,8 +8,12 @@
     <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
   </Folder>
   <Folder Name="/Samples/">
-    <Project Path="InteractionFlow.Samples.Notepad/InteractionFlow.Samples.Notepad.csproj" Id="372df045-4694-4d7c-a318-d0c5f78d234e" />
     <Project Path="InteractionFlow.Samples.Parrot/InteractionFlow.Samples.Parrot.csproj" />
+  </Folder>
+  <Folder Name="/Samples/Notepad/">
+    <Project Path="InteractionFlow.Samples.Notepad.Core/InteractionFlow.Samples.Notepad.Core.csproj" Id="ad8cfc36-187c-4ec0-8a0c-a119875d6bf1" />
+    <Project Path="InteractionFlow.Samples.Notepad.Secure/InteractionFlow.Samples.Notepad.Secure.csproj" Id="5b4e41cc-779f-47e0-a2eb-e6d7a54fd4ea" />
+    <Project Path="InteractionFlow.Samples.Notepad/InteractionFlow.Samples.Notepad.csproj" Id="372df045-4694-4d7c-a318-d0c5f78d234e" />
   </Folder>
   <Folder Name="/_Documents/">
     <Project Path="docs/IDEView.csproj" />
@@ -18,5 +22,6 @@
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
   </Folder>
 </Solution>

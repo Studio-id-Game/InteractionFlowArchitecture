@@ -2,95 +2,87 @@ using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public struct ConsoleState
+    /// <summary>
+    /// コンソール出力で使用する色と改行有無の状態を表します。
+    /// </summary>
+    /// <param name="backgroundColor">背景色。</param>
+    /// <param name="foregroundColor">前景色。</param>
+    /// <param name="writeLine">出力後に改行するかどうか。</param>
+    public class ConsoleState(ConsoleColor backgroundColor, ConsoleColor foregroundColor, bool writeLine) : IFunctionState<ConsoleState>
     {
-        internal readonly struct UseScope : IDisposable
+        /// <summary>
+        /// 色セットと改行有無を指定して状態を作成します。
+        /// </summary>
+        /// <param name="colorSet">使用する色セット。</param>
+        /// <param name="writeLine">出力後に改行するかどうか。</param>
+        public ConsoleState(ConsoleColorSet colorSet, bool writeLine) : this(colorSet.Background, colorSet.Foreground, writeLine)
         {
-            readonly ConsoleColor _ForegroundColor;
-            readonly ConsoleColor _BackgroundColor;
-            readonly bool _WriteLine;
 
-            internal UseScope(ConsoleState state)
+        }
+
+        /// <summary>
+        /// 標準のコンソール状態を取得します。
+        /// </summary>
+        public static ConsoleState Default => new(ConsoleColorSet.Default, true);
+
+        /// <summary>
+        /// 改行しない標準のコンソール状態を取得します。
+        /// </summary>
+        public static ConsoleState DefaultNoLine => new(ConsoleColorSet.Default, false);
+
+        /// <summary>
+        /// 背景色を保持します。
+        /// </summary>
+        public ConsoleColor backgroundColor = backgroundColor;
+
+        /// <summary>
+        /// 前景色を保持します。
+        /// </summary>
+        public ConsoleColor foregroundColor = foregroundColor;
+
+        /// <summary>
+        /// 出力後に改行するかどうかを保持します。
+        /// </summary>
+        public bool writeLine = writeLine;
+
+        /// <summary>
+        /// 前景色と背景色を色セットとして取得または設定します。
+        /// </summary>
+        public ConsoleColorSet ColorSet
+        {
+            get => new(foregroundColor, backgroundColor);
+            set
             {
-                _ForegroundColor = Console.ForegroundColor;
-                _BackgroundColor = Console.BackgroundColor;
-                _WriteLine = state.writeLine;
-
-                Console.ForegroundColor = state.foregroundColor;
-                Console.BackgroundColor = state.backgroundColor;
-            }
-
-            public readonly void Dispose()
-            {
-                Console.ForegroundColor = _ForegroundColor;
-                Console.BackgroundColor = _BackgroundColor;
-
-                if (_WriteLine)
-                {
-                    Console.WriteLine();
-                }
+                foregroundColor = value.Foreground;
+                backgroundColor = value.Background;
             }
         }
 
-        public readonly struct CustomizeScope : IDisposable
+        /// <summary>
+        /// 指定された項目だけを現在の状態へ反映します。
+        /// </summary>
+        /// <param name="foregroundColor">変更する前景色。</param>
+        /// <param name="backgroundColor">変更する背景色。</param>
+        /// <param name="writeLine">変更する改行有無。</param>
+        public void Update(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
         {
-            private readonly ConsoleState defaultState;
-            private readonly Action<ConsoleState> setter;
+            if (backgroundColor != null)
+                this.backgroundColor = backgroundColor.Value;
 
-            public CustomizeScope(ConsoleState currentState, Action<ConsoleState> setter)
-            {
-                defaultState = currentState;
-                this.setter = setter;
-            }
+            if (foregroundColor != null)
+                this.foregroundColor = foregroundColor.Value;
 
-            public void Set(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
-            {
-                var set = defaultState;
-                if (foregroundColor != null) set.foregroundColor = foregroundColor.Value;
-                if (backgroundColor != null) set.backgroundColor = backgroundColor.Value;
-                if (writeLine != null) set.writeLine = writeLine.Value;
-                setter(set);
-            }
-
-            public void Reset() => setter(defaultState);
-
-            public void Dispose()
-            {
-                Reset();
-            }
+            if (writeLine != null)
+                this.writeLine = writeLine.Value;
         }
 
-        public static ConsoleState Default { get; } = new ConsoleState()
+        /// <summary>
+        /// 現在の状態をコピーします。
+        /// </summary>
+        /// <returns>現在の状態と同じ内容を持つコピー。</returns>
+        public ConsoleState Copy()
         {
-            foregroundColor = ConsoleColor.Gray,
-            backgroundColor = ConsoleColor.Black,
-            writeLine = true,
-        };
-
-        public static ConsoleState DefaultNoLine { get; } = new ConsoleState()
-        {
-            foregroundColor = ConsoleColor.Gray,
-            backgroundColor = ConsoleColor.Black,
-            writeLine = false,
-        };
-
-
-
-        public ConsoleColor foregroundColor;
-
-        public ConsoleColor backgroundColor;
-
-        public bool writeLine;
-
-        public ConsoleState(ConsoleColor foregroundColor, ConsoleColor backgroundColor, bool writeLine)
-        {
-            this.foregroundColor = foregroundColor;
-            this.backgroundColor = backgroundColor;
-            this.writeLine = writeLine;
+            return new(backgroundColor, foregroundColor, writeLine);
         }
-
-        internal readonly UseScope Use() => new(this);
-
-        public readonly CustomizeScope Customize(Action<ConsoleState> reset) => new(this, reset);
     }
 }

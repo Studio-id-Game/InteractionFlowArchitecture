@@ -2,13 +2,15 @@ using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
 {
-    public readonly struct ConsoleInputKeyInfo
+    /// <summary>
+    /// コンソールから入力されたキー情報を表します。
+    /// </summary>
+    /// <param name="key">入力されたキー情報。</param>
+    public readonly struct ConsoleInputKeyInfo(ConsoleKeyInfo key)
     {
-        public readonly ConsoleKeyInfo key;
-
-        public ConsoleInputKeyInfo(ConsoleKeyInfo key)
-        {
-            this.key = key;
-        }
+        /// <summary>
+        /// 入力されたキー情報を取得します。
+        /// </summary>
+        public readonly ConsoleKeyInfo key = key;
     }
 }

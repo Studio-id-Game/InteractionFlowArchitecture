@@ -1,3 +1,3 @@
-﻿![Interaction_Flow_Architecture__Dependency_Diagram.png](Interaction_Flow_Architecture__Dependency_Diagram.png)
-![Interaction_Flow_Architecture__Overview.png](Interaction_Flow_Architecture__Overview.png)
-![Interaction_Flow_Architecture__User_Flow.png](Interaction_Flow_Architecture__User_Flow.png)
+![Interaction_Flow_Architecture__Dependency_Diagram.svg](Interaction_Flow_Architecture__Dependency_Diagram.svg)
+![Interaction_Flow_Architecture__Overview.svg](Interaction_Flow_Architecture__Overview.svg)
+![Interaction_Flow_Architecture__User_Flow.svg](Interaction_Flow_Architecture__User_Flow.svg)

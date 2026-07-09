@@ -1,15 +1,13 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Parrot.Entities;
-using InteractionFlow.Samples.Parrot.Focuses;
+using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Parrot.Externals.Storages;
 using InteractionFlow.Samples.Parrot.Interactions;
-using InteractionFlow.Samples.Parrot.StoragePorts;
-using InteractionFlow.Samples.Parrot.Storages;
+using InteractionFlow.Samples.Parrot.ProgramFlows;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.Builders.Profiles;
 using InteractionFlow.Standard.Interactions;
-using InteractionFlow.Standard.SilentlntegrationPorts;
-using InteractionFlow.Standard.Silentlntegrations;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
 {
@@ -19,21 +17,17 @@ namespace InteractionFlow.Samples.Parrot
         {
             var globalScopeBuilder = new ScopeBuilder();
 
-            // Console Reactions & Operations
-            globalScopeBuilder.Apply(ConsoleFunction.Profile);
-
+            globalScopeBuilder
+            // Console Functions
+                .Apply(ConsoleBuilder.ProfileUseCancellation)
             // Storages
-            globalScopeBuilder.UseFunction<ILastSelectMemory, LastSelectMemory>();
-
-            // Silentlntegrations
-            globalScopeBuilder.UseFunction<ICancelKeyAssigne, ConsoleCancelKeyAssigne>();
-
+                .UseFunction<ILastSelectMemory, LastSelectMemory>()
             // Interactions
-            globalScopeBuilder.UseInteraction<ConsoleWrite>();
-            globalScopeBuilder.UseInteraction<ListSamples>();
-            globalScopeBuilder.UseInteraction<SelectSample>();
-            globalScopeBuilder.UseInteraction<RunSample>();
-            globalScopeBuilder.UseInteraction<AssigneCancelKey>();
+                .UseInteraction<ConsoleWriting>()
+                .UseInteraction<ListSamples>()
+                .UseInteraction<SelectSample>()
+                .UseInteraction<RunSample>()
+                .UseInteraction<ConsoleSetup>();
 
             return globalScopeBuilder.BuildScope();
         }
@@ -42,30 +36,24 @@ namespace InteractionFlow.Samples.Parrot
         {
             using var globalScope = BuildScope();
 
-            using (globalScope)
+            var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
+            var context = new FlowContext(user);
+
+            using (var initializeApplication = globalScope.BuildProgramFlow<InitializeApplication, IFlowContext>())
             {
+                await initializeApplication.ExecuteAsync(context);
+            }
 
-                var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
-                var context = new FlowContext(user);
+            using var selectAndRunSample = globalScope.BuildProgramFlow<SelectAndRunSample, IFlowContext>();
 
-                FlowEndToken end;
+            while (true)
+            {
+                var end = await selectAndRunSample.ExecuteAsync(context);
+                var endState = end.LastContext.TryGet<SelectAndRunSampleEndState>(out var _endState) ?
+                    _endState : SelectAndRunSampleEndState.None;
 
-                {
-                    using var initializeApplication = globalScope.BuildFocus<InitializeApplication, IFlowContext>();
-                    end = await initializeApplication.UseUserFlowAsync(context);
-                }
-
-                using var selectAndRunSample = globalScope.BuildFocus<SelectAndRunSample, IFlowContext>();
-
-                while (true)
-                {
-                    end = await selectAndRunSample.UseUserFlowAsync(context);
-                    var endState = end.LastContext.TryGet<SelectAndRunSampleEndState>(out var _endState) ?
-                        _endState : SelectAndRunSampleEndState.None;
-
-                    if (endState == SelectAndRunSampleEndState.CancelSelect)
-                        break;
-                }
+                if (endState == SelectAndRunSampleEndState.CancelSelect)
+                    break;
             }
         }
     }

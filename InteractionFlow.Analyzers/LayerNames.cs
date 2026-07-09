@@ -8,44 +8,28 @@ namespace InteractionFlow.Analyzers
 {
     internal static class LayerNames
     {
-
         private static readonly StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
 
         public const string Builders = nameof(Builders);
         public const string Entities = nameof(Entities);
-        public const string Focuses = nameof(Focuses);
-        public const string MultiFunctions = nameof(MultiFunctions);
-        public const string MultiFunctionPorts = nameof(MultiFunctionPorts);
+        public const string ExternalPorts = nameof(ExternalPorts);
+        public const string Externals = nameof(Externals);
         public const string Interactions = nameof(Interactions);
-        public const string OperationPorts = nameof(OperationPorts);
-        public const string Operations = nameof(Operations);
-        public const string ReactionPorts = nameof(ReactionPorts);
-        public const string Reactions = nameof(Reactions);
-        public const string SilentlntegrationPorts = nameof(SilentlntegrationPorts);
-        public const string Silentlntegrations = nameof(Silentlntegrations);
-        public const string StoragePorts = nameof(StoragePorts);
-        public const string Storages = nameof(Storages);
+        public const string ProgramFlows = nameof(ProgramFlows);
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
-        private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new ConcurrentDictionary<string, ImmutableHashSet<string>>(stringComparer);
+        private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
+        private static readonly ConcurrentDictionary<string, string> layerByNamespace = new(stringComparer);
 
 
-        private static HashSet<string> GetAll() => new HashSet<string>(stringComparer)
+        private static HashSet<string> GetAll() => new(stringComparer)
         {
             Builders,
             Entities,
-            Focuses,
+            ExternalPorts,
+            Externals,
             Interactions,
-            MultiFunctionPorts,
-            MultiFunctions,
-            OperationPorts,
-            Operations,
-            ReactionPorts,
-            Reactions,
-            Silentlntegrations,
-            SilentlntegrationPorts,
-            StoragePorts,
-            Storages,
+            ProgramFlows,
         };
 
         private static ImmutableHashSet<string> Disallows(string layerName)
@@ -58,51 +42,32 @@ namespace InteractionFlow.Analyzers
             {
                 case Builders:
 
-                    disallows.Remove(Focuses);
+                    disallows.Remove(ExternalPorts);
+                    disallows.Remove(Externals);
                     disallows.Remove(Interactions);
-                    disallows.Remove(MultiFunctions);
-                    disallows.Remove(MultiFunctionPorts);
-                    disallows.Remove(Operations);
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(Reactions);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(Storages);
-                    disallows.Remove(StoragePorts);
+                    disallows.Remove(ProgramFlows);
                     break;
 
-                case Focuses:
+                case Entities:
+                case ExternalPorts:
 
-                    disallows.Remove(Interactions);
+                    break;
+
+                case Externals:
+
+                    disallows.Remove(ExternalPorts);
                     break;
 
                 case Interactions:
 
-                    disallows.Remove(MultiFunctionPorts);
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentlntegrationPorts);
+                    disallows.Remove(ExternalPorts);
                     break;
 
-                case MultiFunctions:
-                case MultiFunctionPorts:
-                case Silentlntegrations:
-                case SilentlntegrationPorts:
-                case Operations:
-                case OperationPorts:
-                case Reactions:
-                case ReactionPorts:
-                case Storages:
-                case StoragePorts:
+                case ProgramFlows:
 
-                    disallows.Remove(MultiFunctionPorts);
-                    disallows.Remove(OperationPorts);
-                    disallows.Remove(ReactionPorts);
-                    disallows.Remove(StoragePorts);
-                    disallows.Remove(SilentlntegrationPorts);
+                    disallows.Remove(Interactions);
                     break;
 
-                case Entities:
                 default:
                     break;
             }
@@ -120,10 +85,7 @@ namespace InteractionFlow.Analyzers
             switch (sourceLayer)
             {
                 case Builders:
-                case Operations:
-                case Reactions:
-                case Storages:
-
+                case Externals:
                     return false;
             }
 
@@ -141,10 +103,8 @@ namespace InteractionFlow.Analyzers
 
         public static bool IsDisallowReference(IEnumerable<string> allowedRoots, string source, string target, out string sourceShowName, out string targetShowName)
         {
-            var sourcePath = source.Split('.');
-            var targetPath = target.Split('.');
-            var sourceLayer = sourcePath.FirstOrDefault(e => all.Contains(e));
-            var targetLayer = targetPath.FirstOrDefault(e => all.Contains(e));
+            var sourceLayer = GetLayerName(source);
+            var targetLayer = GetLayerName(target);
             var isOutsideLayer = string.IsNullOrEmpty(sourceLayer);
 
             targetShowName = string.IsNullOrEmpty(targetLayer) ? target : targetLayer;
@@ -155,14 +115,25 @@ namespace InteractionFlow.Analyzers
                 return false;
             }
 
-
-            if (!disallowsSourceLayer.TryGetValue(sourceLayer, out var disallows))
-            {
-                disallows = Disallows(sourceLayer);
-                disallowsSourceLayer[sourceLayer] = disallows;
-            }
+            var disallows = disallowsSourceLayer.GetOrAdd(sourceLayer, Disallows);
 
             return disallows.Contains(targetLayer) || CheckDisallowExternal(allowedRoots, sourceLayer, target, targetLayer);
+        }
+
+        private static string GetLayerName(string namespaceName)
+        {
+            return layerByNamespace.GetOrAdd(namespaceName, currentNamespace =>
+            {
+                foreach (var item in currentNamespace.Split('.'))
+                {
+                    if (all.Contains(item))
+                    {
+                        return item;
+                    }
+                }
+
+                return "";
+            });
         }
     }
 }

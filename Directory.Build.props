@@ -15,7 +15,7 @@
 		<DescriptionHead>このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。</DescriptionHead>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</PackageProjectUrl>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageReadmeFile>NUGET_README.md</PackageReadmeFile>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</RepositoryUrl>
 		<PackageTags>interaction-flow;interaction-flow-architecture;csharp;dotnet;netstandard</PackageTags>
@@ -29,7 +29,7 @@
 		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="..\README.md">
+		<None Include="..\NUGET_README.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>

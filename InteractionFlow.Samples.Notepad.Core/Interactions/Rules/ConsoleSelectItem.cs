@@ -108,10 +108,11 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
             while (true);
         }
 
-        private async Task MoveToHead(string[] keys)
+        private Task MoveToHead(string[] keys)
         {
             var top = consoleCursorPositionAccess.Position.Top.GetValueOrDefault();
             consoleCursorPositionAccess.Position = new(0, top - keys.Length);
+            return Task.CompletedTask;
         }
 
         private async Task Write(IFlowContext context, string text)

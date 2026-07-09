@@ -38,9 +38,9 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
         public override async Task<Result<NotepadData>> Deserialize(Result<Stream> inputData, Result<NotepadData> refValue)
         {
             return await inputData.StartAsync()
-                .ThenAsync(async stream =>
+                .ThenAsync(stream =>
                 {
-                    return refValue.Then(notepad => (stream, notepad).AsResult());
+                    return Task.FromResult(refValue.Then(notepad => (stream, notepad).AsResult()));
                 })
                 .ThenAsync(async value =>
                 {
@@ -48,7 +48,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
                     try
                     {
                         await using var memory = new MemoryStream();
-                        await stream.CopyToAsync(memory);
+                        await stream.CopyToAsync(memory).ConfigureAwait(false);
                         var bytes = memory.ToArray();
                         return (notepad, bytes).AsResult();
                     }
@@ -57,37 +57,38 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
                         return e;
                     }
                 })
-                .ThenAsync(async value =>
+                .ThenAsync(value =>
                 {
                     var (notepad, bytes) = value;
 
-                    return secureManager.DecryptNotepadData(notepad, GetUserKey(), bytes)
-                        .Then(() => notepad.AsResult());
-                });
+                    return Task.FromResult(secureManager.DecryptNotepadData(notepad, GetUserKey(), bytes)
+                        .Then(() => notepad.AsResult()));
+                })
+                .ConfigureAwait(false);
         }
 
         public override async Task<Result<Stream>> Serialize(Result<NotepadData> inputValue, Result<Stream> refData)
         {
             return await refData.StartAsync()
-                .ThenAsync(async stream =>
+                .ThenAsync(stream =>
                 {
-                    return inputValue.Then(notepad => (stream, notepad).AsResult());
+                    return Task.FromResult(inputValue.Then(notepad => (stream, notepad).AsResult()));
                 })
-                .ThenAsync(async value =>
+                .ThenAsync(value =>
                 {
                     var (stream, notepad) = value;
 
                     var size = secureManager.GetCipherBytesSize(notepad);
                     var cipherBytes = new byte[size];
-                    return secureManager.EncryptNotepadData(notepad, GetUserKey(), cipherBytes)
-                        .Then(() => (stream, cipherBytes).AsResult());
+                    return Task.FromResult(secureManager.EncryptNotepadData(notepad, GetUserKey(), cipherBytes)
+                        .Then(() => (stream, cipherBytes).AsResult()));
                 })
                 .ThenAsync(async value =>
                 {
                     var (stream, cipherBytes) = value;
                     try
                     {
-                        await stream.WriteAsync(cipherBytes);
+                        await stream.WriteAsync(cipherBytes).ConfigureAwait(false);
 
                         return stream.AsResult();
                     }
@@ -95,7 +96,8 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
                     {
                         return e;
                     }
-                });
+                })
+                .ConfigureAwait(false);
         }
     }
 }

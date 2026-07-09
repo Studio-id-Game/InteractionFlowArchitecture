@@ -48,7 +48,7 @@ namespace InteractionFlow.Core.Interactions
         /// <returns>キャンセル処理後のフロー終了トークン。</returns>
         protected async Task<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException e)
         {
-            return await CancellationPort.HandleCancellationAsync(context, e);
+            return await CancellationPort.HandleCancellationAsync(context, e).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace InteractionFlow.Core.Interactions
         /// <returns>例外処理後のフロー終了トークン。</returns>
         protected async Task<FlowEndToken> HandleExceptionAsync(IFlowContext context, Exception e)
         {
-            return await ExceptionPort.HandleExceptionAsync(context, e);
+            return await ExceptionPort.HandleExceptionAsync(context, e).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -106,13 +106,13 @@ namespace InteractionFlow.Core.Interactions
                     {
                         try
                         {
-                            await task;
+                            await task.ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
                             if (attachCancellation != null)
                             {
-                                await attachCancellation();
+                                await attachCancellation().ConfigureAwait(false);
                             }
                         }
                         catch (Exception)
@@ -123,18 +123,18 @@ namespace InteractionFlow.Core.Interactions
                     }
                 }
 
-                return await task;
+                return await task.ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
                 e = new OperationCanceledException($"{this.GetName()} Interaction was canceled.", e);
-                var end = await HandleCancellationAsync(context, e);
+                var end = await HandleCancellationAsync(context, e).ConfigureAwait(false);
                 end.Exception = e;
                 return end;
             }
             catch (Exception e)
             {
-                var end = await HandleExceptionAsync(context, e);
+                var end = await HandleExceptionAsync(context, e).ConfigureAwait(false);
                 end.Exception = e;
                 return end;
             }

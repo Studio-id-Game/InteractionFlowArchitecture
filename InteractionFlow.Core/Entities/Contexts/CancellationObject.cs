@@ -61,7 +61,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             {
                 while (currentTasks.TryTake(out var task))
                 {
-                    await task;
+                    await task.ConfigureAwait(false);
                 }
 
                 tokenSource?.Dispose();

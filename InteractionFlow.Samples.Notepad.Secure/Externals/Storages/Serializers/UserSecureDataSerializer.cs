@@ -13,11 +13,11 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
         public override async Task<Result<UserSecureData>> Deserialize(Result<Stream> inputData, Result<UserSecureData> refValue)
         {
             return await inputData.StartAsync()
-                .ThenAsync(async stream =>
+                .ThenAsync(stream =>
                 {
-                    return refValue
+                    return Task.FromResult(refValue
                         .ThenError(e => new UserSecureData())
-                        .Then(data => (stream, data).AsResult());
+                        .Then(data => (stream, data).AsResult()));
                 })
                 .ThenAsync(async value =>
                 {
@@ -26,7 +26,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
                     try
                     {
                         await using var memory = new MemoryStream();
-                        await stream.CopyToAsync(memory);
+                        await stream.CopyToAsync(memory).ConfigureAwait(false);
                         data.UserSalt = memory.ToArray();
                         return data.AsResult();
                     }
@@ -34,25 +34,27 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
                     {
                         return e;
                     }
-                });
+                })
+                .ConfigureAwait(false);
         }
 
         public override async Task<Result<Stream>> Serialize(Result<UserSecureData> inputValue, Result<Stream> refData)
         {
             return await inputValue.StartAsync()
-                .ThenAsync(async data =>
+                .ThenAsync(data =>
                 {
-                    return refData
-                        .Then(stream => (data, stream).AsResult());
+                    return Task.FromResult(refData
+                        .Then(stream => (data, stream).AsResult()));
                 })
                 .ThenAsync(async e =>
                 {
                     var (data, stream) = e;
 
-                    await stream.WriteAsync(data.UserSalt);
+                    await stream.WriteAsync(data.UserSalt).ConfigureAwait(false);
 
                     return stream.AsResult();
-                });
+                })
+                .ConfigureAwait(false);
         }
     }
 }

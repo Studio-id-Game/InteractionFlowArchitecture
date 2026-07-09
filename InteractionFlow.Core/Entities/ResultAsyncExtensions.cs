@@ -31,10 +31,10 @@ namespace InteractionFlow.Core.Entities
             Func<Task<U>> onSuccess,
             Func<Exception, Task<U>> onFailure)
         {
-            if ((await task).Try(out var error))
-                return await onSuccess();
+            if ((await task.ConfigureAwait(false)).Try(out var error))
+                return await onSuccess().ConfigureAwait(false);
             else
-                return await onFailure(error);
+                return await onFailure(error).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -48,8 +48,8 @@ namespace InteractionFlow.Core.Entities
             this Task<Result> task,
             Func<Task<Result<U>>> binder)
         {
-            if ((await task).Try(out var error))
-                return await binder();
+            if ((await task.ConfigureAwait(false)).Try(out var error))
+                return await binder().ConfigureAwait(false);
             else
                 return error;
         }
@@ -64,8 +64,8 @@ namespace InteractionFlow.Core.Entities
             this Task<Result> task,
             Func<Task<Result>> binder)
         {
-            if ((await task).Try(out var error))
-                return await binder();
+            if ((await task.ConfigureAwait(false)).Try(out var error))
+                return await binder().ConfigureAwait(false);
             else
                 return error;
         }
@@ -80,10 +80,10 @@ namespace InteractionFlow.Core.Entities
             this Task<Result> task,
             Func<Exception, Task<Result>> binder)
         {
-            if ((await task).Try(out var error))
+            if ((await task.ConfigureAwait(false)).Try(out var error))
                 return Result.Success;
             else
-                return await binder(error);
+                return await binder(error).ConfigureAwait(false);
         }
     }
 }

@@ -43,7 +43,7 @@ namespace InteractionFlow.Standard.Interactions
         /// <returns>出力後のフロー終了トークン。</returns>
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
-            return await TryCatchBlock(context, option, InteractWithUserAsyncCore);
+            return await TryCatchBlock(context, option, InteractWithUserAsyncCore).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace InteractionFlow.Standard.Interactions
 
             using var scope = consoleWrite.GetStateScope();
             scope.State = state;
-            return await consoleWrite.Write(context, output);
+            return await consoleWrite.Write(context, output).ConfigureAwait(false);
         }
     }
 }

@@ -64,7 +64,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
                     bufferSize: 81920,
                     useAsync: true);
 
-                return await serializer.Deserialize(stream, oldValue);
+                return await serializer.Deserialize(stream, oldValue).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -85,10 +85,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
                     useAsync: true);
 
                 return await serializer.Serialize(value, stream)
-                    .ThenAsync(async stream2 =>
+                    .ThenAsync(stream2 =>
                     {
-                        return Result.Success;
-                    });
+                        return Task.FromResult(Result.Success);
+                    })
+                    .ConfigureAwait(false);
             }
             catch (Exception e)
             {

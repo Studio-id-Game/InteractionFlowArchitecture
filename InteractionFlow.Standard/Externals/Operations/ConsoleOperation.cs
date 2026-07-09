@@ -46,7 +46,7 @@ namespace InteractionFlow.Standard.Externals.Operations
             return await CancelableConsoleReadAsync<ConsoleInputText>(context, () =>
             {
                 return new(Console.ReadLine());
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace InteractionFlow.Standard.Externals.Operations
             return await CancelableConsoleReadAsync<ConsoleInputKeyInfo>(context, () =>
             {
                 return new(Console.ReadKey(hideChar));
-            });
+            }).ConfigureAwait(false);
         }
 
         private async Task<TInput> CancelableConsoleReadAsync<TInput>(IFlowContext context, Func<TInput> read)
@@ -118,11 +118,11 @@ namespace InteractionFlow.Standard.Externals.Operations
                 });
 
                 // これにより、入力終了+CancelWaitTimeの間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
-                await Task.Delay(State.cancelWaitTime, cancellationToken);
+                await Task.Delay(State.cancelWaitTime, cancellationToken).ConfigureAwait(false);
                 return result;
             });
 
-            var endTask = await Task.WhenAny(cancellationTask, consoleTask);
+            var endTask = await Task.WhenAny(cancellationTask, consoleTask).ConfigureAwait(false);
 
             if (endTask.IsCanceled)
             {
@@ -139,7 +139,7 @@ namespace InteractionFlow.Standard.Externals.Operations
 
             }
 
-            return await consoleTask;
+            return await consoleTask.ConfigureAwait(false);
         }
 
         private T Read<T>(Func<T> read)
@@ -225,7 +225,7 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// <returns>ダミーのキー情報。</returns>
             public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
             {
-                await Task.Delay(InputDelayTime);
+                await Task.Delay(InputDelayTime).ConfigureAwait(false);
                 Write("<AutoKeyInfo>" + DummyKeyInfo.key);
                 return DummyKeyInfo;
             }
@@ -238,7 +238,7 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// <returns>ダミーのキー情報。</returns>
             public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
             {
-                await Task.Delay(InputDelayTime);
+                await Task.Delay(InputDelayTime).ConfigureAwait(false);
                 if (!hideChar)
                 {
                     Write("<AutoKeyInfo>" + DummyKeyInfo.key);
@@ -253,7 +253,7 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// <returns>ダミーの文字列入力。</returns>
             public async ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
             {
-                await Task.Delay(InputDelayTime);
+                await Task.Delay(InputDelayTime).ConfigureAwait(false);
                 Write("<AutoText>" + DummyText.text);
                 return DummyText;
             }

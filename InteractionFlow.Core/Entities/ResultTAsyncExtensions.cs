@@ -34,10 +34,10 @@ namespace InteractionFlow.Core.Entities
             Func<T, Task<U>> onSuccess,
             Func<Exception, Task<U>> onFailure)
         {
-            if ((await task).Try(out var value, out var error))
-                return await onSuccess(value);
+            if ((await task.ConfigureAwait(false)).Try(out var value, out var error))
+                return await onSuccess(value).ConfigureAwait(false);
             else
-                return await onFailure(error);
+                return await onFailure(error).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -52,8 +52,8 @@ namespace InteractionFlow.Core.Entities
             this Task<Result<T>> task,
             Func<T, Task<Result<U>>> binder)
         {
-            if ((await task).Try(out var value, out var error))
-                return await binder(value);
+            if ((await task.ConfigureAwait(false)).Try(out var value, out var error))
+                return await binder(value).ConfigureAwait(false);
             else
                 return error;
         }
@@ -69,8 +69,8 @@ namespace InteractionFlow.Core.Entities
             this Task<Result<T>> task,
             Func<T, Task<Result>> binder)
         {
-            if ((await task).Try(out var value, out var error))
-                return await binder(value);
+            if ((await task.ConfigureAwait(false)).Try(out var value, out var error))
+                return await binder(value).ConfigureAwait(false);
             else
                 return error;
         }
@@ -86,10 +86,10 @@ namespace InteractionFlow.Core.Entities
             this Task<Result<T>> task,
             Func<Exception, Task<Result<T>>> binder)
         {
-            if ((await task).Try(out var value, out var error))
+            if ((await task.ConfigureAwait(false)).Try(out var value, out var error))
                 return value;
             else
-                return await binder(error);
+                return await binder(error).ConfigureAwait(false);
         }
     }
 }

@@ -9,9 +9,9 @@ namespace InteractionFlow.Samples.Notepad.Externals.Serializers
 {
     internal class NotepadDataSimpleSerializer : TextSerializer<NotepadData>, INotepadDataSerializerPort
     {
-        public override async Task<Result<NotepadData>> Deserialize(Result<string> inputText, Result<NotepadData> refValue)
+        public override Task<Result<NotepadData>> Deserialize(Result<string> inputText, Result<NotepadData> refValue)
         {
-            return inputText
+            return Task.FromResult(inputText
                 .Then(text =>
                 {
                     return refValue.Then(notepad => (text, notepad).AsResult());
@@ -31,16 +31,16 @@ namespace InteractionFlow.Samples.Notepad.Externals.Serializers
                     notepad.Text = string.Join("\n", lines[1..]);
 
                     return notepad.AsResult();
-                });
+                }));
         }
 
-        public override async Task<Result<string>> Serialize(Result<NotepadData> inputValue, Result<string> refText)
+        public override Task<Result<string>> Serialize(Result<NotepadData> inputValue, Result<string> refText)
         {
-            return inputValue
+            return Task.FromResult(inputValue
                 .Then(notepad =>
                 {
                     return string.Join("\n", notepad.Title, notepad.Text).AsResult();
-                });
+                }));
         }
     }
 }

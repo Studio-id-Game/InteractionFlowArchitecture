@@ -62,15 +62,15 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                 {
                     PersistentEntry<NotepadUserKey, UserSecureData> cv = currentUserEntry;
                     return await currentUserEntry.Load(userSecureDataPersistence)
-                    .ThenErrorAsync(async e =>
+                    .ThenErrorAsync(e =>
                     {
                         e.Data[ExceptionDataKey_CurrentUserEntry] = currentUserEntry;
-                        return e;
+                        return Task.FromResult<Result<UserSecureData>>(e);
                     });
                 })
-                .ThenAsync(async e =>
+                .ThenAsync(e =>
                 {
-                    return Result.Success;
+                    return Task.FromResult(Result.Success);
                 })
                 .ThenErrorAsync(async e =>
                 {
@@ -111,9 +111,9 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                                    {
                                        return await notepadEntry.Load(notepadDataPersistence);
                                    })
-                                   .ThenAsync(async notepadData =>
+                                   .ThenAsync(notepadData =>
                                    {
-                                       return NotepadDataFiles.RemoveWithoutDispose(noteDataKey);
+                                       return Task.FromResult(NotepadDataFiles.RemoveWithoutDispose(noteDataKey));
                                    });
 
                                 if (!result.Try(out var e))

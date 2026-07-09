@@ -45,7 +45,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
 
                 var result = await notepadDataFiles.GetOrCreate(item).StartAsync()
                     .ThenAsync(async notepadEntity => await notepadEntity.Load(_notepadDataPersistence))
-                    .ThenAsync(async notepadData =>
+                    .ThenAsync(notepadData =>
                     {
                         var title = notepadData.Title;
 
@@ -53,18 +53,18 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
 
                         fileDict[$"{index + 1}. {title} ({item.UserKey.Name}/{item.NoteId})"] = item;
 
-                        return Result.Success;
+                        return Task.FromResult(Result.Success);
                     })
-                    .ThenErrorAsync(async e =>
+                    .ThenErrorAsync(e =>
                     {
                         if (includeErrorItem)
                         {
                             fileDict[$"{index + 1}. Error ({item.UserKey.Name}/{item.NoteId})"] = item;
-                            return Result.Success;
+                            return Task.FromResult(Result.Success);
                         }
                         else
                         {
-                            return e;
+                            return Task.FromResult<Result>(e);
                         }
                     });
 

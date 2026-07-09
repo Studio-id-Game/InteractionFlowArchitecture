@@ -32,7 +32,7 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
             }
             else
             {
-                return await fileController.Save(fileID, Value);
+                return await fileController.Save(fileID, Value).ConfigureAwait(false);
             }
         }
 
@@ -50,7 +50,8 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
                 {
                     Value = value;
                     return value.AsResult().StartAsync();
-                });
+                })
+                .ConfigureAwait(false);
         }
     }
 }

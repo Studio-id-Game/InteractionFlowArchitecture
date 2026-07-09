@@ -48,9 +48,9 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
         public override async Task<Result<Stream>> Serialize(Result<TValue> inputValue, Result<Stream> refData)
         {
             return await Serialize(inputValue, DefaultRefText(refData))
-                .ThenAsync(async text =>
+                .ThenAsync(text =>
                 {
-                    return refData.Then(stream => (text, stream).AsResult());
+                    return Task.FromResult(refData.Then(stream => (text, stream).AsResult()));
                 })
                 .ThenAsync(async value =>
                 {
@@ -59,15 +59,16 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
                     try
                     {
                         await using StreamWriter writer = new(stream, Encoding.UTF8, 1024, true);
-                        await writer.WriteAsync(text);
-                        await writer.FlushAsync();
+                        await writer.WriteAsync(text).ConfigureAwait(false);
+                        await writer.FlushAsync().ConfigureAwait(false);
                         return stream.AsResult();
                     }
                     catch (Exception e)
                     {
                         return e;
                     }
-                });
+                })
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -84,7 +85,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
                     try
                     {
                         using StreamReader reader = new(stream, Encoding.UTF8, true, 1024, true);
-                        var text = await reader.ReadToEndAsync();
+                        var text = await reader.ReadToEndAsync().ConfigureAwait(false);
                         return text.AsResult();
                     }
                     catch (Exception e)
@@ -94,8 +95,9 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
                 })
                 .ThenAsync(async text =>
                 {
-                    return await Deserialize(text, refValue);
-                });
+                    return await Deserialize(text, refValue).ConfigureAwait(false);
+                })
+                .ConfigureAwait(false);
         }
     }
 }

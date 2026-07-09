@@ -27,9 +27,9 @@ namespace InteractionFlow.Core.Externals.Reactions
 
                 static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
                 {
-                    await before;
-                    await context.Cancellation.TryWaitAndResetAsync();
-                    return await @this.AfterCancellationCoreAsync(context, exception);
+                    await before.ConfigureAwait(false);
+                    await context.Cancellation.TryWaitAndResetAsync().ConfigureAwait(false);
+                    return await @this.AfterCancellationCoreAsync(context, exception).ConfigureAwait(false);
                 }
             }
 
@@ -40,8 +40,8 @@ namespace InteractionFlow.Core.Externals.Reactions
 
                 static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask<bool> before, IFlowContext context, OperationCanceledException exception)
                 {
-                    await before;
-                    return await @this.AfterCancellationCoreAsync(context, exception);
+                    await before.ConfigureAwait(false);
+                    return await @this.AfterCancellationCoreAsync(context, exception).ConfigureAwait(false);
                 }
             }
 

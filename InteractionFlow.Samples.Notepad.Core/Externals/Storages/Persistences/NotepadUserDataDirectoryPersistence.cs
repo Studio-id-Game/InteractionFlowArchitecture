@@ -37,7 +37,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
         protected override async Task<Result<NotepadUserData>> LoadDirectory(string path, NotepadUserKey id, Result<NotepadUserData> oldValue)
         {
             return await oldValue.StartAsync()
-                .ThenAsync(async userData =>
+                .ThenAsync(userData =>
                 {
                     userData.Clear();
                     var fileIds = filePersistence.GetAlllIdWithUser(id);
@@ -46,8 +46,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
                         userData.Add(fileId);
                     }
 
-                    return userData.AsResult();
-                });
+                    return Task.FromResult(userData.AsResult());
+                })
+                .ConfigureAwait(false);
         }
 
         protected override async Task<Result> SaveDirectory(string path, NotepadUserKey id, Result<NotepadUserData> value)
@@ -62,7 +63,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
                     {
                         if (!userData.Contains(fileId))
                         {
-                            await filePersistence.Delete(fileId);
+                            await filePersistence.Delete(fileId).ConfigureAwait(false);
                         }
                     }
 
@@ -72,7 +73,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
                     foreach (var fileId in userData)
                     {
                         result = await notepadStorage.GetOrCreate(fileId).StartAsync()
-                            .ThenAsync(async entry => await entry.SaveIfChanged(filePersistence));
+                            .ThenAsync(async entry => await entry.SaveIfChanged(filePersistence).ConfigureAwait(false))
+                            .ConfigureAwait(false);
 
                         if (!result.Try(out _))
                         {
@@ -81,7 +83,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
                     }
 
                     return result;
-                });
+                })
+                .ConfigureAwait(false);
         }
     }
 }

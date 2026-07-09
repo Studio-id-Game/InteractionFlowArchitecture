@@ -57,7 +57,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
                     await Write(context, $"> Delete.. - '{notepadDataPersistence.GetViewName(dataKey)}'");
                     return await notepadDataPersistence.Delete(dataKey)
-                        .ThenAsync(async () => (userData, dataKey).AsResult());
+                        .ThenAsync(() => Task.FromResult((userData, dataKey).AsResult()));
                 })
                 .ThenAsync(async (value) =>
                 {

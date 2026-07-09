@@ -34,7 +34,7 @@ namespace InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Entrie
 
             if (data.HasChenged)
             {
-                var result = await Save(persistentController);
+                var result = await Save(persistentController).ConfigureAwait(false);
                 data.ChangeSaved();
                 return result;
             }

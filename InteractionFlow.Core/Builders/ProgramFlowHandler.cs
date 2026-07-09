@@ -25,7 +25,7 @@ namespace InteractionFlow.Core.Builders
         public async Task<FlowEndToken> ExecuteAsync(TContext context)
         {
             var programFlow = this.programFlow ?? throw new InvalidOperationException();
-            return await programFlow.ExecuteAsync(context);
+            return await programFlow.ExecuteAsync(context).ConfigureAwait(false);
         }
 
         /// <summary>

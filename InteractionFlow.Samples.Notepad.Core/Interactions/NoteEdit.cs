@@ -297,17 +297,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                         return notepadDataKey.AsResult();
                     }
                 })
-                    .ThenAsync(async notepadDataKey =>
+                    .ThenAsync(notepadDataKey =>
                     {
-                        return notepadDataFiles.GetOrCreate(notepadDataKey);
+                        return Task.FromResult(notepadDataFiles.GetOrCreate(notepadDataKey));
                     })
                     .ThenAsync(async notepadEntry =>
                     {
                         var notepadDataKey = notepadEntry.FileID;
 
                         return await notepadEntry.Load(notepadDataPersistence)
-                            .ThenErrorAsync(async e => new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'"))
-                            .ThenAsync(async notepad => (notepad, notepadEntry).AsResult());
+                            .ThenErrorAsync(e => Task.FromResult<Result<NotepadData>>(new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
+                            .ThenAsync(notepad => Task.FromResult((notepad, notepadEntry).AsResult()));
                     })
                     .ThenAsync(async e =>
                     {
@@ -326,8 +326,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                         await Task.Delay(500);
 
                         return await notepadEntry.Save(notepadDataPersistence)
-                            .ThenErrorAsync(async e => new Exception($"Can not saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'"))
-                            .ThenAsync(async () => notepadDataKey.AsResult());
+                            .ThenErrorAsync(e => Task.FromResult<Result>(new Exception($"Can not saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
+                            .ThenAsync(() => Task.FromResult(notepadDataKey.AsResult()));
                     })
                     .ResolveAsync(
                     onSuccess: async notepadDataKey =>

@@ -71,9 +71,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
                     } while (true);
                 })
-                .ThenAsync(async () =>
+                .ThenAsync(() =>
                 {
-                    return notepadDataFiles.GetOrCreate(notepadDataKey);
+                    return Task.FromResult(notepadDataFiles.GetOrCreate(notepadDataKey));
                 })
                 .ThenAsync(async notepadEntity =>
                 {

@@ -7,7 +7,7 @@
 
 		<CoreVersion>0.4.0</CoreVersion>
 		<StandardVersion>0.4.0</StandardVersion>
-		<AnalyzerVersion>0.4.0</AnalyzerVersion>
+		<AnalyzerVersion>0.4.1</AnalyzerVersion>
 		
 		<Title>$(AssemblyName)</Title>
 		<Authors>StudioIdGames</Authors>

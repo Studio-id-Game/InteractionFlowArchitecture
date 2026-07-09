@@ -10,9 +10,16 @@ using System.Threading;
 
 namespace InteractionFlow.Analyzers
 {
+    /// <summary>
+    /// The Analyzer for InteractionFlow.
+    /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
+
     public class InteractionFlowAnalyzersAnalyzer : DiagnosticAnalyzer
     {
+        /// <summary>
+        /// The diagnostic identifier for invalid Interaction Flow architecture layer dependencies.
+        /// </summary>
         public const string DiagnosticId = "InteractionFlowArchitecture001";
 
         private static readonly LocalizableString Title =
@@ -45,9 +52,11 @@ namespace InteractionFlow.Analyzers
             return RulesBySeverity.TryGetValue(severity, out var rule) ? rule : Rule;
         }
 
+        /// <inheritdoc/>
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
                => ImmutableArray.Create(Rule);
 
+        /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);

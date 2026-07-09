@@ -3,12 +3,19 @@ using System.IO;
 
 namespace InteractionFlow.Standard.Externals.Storages.Persistences
 {
+    /// <summary>
+    /// ルート配下に限定してディレクトリを作成するユーティリティです。
+    /// </summary>
     public static class DirectoryUtility
     {
         /// <summary>
         /// root より下のディレクトリのみを再帰的に作成する。
         /// root 自体は作成しない。
         /// </summary>
+        /// <param name="root">作成を許可するルートディレクトリ。</param>
+        /// <param name="target">作成対象のディレクトリ。</param>
+        /// <exception cref="DirectoryNotFoundException">ルートディレクトリが存在しない場合に発生します。</exception>
+        /// <exception cref="InvalidOperationException">作成対象がルート配下ではない場合に発生します。</exception>
         public static void CreateDirectories(string root, string target)
         {
             root = Path.GetFullPath(root)

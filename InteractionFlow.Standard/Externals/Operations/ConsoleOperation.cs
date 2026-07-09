@@ -9,21 +9,38 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Externals.Operations
 {
+    /// <summary>
+    /// 標準入力から文字列またはキーを取得するコンソール Operation 実装です。
+    /// </summary>
     public class ConsoleOperation : Operation, IConsoleOperation
     {
+        /// <summary>
+        /// 既定のコンソール入力状態でインスタンスを作成します。
+        /// </summary>
         public ConsoleOperation() : base()
         {
             if (State == null)
                 throw new ArgumentNullException("state");
         }
 
+        /// <summary>
+        /// コンソール入力状態を既定値へ戻します。
+        /// </summary>
         public override void ForceResetMemoryState()
         {
             State = ConsoleOperationState.Default;
         }
 
+        /// <summary>
+        /// コンソール入力に使用する状態を取得または設定します。
+        /// </summary>
         public ConsoleOperationState State { get; set; }
 
+        /// <summary>
+        /// 標準入力から 1 行の文字列を取得します。
+        /// </summary>
+        /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+        /// <returns>入力された文字列。</returns>
         public async ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
         {
             return await CancelableConsoleReadAsync<ConsoleInputText>(context, () =>
@@ -32,11 +49,22 @@ namespace InteractionFlow.Standard.Externals.Operations
             });
         }
 
+        /// <summary>
+        /// 標準入力からキーを取得します。
+        /// </summary>
+        /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+        /// <returns>入力されたキー情報。</returns>
         public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
         {
             return WaitUserKeyAsync(context, false);
         }
 
+        /// <summary>
+        /// 標準入力からキーを、表示有無を指定して取得します。
+        /// </summary>
+        /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+        /// <param name="hideChar">入力文字を表示しない場合は <see langword="true"/>。</param>
+        /// <returns>入力されたキー情報。</returns>
         public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
         {
             return await CancelableConsoleReadAsync<ConsoleInputKeyInfo>(context, () =>
@@ -142,14 +170,23 @@ namespace InteractionFlow.Standard.Externals.Operations
             }
         }
 
+        /// <summary>
+        /// 実際のコンソール入力を待たず、設定されたダミー値を返す Operation 実装です。
+        /// </summary>
         public class Dummy : Operation, IConsoleOperation.IDummy
         {
+            /// <summary>
+            /// 既定のダミー入力状態でインスタンスを作成します。
+            /// </summary>
             public Dummy() : base()
             {
                 if (State == null)
                     throw new ArgumentNullException("state");
             }
 
+            /// <summary>
+            /// ダミー入力状態と返却値を既定値へ戻します。
+            /// </summary>
             public override void ForceResetMemoryState()
             {
                 State = ConsoleOperationState.Default;
@@ -161,14 +198,31 @@ namespace InteractionFlow.Standard.Externals.Operations
                 InputDelayTime = 250;
             }
 
+            /// <summary>
+            /// ダミーの文字列入力を取得または設定します。
+            /// </summary>
             public ConsoleInputText DummyText { get; set; }
 
+            /// <summary>
+            /// ダミーのキー入力を取得または設定します。
+            /// </summary>
             public ConsoleInputKeyInfo DummyKeyInfo { get; set; }
 
+            /// <summary>
+            /// ダミー入力を返すまでの待機時間を取得または設定します。
+            /// </summary>
             public int InputDelayTime { get; set; }
 
+            /// <summary>
+            /// ダミー入力表示に使用する状態を取得または設定します。
+            /// </summary>
             public ConsoleOperationState State { get; set; }
 
+            /// <summary>
+            /// 設定されたダミーキー入力を返します。
+            /// </summary>
+            /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+            /// <returns>ダミーのキー情報。</returns>
             public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
             {
                 await Task.Delay(InputDelayTime);
@@ -176,12 +230,12 @@ namespace InteractionFlow.Standard.Externals.Operations
                 return DummyKeyInfo;
             }
 
-            public ValueTask<ConsoleInputKeyInfo> WaitUserText(IFlowContext context)
-            {
-                return WaitUserKeyAsync(context, false);
-
-            }
-
+            /// <summary>
+            /// 設定されたダミーキー入力を、表示有無を指定して返します。
+            /// </summary>
+            /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+            /// <param name="hideChar">ダミーキーを表示しない場合は <see langword="true"/>。</param>
+            /// <returns>ダミーのキー情報。</returns>
             public async ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context, bool hideChar)
             {
                 await Task.Delay(InputDelayTime);
@@ -192,6 +246,11 @@ namespace InteractionFlow.Standard.Externals.Operations
                 return DummyKeyInfo;
             }
 
+            /// <summary>
+            /// 設定されたダミー文字列入力を返します。
+            /// </summary>
+            /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+            /// <returns>ダミーの文字列入力。</returns>
             public async ValueTask<ConsoleInputText> WaitUserTextAsync(IFlowContext context)
             {
                 await Task.Delay(InputDelayTime);

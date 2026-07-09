@@ -7,26 +7,47 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Interactions
 {
+    /// <summary>
+    /// オプション引数付きで実行できる Interaction の基底クラスです。
+    /// </summary>
+    /// <typeparam name="TOption">Interaction に渡すオプションの型。</typeparam>
+    /// <param name="exceptionPort">通常の例外をフロー終了時の反応へ変換するポート。</param>
+    /// <param name="cancellationPort">キャンセルをフロー終了時の反応へ変換するポート。</param>
+    /// <param name="dependency">この Interaction が明示的に依存するフローノード。</param>
     public abstract class InteractionOptionalArg<TOption>(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         params IFlowNode[] dependency)
         : Interaction(exceptionPort, cancellationPort, dependency)
     {
+        /// <summary>
+        /// オプションを指定せず実行した場合に使用する既定値を取得します。
+        /// </summary>
         protected virtual TOption? DefaultOption => default;
 
+        /// <summary>
+        /// 既定のオプションを使用して Interaction を実行します。
+        /// </summary>
+        /// <param name="context">Interaction に渡すフローコンテキスト。</param>
+        /// <returns>Interaction の終了結果。</returns>
         public sealed override Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
             return ExecuteAsync(context, DefaultOption);
         }
 
+        /// <summary>
+        /// 指定されたオプションで Interaction を実行します。
+        /// </summary>
+        /// <param name="context">Interaction に渡すフローコンテキスト。</param>
+        /// <param name="option">実行時に渡すオプション。</param>
+        /// <returns>Interaction の終了結果。</returns>
         public abstract Task<FlowEndToken> ExecuteAsync(IFlowContext context, TOption? option);
 
 
         /// <summary>
         /// Interaction の実行本体を、ライブラリ標準の例外ハンドリング内で実行します。
         /// <para>
-        /// <see cref="OperationCanceledException"/> および <typeparamref name="TException"/> は捕捉され、
+        /// <see cref="OperationCanceledException"/> およびその他の <see cref="Exception"/> は捕捉され、
         /// <see cref="FlowEndToken"/> に変換されます。
         /// </para>
         /// <para>

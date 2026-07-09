@@ -6,6 +6,10 @@ using System;
 
 namespace InteractionFlow.Standard.Builders
 {
+    /// <summary>
+    /// 登録済みサービスから ProgramFlow と専用スコープを生成する標準ビルダーです。
+    /// </summary>
+    /// <typeparam name="TContext">生成する ProgramFlow が扱うコンテキストの型。</typeparam>
     public class ProgramFlowBuilder<TContext> : ScopeServices, IProgramFlowBuilder<TContext>
         where TContext : IFlowContext
     {
@@ -25,6 +29,12 @@ namespace InteractionFlow.Standard.Builders
             }
         }
 
+        /// <summary>
+        /// 現在のサービス登録を使用して ProgramFlow を生成します。
+        /// </summary>
+        /// <typeparam name="TProgramFlow">生成する ProgramFlow の型。</typeparam>
+        /// <param name="parents">ProgramFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
+        /// <returns>生成された ProgramFlow とスコープを管理するハンドラ。</returns>
         public ProgramFlowHandler<TContext> BuildProgramFlow<TProgramFlow>(params ScopeHandler[] parents)
             where TProgramFlow : IProgramFlow<TContext>
         {
@@ -35,6 +45,13 @@ namespace InteractionFlow.Standard.Builders
             return new ProgramFlowHandler<TContext>(scope, programFlow);
         }
 
+        /// <summary>
+        /// 現在のサービス登録と追加パラメーターを使用して ProgramFlow を生成します。
+        /// </summary>
+        /// <typeparam name="TProgramFlow">生成する ProgramFlow の型。</typeparam>
+        /// <param name="parameters">ProgramFlow の生成時に DI へ追加で渡すコンストラクタ引数。</param>
+        /// <param name="parents">ProgramFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
+        /// <returns>生成された ProgramFlow とスコープを管理するハンドラ。</returns>
         public ProgramFlowHandler<TContext> BuildProgramFlow<TProgramFlow>(object[] parameters, params ScopeHandler[] parents)
             where TProgramFlow : IProgramFlow<TContext>
         {

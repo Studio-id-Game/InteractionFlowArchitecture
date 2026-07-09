@@ -7,17 +7,44 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Externals.Storages.Serializers
 {
+    /// <summary>
+    /// 文字列形式の変換を基準に、ストリームとの相互変換も提供する Serializer 基底クラスです。
+    /// </summary>
+    /// <typeparam name="TValue">変換対象の値の型。</typeparam>
     public abstract class TextSerializer<TValue> : StreamSerializer<TValue>, ISerializerPort<string, TValue>
     {
+        /// <summary>
+        /// 値を文字列へ変換します。
+        /// </summary>
+        /// <param name="inputValue">変換する値。</param>
+        /// <param name="refText">変換時に参照または再利用する文字列。</param>
+        /// <returns>変換された文字列。失敗時は失敗結果。</returns>
         public abstract Task<Result<string>> Serialize(Result<TValue> inputValue, Result<string> refText);
 
+        /// <summary>
+        /// 文字列から値へ変換します。
+        /// </summary>
+        /// <param name="inputText">変換する文字列。</param>
+        /// <param name="refValue">変換時に参照または再利用する値。</param>
+        /// <returns>変換された値。失敗時は失敗結果。</returns>
         public abstract Task<Result<TValue>> Deserialize(Result<string> inputText, Result<TValue> refValue);
 
+        /// <summary>
+        /// ストリーム変換時に使用する既定の参照文字列を取得します。
+        /// </summary>
+        /// <param name="refData">参照元のストリーム結果。</param>
+        /// <returns>既定の参照文字列。</returns>
         public virtual Result<string> DefaultRefText(Result<Stream> refData)
         {
             return "";
         }
 
+        /// <summary>
+        /// 値を文字列へ変換し、UTF-8 でストリームへ書き込みます。
+        /// </summary>
+        /// <param name="inputValue">変換する値。</param>
+        /// <param name="refData">書き込み先として使用するストリーム。</param>
+        /// <returns>書き込み後のストリーム。失敗時は失敗結果。</returns>
         public override async Task<Result<Stream>> Serialize(Result<TValue> inputValue, Result<Stream> refData)
         {
             return await Serialize(inputValue, DefaultRefText(refData))
@@ -43,6 +70,12 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
                 });
         }
 
+        /// <summary>
+        /// ストリームから UTF-8 文字列を読み取り、値へ変換します。
+        /// </summary>
+        /// <param name="inputData">読み取り元のストリーム。</param>
+        /// <param name="refValue">変換時に参照または再利用する値。</param>
+        /// <returns>変換された値。失敗時は失敗結果。</returns>
         public override async Task<Result<TValue>> Deserialize(Result<Stream> inputData, Result<TValue> refValue)
         {
             return await inputData.StartAsync()

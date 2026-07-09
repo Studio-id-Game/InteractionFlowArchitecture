@@ -2,9 +2,11 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 
 namespace InteractionFlow.Analyzers
 {
@@ -31,9 +33,16 @@ namespace InteractionFlow.Analyzers
 
         private static readonly DiagnosticDescriptor Rule = new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
+        private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> RulesBySeverity =
+            Enum.GetValues(typeof(DiagnosticSeverity))
+                .Cast<DiagnosticSeverity>()
+                .ToImmutableDictionary(
+                    severity => severity,
+                    severity => new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, severity, isEnabledByDefault: true, description: Description));
+
         private static DiagnosticDescriptor GetRule(DiagnosticSeverity severity)
         {
-            return new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, severity, isEnabledByDefault: true, description: Description);
+            return RulesBySeverity.TryGetValue(severity, out var rule) ? rule : Rule;
         }
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
@@ -44,49 +53,56 @@ namespace InteractionFlow.Analyzers
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            // ▼ 定義側
-            context.RegisterSymbolAction(AnalyzeProperty, SymbolKind.Property);
-            context.RegisterSymbolAction(AnalyzeField, SymbolKind.Field);
-            context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
-            context.RegisterSymbolAction(AnalyzeMethod, SymbolKind.Method);
+            context.RegisterCompilationStartAction(compilationContext =>
+            {
+                var analysisState = new CompilationAnalyzerContext(compilationContext.Options.AnalyzerConfigOptionsProvider);
 
-            // ▼ 使用側
-            context.RegisterOperationAction(AnalyzeOperation,
-                OperationKind.ObjectCreation,
-                OperationKind.Invocation,
-                OperationKind.FieldReference,
-                OperationKind.PropertyReference,
-                OperationKind.VariableDeclarator);
+                // ▼ 定義側
+                compilationContext.RegisterSymbolAction(context => AnalyzeProperty(context, analysisState), SymbolKind.Property);
+                compilationContext.RegisterSymbolAction(context => AnalyzeField(context, analysisState), SymbolKind.Field);
+                compilationContext.RegisterSymbolAction(context => AnalyzeNamedType(context, analysisState), SymbolKind.NamedType);
+                compilationContext.RegisterSymbolAction(context => AnalyzeMethod(context, analysisState), SymbolKind.Method);
+
+                // ▼ 使用側
+                compilationContext.RegisterOperationAction(context => AnalyzeOperation(context, analysisState),
+                    OperationKind.ObjectCreation,
+                    OperationKind.Invocation,
+                    OperationKind.FieldReference,
+                    OperationKind.PropertyReference,
+                    OperationKind.VariableDeclarator);
+            });
         }
 
         // =========================
         // Symbol（定義）
         // =========================
 
-        private static void AnalyzeProperty(SymbolAnalysisContext context)
+        private static void AnalyzeProperty(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var property = GetSymbol<IPropertySymbol>(context, out var location, out var sourceNamespace);
-            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace);
+            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
 
             CheckTypeRecursive(analysisContext, property.Type);
         }
 
-        private static void AnalyzeField(SymbolAnalysisContext context)
+        private static void AnalyzeField(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var field = GetSymbol<IFieldSymbol>(context, out var location, out var sourceNamespace);
-            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace);
+            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
 
             CheckTypeRecursive(analysisContext, field.Type);
         }
 
-        private static void AnalyzeNamedType(SymbolAnalysisContext context)
+        private static void AnalyzeNamedType(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var type = GetSymbol<INamedTypeSymbol>(context, out var location, out var sourceNamespace);
-            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace);
+            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
 
             // 型パラメータ制約
             foreach (var tp in type.TypeParameters)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 foreach (var constraint in tp.ConstraintTypes)
                 {
                     CheckTypeRecursive(analysisContext, constraint);
@@ -103,22 +119,28 @@ namespace InteractionFlow.Analyzers
             // Interfaces
             foreach (var iface in type.AllInterfaces)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 CheckTypeRecursive(analysisContext, iface);
             }
         }
 
-        private static void AnalyzeMethod(SymbolAnalysisContext context)
+        private static void AnalyzeMethod(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var method = GetSymbol<IMethodSymbol>(context, out var location, out var sourceNamespace);
-            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace);
+            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
 
             foreach (var param in method.Parameters)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 CheckTypeRecursive(analysisContext, param.Type);
             }
 
             foreach (var tp in method.TypeParameters)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 foreach (var constraint in tp.ConstraintTypes)
                 {
                     CheckTypeRecursive(analysisContext, constraint);
@@ -130,7 +152,7 @@ namespace InteractionFlow.Analyzers
             where T : ISymbol
         {
             var symbol = context.Symbol;
-            location = symbol.Locations.FirstOrDefault(loc => loc.IsInSource);
+            location = symbol.Locations.FirstOrDefault(loc => loc.IsInSource) ?? Location.None;
             sourceNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "";
             return (T)symbol;
         }
@@ -139,12 +161,12 @@ namespace InteractionFlow.Analyzers
         // Operation（使用）
         // =========================
 
-        private static void AnalyzeOperation(OperationAnalysisContext context)
+        private static void AnalyzeOperation(OperationAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var operation = context.Operation;
             var sourceNamespace = ResolveSourceNamespace(context, operation);
             var location = operation.Syntax.GetLocation();
-            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace);
+            var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
 
             if (operation.Type != null)
             {
@@ -153,6 +175,8 @@ namespace InteractionFlow.Analyzers
 
             foreach (var dependencyType in GetOperationDependencyTypes(operation))
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 CheckTypeRecursive(analysisContext, dependencyType);
             }
         }
@@ -164,6 +188,8 @@ namespace InteractionFlow.Analyzers
 
         private static void CheckTypeRecursive(AnalyzerExecutionContext context, ITypeSymbol type)
         {
+            context.ThrowIfCancellationRequested();
+
             if (!context.IsEnabled()) return;
             else if (type == null) return;
             else if (context.IsVisited(type)) return;
@@ -175,6 +201,8 @@ namespace InteractionFlow.Analyzers
             {
                 foreach (var arg in named.TypeArguments)
                 {
+                    context.ThrowIfCancellationRequested();
+
                     CheckTypeRecursive(context, arg);
                 }
             }
@@ -199,8 +227,8 @@ namespace InteractionFlow.Analyzers
 
         private static string ResolveSourceNamespace(OperationAnalysisContext context, IOperation operation)
         {
-            var symbolNamespace = context.ContainingSymbol?.ContainingNamespace?.ToDisplayString();
-            if (!string.IsNullOrEmpty(symbolNamespace))
+            var symbolNamespace = context.ContainingSymbol?.ContainingNamespace?.ToDisplayString() ?? "";
+            if (symbolNamespace.Length != 0)
             {
                 return symbolNamespace;
             }
@@ -236,57 +264,130 @@ namespace InteractionFlow.Analyzers
         }
 
         // =========================
-        // 共通インターフェース化
+        // 実行コンテキスト
         // =========================
 
-        private static AnalyzerExecutionContext CreateAnalysisContext(SymbolAnalysisContext context, Location location, string sourceNamespace)
+        private static AnalyzerExecutionContext CreateAnalysisContext(
+            SymbolAnalysisContext context,
+            Location location,
+            string sourceNamespace,
+            CompilationAnalyzerContext analysisState)
         {
-            var wrapper = new SymbolContextWrapper(context);
-            return new AnalyzerExecutionContext(wrapper, location, sourceNamespace);
+            return new AnalyzerExecutionContext(
+                context.ReportDiagnostic,
+                location,
+                sourceNamespace,
+                analysisState.GetOptions(location),
+                context.CancellationToken,
+                analysisState);
         }
 
-        private static AnalyzerExecutionContext CreateAnalysisContext(OperationAnalysisContext context, Location location, string sourceNamespace)
+        private static AnalyzerExecutionContext CreateAnalysisContext(
+            OperationAnalysisContext context,
+            Location location,
+            string sourceNamespace,
+            CompilationAnalyzerContext analysisState)
         {
-            var wrapper = new OperationContextWrapper(context);
-            return new AnalyzerExecutionContext(wrapper, location, sourceNamespace);
+            return new AnalyzerExecutionContext(
+                context.ReportDiagnostic,
+                location,
+                sourceNamespace,
+                analysisState.GetOptions(context.Operation.Syntax.SyntaxTree),
+                context.CancellationToken,
+                analysisState);
+        }
+
+        private sealed class CompilationAnalyzerContext
+        {
+            private readonly AnalyzerConfigOptionsProvider optionsProvider;
+            private readonly OptionValues disabledOptions = new(null);
+            private readonly ConcurrentDictionary<SyntaxTree, OptionValues> optionsByTree = new();
+            private readonly ConcurrentDictionary<string, DisallowReferenceInfo> disallowReferenceCache = new(StringComparer.Ordinal);
+
+            public CompilationAnalyzerContext(AnalyzerConfigOptionsProvider optionsProvider)
+            {
+                this.optionsProvider = optionsProvider;
+            }
+
+            public OptionValues GetOptions(Location location)
+            {
+                var tree = location.SourceTree;
+                return tree == null ? disabledOptions : GetOptions(tree);
+            }
+
+            public OptionValues GetOptions(SyntaxTree tree)
+            {
+                return optionsByTree.GetOrAdd(tree, currentTree => new OptionValues(optionsProvider.GetOptions(currentTree)));
+            }
+
+            public DisallowReferenceInfo GetDisallowReferenceInfo(OptionValues options, string sourceNamespace, string targetNamespace)
+            {
+                var cacheKey = string.Concat(options.AllowedRootsKey, "\u001f", sourceNamespace, "\u001f", targetNamespace);
+                return disallowReferenceCache.GetOrAdd(cacheKey, _ =>
+                {
+                    var isDisallow = LayerNames.IsDisallowReference(
+                        options.AllowedRoots,
+                        sourceNamespace,
+                        targetNamespace,
+                        out var sourceShowName,
+                        out var targetShowName);
+
+                    return new DisallowReferenceInfo(targetNamespace, isDisallow, sourceShowName, targetShowName);
+                });
+            }
+        }
+
+        private sealed class DisallowReferenceInfo
+        {
+            public DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
+            {
+                TargetNamespace = targetNamespace;
+                IsDisallow = isDisallow;
+                SourceShowName = sourceShowName;
+                TargetShowName = targetShowName;
+            }
+
+            public string TargetNamespace { get; }
+
+            public bool IsDisallow { get; }
+
+            public string SourceShowName { get; }
+
+            public string TargetShowName { get; }
         }
 
         private sealed class AnalyzerExecutionContext
         {
-            private class DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
-            {
-                public string TargetNamespace { get; } = targetNamespace;
-
-                public bool IsDisallow { get; } = isDisallow;
-
-                public string SourceShowName { get; } = sourceShowName;
-
-                public string TargetShowName { get; } = targetShowName;
-            }
-
-
-            private readonly AnalysisContextBase context;
-
+            private readonly Action<Diagnostic> reportDiagnostic;
             private readonly Location location;
-
             private readonly string sourceNamespace;
-
             private readonly OptionValues options;
-
             private readonly DiagnosticDescriptor rule;
-
             private readonly HashSet<ITypeSymbol> visited;
+            private readonly CancellationToken cancellationToken;
+            private readonly CompilationAnalyzerContext analysisState;
 
-            private readonly Dictionary<string, DisallowReferenceInfo> disallowReferenceCach = new(StringComparer.Ordinal);
-
-            public AnalyzerExecutionContext(AnalysisContextBase context, Location location, string sourceNamespace)
+            public AnalyzerExecutionContext(
+                Action<Diagnostic> reportDiagnostic,
+                Location location,
+                string sourceNamespace,
+                OptionValues options,
+                CancellationToken cancellationToken,
+                CompilationAnalyzerContext analysisState)
             {
-                this.context = context;
+                this.reportDiagnostic = reportDiagnostic;
                 this.location = location;
                 this.sourceNamespace = sourceNamespace;
-                options = new OptionValues(context.GetOptions());
+                this.options = options;
+                this.cancellationToken = cancellationToken;
+                this.analysisState = analysisState;
                 rule = GetRule(options.Mode);
                 visited = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+            }
+
+            public void ThrowIfCancellationRequested()
+            {
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
             public bool IsEnabled()
@@ -301,18 +402,16 @@ namespace InteractionFlow.Analyzers
 
             public bool CheckAndReport(ITypeSymbol type)
             {
-                var targetNamespace = type.ContainingNamespace?.ToDisplayString();
+                var targetNamespaceSymbol = type.ContainingNamespace;
+                if (targetNamespaceSymbol == null || targetNamespaceSymbol.IsGlobalNamespace)
+                {
+                    return false;
+                }
 
+                var targetNamespace = targetNamespaceSymbol.ToDisplayString();
                 if (string.IsNullOrEmpty(targetNamespace)) return false;
 
-                if (!disallowReferenceCach.TryGetValue(targetNamespace, out var disallowReferenceInfo))
-                {
-
-                    var isDisallow = IsDisallowReference(targetNamespace, out var sourceShowName, out var targetShowName);
-                    disallowReferenceCach[targetNamespace] =
-                        disallowReferenceInfo =
-                        new DisallowReferenceInfo(targetNamespace, isDisallow, sourceShowName, targetShowName);
-                }
+                var disallowReferenceInfo = analysisState.GetDisallowReferenceInfo(options, sourceNamespace, targetNamespace);
 
                 if (disallowReferenceInfo.IsDisallow)
                 {
@@ -323,59 +422,13 @@ namespace InteractionFlow.Analyzers
                         type.Name
                     };
 
-                    context.ReportDiagnostic(Diagnostic.Create(rule, location, args));
+                    reportDiagnostic(Diagnostic.Create(rule, location, args));
                     return true;
                 }
                 else
                 {
                     return false;
                 }
-            }
-
-            private bool IsDisallowReference(string targetNamespace, out string sourceShowName, out string targetShowName)
-            {
-                return LayerNames.IsDisallowReference(options.AllowedRoots, sourceNamespace, targetNamespace, out sourceShowName, out targetShowName);
-            }
-        }
-
-        private abstract class AnalysisContextBase
-        {
-            public abstract void ReportDiagnostic(Diagnostic diagnostic);
-
-            public abstract AnalyzerConfigOptions? GetOptions();
-        }
-
-        private class SymbolContextWrapper(SymbolAnalysisContext context) : AnalysisContextBase
-        {
-            private readonly SymbolAnalysisContext _context = context;
-
-            public override void ReportDiagnostic(Diagnostic diagnostic) => _context.ReportDiagnostic(diagnostic);
-
-            public override AnalyzerConfigOptions? GetOptions()
-            {
-                var location = _context.Symbol.Locations.FirstOrDefault();
-                if (location == null || !location.IsInSource) return null;
-
-                var tree = location.SourceTree;
-                var provider = _context.Options.AnalyzerConfigOptionsProvider;
-
-                return provider.GetOptions(tree);
-            }
-
-        }
-
-        private class OperationContextWrapper(OperationAnalysisContext context) : AnalysisContextBase
-        {
-            private readonly OperationAnalysisContext _context = context;
-
-            public override void ReportDiagnostic(Diagnostic diagnostic) => _context.ReportDiagnostic(diagnostic);
-
-            public override AnalyzerConfigOptions GetOptions()
-            {
-                var tree = _context.Operation.Syntax.SyntaxTree;
-                var provider = _context.Options.AnalyzerConfigOptionsProvider;
-
-                return provider.GetOptions(tree);
             }
         }
     }

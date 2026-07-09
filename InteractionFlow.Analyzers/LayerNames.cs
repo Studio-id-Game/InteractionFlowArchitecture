@@ -19,6 +19,7 @@ namespace InteractionFlow.Analyzers
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
         private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
+        private static readonly ConcurrentDictionary<string, string> layerByNamespace = new(stringComparer);
 
 
         private static HashSet<string> GetAll() => new(stringComparer)
@@ -102,10 +103,8 @@ namespace InteractionFlow.Analyzers
 
         public static bool IsDisallowReference(IEnumerable<string> allowedRoots, string source, string target, out string sourceShowName, out string targetShowName)
         {
-            var sourcePath = source.Split('.');
-            var targetPath = target.Split('.');
-            var sourceLayer = sourcePath.FirstOrDefault(e => all.Contains(e));
-            var targetLayer = targetPath.FirstOrDefault(e => all.Contains(e));
+            var sourceLayer = GetLayerName(source);
+            var targetLayer = GetLayerName(target);
             var isOutsideLayer = string.IsNullOrEmpty(sourceLayer);
 
             targetShowName = string.IsNullOrEmpty(targetLayer) ? target : targetLayer;
@@ -116,14 +115,25 @@ namespace InteractionFlow.Analyzers
                 return false;
             }
 
-
-            if (!disallowsSourceLayer.TryGetValue(sourceLayer, out var disallows))
-            {
-                disallows = Disallows(sourceLayer);
-                disallowsSourceLayer[sourceLayer] = disallows;
-            }
+            var disallows = disallowsSourceLayer.GetOrAdd(sourceLayer, Disallows);
 
             return disallows.Contains(targetLayer) || CheckDisallowExternal(allowedRoots, sourceLayer, target, targetLayer);
+        }
+
+        private static string GetLayerName(string namespaceName)
+        {
+            return layerByNamespace.GetOrAdd(namespaceName, currentNamespace =>
+            {
+                foreach (var item in currentNamespace.Split('.'))
+                {
+                    if (all.Contains(item))
+                    {
+                        return item;
+                    }
+                }
+
+                return "";
+            });
         }
     }
 }

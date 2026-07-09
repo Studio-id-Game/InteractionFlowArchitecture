@@ -6,13 +6,23 @@ using System.Linq;
 
 namespace InteractionFlow.Analyzers
 {
-    internal class OptionValues(AnalyzerConfigOptions? options)
+    internal class OptionValues
     {
-        public bool Enabled { get; } = GetEnabled(options);
+        public OptionValues(AnalyzerConfigOptions? options)
+        {
+            Enabled = GetEnabled(options);
+            Mode = GetMode(options);
+            AllowedRoots = GetAllowedRoots(options);
+            AllowedRootsKey = string.Join("\u001f", AllowedRoots);
+        }
 
-        public DiagnosticSeverity Mode { get; } = GetMode(options);
+        public bool Enabled { get; }
 
-        public IEnumerable<string> AllowedRoots { get; } = GetAllowedRoots(options);
+        public DiagnosticSeverity Mode { get; }
+
+        public string[] AllowedRoots { get; }
+
+        public string AllowedRootsKey { get; }
 
         public static class Keys
         {

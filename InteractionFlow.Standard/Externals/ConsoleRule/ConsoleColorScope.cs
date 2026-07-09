@@ -2,7 +2,7 @@ using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using System;
 
-namespace InteractionFlow.Standard.Externals
+namespace InteractionFlow.Standard.Externals.ConsoleRule
 {
     /// <summary>
     /// 現在のコンソール色を Function 状態として読み書きするアダプタです。

@@ -297,17 +297,11 @@ namespace InteractionFlow.Analyzers
                 analysisState);
         }
 
-        private sealed class CompilationAnalyzerContext
+        private sealed class CompilationAnalyzerContext(AnalyzerConfigOptionsProvider optionsProvider)
         {
-            private readonly AnalyzerConfigOptionsProvider optionsProvider;
             private readonly OptionValues disabledOptions = new(null);
             private readonly ConcurrentDictionary<SyntaxTree, OptionValues> optionsByTree = new();
             private readonly ConcurrentDictionary<string, DisallowReferenceInfo> disallowReferenceCache = new(StringComparer.Ordinal);
-
-            public CompilationAnalyzerContext(AnalyzerConfigOptionsProvider optionsProvider)
-            {
-                this.optionsProvider = optionsProvider;
-            }
 
             public OptionValues GetOptions(Location location)
             {
@@ -337,53 +331,33 @@ namespace InteractionFlow.Analyzers
             }
         }
 
-        private sealed class DisallowReferenceInfo
+        private sealed class DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
         {
-            public DisallowReferenceInfo(string targetNamespace, bool isDisallow, string sourceShowName, string targetShowName)
-            {
-                TargetNamespace = targetNamespace;
-                IsDisallow = isDisallow;
-                SourceShowName = sourceShowName;
-                TargetShowName = targetShowName;
-            }
+            public string TargetNamespace { get; } = targetNamespace;
 
-            public string TargetNamespace { get; }
+            public bool IsDisallow { get; } = isDisallow;
 
-            public bool IsDisallow { get; }
+            public string SourceShowName { get; } = sourceShowName;
 
-            public string SourceShowName { get; }
-
-            public string TargetShowName { get; }
+            public string TargetShowName { get; } = targetShowName;
         }
 
-        private sealed class AnalyzerExecutionContext
+        private sealed class AnalyzerExecutionContext(
+            Action<Diagnostic> reportDiagnostic,
+            Location location,
+            string sourceNamespace,
+            OptionValues options,
+            CancellationToken cancellationToken,
+            CompilationAnalyzerContext analysisState)
         {
-            private readonly Action<Diagnostic> reportDiagnostic;
-            private readonly Location location;
-            private readonly string sourceNamespace;
-            private readonly OptionValues options;
-            private readonly DiagnosticDescriptor rule;
-            private readonly HashSet<ITypeSymbol> visited;
-            private readonly CancellationToken cancellationToken;
-            private readonly CompilationAnalyzerContext analysisState;
-
-            public AnalyzerExecutionContext(
-                Action<Diagnostic> reportDiagnostic,
-                Location location,
-                string sourceNamespace,
-                OptionValues options,
-                CancellationToken cancellationToken,
-                CompilationAnalyzerContext analysisState)
-            {
-                this.reportDiagnostic = reportDiagnostic;
-                this.location = location;
-                this.sourceNamespace = sourceNamespace;
-                this.options = options;
-                this.cancellationToken = cancellationToken;
-                this.analysisState = analysisState;
-                rule = GetRule(options.Mode);
-                visited = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-            }
+            private readonly Action<Diagnostic> reportDiagnostic = reportDiagnostic;
+            private readonly Location location = location;
+            private readonly string sourceNamespace = sourceNamespace;
+            private readonly OptionValues options = options;
+            private readonly DiagnosticDescriptor rule = GetRule(options.Mode);
+            private readonly HashSet<ITypeSymbol> visited = new(SymbolEqualityComparer.Default);
+            private readonly CancellationToken cancellationToken = cancellationToken;
+            private readonly CompilationAnalyzerContext analysisState = analysisState;
 
             public void ThrowIfCancellationRequested()
             {

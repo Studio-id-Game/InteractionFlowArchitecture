@@ -3,6 +3,7 @@ using InteractionFlow.Core.Externals.Operations;
 using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.Externals.ConsoleRule;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

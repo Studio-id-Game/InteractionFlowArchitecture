@@ -128,7 +128,14 @@ namespace InteractionFlow.Analyzers
         private static void AnalyzeMethod(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
         {
             var method = GetSymbol<IMethodSymbol>(context, out var location, out var sourceNamespace);
+            if (method.AssociatedSymbol is IPropertySymbol)
+            {
+                return;
+            }
+
             var analysisContext = CreateAnalysisContext(context, location, sourceNamespace, analysisState);
+
+            CheckTypeRecursive(analysisContext, method.ReturnType);
 
             foreach (var param in method.Parameters)
             {

@@ -61,7 +61,7 @@ jobs:
         run: Get-ChildItem $env:ARTIFACTS_DIR | Select-Object Name, Length
 
       - name: Upload packages
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/packages-')
         uses: actions/upload-artifact@v4
         with:
           name: nuget-packages

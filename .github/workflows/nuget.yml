@@ -4,6 +4,15 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.props"
+      - "**/*.targets"
+      - "InteractionFlow.slnx"
+      - "global.json"
+      - ".editorconfig"
+      - "NUGET_README.md"
   push:
     tags:
       - "packages-*"

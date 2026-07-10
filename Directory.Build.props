@@ -8,6 +8,9 @@
 		<CoreVersion>0.4.1</CoreVersion>
 		<StandardVersion>0.4.1</StandardVersion>
 		<AnalyzerVersion>0.4.2</AnalyzerVersion>
+		<CoreReleaseNotes>Interaction Flow Architecture の基盤 API を更新したリリースです。</CoreReleaseNotes>
+		<StandardReleaseNotes>Interaction Flow Architecture の標準 API と標準実装を更新したリリースです。</StandardReleaseNotes>
+		<AnalyzerReleaseNotes>Interaction Flow Architecture の依存関係ルールを検証する Analyzer を更新したリリースです。</AnalyzerReleaseNotes>
 		
 		<Title>$(AssemblyName)</Title>
 		<Authors>StudioIdGames</Authors>
@@ -19,7 +22,6 @@
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</RepositoryUrl>
 		<PackageTags>interaction-flow;interaction-flow-architecture;csharp;dotnet;netstandard</PackageTags>
-		<PackageReleaseNotes>Interaction Flow Architecture の NuGet パッケージメタデータを整備した 0.4 系リリースです。</PackageReleaseNotes>
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<IncludeSymbols>true</IncludeSymbols>

@@ -36,13 +36,45 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore InteractionFlow.slnx
+        run: |
+          $projects = @(
+            "InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj",
+            "InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj",
+            "InteractionFlow.Core/InteractionFlow.Core.csproj",
+            "InteractionFlow.Standard/InteractionFlow.Standard.csproj",
+            "InteractionFlow.Samples.Parrot/InteractionFlow.Samples.Parrot.csproj",
+            "InteractionFlow.Samples.Notepad.Core/InteractionFlow.Samples.Notepad.Core.csproj",
+            "InteractionFlow.Samples.Notepad/InteractionFlow.Samples.Notepad.csproj",
+            "InteractionFlow.Samples.Notepad.Secure/InteractionFlow.Samples.Notepad.Secure.csproj",
+            "docs/IDEView.csproj"
+          )
+
+          foreach ($project in $projects) {
+            dotnet restore $project
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Build
-        run: dotnet build InteractionFlow.slnx --configuration $env:CONFIGURATION --no-restore
+        run: |
+          $projects = @(
+            "InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj",
+            "InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj",
+            "InteractionFlow.Core/InteractionFlow.Core.csproj",
+            "InteractionFlow.Standard/InteractionFlow.Standard.csproj",
+            "InteractionFlow.Samples.Parrot/InteractionFlow.Samples.Parrot.csproj",
+            "InteractionFlow.Samples.Notepad.Core/InteractionFlow.Samples.Notepad.Core.csproj",
+            "InteractionFlow.Samples.Notepad/InteractionFlow.Samples.Notepad.csproj",
+            "InteractionFlow.Samples.Notepad.Secure/InteractionFlow.Samples.Notepad.Secure.csproj",
+            "docs/IDEView.csproj"
+          )
+
+          foreach ($project in $projects) {
+            dotnet build $project --configuration $env:CONFIGURATION --no-restore
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Test
-        run: dotnet test InteractionFlow.slnx --configuration $env:CONFIGURATION --no-build
+        run: dotnet test InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj --configuration $env:CONFIGURATION --no-build
 
       - name: Pack Core
         if: github.event_name != 'pull_request'

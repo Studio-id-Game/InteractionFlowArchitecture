@@ -21,6 +21,8 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!docs/releases/
+!docs/releases/**
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -31,6 +33,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+_[Tt]mp/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/

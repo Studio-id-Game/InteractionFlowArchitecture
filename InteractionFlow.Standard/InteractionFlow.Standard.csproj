@@ -5,7 +5,7 @@
 		<VersionPrefix>$(StandardVersion)</VersionPrefix>
 		<Description>$(DescriptionHead)特に、基本的なAPIを提供するスタンダードライブラリを提供します。</Description>
 		<PackageTags>$(PackageTags);standard;console;dependency-injection</PackageTags>
-		<PackageReleaseNotes>Interaction Flow Architecture の標準 API と標準実装を提供する 0.4.0 リリースです。</PackageReleaseNotes>
+		<PackageReleaseNotes>$(StandardReleaseNotes)</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>

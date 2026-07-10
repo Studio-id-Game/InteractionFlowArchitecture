@@ -5,9 +5,9 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<CoreVersion>0.4.0</CoreVersion>
-		<StandardVersion>0.4.0</StandardVersion>
-		<AnalyzerVersion>0.4.1</AnalyzerVersion>
+		<CoreVersion>0.4.1</CoreVersion>
+		<StandardVersion>0.4.1</StandardVersion>
+		<AnalyzerVersion>0.4.2</AnalyzerVersion>
 		
 		<Title>$(AssemblyName)</Title>
 		<Authors>StudioIdGames</Authors>

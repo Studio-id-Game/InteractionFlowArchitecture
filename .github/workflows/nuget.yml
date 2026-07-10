@@ -2,9 +2,9 @@ name: NuGet
 
 on:
   pull_request:
-  push:
     branches:
       - main
+  push:
     tags:
       - "packages-*"
   workflow_dispatch:

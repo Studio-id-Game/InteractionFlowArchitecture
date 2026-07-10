@@ -13,19 +13,25 @@
 		<Authors>StudioIdGames</Authors>
 		<Company>StudioIdGames</Company>
 		<DescriptionHead>このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。</DescriptionHead>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</PackageProjectUrl>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageReadmeFile>NUGET_README.md</PackageReadmeFile>
+		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/Studio-id-Game/InteractionFlowArchitecture</RepositoryUrl>
-		<PackageTags>
-			core-$(CoreVersion)
-		</PackageTags>
+		<PackageTags>interaction-flow;interaction-flow-architecture;csharp;dotnet;netstandard</PackageTags>
+		<PackageReleaseNotes>Interaction Flow Architecture の NuGet パッケージメタデータを整備した 0.4 系リリースです。</PackageReleaseNotes>
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 	<ItemGroup>
-	  <None Include="..\README.md">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
+		<None Include="..\NUGET_README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 </Project>

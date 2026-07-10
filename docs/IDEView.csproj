@@ -13,5 +13,8 @@
 		<None Include="../README.md">
 			<Link>_root/%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</None>
+		<None Include="../.AGENTS.md">
+			<Link>_root/%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</None>
 	</ItemGroup>
 </Project>

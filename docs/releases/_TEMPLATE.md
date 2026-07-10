@@ -6,9 +6,9 @@ InteractionFlow の NuGet パッケージ公開リリースです。
 
 | Package | Version | 概要 |
 |---|---:|---|
-| **[InteractionFlow.Core](https://www.nuget.org/packages/InteractionFlow.Core)** | `x.y.z` | 基盤 API の更新内容を記載 |
-| **[InteractionFlow.Standard](https://www.nuget.org/packages/InteractionFlow.Standard)** | `x.y.z` | 標準 API / 標準実装の更新内容を記載 |
-| **[InteractionFlow.Analyzers](https://www.nuget.org/packages/InteractionFlow.Analyzers)** | `x.y.z` | Analyzer ルールや配布設定の更新内容を記載 |
+| **[InteractionFlow.Core](https://www.nuget.org/packages/InteractionFlow.Core)** | `x.y.z` | 更新内容 |
+| **[InteractionFlow.Standard](https://www.nuget.org/packages/InteractionFlow.Standard)** | `x.y.z` | 更新内容 |
+| **[InteractionFlow.Analyzers](https://www.nuget.org/packages/InteractionFlow.Analyzers)** | `x.y.z` | 更新内容 |
 
 ## 主な変更
 
@@ -25,6 +25,7 @@ InteractionFlow の NuGet パッケージ公開リリースです。
 ## 導入
 
 通常は `InteractionFlow.Standard` から導入してください。
+（`InteractionFlow.Standard` は `InteractionFlow.Core` に依存し、NuGetによって自動で解決されます。）
 
 ```bash
 dotnet add package InteractionFlow.Standard
@@ -56,3 +57,4 @@ Analyzer は開発時のみ利用するため、`.csproj` では `PrivateAssets=
 
 このリリースタグはパッケージ公開バッチを表します。
 各パッケージのバージョンは `Directory.Build.props` の `CoreVersion`、`StandardVersion`、`AnalyzerVersion` で個別に管理します。
+このプロジェクトは現在 0.x 系です。1.0 に到達するまでは公開 API が変更される可能性があります。

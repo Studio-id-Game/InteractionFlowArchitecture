@@ -5,7 +5,7 @@
 		<VersionPrefix>$(CoreVersion)</VersionPrefix>
 		<Description>$(DescriptionHead)特に、基盤となる仕組みを提供するコアライブラリを提供します。</Description>
 		<PackageTags>$(PackageTags);core;flow;architecture</PackageTags>
-		<PackageReleaseNotes>Interaction Flow Architecture の基盤 API を提供する 0.4.0 リリースです。</PackageReleaseNotes>
+		<PackageReleaseNotes>$(CoreReleaseNotes)</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>

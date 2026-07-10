@@ -6,7 +6,7 @@
 		<VersionPrefix>$(AnalyzerVersion)</VersionPrefix>
 		<Description>$(DescriptionHead)特に、アーキテクチャの規則を静的に解析して警告するアナライザーライブラリを提供します。</Description>
 		<PackageTags>$(PackageTags);analyzer;roslyn;diagnostics;architecture-rules</PackageTags>
-		<PackageReleaseNotes>Interaction Flow Architecture の依存関係ルールを検証する Analyzer 0.4.1 リリースです。</PackageReleaseNotes>
+		<PackageReleaseNotes>$(AnalyzerReleaseNotes)</PackageReleaseNotes>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<IncludeSymbols>false</IncludeSymbols>

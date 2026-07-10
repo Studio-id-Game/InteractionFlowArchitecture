@@ -1,0 +1,82 @@
+name: Package Install Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CONFIGURATION: Release
+  NUGET_SOURCE: https://api.nuget.org/v3/index.json
+  CHECK_PROJECT: InteractionFlow.PackageInstallCheck/InteractionFlow.PackageInstallCheck.csproj
+
+jobs:
+  package-install-check:
+    name: Restore and Build from NuGet.org
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore from NuGet.org
+        run: dotnet restore $env:CHECK_PROJECT --source $env:NUGET_SOURCE --no-cache --force
+
+      - name: List resolved packages
+        run: dotnet list $env:CHECK_PROJECT package --include-transitive
+
+      - name: Summarize resolved package versions
+        run: |
+          $assetsPath = Join-Path (Split-Path $env:CHECK_PROJECT -Parent) "obj/project.assets.json"
+          $assets = Get-Content $assetsPath -Raw | ConvertFrom-Json
+
+          $packages = $assets.libraries.PSObject.Properties |
+            Where-Object { $_.Value.type -eq "package" } |
+            ForEach-Object {
+              $name, $version = $_.Name -split "/", 2
+              [pscustomobject]@{
+                Package = $name
+                Version = $version
+              }
+            } |
+            Sort-Object Package
+
+          "## Resolved Package Versions" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+          "| Package | Version |" >> $env:GITHUB_STEP_SUMMARY
+          "|---|---:|" >> $env:GITHUB_STEP_SUMMARY
+
+          foreach ($package in $packages) {
+            "| ``$($package.Package)`` | ``$($package.Version)`` |" >> $env:GITHUB_STEP_SUMMARY
+          }
+
+          $packages | Format-Table -AutoSize
+
+      - name: Build package usage
+        run: dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore /p:NoWarn=InteractionFlowArchitecture001
+
+      - name: Run package usage
+        run: dotnet run --project $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-build
+
+      - name: Verify analyzer diagnostic
+        run: |
+          $output = dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore --no-incremental 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Write-Output
+
+          if ($exitCode -eq 0) {
+            throw "Expected InteractionFlowArchitecture001 to fail the build, but build succeeded."
+          }
+
+          $text = $output -join "`n"
+          if ($text -notmatch "InteractionFlowArchitecture001") {
+            throw "Expected InteractionFlowArchitecture001 diagnostic was not found in build output."
+          }

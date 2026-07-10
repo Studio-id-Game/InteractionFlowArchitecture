@@ -73,8 +73,10 @@ jobs:
             $PSNativeCommandUseErrorActionPreference = $false
           }
 
-          $output = & dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore --no-incremental 2>&1
+          $outputPath = Join-Path $env:RUNNER_TEMP "interactionflow-analyzer-check.log"
+          & dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore --no-incremental *> $outputPath
           $exitCode = $LASTEXITCODE
+          $output = Get-Content $outputPath
           $output | Write-Output
 
           if ($exitCode -eq 0) {
@@ -85,3 +87,8 @@ jobs:
           if ($text -notmatch "InteractionFlowArchitecture001") {
             throw "Expected InteractionFlowArchitecture001 diagnostic was not found in build output."
           }
+
+          "## Analyzer Diagnostic Check" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+          "- `InteractionFlowArchitecture001` was detected as expected." >> $env:GITHUB_STEP_SUMMARY
+          exit 0

@@ -68,7 +68,12 @@ jobs:
 
       - name: Verify analyzer diagnostic
         run: |
-          $output = dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore --no-incremental 2>&1
+          $ErrorActionPreference = "Continue"
+          if (Get-Variable PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+            $PSNativeCommandUseErrorActionPreference = $false
+          }
+
+          $output = & dotnet build $env:CHECK_PROJECT --configuration $env:CONFIGURATION --no-restore --no-incremental 2>&1
           $exitCode = $LASTEXITCODE
           $output | Write-Output
 

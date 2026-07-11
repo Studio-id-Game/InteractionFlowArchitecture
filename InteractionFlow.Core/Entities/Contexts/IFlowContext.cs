@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
@@ -16,6 +18,6 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <param name="value">取得できた値。取得できない場合は既定値。</param>
         /// <returns>値を取得できた場合は <see langword="true"/>、取得できない場合は <see langword="false"/>。</returns>
-        public bool TryGet<T>(out T? value);
+        public bool TryGet<T>([MaybeNullWhen(false)] out T value);
     }
 }

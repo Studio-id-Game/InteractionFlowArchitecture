@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
@@ -32,7 +34,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <param name="value">取得できた値。基本実装では常に既定値。</param>
         /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TryGet<T>(out T? value)
+        public virtual bool TryGet<T>([MaybeNullWhen(false)] out T value)
         {
             value = default;
             return false;

@@ -13,11 +13,6 @@ namespace InteractionFlow.Core.Entities.Contexts
         private readonly List<IFlowContextValue> values = [];
 
         /// <summary>
-        /// 元のコンテキストに紐づくユーザー情報を取得します。
-        /// </summary>
-        public UserObject User => mainContext.User;
-
-        /// <summary>
         /// 元のコンテキストに紐づくキャンセル制御オブジェクトを取得します。
         /// </summary>
         public CancellationObject Cancellation => mainContext.Cancellation;

@@ -4,13 +4,13 @@ using System;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
 {
-    public class NotepadContext(NotepadUserObject userObject) : FlowContext(userObject)
+    public class NotepadContext(NotepadUserObject userObject) : FlowContext
     {
         public NotepadContext() : this(NotepadUserObject.Public)
         {
         }
 
-        public new NotepadUserObject User { get; } = userObject;
+        public NotepadUserObject User { get; } = userObject;
 
         public NotepadDataKey CurrentNotepadKey { get; set; } = NotepadDataKey.Empty;
 

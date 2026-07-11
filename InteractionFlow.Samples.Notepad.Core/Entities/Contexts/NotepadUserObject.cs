@@ -1,9 +1,8 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
 {
-    public class NotepadUserObject(NotepadUserKey userKey) : UserObject(userKey.Id)
+    public class NotepadUserObject(NotepadUserKey userKey)
     {
         public NotepadUserObject() : this(NotepadUserKey.Public)
         {
@@ -13,5 +12,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
         public static NotepadUserObject Public => new();
 
         public NotepadUserKey NotepadUserKey { get; } = userKey;
+
+        public string Id => NotepadUserKey.Id;
+
+        public string Name => NotepadUserKey.Name;
     }
 }

@@ -36,8 +36,7 @@ namespace InteractionFlow.Samples.Parrot
         {
             using var globalScope = BuildScope();
 
-            var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
-            var context = new FlowContext(user);
+            var context = new FlowContext();
 
             using (var initializeApplication = globalScope.BuildProgramFlow<InitializeApplication, IFlowContext>())
             {

@@ -3,34 +3,25 @@ using System;
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// ユーザー情報とキャンセル制御を保持する、基本的なフローコンテキストです。
+    /// キャンセル制御を保持する、基本的なフローコンテキストです。
     /// </summary>
     public class FlowContext : IFlowContext
     {
         /// <summary>
-        /// 指定したユーザー情報で新しいコンテキストを作成します。
+        /// 新しいコンテキストを作成します。
         /// </summary>
-        /// <param name="userToken">このコンテキストに紐づけるユーザー情報。</param>
-        public FlowContext(UserObject userToken)
+        public FlowContext()
         {
-            User = userToken;
         }
 
         /// <summary>
-        /// 指定したユーザー情報とキャンセル制御で新しいコンテキストを作成します。
+        /// 指定したキャンセル制御で新しいコンテキストを作成します。
         /// </summary>
-        /// <param name="userToken">このコンテキストに紐づけるユーザー情報。</param>
         /// <param name="cancellation">このコンテキストで共有するキャンセル制御。</param>
-        public FlowContext(UserObject userToken, CancellationObject cancellation)
+        public FlowContext(CancellationObject cancellation)
         {
-            User = userToken;
             Cancellation = cancellation;
         }
-
-        /// <summary>
-        /// このコンテキストに紐づくユーザー情報を取得します。
-        /// </summary>
-        public UserObject User { get; }
 
         /// <summary>
         /// このコンテキストに紐づくキャンセル制御オブジェクトを取得します。

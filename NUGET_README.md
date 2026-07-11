@@ -38,7 +38,7 @@ Interaction Flow Architecture は、ユーザーとの相互作用を次のよ�
 - Interaction: システム内部の目的を達成する処理単位
 - Function Port: 外部機能への抽象インターフェース
 - Function External: UI、DB、外部サービスなどの実装
-- Context: フロー間で受け渡されるユーザー状態や文脈
+- Context: フロー間で受け渡される状態や文脈
 
 依存関係は Port を境界に整理されるため、UI、保存先、外部サービスを差し替えやすく、テストしやすい構成を作れます。
 

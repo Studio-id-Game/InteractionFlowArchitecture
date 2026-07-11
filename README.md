@@ -222,8 +222,8 @@ Context は現在の処理に関する状態や状況を表す文脈的情報で
 ユーザーを識別する値が必要な場合は、アプリケーション側の Entity として定義し、Context の値として扱います。  
 ProgramFlow はこの Context をもとに実行され、Interaction を通じて処理が進行します。
 
-処理の過程で、Function External を介した操作や状態更新が行われ、その結果として Context は更新されます。  
-また、Context の更新は ProgramFlow / Interaction 内で行われる場合もあります。
+`FlowContext` は基本となる文脈を表し、アプリケーション固有の文脈値は継承によって定義します。  
+フロー中に一時的な文脈値を追加する場合は `ScopedFlowContext` を使用します。
 
 更新された Context は、必要に応じて次のフローの入力として再利用されます。  
 これにより、連続したユーザー体験が構成されます。

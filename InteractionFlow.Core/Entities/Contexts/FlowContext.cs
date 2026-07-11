@@ -1,5 +1,3 @@
-using System;
-
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
@@ -37,28 +35,6 @@ namespace InteractionFlow.Core.Entities.Contexts
         public virtual bool TryGet<T>(out T? value)
         {
             value = default;
-            return false;
-        }
-
-        /// <summary>
-        /// 基本コンテキストに指定した型の値を設定します。
-        /// </summary>
-        /// <typeparam name="T">設定する値の型。</typeparam>
-        /// <param name="value">設定する値。</param>
-        /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TrySet<T>(T? value)
-        {
-            return false;
-        }
-
-        /// <summary>
-        /// 基本コンテキストに指定した型の値を生成して設定します。
-        /// </summary>
-        /// <typeparam name="T">設定する値の型。</typeparam>
-        /// <param name="select">設定する値を生成する関数。</param>
-        /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TrySet<T>(Func<T> select)
-        {
             return false;
         }
     }

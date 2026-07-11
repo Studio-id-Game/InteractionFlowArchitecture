@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
 {
@@ -14,55 +14,29 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
 
         public NotepadDataKey CurrentNotepadKey { get; set; } = NotepadDataKey.Empty;
 
-        public override bool TrySet<T>(T? value) where T : default
-        {
-            if (value is NotepadDataKey notepadDataKey)
-            {
-                CurrentNotepadKey = notepadDataKey;
-                return true;
-            }
-
-            return base.TrySet(value);
-        }
-
-        public override bool TrySet<T>(Func<T> select)
-        {
-            if (select is Func<NotepadDataKey> notepadDataKey)
-            {
-                CurrentNotepadKey = notepadDataKey();
-                return true;
-            }
-
-            return base.TrySet(select);
-        }
-
-        public override bool TryGet<T>(out T? value) where T : default
+        public override bool TryGet<T>([MaybeNullWhen(false)] out T value)
         {
             value = default;
 
-            if (TryCast(User, ref value))
+            if (User is T user)
+            {
+                value = user;
                 return true;
+            }
 
-            if (TryCast(User.NotepadUserKey, ref value))
+            if (User.NotepadUserKey is T userKey)
+            {
+                value = userKey;
                 return true;
+            }
 
-            if (TryCast(CurrentNotepadKey, ref value))
+            if (CurrentNotepadKey is T currentNotepadKey)
+            {
+                value = currentNotepadKey;
                 return true;
+            }
 
             return base.TryGet(out value);
-        }
-
-        private static bool TryCast<T2, T>(T2? newValue, ref T? value)
-        {
-            if (newValue != null && newValue is T newValueT)
-            {
-                value = newValueT;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
         }
     }
 }

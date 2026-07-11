@@ -33,13 +33,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions.Rules
                 ["0. Cancel"] = NotepadDataKey.Empty
             };
 
-            var loadContext = new FlowContextGroup(context)
-                .Add(NotepadDataKey.Empty, out var dataKey);
-
             foreach (var (index, item) in userData.OrderBy(e => e.NoteId).Select((item, index) => (index, item)))
             {
-                dataKey.Value = item;
-
                 var _notepadDataPersistence = notepadDataPersistence;
                 var _notepadDataFiles = notepadDataFiles;
 

@@ -19,8 +19,9 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            context = new FlowContextGroup(context)
-                .Add(SelectAndRunSampleEndState.None, out var endState);
+            var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
+            context = new ScopedFlowContext(context)
+                .With(endState);
 
             async Task<FlowEndToken> Write(string text)
             {

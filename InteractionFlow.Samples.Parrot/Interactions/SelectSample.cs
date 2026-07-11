@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -57,8 +58,8 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                     }
 
                     var selectedSample = new SampleSelected(sampleID);
-                    context = new FlowContextGroup(context)
-                        .AddImmutable(selectedSample, out _);
+                    context = new ScopedFlowContext(context)
+                        .With(selectedSample);
 
                     await reaction.Write(context, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
                 }

@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
@@ -118,8 +119,8 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<FlowEndToken> ParrotCustomContext(IFlowContext context)
         {
-            var newContext = new FlowContextGroup(context)
-                .AddImmutable(new ParrotHello($"Hello! I'm Parrot with Custom Context, who are you?"), out _);
+            var newContext = new ScopedFlowContext(context)
+                .With(new ParrotHello($"Hello! I'm Parrot with Custom Context, who are you?"));
             context = newContext;
             return await parrot.ExecuteAsync(context);
         }

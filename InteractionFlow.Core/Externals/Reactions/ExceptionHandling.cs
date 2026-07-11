@@ -23,7 +23,7 @@ namespace InteractionFlow.Core.Externals.Reactions
         where TException : Exception
     {
         /// <summary>
-        /// 例外をフロー終了トークンへ変換せず、そのまま再送出するかどうかを取得または設定します。
+        /// 例外をフロー終了結果へ変換せず、そのまま再送出するかどうかを取得または設定します。
         /// </summary>
         public bool ThrowException { get; set; } = false;
 
@@ -32,9 +32,9 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// </summary>
         /// <param name="context">例外が発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理する例外。</param>
-        /// <returns>例外処理後のフロー終了トークン。</returns>
+        /// <returns>例外処理後のフロー終了結果。</returns>
         /// <exception cref="Exception"><see cref="ThrowException"/> が <see langword="true"/> の場合、指定された例外を再送出します。</exception>
-        public ValueTask<FlowEndToken> HandleExceptionAsync(IFlowContext context, TException exception)
+        public ValueTask<ReactionEnd> HandleExceptionAsync(IFlowContext context, TException exception)
         {
             if (ThrowException)
             {
@@ -47,11 +47,11 @@ namespace InteractionFlow.Core.Externals.Reactions
         }
 
         /// <summary>
-        /// 例外をフロー終了トークンへ変換する派生クラス固有の処理を実行します。
+        /// 例外をフロー終了結果へ変換する派生クラス固有の処理を実行します。
         /// </summary>
         /// <param name="context">例外が発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理する例外。</param>
-        /// <returns>例外処理後のフロー終了トークン。</returns>
-        protected abstract ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, TException exception);
+        /// <returns>例外処理後のフロー終了結果。</returns>
+        protected abstract ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, TException exception);
     }
 }

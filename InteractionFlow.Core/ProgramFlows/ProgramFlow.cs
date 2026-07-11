@@ -31,17 +31,28 @@ namespace InteractionFlow.Core.ProgramFlows
         /// </summary>
         /// <param name="context">ProgramFlow に渡すコンテキスト。</param>
         /// <returns>ProgramFlow の終了結果。</returns>
-        public abstract Task<FlowEndToken> ExecuteAsync(TContext context);
+        public async Task<FlowEndToken> ExecuteAsync(TContext context)
+        {
+            var end = await ExecuteCoreAsync(context).ConfigureAwait(false);
+            return GetEnd(context, end);
+        }
 
         /// <summary>
-        /// 指定された終了結果の最終コンテキストを、ProgramFlow に渡されたコンテキストへ揃えます。
+        /// 指定されたコンテキストで ProgramFlow の本体を実行します。
         /// </summary>
-        /// <param name="context">ProgramFlow に渡されたコンテキスト。</param>
-        /// <param name="end">正規化する終了結果。</param>
-        /// <returns>最終コンテキストを揃えた終了結果。</returns>
-        protected FlowEndToken NormalizeLastContext(TContext context, FlowEndToken end)
+        /// <param name="context">ProgramFlow に渡すコンテキスト。</param>
+        /// <returns>ProgramFlow 内の Interaction が返した終了トークン。</returns>
+        protected abstract Task<FlowEndToken> ExecuteCoreAsync(TContext context);
+
+        /// <summary>
+        /// Interaction の終了トークンを、ProgramFlow に渡されたコンテキストへ結合し直します。
+        /// </summary>
+        /// <param name="context">ProgramFlow に渡されたフローコンテキスト。</param>
+        /// <param name="interactionEnd">ProgramFlow 内の Interaction が返した終了トークン。</param>
+        /// <returns>ProgramFlow の終了トークン。</returns>
+        protected static FlowEndToken GetEnd(IFlowContext context, FlowEndToken interactionEnd)
         {
-            return end.NormalizeLastContext(context);
+            return IProgramFlow.GetEnd(context, interactionEnd);
         }
     }
 }

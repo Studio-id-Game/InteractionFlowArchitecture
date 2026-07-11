@@ -25,5 +25,16 @@ namespace InteractionFlow.Core.Interactions
         /// <param name="context">Interaction に渡すフローコンテキスト。</param>
         /// <returns>Interaction の終了結果。</returns>
         Task<FlowEndToken> ExecuteAsync(IFlowContext context);
+
+        /// <summary>
+        /// Reaction が生成した終了結果を、Interaction に渡されたコンテキストへ結合します。
+        /// </summary>
+        /// <param name="context">Interaction に渡されたフローコンテキスト。</param>
+        /// <param name="reactionEnd">Reaction が生成したフロー終了結果。</param>
+        /// <returns>Interaction の終了トークン。</returns>
+        protected static FlowEndToken GetEnd(IFlowContext context, ReactionEnd reactionEnd)
+        {
+            return new(context, reactionEnd);
+        }
     }
 }

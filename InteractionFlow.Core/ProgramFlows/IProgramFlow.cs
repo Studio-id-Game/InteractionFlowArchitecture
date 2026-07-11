@@ -18,6 +18,17 @@ namespace InteractionFlow.Core.ProgramFlows
         /// ProgramFlow は FunctionPort 種別を持たないことを示します。
         /// </summary>
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.None;
+
+        /// <summary>
+        /// Interaction の終了トークンを、ProgramFlow に渡されたコンテキストへ結合し直します。
+        /// </summary>
+        /// <param name="context">ProgramFlow に渡されたフローコンテキスト。</param>
+        /// <param name="interactionEnd">ProgramFlow 内の Interaction が返した終了トークン。</param>
+        /// <returns>ProgramFlow の終了トークン。</returns>
+        protected static FlowEndToken GetEnd(IFlowContext context, FlowEndToken interactionEnd)
+        {
+            return new(context, interactionEnd.End);
+        }
     }
 
     /// <summary>

@@ -3,55 +3,44 @@ using System;
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// フローの終了時点のコンテキストと、終了時に発生した例外情報を保持します。
+    /// フローの終了結果と、実行に渡されたコンテキストを結合したトークンです。
     /// </summary>
     public sealed class FlowEndToken
     {
         /// <summary>
-        /// フロー終了時点で最後に扱われていたコンテキストを取得します。
+        /// フローの実行に渡されたコンテキストを取得します。
         /// </summary>
         public IFlowContext LastContext { get; }
 
         /// <summary>
-        /// フロー終了時に発生した例外を取得または設定します。
+        /// Reaction が生成したフロー終了結果を取得します。
         /// </summary>
-        public Exception? Exception { get; set; }
+        public ReactionEnd End { get; }
 
         /// <summary>
-        /// フロー終了時の例外をキャンセル例外として取得または設定します。
+        /// フロー終了時に発生した例外を取得します。
         /// </summary>
-        public OperationCanceledException? CanceledException
-        {
-            get => Exception as OperationCanceledException;
-            set => Exception = value;
-        }
+        public Exception? Exception => End.Exception;
+
+        /// <summary>
+        /// フロー終了時の例外をキャンセル例外として取得します。
+        /// </summary>
+        public OperationCanceledException? CanceledException => Exception as OperationCanceledException;
 
         /// <summary>
         /// 例外が設定されているかどうかを取得します。
         /// </summary>
-        public bool HasException => Exception != null;
+        public bool HasException => End.HasException;
 
         /// <summary>
         /// 設定されている例外がキャンセル例外かどうかを取得します。
         /// </summary>
-        public bool HasCanceled => HasException && Exception is OperationCanceledException;
+        public bool HasCanceled => End.HasCanceled;
 
-        internal FlowEndToken(IFlowContext lastContext)
+        internal FlowEndToken(IFlowContext lastContext, ReactionEnd end)
         {
-            LastContext = lastContext;
-        }
-
-        internal FlowEndToken NormalizeLastContext(IFlowContext context)
-        {
-            if (LastContext == context)
-            {
-                return this;
-            }
-
-            return new FlowEndToken(context)
-            {
-                Exception = Exception
-            };
+            LastContext = lastContext ?? throw new ArgumentNullException(nameof(lastContext));
+            End = end ?? throw new ArgumentNullException(nameof(end));
         }
     }
 }

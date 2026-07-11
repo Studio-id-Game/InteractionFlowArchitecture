@@ -21,12 +21,11 @@ namespace InteractionFlow.Core.Builders
         /// </summary>
         /// <param name="context">ProgramFlow に渡すコンテキスト。</param>
         /// <returns>ProgramFlow の終了結果。</returns>
-        /// <exception cref="InvalidOperationException">このハンドラが破棄済みの場合に発生します。</exception>
+        /// <exception cref="ObjectDisposedException">このハンドラが破棄済みの場合に発生します。</exception>
         public async Task<FlowEndToken> ExecuteAsync(TContext context)
         {
-            var programFlow = this.programFlow ?? throw new InvalidOperationException();
-            var end = await programFlow.ExecuteAsync(context).ConfigureAwait(false);
-            return end.NormalizeLastContext(context);
+            var programFlow = this.programFlow ?? throw new ObjectDisposedException(nameof(ProgramFlowHandler<TContext>));
+            return await programFlow.ExecuteAsync(context).ConfigureAwait(false);
         }
 
         /// <summary>

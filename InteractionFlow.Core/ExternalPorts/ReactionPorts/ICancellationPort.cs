@@ -21,20 +21,20 @@ namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
 
         /// <summary>
-        /// 指定されたキャンセル例外を処理し、フロー終了トークンへ変換します。
+        /// 指定されたキャンセル例外を処理し、フロー終了結果へ変換します。
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
-        ValueTask<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException exception);
+        /// <returns>キャンセル処理後のフロー終了結果。</returns>
+        ValueTask<ReactionEnd> HandleCancellationAsync(IFlowContext context, OperationCanceledException exception);
 
         /// <summary>
         /// 例外ハンドリング契約から呼び出されたキャンセル例外を、キャンセル専用の処理へ委譲します。
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
-        ValueTask<FlowEndToken> IExceptionPort<OperationCanceledException>.HandleExceptionAsync(IFlowContext context, OperationCanceledException exception)
+        /// <returns>キャンセル処理後のフロー終了結果。</returns>
+        ValueTask<ReactionEnd> IExceptionPort<OperationCanceledException>.HandleExceptionAsync(IFlowContext context, OperationCanceledException exception)
         {
             return HandleCancellationAsync(context, exception);
         }

@@ -1,4 +1,6 @@
 using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.Entities.Contexts;
+using System;
 
 namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
 {
@@ -16,5 +18,15 @@ namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
         /// このノードが Reaction 種別の FunctionPort であることを示します。
         /// </summary>
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
+
+        /// <summary>
+        /// Reaction が決定したフロー終了結果を生成します。
+        /// </summary>
+        /// <param name="exception">Reaction が未解決として扱う例外。解決済みの場合は <see langword="null"/>。</param>
+        /// <returns>Reaction が生成したフロー終了結果。</returns>
+        protected static ReactionEnd GetEnd(Exception? exception = null)
+        {
+            return exception == null ? ReactionEnd.Success : new(exception);
+        }
     }
 }

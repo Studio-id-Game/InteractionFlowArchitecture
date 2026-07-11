@@ -15,15 +15,6 @@ namespace InteractionFlow.Core.Entities.Contexts
         }
 
         /// <summary>
-        /// 指定したキャンセル制御で新しいコンテキストを作成します。
-        /// </summary>
-        /// <param name="cancellation">このコンテキストで共有するキャンセル制御。</param>
-        public FlowContext(CancellationObject cancellation)
-        {
-            Cancellation = cancellation;
-        }
-
-        /// <summary>
         /// このコンテキストに紐づくキャンセル制御オブジェクトを取得します。
         /// </summary>
         public CancellationObject Cancellation { get; } = new();

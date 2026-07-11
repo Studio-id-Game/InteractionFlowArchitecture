@@ -18,7 +18,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <summary>
         /// 登録済みのキャンセル対象タスクが存在するかどうかを取得します。
         /// </summary>
-        public bool HasTask => currentTasks.Any();
+        public bool HasTask => currentTasks.Any(e => !e.IsCompleted);
 
         /// <summary>
         /// 現在のキャンセルトークンにキャンセルが要求されているかどうかを取得します。

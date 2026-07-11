@@ -47,19 +47,13 @@ namespace InteractionFlow.Samples.Parrot
 
             while (true)
             {
-                var end = await selectAndRunSample.ExecuteAsync(context);
+                var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
+                var contextScope = new ScopedFlowContext(context)
+                    .With(endState);
 
-                SelectAndRunSampleEndState endState;
-                if (end.LastContext.TryGet<RefEntity<SelectAndRunSampleEndState>>(out var endStateEntry))
-                {
-                    endState = endStateEntry.Value;
-                }
-                else
-                {
-                    endState = SelectAndRunSampleEndState.None;
-                }
+                await selectAndRunSample.ExecuteAsync(contextScope);
 
-                if (endState == SelectAndRunSampleEndState.CancelSelect)
+                if (endState.Value == SelectAndRunSampleEndState.CancelSelect)
                     break;
             }
         }

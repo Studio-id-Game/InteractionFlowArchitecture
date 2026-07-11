@@ -51,6 +51,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             return await TryCatchBlockAsync(context, async context =>
             {
+                var notepadContext = context as NotepadContext
+                    ?? throw new InvalidOperationException($"{nameof(Login)} requires {nameof(NotepadContext)}.");
+
                 // セキュリティのためのメモリリセット
                 notepadUserDataFiles.ForceResetMemoryState();
                 notepadDataFiles.ForceResetMemoryState();
@@ -75,32 +78,34 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     }
                     else if (string.IsNullOrEmpty(userID))
                     {
-                        context = new NotepadContext();
+                        notepadContext.User = NotepadUserObject.Public;
+                        notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
                         break;
                     }
                     else
                     {
                         userKey = new NotepadUserKey(userID);
                         var userObject = new NotepadUserObject(userKey);
-                        context = new NotepadContext(userObject);
+                        notepadContext.User = userObject;
+                        notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
                         break;
                     }
 
                 } while (true);
 
-                await OnBeforeLoadingUserDataAsync(context);
+                await OnBeforeLoadingUserDataAsync(notepadContext);
 
                 await Write(context, "> Loading User data...");
-                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
+                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, notepadContext)
                     .ResolveAsync(
                         onSuccess: async userData =>
                         {
                             var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
-                            return await Write(context, $"> Logined - {viewName} ({userData.Count()} Notes)");
+                            return await Write(notepadContext, $"> Logined - {viewName} ({userData.Count()} Notes)");
                         },
                         onFailure: async e =>
                         {
-                            return await Write(context, $"> Login error : {e.Message}");
+                            return await Write(notepadContext, $"> Login error : {e.Message}");
                         });
             });
         }

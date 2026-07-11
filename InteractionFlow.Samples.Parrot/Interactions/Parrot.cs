@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Standard.Entities;
@@ -45,24 +46,23 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<FlowEndToken> Init(IFlowContext context)
         {
-            if (!context.TryGet<SampleSelected>(out var selectedSample))
+            if (!context.TryGet<RefEntity<SampleSelected>>(out var selectedSample))
             {
                 await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
                 return await reaction.Write(context, new ConsoleOutput(""));
             }
             else
             {
-                var end = await reaction.Write(context, new ConsoleOutput($"- {selectedSample}"));
+                var end = await reaction.Write(context, new ConsoleOutput($"- {selectedSample.Value}"));
 
-                if (!context.TryGet<ParrotHello>(out var hello) || hello.text == null)
-                {
-                    hello = new ParrotHello(DefaultHello);
-                }
+                var helloText = context.TryGet<RefEntity<ParrotHello>>(out var hello) && hello.Value.text != null
+                    ? hello.Value.text
+                    : DefaultHello;
 
-                if (!string.IsNullOrEmpty(hello.text))
+                if (!string.IsNullOrEmpty(helloText))
                 {
                     await NameHeader(context, "Parrot");
-                    end = await SlowTalk(context, hello.text);
+                    end = await SlowTalk(context, helloText);
                 }
 
                 return end;

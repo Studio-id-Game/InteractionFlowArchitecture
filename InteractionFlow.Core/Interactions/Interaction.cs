@@ -123,7 +123,8 @@ namespace InteractionFlow.Core.Interactions
                     }
                 }
 
-                return await task.ConfigureAwait(false);
+                var end = await task.ConfigureAwait(false);
+                return end.NormalizeLastContext(context);
             }
             catch (OperationCanceledException e)
             {

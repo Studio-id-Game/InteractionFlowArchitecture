@@ -40,5 +40,18 @@ namespace InteractionFlow.Core.Entities.Contexts
         {
             LastContext = lastContext;
         }
+
+        internal FlowEndToken NormalizeLastContext(IFlowContext context)
+        {
+            if (LastContext == context)
+            {
+                return this;
+            }
+
+            return new FlowEndToken(context)
+            {
+                Exception = Exception
+            };
+        }
     }
 }

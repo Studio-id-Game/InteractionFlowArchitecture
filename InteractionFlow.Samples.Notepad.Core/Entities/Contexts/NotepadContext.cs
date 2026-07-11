@@ -10,7 +10,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities.Contexts
         {
         }
 
-        public NotepadUserObject User { get; } = userObject;
+        public NotepadUserObject User { get; set; } = userObject;
 
         public NotepadDataKey CurrentNotepadKey { get; set; } = NotepadDataKey.Empty;
 

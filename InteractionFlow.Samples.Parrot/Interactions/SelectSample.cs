@@ -58,8 +58,10 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                     }
 
                     var selectedSample = new SampleSelected(sampleID);
-                    context = new ScopedFlowContext(context)
-                        .With(selectedSample);
+                    if (context.TryGet<RefEntity<SampleSelected>>(out var selectedSampleEntry))
+                    {
+                        selectedSampleEntry.Value = selectedSample;
+                    }
 
                     await reaction.Write(context, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
                 }

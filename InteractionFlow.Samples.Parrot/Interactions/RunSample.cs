@@ -33,13 +33,13 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             return await TryCatchBlockAsync(context, async (context) =>
             {
-                if (!context.TryGet<SampleSelected>(out var selected) || selected.id.mode == SampleMode.None)
+                if (!context.TryGet<RefEntity<SampleSelected>>(out var selected) || selected.Value.id.mode == SampleMode.None)
                 {
                     await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
                     return await reaction.Write(context, new ConsoleOutput(""));
                 }
 
-                var mode = selected.id.mode;
+                var mode = selected.Value.id.mode;
 
                 if (mode == SampleMode.RepeatLast)
                 {
@@ -120,7 +120,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         private async Task<FlowEndToken> ParrotCustomContext(IFlowContext context)
         {
             var newContext = new ScopedFlowContext(context)
-                .With(new ParrotHello($"Hello! I'm Parrot with Custom Context, who are you?"));
+                .With(new RefEntity<ParrotHello>(new($"Hello! I'm Parrot with Custom Context, who are you?")));
             context = newContext;
             return await parrot.ExecuteAsync(context);
         }

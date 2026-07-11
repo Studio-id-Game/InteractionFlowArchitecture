@@ -19,9 +19,12 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
     {
         public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
-            var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
+            var lastContext = context;
+            context.TryGet<RefEntity<SelectAndRunSampleEndState>>(out var endState);
+
+            var selectedSample = new RefEntity<SampleSelected>(new(new(SampleMode.None)));
             context = new ScopedFlowContext(context)
-                .With(endState);
+                .With(selectedSample);
 
             async Task<FlowEndToken> Write(string text)
             {
@@ -37,17 +40,20 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
 
             // Select
             var end = await selectSample.ExecuteAsync(context);
-            context = end.LastContext;
 
             if (end.HasCanceled)
             {
                 await Write("[Exit Sample Select]");
-                endState.Value = SelectAndRunSampleEndState.CancelSelect;
-                return end;
+                if (endState != null)
+                {
+                    endState.Value = SelectAndRunSampleEndState.CancelSelect;
+                }
+
+                return NormalizeLastContext(lastContext, end);
             }
 
             // Run
-            if (context.TryGet<SampleSelected>(out var selected) && selected.id.mode != SampleMode.None)
+            if (selectedSample.Value.id.mode != SampleMode.None)
             {
                 end = await runSample.ExecuteAsync(context);
 
@@ -55,20 +61,32 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
                 {
                     await Write("[Exit Sample]");
                     await Write("");
-                    endState.Value = SelectAndRunSampleEndState.CancelSample;
-                    return end;
+                    if (endState != null)
+                    {
+                        endState.Value = SelectAndRunSampleEndState.CancelSample;
+                    }
+
+                    return NormalizeLastContext(lastContext, end);
                 }
                 else
                 {
-                    endState.Value = SelectAndRunSampleEndState.Finish;
+                    if (endState != null)
+                    {
+                        endState.Value = SelectAndRunSampleEndState.Finish;
+                    }
+
                     await Write("[Finish]");
-                    return end;
+                    return NormalizeLastContext(lastContext, end);
                 }
             }
 
-            endState.Value = SelectAndRunSampleEndState.None;
+            if (endState != null)
+            {
+                endState.Value = SelectAndRunSampleEndState.None;
+            }
+
             Console.WriteLine("[None]");
-            return end;
+            return NormalizeLastContext(lastContext, end);
 
         }
     }

@@ -29,12 +29,10 @@ namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
 
             do
             {
-                var loginedContext = end.LastContext as NotepadContext ?? throw new Exception();
-
-                await noteListView.ExecuteAsync(loginedContext);
+                await noteListView.ExecuteAsync(context);
                 await Write("");
 
-                end = await selectUserAction.ExecuteAsync(loginedContext);
+                end = await selectUserAction.ExecuteAsync(context);
                 await Write("");
                 if (end.HasCanceled)
                 {

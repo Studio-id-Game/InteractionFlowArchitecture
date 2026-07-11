@@ -32,5 +32,16 @@ namespace InteractionFlow.Core.ProgramFlows
         /// <param name="context">ProgramFlow に渡すコンテキスト。</param>
         /// <returns>ProgramFlow の終了結果。</returns>
         public abstract Task<FlowEndToken> ExecuteAsync(TContext context);
+
+        /// <summary>
+        /// 指定された終了結果の最終コンテキストを、ProgramFlow に渡されたコンテキストへ揃えます。
+        /// </summary>
+        /// <param name="context">ProgramFlow に渡されたコンテキスト。</param>
+        /// <param name="end">正規化する終了結果。</param>
+        /// <returns>最終コンテキストを揃えた終了結果。</returns>
+        protected FlowEndToken NormalizeLastContext(TContext context, FlowEndToken end)
+        {
+            return end.NormalizeLastContext(context);
+        }
     }
 }

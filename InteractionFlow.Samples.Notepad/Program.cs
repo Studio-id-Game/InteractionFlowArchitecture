@@ -42,7 +42,7 @@ namespace InteractionFlow.Samples.Notepad
 
             var end = await mainLoop.ExecuteAsync(context);
 
-            end.LastContext.TryGet<NotepadUserObject>(out var notepadUser);
+            context.TryGet<NotepadUserObject>(out var notepadUser);
 
             Console.WriteLine($"[Exit Notepad] - Goodbye, {notepadUser?.Id}.");
         }

@@ -40,10 +40,10 @@ namespace InteractionFlow.Standard.Interactions
         /// </summary>
         /// <param name="context">Interaction に渡すフローコンテキスト。</param>
         /// <param name="option">出力内容と出力状態のオプション。</param>
-        /// <returns>出力後のフロー終了トークン。</returns>
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
+        /// <returns>出力後のフロー終了結果。</returns>
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
-            return await TryCatchBlock(context, option, InteractWithUserAsyncCore).ConfigureAwait(false);
+            return await InteractWithUserAsyncCore(context, option).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -51,8 +51,8 @@ namespace InteractionFlow.Standard.Interactions
         /// </summary>
         /// <param name="context">Interaction に渡すフローコンテキスト。</param>
         /// <param name="option">出力内容と出力状態のオプション。</param>
-        /// <returns>出力後のフロー終了トークン。</returns>
-        protected virtual async Task<FlowEndToken> InteractWithUserAsyncCore(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
+        /// <returns>出力後のフロー終了結果。</returns>
+        protected virtual async Task<ReactionEnd> InteractWithUserAsyncCore(IFlowContext context, (ConsoleOutput?, ConsoleState?) option)
         {
             var output = option.Item1 ?? (context.TryGet<ConsoleOutput>(out var _output) ? _output! : DefaultOutput);
             var state = option.Item2 ?? (context.TryGet<ConsoleState>(out var _state) ? _state! : DefaultState);

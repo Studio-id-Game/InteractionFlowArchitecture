@@ -5,7 +5,6 @@ using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
-using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.ProgramFlows
@@ -84,8 +83,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
                 endState.Value = SelectAndRunSampleEndState.None;
             }
 
-            Console.WriteLine("[None]");
-            return end;
+            return await Write("[None]");
 
         }
     }

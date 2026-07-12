@@ -42,10 +42,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             if (mode == SampleMode.RepeatLast)
             {
                 lastSelectMemory.GetKey(context)
-                    .Then(key =>
-                    {
-                        return lastSelectMemory.GetOrCreate(key);
-                    })
+                    .Then(lastSelectMemory.GetOrCreate)
                     .Then(lastMode =>
                     {
                         mode = lastMode.Value.mode;
@@ -56,7 +53,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             return mode switch
             {
-                SampleMode.Parrot => (await parrot.ExecuteAsync(context)).End,
+                SampleMode.Parrot => await Parrot(context),
                 SampleMode.ParrotAuto => await ParrotAuto(context),
                 SampleMode.ParrotAutoAndKill => await ParrotAutoAndKill(context),
                 SampleMode.ParrotColorful => await ParrotColorful(context),
@@ -66,16 +63,21 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         }
 
 
+        private async Task<ReactionEnd> Parrot(IFlowContext context)
+        {
+            return await NestedExecuteAsync(parrot, context);
+        }
+
         private async Task<ReactionEnd> ParrotAuto(IFlowContext context)
         {
             operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot!");
-            return (await parrotAuto.ExecuteAsync(context)).End;
+            return await NestedExecuteAsync(parrotAuto, context);
         }
 
         private async Task<ReactionEnd> ParrotAutoAndKill(IFlowContext context)
         {
             operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot! ...?");
-            var parrotTask = parrotAuto.ExecuteAsync(context);
+            var parrotTask = NestedExecuteAsync(parrotAuto, context);
             var cancelTask = Task.Delay(10000, context.Cancellation.GetToken())
                 .ContinueWith(async e =>
                 {
@@ -83,7 +85,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                     context.Cancellation.Cancel();
                 });
 
-            return (await parrotTask).End;
+            return await parrotTask;
         }
 
         private async Task<ReactionEnd> ParrotColorful(IFlowContext context)
@@ -111,7 +113,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             using var op = operation.GetStateScope();
             operation.State.Update(foregroundColor: opColor, backgroundColor: opBackColor);
 
-            return (await parrot.ExecuteAsync(context)).End;
+            return await NestedExecuteAsync(parrot, context);
         }
 
         private async Task<ReactionEnd> ParrotCustomContext(IFlowContext context)
@@ -119,7 +121,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             var newContext = new ScopedFlowContext(context)
                 .With(new RefEntity<ParrotHello>(new($"Hello! I'm Parrot with Custom Context, who are you?")));
             context = newContext;
-            return (await parrot.ExecuteAsync(context)).End;
+            return await NestedExecuteAsync(parrot, context);
         }
     }
 }

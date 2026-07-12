@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
@@ -18,6 +19,16 @@ namespace InteractionFlow.Core.Interactions
         params IFlowNode[] dependency)
         : IInteraction
     {
+        private sealed class NestedFlowContext(IFlowContext parent) : IFlowContext
+        {
+            public CancellationObject Cancellation { get; } = new();
+
+            public bool TryGet<T>([MaybeNullWhen(false)] out T value)
+            {
+                return parent.TryGet(out value);
+            }
+        }
+
         /// <summary>
         /// 例外処理ポート、キャンセル処理ポート、および派生クラスから渡された依存ノードを取得します。
         /// </summary>
@@ -49,8 +60,8 @@ namespace InteractionFlow.Core.Interactions
                 }
 
                 var task = ExecuteCoreAsync(context);
-
                 context.Cancellation.AddCancelableTask(CancelableTask());
+                end = await task.ConfigureAwait(false);
 
                 async Task CancelableTask()
                 {
@@ -68,8 +79,6 @@ namespace InteractionFlow.Core.Interactions
                         // これにより、CancelableTask はキャンセル時の追加処理だけを担当できる。
                     }
                 }
-
-                end = await task.ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
@@ -82,6 +91,54 @@ namespace InteractionFlow.Core.Interactions
             }
 
             return GetEnd(context, end);
+        }
+
+        /// <summary>
+        /// 指定された Interaction を、現在のコンテキスト値を参照できる独立したキャンセルスコープで実行します。
+        /// </summary>
+        /// <param name="nestedInteraction">ネストして実行する Interaction。</param>
+        /// <param name="context">親 Interaction のフローコンテキスト。</param>
+        /// <returns>ネストした Interaction の Reaction が生成した終了結果。</returns>
+        /// <exception cref="Exception">ネストした Interaction が未解決の例外で終了した場合にスローされます。</exception>
+        protected static async Task<ReactionEnd> NestedExecuteAsync(IInteraction nestedInteraction, IFlowContext context)
+        {
+            var nestedContext = new NestedFlowContext(context);
+            using var registration = context.Cancellation.GetToken().Register(nestedContext.Cancellation.Cancel);
+
+            var end = await nestedInteraction.ExecuteAsync(nestedContext);
+
+            if (end.HasException)
+            {
+                throw end.Exception!;
+            }
+            else
+            {
+                return end.End;
+            }
+        }
+
+        /// <summary>
+        /// 指定された関数を、現在のコンテキスト値を参照できる独立したキャンセルスコープで実行します。
+        /// </summary>
+        /// <param name="nestedInteractionExecuteAsync">ネストしたキャンセルスコープのフローコンテキストを受け取り、Reaction の終了結果を返す関数。</param>
+        /// <param name="context">親 Interaction のフローコンテキスト。</param>
+        /// <returns>指定された関数が返した Reaction の終了結果。</returns>
+        /// <exception cref="Exception">指定された関数が未解決の例外を含む終了結果を返した場合にスローされます。</exception>
+        protected static async Task<ReactionEnd> NestedExecuteAsync(Func<IFlowContext, Task<ReactionEnd>> nestedInteractionExecuteAsync, IFlowContext context)
+        {
+            var nestedContext = new NestedFlowContext(context);
+            using var registration = context.Cancellation.GetToken().Register(nestedContext.Cancellation.Cancel);
+
+            var end = await nestedInteractionExecuteAsync(nestedContext);
+
+            if (end.HasException)
+            {
+                throw end.Exception!;
+            }
+            else
+            {
+                return end;
+            }
         }
 
         /// <summary>

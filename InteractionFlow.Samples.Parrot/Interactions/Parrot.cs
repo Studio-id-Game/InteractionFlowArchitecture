@@ -34,7 +34,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
             do
             {
-                end = await SingleParrot(context);
+                end = await TrySingleParrotAsync(context);
 
             } while (!end.HasCanceled);
 
@@ -86,6 +86,22 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             await Task.Delay(100);
 
             return await Output(context, outputText);
+        }
+
+        private async Task<ReactionEnd> TrySingleParrotAsync(IFlowContext context)
+        {
+            try
+            {
+                return await SingleParrot(context);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                return await ExceptionPort.HandleExceptionAsync(context, e);
+            }
         }
 
         private async Task<ConsoleInputText> Input(IFlowContext context)

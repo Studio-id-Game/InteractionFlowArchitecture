@@ -12,7 +12,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
         ConsoleSetup assigneCancelKey)
         : ProgramFlow<IFlowContext>(writing, assigneCancelKey)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
         {
             await Write("# Interaction Flow Architecture's Sample : Parrot Application.");
             await Write("- Application Initializing Start...");

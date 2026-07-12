@@ -47,67 +47,64 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             }
         }
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            return await TryCatchBlockAsync(context, async context =>
+            var notepadContext = context as NotepadContext
+                ?? throw new InvalidOperationException($"{nameof(Login)} requires {nameof(NotepadContext)}.");
+
+            // セキュリティのためのメモリリセット
+            notepadUserDataFiles.ForceResetMemoryState();
+            notepadDataFiles.ForceResetMemoryState();
+
+            await OnBeforeLoginAsync();
+
+            using var scope = consoleReaction.GetStateScope();
+            scope.State.Update(writeLine: true);
+
+            string userID;
+            NotepadUserKey userKey = default;
+            do
             {
-                var notepadContext = context as NotepadContext
-                    ?? throw new InvalidOperationException($"{nameof(Login)} requires {nameof(NotepadContext)}.");
+                await Write(context, "# Login - Enter your id (if Empty, use public note) :");
 
-                // セキュリティのためのメモリリセット
-                notepadUserDataFiles.ForceResetMemoryState();
-                notepadDataFiles.ForceResetMemoryState();
+                userID = (await consoleOperation.WaitUserTextAsync(context)).text;
 
-                await OnBeforeLoginAsync();
-
-                using var scope = consoleReaction.GetStateScope();
-                scope.State.Update(writeLine: true);
-
-                string userID;
-                NotepadUserKey userKey = default;
-                do
+                if (!new NotepadUserKey(userID).IsValid)
                 {
-                    await Write(context, "# Login - Enter your id (if Empty, use public note) :");
+                    await Write(context, "- Invalid user id, Retry enter your id :");
+                    continue;
+                }
+                else if (string.IsNullOrEmpty(userID))
+                {
+                    notepadContext.User = NotepadUserObject.Public;
+                    notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
+                    break;
+                }
+                else
+                {
+                    userKey = new NotepadUserKey(userID);
+                    var userObject = new NotepadUserObject(userKey);
+                    notepadContext.User = userObject;
+                    notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
+                    break;
+                }
 
-                    userID = (await consoleOperation.WaitUserTextAsync(context)).text;
+            } while (true);
 
-                    if (!new NotepadUserKey(userID).IsValid)
+            await OnBeforeLoadingUserDataAsync(notepadContext);
+
+            await Write(context, "> Loading User data...");
+            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, notepadContext)
+                .ResolveAsync(
+                    onSuccess: async userData =>
                     {
-                        await Write(context, "- Invalid user id, Retry enter your id :");
-                        continue;
-                    }
-                    else if (string.IsNullOrEmpty(userID))
+                        var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
+                        return await Write(notepadContext, $"> Logined - {viewName} ({userData.Count()} Notes)");
+                    },
+                    onFailure: async e =>
                     {
-                        notepadContext.User = NotepadUserObject.Public;
-                        notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
-                        break;
-                    }
-                    else
-                    {
-                        userKey = new NotepadUserKey(userID);
-                        var userObject = new NotepadUserObject(userKey);
-                        notepadContext.User = userObject;
-                        notepadContext.CurrentNotepadKey = NotepadDataKey.Empty;
-                        break;
-                    }
-
-                } while (true);
-
-                await OnBeforeLoadingUserDataAsync(notepadContext);
-
-                await Write(context, "> Loading User data...");
-                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, notepadContext)
-                    .ResolveAsync(
-                        onSuccess: async userData =>
-                        {
-                            var viewName = string.IsNullOrEmpty(userID) ? "Public" : userID;
-                            return await Write(notepadContext, $"> Logined - {viewName} ({userData.Count()} Notes)");
-                        },
-                        onFailure: async e =>
-                        {
-                            return await Write(notepadContext, $"> Login error : {e.Message}");
-                        });
-            });
+                        return await Write(notepadContext, $"> Login error : {e.Message}");
+                    });
         }
 
         protected virtual ValueTask OnBeforeLoginAsync()
@@ -121,7 +118,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             return default;
         }
 
-        private async Task<FlowEndToken> Write(IFlowContext context, string text)
+        private async Task<ReactionEnd> Write(IFlowContext context, string text)
         {
             return await consoleReaction.Write(context, new ConsoleOutput(text));
         }

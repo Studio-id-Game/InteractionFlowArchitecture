@@ -24,27 +24,29 @@ namespace InteractionFlow.Samples.Parrot.Interactions
     {
         private static string DefaultHello => $"Hello! I'm Parrot, who are you?";
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             await reaction.Write(context, new ConsoleOutput($"## Parrot"));
 
-            var end = await TryCatchBlockAsync(context, Init);
+            var end = await Init(context);
 
             if (end.HasException) return end;
 
             do
             {
-                end = await TryCatchBlockAsync(context, SingleParrot, async () =>
-                {
-                    await Task.Delay(500);
-                });
+                end = await SingleParrot(context);
 
             } while (!end.HasCanceled);
 
             return end;
         }
 
-        private async Task<FlowEndToken> Init(IFlowContext context)
+        protected override async Task OnCancellation(IFlowContext context)
+        {
+            await Task.Delay(500);
+        }
+
+        private async Task<ReactionEnd> Init(IFlowContext context)
         {
             if (!context.TryGet<RefEntity<SampleSelected>>(out var selectedSample))
             {
@@ -70,7 +72,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         }
 
-        private async Task<FlowEndToken> SingleParrot(IFlowContext context)
+        private async Task<ReactionEnd> SingleParrot(IFlowContext context)
         {
             var input = await Input(context);
 
@@ -107,13 +109,13 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             return outputText;
         }
 
-        private async Task<FlowEndToken> Output(IFlowContext context, string reactionText)
+        private async Task<ReactionEnd> Output(IFlowContext context, string reactionText)
         {
             await NameHeader(context, "Parrot");
             return await SlowTalk(context, reactionText);
         }
 
-        private async Task<FlowEndToken> NameHeader(IFlowContext context, string name)
+        private async Task<ReactionEnd> NameHeader(IFlowContext context, string name)
         {
             using var reactionState = reaction.GetStateScope();
             reaction.State.Update(writeLine: false);
@@ -122,7 +124,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         }
 
-        private async Task<FlowEndToken> SlowTalk(IFlowContext context, string outputText)
+        private async Task<ReactionEnd> SlowTalk(IFlowContext context, string outputText)
         {
             using var reactionState = reaction.GetStateScope();
             reaction.State.Update(writeLine: false);

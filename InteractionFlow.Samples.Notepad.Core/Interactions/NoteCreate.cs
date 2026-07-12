@@ -26,19 +26,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         INotepadDataPersistencePort notepadDataPersistence) :
         Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            return await TryCatchBlockAsync(context, async context =>
-            {
-                using var scope = consoleReaction.GetStateScope();
-                scope.State.Update(writeLine: true);
+            using var scope = consoleReaction.GetStateScope();
+            scope.State.Update(writeLine: true);
 
-                await Write(context, "# Note Create");
-                await Write(context, "> Loading User data...");
+            await Write(context, "# Note Create");
+            await Write(context, "> Loading User data...");
 
-                var notepadDataKey = NotepadDataKey.Empty;
+            var notepadDataKey = NotepadDataKey.Empty;
 
-                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
+            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
                 .ThenAsync(async userData =>
                 {
 
@@ -94,10 +92,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 {
                     return await Write(context, $"> Create Error : {e.Message}");
                 });
-            });
         }
 
-        private async Task<FlowEndToken> Write(IFlowContext context, string text)
+        private async Task<ReactionEnd> Write(IFlowContext context, string text)
         {
             return await consoleReaction.Write(context, new ConsoleOutput(text));
         }

@@ -17,7 +17,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         IConsoleWriter console)
         : Interaction(exception, cancellation, cancellationWithConsole, console)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             //ExceptionPort.ThrowException = true;
             //CancellationPort.ThrowException = true;
@@ -29,7 +29,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             await Task.Delay(200);
             return await Write("> Cancellation Setup Complete.");
 
-            ValueTask<FlowEndToken> Write(string text)
+            ValueTask<ReactionEnd> Write(string text)
             {
                 var output = new ConsoleOutput(text);
                 return console.Write(context, output);

@@ -253,14 +253,14 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 consoleCursorPositionAccess.Position = new(0, top + value);
             }
 
-            private async Task<FlowEndToken> WriteLine(IFlowContext context, string text)
+            private async Task<ReactionEnd> WriteLine(IFlowContext context, string text)
             {
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: true);
                 return await consoleReaction.Write(context, new ConsoleOutput(text));
             }
 
-            private async Task<FlowEndToken> Write(IFlowContext context, string text)
+            private async Task<ReactionEnd> Write(IFlowContext context, string text)
             {
                 using var scope = consoleReaction.GetStateScope();
                 scope.State.Update(writeLine: false);
@@ -268,87 +268,84 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             }
         }
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            return await TryCatchBlockAsync(context, async context =>
+            await WriteLine(context, "# Note Edit");
+
+            await Write(context, "> Loading User data...");
+
+            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context).ThenAsync(async userData =>
             {
-                await WriteLine(context, "# Note Edit");
+                var detaKeySelect = new ConsoleSelectNotepadData(
+                    consoleReaction,
+                    consoleCursorPositionAccess,
+                    consoleOperation,
+                    notepadDataFiles,
+                    notepadDataPersistence);
 
-                await Write(context, "> Loading User data...");
+                await WriteLine(context, "- Select exist note name:");
+                var (select, notepadDataKey) = await detaKeySelect.GetSelectAsync(context, userData, false);
 
-                return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context).ThenAsync(async userData =>
+                if (notepadDataKey.IsEmpty)
                 {
-                    var detaKeySelect = new ConsoleSelectNotepadData(
-                        consoleReaction,
-                        consoleCursorPositionAccess,
-                        consoleOperation,
-                        notepadDataFiles,
-                        notepadDataPersistence);
-
-                    await WriteLine(context, "- Select exist note name:");
-                    var (select, notepadDataKey) = await detaKeySelect.GetSelectAsync(context, userData, false);
-
-                    if (notepadDataKey.IsEmpty)
-                    {
-                        return new Exception("Cancel.");
-                    }
-                    else
-                    {
-                        return notepadDataKey.AsResult();
-                    }
+                    return new Exception("Cancel.");
+                }
+                else
+                {
+                    return notepadDataKey.AsResult();
+                }
+            })
+                .ThenAsync(notepadDataKey =>
+                {
+                    return Task.FromResult(notepadDataFiles.GetOrCreate(notepadDataKey));
                 })
-                    .ThenAsync(notepadDataKey =>
-                    {
-                        return Task.FromResult(notepadDataFiles.GetOrCreate(notepadDataKey));
-                    })
-                    .ThenAsync(async notepadEntry =>
-                    {
-                        var notepadDataKey = notepadEntry.FileID;
+                .ThenAsync(async notepadEntry =>
+                {
+                    var notepadDataKey = notepadEntry.FileID;
 
-                        return await notepadEntry.Load(notepadDataPersistence)
-                            .ThenErrorAsync(e => Task.FromResult<Result<NotepadData>>(new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
-                            .ThenAsync(notepad => Task.FromResult((notepad, notepadEntry).AsResult()));
-                    })
-                    .ThenAsync(async e =>
-                    {
-                        var (notepad, notepadEntry) = e;
-                        var notepadDataKey = notepadEntry.FileID;
+                    return await notepadEntry.Load(notepadDataPersistence)
+                        .ThenErrorAsync(e => Task.FromResult<Result<NotepadData>>(new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
+                        .ThenAsync(notepad => Task.FromResult((notepad, notepadEntry).AsResult()));
+                })
+                .ThenAsync(async e =>
+                {
+                    var (notepad, notepadEntry) = e;
+                    var notepadDataKey = notepadEntry.FileID;
 
-                        var consoleWriter = new ConsoleTextWriter(consoleCursorPositionAccess, consoleReaction, consoleOperation);
-                        await consoleWriter.InitAsync(context, notepad);
+                    var consoleWriter = new ConsoleTextWriter(consoleCursorPositionAccess, consoleReaction, consoleOperation);
+                    await consoleWriter.InitAsync(context, notepad);
 
-                        while (await consoleWriter.Next(context)) { }
+                    while (await consoleWriter.Next(context)) { }
 
-                        notepad.Title = consoleWriter.TextLines[0];
-                        notepad.Text = string.Join(Environment.NewLine, consoleWriter.TextLines.ToArray()[1..]);
+                    notepad.Title = consoleWriter.TextLines[0];
+                    notepad.Text = string.Join(Environment.NewLine, consoleWriter.TextLines.ToArray()[1..]);
 
-                        await WriteLine(context, "> Save note ...");
-                        await Task.Delay(500);
+                    await WriteLine(context, "> Save note ...");
+                    await Task.Delay(500);
 
-                        return await notepadEntry.Save(notepadDataPersistence)
-                            .ThenErrorAsync(e => Task.FromResult<Result>(new Exception($"Can not saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
-                            .ThenAsync(() => Task.FromResult(notepadDataKey.AsResult()));
-                    })
-                    .ResolveAsync(
-                    onSuccess: async notepadDataKey =>
-                    {
-                        return await WriteLine(context, $"> Note Edit End : Saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'");
-                    },
-                    onFailure: async e =>
-                    {
-                        return await WriteLine(context, $"> Note Edit Error : {e.Message}");
-                    });
-            });
+                    return await notepadEntry.Save(notepadDataPersistence)
+                        .ThenErrorAsync(e => Task.FromResult<Result>(new Exception($"Can not saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
+                        .ThenAsync(() => Task.FromResult(notepadDataKey.AsResult()));
+                })
+                .ResolveAsync(
+                onSuccess: async notepadDataKey =>
+                {
+                    return await WriteLine(context, $"> Note Edit End : Saved note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'");
+                },
+                onFailure: async e =>
+                {
+                    return await WriteLine(context, $"> Note Edit Error : {e.Message}");
+                });
         }
 
-        private async Task<FlowEndToken> WriteLine(IFlowContext context, string text)
+        private async Task<ReactionEnd> WriteLine(IFlowContext context, string text)
         {
             using var scope = consoleReaction.GetStateScope();
             scope.State.Update(writeLine: true);
             return await consoleReaction.Write(context, new ConsoleOutput(text));
         }
 
-        private async Task<FlowEndToken> Write(IFlowContext context, string text)
+        private async Task<ReactionEnd> Write(IFlowContext context, string text)
         {
             using var scope = consoleReaction.GetStateScope();
             scope.State.Update(writeLine: false);

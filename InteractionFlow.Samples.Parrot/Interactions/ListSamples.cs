@@ -16,22 +16,19 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         IConsoleWriter console)
         : Interaction(exception, cancellation, console)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            var token = await console.Write(context, new ConsoleOutput("## Samples [index] name"));
+            var end = await console.Write(context, new ConsoleOutput("## Samples [index] name"));
 
-            return await TryCatchBlockAsync(context, async (context) =>
+            var names = Enum.GetNames<SampleMode>().ToList();
+            names.Remove(Enum.GetName(SampleMode.None) ?? string.Empty);
+
+            foreach (var (name, index) in names.Select((e, index) => (e, index)))
             {
-                var names = Enum.GetNames<SampleMode>().ToList();
-                names.Remove(Enum.GetName(SampleMode.None) ?? string.Empty);
+                end = await console.Write(context, new ConsoleOutput($"- [{index}] {name}"));
+            }
 
-                foreach (var (name, index) in names.Select((e, index) => (e, index)))
-                {
-                    token = await console.Write(context, new ConsoleOutput($"- [{index}] {name}"));
-                }
-
-                return token = await console.Write(context, new ConsoleOutput(""));
-            });
+            return await console.Write(context, new ConsoleOutput(""));
         }
     }
 }

@@ -17,9 +17,8 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
         RunSample runSample)
         : ProgramFlow<IFlowContext>(writing, listSamples, selectSample, runSample)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
         {
-            var lastContext = context;
             context.TryGet<RefEntity<SelectAndRunSampleEndState>>(out var endState);
 
             var selectedSample = new RefEntity<SampleSelected>(new(new(SampleMode.None)));
@@ -49,7 +48,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
                     endState.Value = SelectAndRunSampleEndState.CancelSelect;
                 }
 
-                return NormalizeLastContext(lastContext, end);
+                return end;
             }
 
             // Run
@@ -66,7 +65,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
                         endState.Value = SelectAndRunSampleEndState.CancelSample;
                     }
 
-                    return NormalizeLastContext(lastContext, end);
+                    return end;
                 }
                 else
                 {
@@ -76,7 +75,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
                     }
 
                     await Write("[Finish]");
-                    return NormalizeLastContext(lastContext, end);
+                    return end;
                 }
             }
 
@@ -86,7 +85,7 @@ namespace InteractionFlow.Samples.Parrot.ProgramFlows
             }
 
             Console.WriteLine("[None]");
-            return NormalizeLastContext(lastContext, end);
+            return end;
 
         }
     }

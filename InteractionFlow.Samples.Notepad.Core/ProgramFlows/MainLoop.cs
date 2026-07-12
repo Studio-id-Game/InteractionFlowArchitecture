@@ -17,7 +17,7 @@ namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
         : ProgramFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
     {
 
-        public override async Task<FlowEndToken> ExecuteAsync(NotepadContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(NotepadContext context)
         {
             FlowEndToken end;
             end = await login.ExecuteRetryLoopAsync(context);

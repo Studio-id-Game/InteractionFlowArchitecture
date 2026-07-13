@@ -111,7 +111,7 @@ using var programFlow = programFlowBuilder.BuildProgramFlow<SomeProgramFlow>(...
 ProgramFlowHandler は、生成された ProgramFlow インスタンスを内部に保持し、その ProgramFlow によって定義されたユーザーフローを実行する責務を持ちます。
 
 ```csharp
-//endToken は、フローの終了状態（例：正常終了/キャンセル）および新しい Context を持つオブジェクト
+//endToken は、フローの終了状態（例：正常終了/キャンセル）および実行に渡した Context を持つオブジェクト
 var endToken = await programFlow.ExecuteAsync(currentContext);
 ```
 

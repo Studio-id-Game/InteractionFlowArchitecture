@@ -34,7 +34,9 @@ Git の比較元がない場合は、ファイル更新時刻、既存の `.svg`
 - 図の内容差分がある場合、その version ラベルにも差分があるか
 - version ラベルが存在しない図では、存在しないことを作業結果に明記する
 
-Git 管理下で確認できる場合は、変更前後の `.drawio` から version ラベルを比較する。厳密なセマンティックバージョン検証までは不要だが、図が更新されているのに version が据え置きに見える場合は警告する。
+Git 管理下で確認できる場合は、変更前後の `.drawio` から version ラベルを比較する。厳密なセマンティックバージョン検証までは不要である。
+
+図の内容が更新されているのに version が据え置きに見える場合は、この時点でリフレッシュ作業を中止し、`.context.md` と `.svg` は更新しない。作業結果では、version が据え置きであるため中止したことをユーザーに警告する。
 
 ### 3. Context を圧縮・更新する
 
@@ -63,8 +65,10 @@ Codex で作業する場合は、個人スキル `drawio-context` を使う。
 ローカルに draw.io Desktop がある場合の例:
 
 ```powershell
-& 'C:\Program Files\draw.io\draw.io.exe' --export --format svg --output 'docs\img\<filename>.svg' 'docs\img\src\<filename>.drawio'
+& 'C:\Program Files\draw.io\draw.io.exe' --export --format svg --embed-svg-fonts=false --output 'docs\img\<filename>.svg' 'docs\img\src\<filename>.drawio'
 ```
+
+`--embed-svg-fonts=false` は、フォントデータやテキストフォールバック画像を SVG に埋め込まないための指定である。編集用のダイアグラム情報も SVG に含めないため、`--embed-diagram` は指定しない。
 
 出力後、次を確認する。
 

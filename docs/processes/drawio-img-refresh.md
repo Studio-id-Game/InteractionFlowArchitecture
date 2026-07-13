@@ -10,6 +10,7 @@
 
 - SVG: `docs/img/<filename>.svg`
 - Context: `docs/img/<filename>.context.md`
+- Image viewer: `docs/img/ImageViewer.md`
 
 ## 手順
 
@@ -76,7 +77,26 @@ Codex で作業する場合は、個人スキル `drawio-context` を使う。
 - ファイルサイズが 0 ではない
 - 先頭が SVG/XML として読める
 
-### 5. 最終確認
+### 5. ImageViewer.md を更新する
+
+`docs/img/ImageViewer.md` は、`docs/img` 配下の SVG をまとめて表示確認するためのプレビューである。
+
+対象の `.drawio` に対応する `.svg` を新規追加した場合は、`docs/img/ImageViewer.md` に画像リンクを追加する。対象図を削除し、対応する `.svg` も削除した場合は、`docs/img/ImageViewer.md` から該当リンクを削除する。
+
+記述形式は次の通り。
+
+```markdown
+![<filename>.svg](<filename>.svg)
+```
+
+更新後、次を確認する。
+
+- `docs/img` 直下に存在する対象 SVG が `ImageViewer.md` に含まれている
+- `ImageViewer.md` に、存在しない SVG へのリンクが残っていない
+- 同じ SVG へのリンクが重複していない
+- `.context.md`、`.drawio`、その他の非画像ファイルを `ImageViewer.md` に追加していない
+
+### 6. 最終確認
 
 対象ごとに、次のファイルが揃っていることを確認する。
 
@@ -84,7 +104,9 @@ Codex で作業する場合は、個人スキル `drawio-context` を使う。
 - `docs/img/<filename>.svg`
 - `docs/img/<filename>.context.md`
 
-作業結果には、処理した対象ファイル、Version チェック結果、生成・更新した `.svg` と `.context.md` を報告する。
+また、`docs/img/ImageViewer.md` が現在の SVG 一覧と矛盾していないことを確認する。
+
+作業結果には、処理した対象ファイル、Version チェック結果、生成・更新した `.svg` と `.context.md`、および `ImageViewer.md` の更新有無を報告する。
 
 ## 注意
 

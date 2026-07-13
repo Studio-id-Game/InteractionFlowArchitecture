@@ -72,8 +72,8 @@
 
 以下は、本アーキテクチャの構造の全体像です。
 
-![Interaction_Flow_Architecture__Overview](./docs/img/Interaction_Flow_Architecture__Overview.svg)
-代替テキスト：[Interaction_Flow_Architecture__Overview.Hint.md](./docs/img/Interaction_Flow_Architecture__Overview.Hint.md)
+![InteractionFlowArchitecture_Overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
+代替テキスト：[InteractionFlowArchitecture_Overview.context.md](./docs/img/InteractionFlowArchitecture_Overview.context.md)
 
 ---
 
@@ -208,8 +208,8 @@ OS、Framework、ライブラリなどの外部要素です。
 
 以下は、本アーキテクチャにおけるフローの全体像です。
 
-![Interaction_Flow_Architecture__User_Flow](./docs/img/Interaction_Flow_Architecture__User_Flow.svg)
-代替テキスト：[Interaction_Flow_Architecture__User_Flow.Hint.md](./docs/img/Interaction_Flow_Architecture__User_Flow.Hint.md)
+![InteractionFlowArchitecture_FlowDiagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
+代替テキスト：[InteractionFlowArchitecture_FlowDiagram.context.md](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
 
 ユーザー視点の処理は、以下の順で流れます：
 
@@ -232,8 +232,8 @@ ProgramFlow はこの Context をもとに実行され、Interaction を通じ�
 
 以下は、本アーキテクチャにおける依存関係の全体像です。
 
-![Interaction_Flow_Architecture__Dependency_Diagram](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.svg)
-代替テキスト：[Interaction_Flow_Architecture__Dependency_Diagram.Hint.md](./docs/img/Interaction_Flow_Architecture__Dependency_Diagram.Hint.md)
+![InteractionFlowArchitecture_DependencyDiagram](./docs/img/InteractionFlowArchitecture_DependencyDiagram.svg)
+代替テキスト：[InteractionFlowArchitecture_DependencyDiagram.context.md](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
 
 依存関係は次のようになります：
 

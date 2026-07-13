@@ -4,7 +4,6 @@ using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
-using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows

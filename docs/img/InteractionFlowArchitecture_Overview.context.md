@@ -2,13 +2,13 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_Overview.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.0 / 2026.07.13** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System / Application / Service`、およびその内部にある `Layers` と `Blocks` の関係を示している。
+対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.2 / 2026.07.13** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System / Application / Service`、およびその内部にある `Layers` と `Blocks` の関係を示している。
 
 ## 全体像
 
 このアーキテクチャでは、相互作用は `User` と `System / Application / Service` の間で継続する体験として扱われる。
 
-`Context` は、現在の `ProgramFlow` に関する状態、状況、文脈的情報を表す。最初に与えられた `Context` を元に `ProgramFlow` が実行され、その過程で `Context` は更新される。更新された `Context` を再利用することで、相互作用を含む連続した体験を実現する。
+`Context` は、現在の `ProgramFlow` に関する状態、状況、文脈的情報を表す。最初に与えられた `Context` を元に `ProgramFlow` が実行される過程で `Context` は更新される。更新された `Context` を再利用することで、相互作用を含む連続した体験を実現する。
 
 ## 主要な構成要素
 

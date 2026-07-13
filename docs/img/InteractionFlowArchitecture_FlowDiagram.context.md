@@ -2,7 +2,7 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_FlowDiagram.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.2 / 2026.07.13** である。図の主題は、`Program`、`User`、`ProgramFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
+対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.3 / 2026.07.13** である。図の主題は、`Program`、`User`、`ProgramFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
 
 ## 全体像
 
@@ -51,7 +51,7 @@
 
 ### Domain Block
 
-`Domain Block` は、データ構造、閉じた動作、`System / Application / Service` 内の外部に依存しない前提を定義する。
+`Domain Block` は、外部に依存しないデータ構造と動作、および `System / Application / Service` における前提を定義する。
 
 ### Layers
 

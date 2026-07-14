@@ -6,7 +6,7 @@ Interaction Flow Architecture を C# で実装するためのライブラリで�
 ## Packages
 
 - `InteractionFlow.Core`
-  - ProgramFlow、Interaction、Context、Port などの基盤 API を提供します。
+  - SystemFlow、Interaction、Context、Port などの基盤 API を提供します。
 - `InteractionFlow.Standard`
   - `InteractionFlow.Core` に加えて、コンソール操作や DI ビルダーなどの標準実装を提供します。
 - `InteractionFlow.Analyzers`
@@ -34,7 +34,7 @@ Analyzer は開発時だけ利用するため、プロジェクトファイル�
 
 Interaction Flow Architecture は、ユーザーとの相互作用を次のような要素に分けて扱います。
 
-- ProgramFlow: ユーザーの目的を達成する大きなフロー
+- SystemFlow: System 側が User への反応プロセスとして Interaction を束ねるフロー
 - Interaction: システム内部の目的を達成する処理単位
 - Function Port: 外部機能への抽象インターフェース
 - Function External: UI、DB、外部サービスなどの実装

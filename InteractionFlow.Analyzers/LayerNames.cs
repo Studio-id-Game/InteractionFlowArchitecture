@@ -15,7 +15,7 @@ namespace InteractionFlow.Analyzers
         public const string ExternalPorts = nameof(ExternalPorts);
         public const string Externals = nameof(Externals);
         public const string Interactions = nameof(Interactions);
-        public const string ProgramFlows = nameof(ProgramFlows);
+        public const string SystemFlows = nameof(SystemFlows);
 
         private static readonly ImmutableHashSet<string> all = GetAll().ToImmutableHashSet(stringComparer);
         private static readonly ConcurrentDictionary<string, ImmutableHashSet<string>> disallowsSourceLayer = new(stringComparer);
@@ -29,7 +29,7 @@ namespace InteractionFlow.Analyzers
             ExternalPorts,
             Externals,
             Interactions,
-            ProgramFlows,
+            SystemFlows,
         };
 
         private static ImmutableHashSet<string> Disallows(string layerName)
@@ -45,7 +45,7 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(ExternalPorts);
                     disallows.Remove(Externals);
                     disallows.Remove(Interactions);
-                    disallows.Remove(ProgramFlows);
+                    disallows.Remove(SystemFlows);
                     break;
 
                 case Entities:
@@ -63,7 +63,7 @@ namespace InteractionFlow.Analyzers
                     disallows.Remove(ExternalPorts);
                     break;
 
-                case ProgramFlows:
+                case SystemFlows:
 
                     disallows.Remove(Interactions);
                     break;

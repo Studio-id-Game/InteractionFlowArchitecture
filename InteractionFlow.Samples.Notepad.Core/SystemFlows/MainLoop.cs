@@ -1,19 +1,19 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ProgramFlows;
+using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
+namespace InteractionFlow.Samples.Notepad.Core.SystemFlows
 {
     public class MainLoop(
         Login login,
         NoteListView noteListView,
         SelectUserAction selectUserAction,
         ConsoleWriting consoleWrite)
-        : ProgramFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
+        : SystemFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
     {
 
         protected override async Task<FlowEndToken> ExecuteCoreAsync(NotepadContext context)

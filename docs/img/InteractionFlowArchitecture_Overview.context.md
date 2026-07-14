@@ -2,13 +2,13 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_Overview.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.2 / 2026.07.13** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System / Application / Service`、およびその内部にある `Layers` と `Blocks` の関係を示している。
+対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.6 / 2026.07.14** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System / Application / Service`、およびその内部にある `Layers` と `Blocks` の関係を示している。
 
 ## 全体像
 
 このアーキテクチャでは、相互作用は `User` と `System / Application / Service` の間で継続する体験として扱われる。
 
-`Context` は、現在の `ProgramFlow` に関する状態、状況、文脈的情報を表す。最初に与えられた `Context` を元に `ProgramFlow` が実行される過程で `Context` は更新される。更新された `Context` を再利用することで、相互作用を含む連続した体験を実現する。
+`Context` は、現在の `SystemFlow` に関する状態、状況、文脈的情報を表す。最初に与えられた `Context` を元に `SystemFlow` が実行される過程で `Context` は更新される。更新された `Context` を再利用することで、相互作用を含む連続した体験を実現する。
 
 ## 主要な構成要素
 
@@ -20,9 +20,9 @@
 
 ### Context
 
-`Context` は、現在の `ProgramFlow` に関する状態や状況を表す文脈的情報である。
+`Context` は、現在の `SystemFlow` に関する状態や状況を表す文脈的情報である。
 
-単なる入力値ではなく、`ProgramFlow` の実行中に参照・更新され、その後の相互作用へ引き継がれる状態として描かれている。`Context` が更新され再利用されることで、連続した Interaction が成立する。
+単なる入力値ではなく、`SystemFlow` の実行中に参照・更新され、その後の相互作用へ引き継がれる状態として描かれている。`Context` が更新され再利用されることで、連続した Interaction が成立する。
 
 ### System / Application / Service
 
@@ -34,9 +34,9 @@
 
 `Layers` は縦方向に配置されている。図には「各レイヤーは、スコープを持った一時的な `Context` を利用して次の層の動作を変更できる」と示されている。
 
-### ProgramFlow Layer
+### SystemFlow Layer
 
-`ProgramFlow Layer` は Interaction のオーケストレーターである。ユーザーの目的を達成する責務を持つ。
+`SystemFlow Layer` は Interaction のオーケストレーターである。ユーザーへの反応プロセスを構成する責務を持つ。
 
 ### Interaction Layer
 
@@ -44,7 +44,7 @@
 
 ### Function Port Layer
 
-`Function Port Layer` は Function のインターフェースである。依存関係を逆転させるための境界として機能する。
+`Function Port Layer` は Function のインターフェースであり、外部機能への依存を抽象化する。
 
 ### Function External Layer
 
@@ -54,9 +54,9 @@
 
 `Blocks` は `Layers` と並列して存在する構成要素として描かれている。
 
-### ProgramFlow Builder Block
+### SystemFlow Builder Block
 
-`ProgramFlow Builder Block` は DI コンテナのラッパーであり、`ProgramFlow` を構築する。
+`SystemFlow Builder Block` は DI コンテナのラッパーであり、`SystemFlow` の依存オブジェクトを注入する。
 
 ### Domain Block
 
@@ -85,11 +85,11 @@
 この Overview 図は、Interaction Flow Architecture を次の構造として表している。
 
 - `User` は人間だけでなく、ロボット、AI エージェント、他システムも含む相互作用主体である
-- `Context` は現在の `ProgramFlow` に関する状態・状況・文脈情報である
-- `ProgramFlow` は `Context` を元に実行され、実行中に `Context` を更新する
+- `Context` は現在の `SystemFlow` に関する状態・状況・文脈情報である
+- `SystemFlow` は `Context` を元に実行され、実行中に `Context` を更新する
 - 更新された `Context` を再利用することで、連続した Interaction が実現される
-- `Layers` はユーザー目的から具体的な機能実装までを段階的に扱う
-- `Blocks` は ProgramFlow 構築、Domain 前提、External 依存を分離して表す
+- `Layers` はユーザーへの反応プロセスから具体的な機能実装までを段階的に扱う
+- `Blocks` は SystemFlow 構築、Domain 前提、External 依存を分離して表す
 - `Domain Block` と `External Block` を分けることで、外部依存しない前提と外部機能実装を区別する
 
 要約すると、この図は **Interaction Flow Architecture の構造的な見取り図**であり、`Context` を中心に、ユーザーとの相互作用、レイヤー構造、ドメイン前提、外部依存の分担を表している。

@@ -2,15 +2,15 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_FlowDiagram.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.3 / 2026.07.13** である。図の主題は、`Program`、`User`、`ProgramFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
+対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.6 / 2026.07.14** である。図の主題は、`Program`、`User`、`SystemFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
 
 ## 全体像
 
-この図は、`Context` のライフサイクルと `ProgramFlow` の実行経路を中心にした Interaction 設計図である。
+この図は、`Context` のライフサイクルと `SystemFlow` の実行経路を中心にした Interaction 設計図である。
 
-`Program` は `Context` を作成または再利用し、`ProgramFlow` を構築して実行し、更新された `Context` を次回以降へ引き継ぐ。`User` は Operation と Reaction を通じてシステムと相互作用する。`System / Application / Service` は Layer と Block を通じて `ProgramFlow` を実行し、外部依存は External 側で扱う。
+`Program` は `Context` を作成または再利用し、`SystemFlow` を構築して実行し、更新された `Context` を次回以降へ引き継ぐ。`User` は Operation と Reaction を通じてシステムと相互作用する。`System / Application / Service` は Layer と Block を通じて `SystemFlow` を実行し、外部依存は External 側で扱う。
 
-この図の中心的な意味は、**相互作用を `ProgramFlow` として実行し、その過程で `Context` を更新し、更新後の `Context` を次の相互作用に再利用する**ことである。
+この図の中心的な意味は、**相互作用を `SystemFlow` として実行し、その過程で `Context` を更新し、更新後の `Context` を次の相互作用に再利用する**ことである。
 
 ## 主要な構成要素
 
@@ -18,7 +18,7 @@
 
 `Program` は実行の起点である。
 
-エントリーポイント、イベント、リクエストを受け取り、`Context` を作成または再利用し、`ProgramFlow` を実行する。また、`Context` 更新ループを維持する役割を持つ。
+エントリーポイント、イベント、リクエストを受け取り、`Context` を作成または再利用し、`SystemFlow` を実行する。また、`Context` 更新ループを維持する役割を持つ。
 
 ### User
 
@@ -30,14 +30,14 @@
 
 `System / Application / Service` は、Layer 群と Block 群を含む中心領域である。
 
-ここで `ProgramFlow` が実行され、ユーザー目的、システム目的、機能目的が段階的に実現される。
+ここで `SystemFlow` が実行され、ユーザーへの反応プロセス、システム目的、機能目的が段階的に実現される。
 
 ### Context 状態
 
 図には次の `Context` 状態が示されている。
 
 - `New Context`: 新規作成または準備された Context
-- `Current Context`: 現在の `ProgramFlow` で利用される Context
+- `Current Context`: 現在の `SystemFlow` で利用される Context
 - `Updated Context`: 実行と相互作用の結果として更新された Context
 - `Next Context`: 次回以降の実行に再利用される Context
 
@@ -45,9 +45,9 @@
 
 ## Layers / Blocks
 
-### ProgramFlow Builder Block
+### SystemFlow Builder Block
 
-`ProgramFlow Builder Block` は DI コンテナのラッパーであり、`ProgramFlow` を構築する。
+`SystemFlow Builder Block` は DI コンテナのラッパーであり、`SystemFlow` の依存オブジェクトを注入する。
 
 ### Domain Block
 
@@ -57,9 +57,9 @@
 
 Layer 群には次の要素がある。
 
-- `ProgramFlow Layer`: Interaction のオーケストレーター。ユーザーの目的を達成する
+- `SystemFlow Layer`: Interaction のオーケストレーター。ユーザーへの反応プロセスを構成する
 - `Interaction Layer`: Function Port のオーケストレーター。システム内部の目的を達成する
-- `Function Port Layer`: Function のインターフェース。依存関係を逆転させる
+- `Function Port Layer`: Function のインターフェース。外部機能への依存を抽象化する
 - `Function External Layer`: 外部依存の機能実装。機能のための実際の処理を行う
 
 図には、各層がスコープを持った一時的な `Context` を利用して、次の層の動作を変更できることが示されている。
@@ -75,7 +75,7 @@ Layer 群には次の要素がある。
 図では、矢印の色によってフローの意味が分けられている。
 
 - オレンジ: `Context` 更新ループ
-- 青: `ProgramFlow` 実行
+- 青: `SystemFlow` 実行
 - 赤: `User` 相互作用
 - 緑: 外部機能連携
 
@@ -83,23 +83,23 @@ Layer 群には次の要素がある。
 
 ## 主要フロー
 
-### C1. ProgramFlow での Context の利用
+### C1. SystemFlow での Context の利用
 
 `C1` は `New Context` から `Current Context` へ向かうオレンジのフローである。
 
-新規作成または再利用された `Context` が、現在の `ProgramFlow` で利用される状態になることを表す。
+新規作成または再利用された `Context` が、現在の `SystemFlow` で利用される状態になることを表す。
 
-### P1. ProgramFlow 構築 + 実行
+### P1. SystemFlow 構築 + 実行
 
-`P1` は `Program` から `ProgramFlow Builder Block` を経由して Layer 群へ向かう青いフローである。
+`P1` は `Program` から `SystemFlow Builder Block` を経由して Layer 群へ向かう青いフローである。
 
-`Program` が `ProgramFlow` を構築し、Layer 群での実行を開始することを表す。
+`Program` が `SystemFlow` を構築し、Layer 群での実行を開始することを表す。
 
-### P2. ユーザーの目的の実現
+### P2. ユーザーへの反応プロセス
 
-`P2` は `ProgramFlow Layer` に対応する青い下向きフローである。
+`P2` は `SystemFlow Layer` に対応する青い下向きフローである。
 
-Interaction をオーケストレーションし、ユーザーの目的を達成する段階を表す。
+Interaction をオーケストレーションし、ユーザーへの反応プロセスを構成する段階を表す。
 
 ### P3. システムの目的の実現
 
@@ -129,13 +129,13 @@ Function または External 側から外部依存や外部リソースへ動作�
 
 `C2` は `Current Context` から `Updated Context` へ向かう大きなオレンジの下向きフローである。
 
-`ProgramFlow` の実行中、Layer 群が `Context` を参照・更新しながら処理を進めることを表す。
+`SystemFlow` の実行中、Layer 群が `Context` を参照・更新しながら処理を進めることを表す。
 
-### C3. ProgramFlow で更新された Context の再利用
+### C3. SystemFlow で更新された Context の再利用
 
 `C3` は `Updated Context` から `Next Context` へ向かうオレンジのフローである。
 
-`ProgramFlow` によって更新された `Context` が次回以降に再利用され、`Context` 更新ループが閉じることを表す。
+`SystemFlow` によって更新された `Context` が次回以降に再利用され、`Context` 更新ループが閉じることを表す。
 
 ## User との相互作用
 
@@ -160,14 +160,14 @@ Function または External 側から外部依存や外部リソースへ動作�
 この Flow Diagram は、Interaction Flow Architecture を実行時のループとして表している。
 
 - `Program` がトリガーを受け取り、`Context` を準備する
-- `ProgramFlow Builder Block` が `ProgramFlow` を構築する
-- Layer 群が、ユーザー目的、システム目的、機能目的を段階的に実現する
-- `Function Port Layer` が依存関係を逆転し、外部実装を抽象化する
+- `SystemFlow Builder Block` が `SystemFlow` を構築する
+- Layer 群が、ユーザーへの反応プロセス、システム目的、機能目的を段階的に実現する
+- `Function Port Layer` が Function のインターフェースとして外部機能への依存を抽象化する
 - `Function External Layer` と `External Block` が外部依存を伴う実際の処理を担う
 - `User` の Operation と Reaction が相互作用を進める
 - `Context` が更新され、次の相互作用へ再利用される
 
-要約すると、この図は **`ProgramFlow` の実行を通じて `Context` を更新し続ける Interaction の実行モデル**を表している。
+要約すると、この図は **`SystemFlow` の実行を通じて `Context` を更新し続ける Interaction の実行モデル**を表している。
 
 ## 推定事項
 

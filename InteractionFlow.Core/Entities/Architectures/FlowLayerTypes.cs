@@ -11,9 +11,9 @@ namespace InteractionFlow.Core.Entities.Architectures
         None = 0,
 
         /// <summary>
-        /// ProgramFlow レイヤーを表します。
+        /// SystemFlow レイヤーを表します。
         /// </summary>
-        ProgramFlow,
+        SystemFlow,
 
         /// <summary>
         /// Interaction レイヤーを表します。

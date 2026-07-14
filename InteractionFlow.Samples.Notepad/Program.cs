@@ -5,7 +5,7 @@ using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Serializer
 using InteractionFlow.Samples.Notepad.Core.Externals.Storages;
 using InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.ProgramFlows;
+using InteractionFlow.Samples.Notepad.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Externals.Serializers;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
@@ -36,7 +36,7 @@ namespace InteractionFlow.Samples.Notepad
 
             var scope = scopeBuilder.BuildScope();
 
-            var mainLoop = scope.BuildProgramFlow<MainLoop, NotepadContext>();
+            var mainLoop = scope.BuildSystemFlow<MainLoop, NotepadContext>();
 
             var context = new NotepadContext(NotepadUserObject.Public);
 

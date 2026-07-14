@@ -15,6 +15,23 @@
 
 ## Interaction Flow Architecture
 
+<p align="center">
+  <img
+    src="./docs/img/illustration/ChatGPT_Header01_s.png"
+    alt="ChatGPTに生成してもらった、本アーキテクチャのイメージイラスト"
+    width="100%"
+  >
+  <br>
+</p>
+<br>
+<p align="center">
+  <em>
+    Interaction shapes Context,<br>
+    and Context shapes Interaction.
+  </em>
+</p>
+<br>
+
 本プロジェクトが提唱する Interaction Flow Architecture は、クリーンアーキテクチャと同様の高いテスト耐性と拡張性を備えています。
 
 さらに、構造の認知しやすさと責任範囲の明確化を徹底することで、実装単位や責務、コードの配置が自然に導かれるよう設計されています。  
@@ -49,7 +66,7 @@
   コンソールベースのオウム返しアプリケーションによる、基本構成のサンプル実装
 
 - `InteractionFlow.Samples.Notepad.Core`  
-  Notepad サンプルの中核となるプロジェクトです。Entity / Port / Interaction / ProgramFlow をまとめ、ノート一覧・作成・編集・削除などの処理を提供します。
+  Notepad サンプルの中核となるプロジェクトです。Entity / Port / Interaction / SystemFlow をまとめ、ノート一覧・作成・編集・削除などの処理を提供します。
 
 - `InteractionFlow.Samples.Notepad`  
   Notepad サンプルの実行用プロジェクトです。`Core` のフローをコンソールアプリとして組み立て、標準的なストレージ実装を注入して起動します。
@@ -73,20 +90,21 @@
 以下は、本アーキテクチャの構造の全体像です。
 
 ![InteractionFlowArchitecture_Overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
+
 代替テキスト：[InteractionFlowArchitecture_Overview.context.md](./docs/img/InteractionFlowArchitecture_Overview.context.md)
 
 ---
 
 # Layers
 
-## ProgramFlow Layer
+## SystemFlow Layer
 
 **namespace**  
-`{ProjectName}.ProgramFlows`
+`{ProjectName}.SystemFlows`
 
 **役割**  
-ユーザーの目的を達成するためのフロー単位です。  
-ユーザーにとって「単一の意味」を持つ単位として設計されます。
+SystemFlow は、システム全体の処理手順ではなく、System 側が User への反応プロセスとして Interaction を束ねるフロー単位です。  
+System と User の間にある関係として、単一の意味を持つ単位として設計されます。
 
 **構成**  
 - 1つのユーザー目的に対して1つのクラス（または構造体）で構成
@@ -177,19 +195,19 @@
 **制約**
 - `{ProjectName}.Entities` 内からのみ参照可能
 
-## ProgramFlow Builder Block
+## SystemFlow Builder Block
 
 **namespace**  
 `{ProjectName}.Builders`
 
 **役割**  
-DI コンテナのラッパーとして、ProgramFlow の構築を担います。
+DI コンテナのラッパーとして、SystemFlow の構築を担います。
 
 **特徴**
 - Function Port を介して Function External 実装を注入
-- ProgramFlow の実行環境を構成する
+- SystemFlow の実行環境を構成する
 
-> 詳細な構築手順や設計意図については、[ProgramFlow Builder の詳細](./docs/ProgramFlowBuilder.md) を参照してください。
+> 詳細な構築手順や設計意図については、[SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md) を参照してください。
 
 ## External Block
 
@@ -209,18 +227,19 @@ OS、Framework、ライブラリなどの外部要素です。
 以下は、本アーキテクチャにおけるフローの全体像です。
 
 ![InteractionFlowArchitecture_FlowDiagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
+
 代替テキスト：[InteractionFlowArchitecture_FlowDiagram.context.md](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
 
 ユーザー視点の処理は、以下の順で流れます：
 
-> User(開始) → ProgramFlow → Interaction → Function Port → Function External → User(入力/観測/終了)
+> User(開始) → SystemFlow → Interaction → Function Port → Function External → User(入力/観測/終了)
 
 ### Context（文脈）
-ProgramFlow からエントリーするユーザー視点のフローは、常に「Context（文脈）」を入力として開始されます。
+SystemFlow は、常に「Context（文脈）」を入力として開始されます。
 
 Context は現在の処理に関する状態や状況を表す文脈的情報で、初期に与えられた情報や、過去の処理によって更新された情報を含みます。  
 ユーザーを識別する値が必要な場合は、アプリケーション側の Entity として定義し、Context の値として扱います。  
-ProgramFlow はこの Context をもとに実行され、Interaction を通じて処理が進行します。
+SystemFlow はこの Context をもとに実行され、Interaction を通じて処理が進行します。
 
 `FlowContext` は基本となる文脈を表し、アプリケーション固有の文脈値は継承によって定義します。  
 フロー中に一時的な文脈値を追加する場合は `ScopedFlowContext` を使用します。
@@ -233,13 +252,14 @@ ProgramFlow はこの Context をもとに実行され、Interaction を通じ�
 以下は、本アーキテクチャにおける依存関係の全体像です。
 
 ![InteractionFlowArchitecture_DependencyDiagram](./docs/img/InteractionFlowArchitecture_DependencyDiagram.svg)
+
 代替テキスト：[InteractionFlowArchitecture_DependencyDiagram.context.md](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
 
 依存関係は次のようになります：
 
-- ProgramFlow は Interaction に、Interaction と Function External は Function Port に依存します
+- SystemFlow は Interaction に、Interaction と Function External は Function Port に依存します
 
-> ProgramFlow → Interaction → Function Port ← Function External
+> SystemFlow → Interaction → Function Port ← Function External
 
 - Function External のみが外部に依存します
 
@@ -247,7 +267,7 @@ ProgramFlow はこの Context をもとに実行され、Interaction を通じ�
 
 - Builder は  Interaction と External Block を除くすべての要素に依存します
 
-> ProgramFlow Builder → ProgramFlow / Function Port / Function External
+> SystemFlow Builder → SystemFlow / Function Port / Function External
 
 - すべての要素は Domain に依存します
 
@@ -257,17 +277,17 @@ ProgramFlow はこの Context をもとに実行され、Interaction を通じ�
 
 # 概念モデル
 
-## ProgramFlow / Interaction / Function
+## SystemFlow / Interaction / Function
 
-### ProgramFlow（プログラムフロー）
+### SystemFlow
 
-ユーザーにとっての意味単位です。  
-複数の Interaction を組み合わせてユーザーフローを構成します。
+SystemFlow は、システム全体の処理手順ではなく、System 側が User への反応プロセスとして Interaction を束ねるフロー単位です。  
+System と User の間にある関係として単一の意味を持ち、一貫した System 側の振る舞いとして構成します。
 
 ### Interaction（作用）
 
 システム内部の意味単位です。  
-Function Port を介して複数の Function（機能）を実行し、それらを組み合わせてシステムフローを構成します。
+Function Port を介して複数の Function（機能）を実行し、それらを組み合わせて SystemFlow の内部状態遷移を構成します。
 
 ### Function（機能）
 
@@ -294,36 +314,36 @@ Function Port を介して複数の Function（機能）を実行し、それら
 ## 中断
 
 - Function は中断（例外・キャンセル）を持つ
-- ProgramFlow / Interaction は中断を持たない
+- SystemFlow / Interaction は中断を持たない
 
-> 正確には、ProgramFlow / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
+> 正確には、SystemFlow / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
 
 ## 状態
 - Function（Operation / Storage / Reaction）のみが、必要に応じて Mutable な状態を持つことができる
-- ProgramFlow / Interaction は Immutable
+- SystemFlow / Interaction は Immutable
 
-また、ProgramFlow / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
+また、SystemFlow / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
 
 ---
 
 # 制約とアンチパターン
 
-## ProgramFlow の制約
+## SystemFlow の制約
 
 - Function Port および Function External に依存しない
-- ユーザーにとって単一の意味と目的を持つ
+- System と User の間にある関係として、単一の意味と目的を持つ
 - 必ず「明確な終了」を示す Interaction を持つ
 
 ### アンチパターン
 
-- ユーザーの目的を意味しない ProgramFlow
+- User への反応プロセスとして意味を持たない SystemFlow
 
-> ユーザーの目的と対応する場合は、単一の Interaction をラップする ProgramFlow であってもよい。
+> System と User の間にある関係として単一の意味を持つ場合は、単一の Interaction をラップする SystemFlow であってもよい。
 
 ## Interaction の制約
 
 - Function Port に依存するが、Function External には依存しない
-- ProgramFlow に依存しない
+- SystemFlow に依存しない
 - システム内で単一の意味と目的を持つ
 - 必ず終了を示す Reaction を持つ（例外やキャンセルも含めて最終的にユーザーに結果を返す）
 
@@ -336,7 +356,7 @@ Function Port を介して複数の Function（機能）を実行し、それら
 
 ## 補足
 
-ProgramFlow / Interaction の粒度はチームで調整可能です。
+SystemFlow / Interaction の粒度はチームで調整可能です。
 ただし、前述したアンチパターンにならないように注意する必要があります。
 
 ---

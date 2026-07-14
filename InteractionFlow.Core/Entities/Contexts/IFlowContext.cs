@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// ProgramFlow や Interaction の実行中に受け渡されるコンテキストを表します。
+    /// SystemFlow や Interaction の実行中に受け渡されるコンテキストを表します。
     /// </summary>
     public interface IFlowContext
     {

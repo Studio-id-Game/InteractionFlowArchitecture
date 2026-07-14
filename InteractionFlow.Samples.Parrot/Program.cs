@@ -4,7 +4,7 @@ using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Parrot.Externals.Storages;
 using InteractionFlow.Samples.Parrot.Interactions;
-using InteractionFlow.Samples.Parrot.ProgramFlows;
+using InteractionFlow.Samples.Parrot.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
 using System.Threading.Tasks;
@@ -38,12 +38,12 @@ namespace InteractionFlow.Samples.Parrot
 
             var context = new FlowContext();
 
-            using (var initializeApplication = globalScope.BuildProgramFlow<InitializeApplication, IFlowContext>())
+            using (var initializeApplication = globalScope.BuildSystemFlow<InitializeApplication, IFlowContext>())
             {
                 await initializeApplication.ExecuteAsync(context);
             }
 
-            using var selectAndRunSample = globalScope.BuildProgramFlow<SelectAndRunSample, IFlowContext>();
+            using var selectAndRunSample = globalScope.BuildSystemFlow<SelectAndRunSample, IFlowContext>();
 
             while (true)
             {

@@ -37,7 +37,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             consoleReactionScope.State.Update(writeLine: true);
             consoleOperationScope.State.Update(writeLine: true);
 
-            return currentUserStorage.GetKey(context).StartAsync()
+            return await currentUserStorage.GetKey(context).StartAsync()
                 .ThenAsync(userKey =>
                 {
                     return Task.FromResult(currentUserStorage.GetOrCreate(userKey));

@@ -29,10 +29,12 @@ namespace InteractionFlow.Core.Interactions
             }
         }
 
+        private readonly IDependencyNode[] dependencies = [exceptionPort, cancellationPort, .. dependency];
+
         /// <summary>
         /// 例外処理ポート、キャンセル処理ポート、および派生クラスから渡された依存ノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => (IDependencyNode[])[ExceptionPort, CancellationPort, .. dependency];
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
 
         /// <summary>
         /// 通常の例外を処理する Reaction ポートを取得します。

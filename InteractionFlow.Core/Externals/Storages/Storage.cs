@@ -37,7 +37,7 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <summary>
         /// この Storage が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         // IStoragePort<TKey, TValue>
         #region IStoragePort<TKey, TValue>

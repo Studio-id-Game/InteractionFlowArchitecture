@@ -16,7 +16,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
         /// <summary>
         /// この Serializer が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlySpan<IDependencyNode> Dependency => [];
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
 
         /// <summary>
         /// ストリームから値へ変換します。

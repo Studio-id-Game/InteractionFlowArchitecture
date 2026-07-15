@@ -23,7 +23,7 @@ namespace InteractionFlow.Core.Externals.SilentExternals
         /// <summary>
         /// この SilentExternal が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 

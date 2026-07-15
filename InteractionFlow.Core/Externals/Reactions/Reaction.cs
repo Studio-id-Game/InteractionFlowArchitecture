@@ -28,7 +28,7 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// <summary>
         /// この Reaction が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 派生クラスが保持するメモリ上の状態を初期化します。

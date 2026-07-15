@@ -27,7 +27,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// <summary>
         /// この Persistence が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 保存先のルートパスを取得します。

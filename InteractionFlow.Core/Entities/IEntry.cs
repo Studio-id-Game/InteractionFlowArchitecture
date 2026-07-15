@@ -20,6 +20,6 @@ namespace InteractionFlow.Core.Entities
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <param name="visitedEntries">循環参照の検出に使用する訪問済み Entry。</param>
         /// <returns>値を指定型として取得できる場合は成功結果。取得できない場合は失敗結果。</returns>
-        public Result<T> Parse<T>(ISet<IEntry> visitedEntries);
+        internal Result<T> Parse<T>(ISet<IEntry> visitedEntries);
     }
 }

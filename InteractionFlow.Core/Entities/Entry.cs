@@ -62,7 +62,7 @@ namespace InteractionFlow.Core.Entities
             }
             else if (Value is IEntry entry)
             {
-                return entry.Parse<T>();
+                return entry.Parse<T>(visitedEntries);
             }
             else
             {

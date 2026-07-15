@@ -61,7 +61,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// </summary>
         /// <param name="id">存在確認する ID。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        public Task<Result> Exist(TDirectoryId id)
+        public Task<Result> Exists(TDirectoryId id)
         {
             try
             {
@@ -154,7 +154,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// ルート直下にあるディレクトリ ID をすべて取得します。
         /// </summary>
         /// <returns>保存されているディレクトリ ID の配列。失敗時は失敗結果。</returns>
-        public virtual Task<Result<TDirectoryId[]>> GetAllId()
+        public virtual Task<Result<TDirectoryId[]>> GetAllIds()
         {
             try
             {

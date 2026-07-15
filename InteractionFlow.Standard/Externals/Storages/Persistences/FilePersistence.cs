@@ -185,7 +185,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// </summary>
         /// <param name="id">存在確認する ID。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        public Task<Result> Exist(TFileId id)
+        public Task<Result> Exists(TFileId id)
         {
             try
             {
@@ -210,7 +210,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// ルート配下にある対象拡張子のファイル ID をすべて取得します。
         /// </summary>
         /// <returns>保存されているファイル ID の配列。失敗時は失敗結果。</returns>
-        public Task<Result<TFileId[]>> GetAllId()
+        public Task<Result<TFileId[]>> GetAllIds()
         {
             try
             {

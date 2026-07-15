@@ -13,14 +13,14 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
         /// <summary>
         /// Entry の現在値を指定された Persistence ポートへ保存します。
         /// </summary>
-        /// <typeparam name="TPersistentId">永続化先を識別する ID の型。</typeparam>
+        /// <typeparam name="TPersistenceId">永続化先を識別する ID の型。</typeparam>
         /// <typeparam name="TValue">保存する値の型。</typeparam>
         /// <param name="entry">保存対象の Entry。</param>
-        /// <param name="fileController">保存に使用する Persistence ポート。</param>
+        /// <param name="persistencePort">保存に使用する Persistence ポート。</param>
         /// <returns>保存結果。</returns>
-        public static async Task<Result> Save<TPersistentId, TValue>(
-            this PersistentEntry<TPersistentId, TValue> entry,
-            IPersistencePort<TPersistentId, TValue> fileController)
+        public static async Task<Result> Save<TPersistenceId, TValue>(
+            this PersistentEntry<TPersistenceId, TValue> entry,
+            IPersistencePort<TPersistenceId, TValue> persistencePort)
         {
             if (entry.Value == null)
             {
@@ -28,23 +28,23 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
             }
             else
             {
-                return await fileController.Save(entry.FileID, entry.Value).ConfigureAwait(false);
+                return await persistencePort.Save(entry.PersistenceId, entry.Value).ConfigureAwait(false);
             }
         }
 
         /// <summary>
         /// Entry の永続化 ID に対応する保存データが存在するかを確認します。
         /// </summary>
-        /// <typeparam name="TPersistentId">永続化先を識別する ID の型。</typeparam>
+        /// <typeparam name="TPersistenceId">永続化先を識別する ID の型。</typeparam>
         /// <typeparam name="TValue">保存されている値の型。</typeparam>
         /// <param name="entry">存在確認対象の Entry。</param>
-        /// <param name="fileController">存在確認に使用する Persistence ポート。</param>
+        /// <param name="persistencePort">存在確認に使用する Persistence ポート。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        public static Task<Result> Exist<TPersistentId, TValue>(
-            this PersistentEntry<TPersistentId, TValue> entry,
-            IPersistencePort<TPersistentId, TValue> fileController)
+        public static Task<Result> Exists<TPersistenceId, TValue>(
+            this PersistentEntry<TPersistenceId, TValue> entry,
+            IPersistencePort<TPersistenceId, TValue> persistencePort)
         {
-            return fileController.Exist(entry.FileID);
+            return persistencePort.Exists(entry.PersistenceId);
         }
     }
 }

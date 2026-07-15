@@ -302,7 +302,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 })
                 .ThenAsync(async notepadEntry =>
                 {
-                    var notepadDataKey = notepadEntry.FileID;
+                    var notepadDataKey = notepadEntry.PersistenceId;
 
                     return await notepadEntry.Load(notepadDataPersistence)
                         .ThenErrorAsync(e => Task.FromResult<Result<NotepadData>>(new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
@@ -311,7 +311,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 .ThenAsync(async e =>
                 {
                     var (notepad, notepadEntry) = e;
-                    var notepadDataKey = notepadEntry.FileID;
+                    var notepadDataKey = notepadEntry.PersistenceId;
 
                     var consoleWriter = new ConsoleTextWriter(consoleCursorPositionAccess, consoleReaction, consoleOperation);
                     await consoleWriter.InitAsync(context, notepad);

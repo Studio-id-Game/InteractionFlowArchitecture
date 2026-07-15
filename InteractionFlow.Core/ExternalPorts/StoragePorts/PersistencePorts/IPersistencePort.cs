@@ -39,12 +39,12 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts
         /// </summary>
         /// <param name="id">存在確認する ID。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        Task<Result> Exist(TPersistenceId id);
+        Task<Result> Exists(TPersistenceId id);
 
         /// <summary>
         /// 保存されているすべての ID を取得します。
         /// </summary>
         /// <returns>保存されている ID の配列。失敗時は失敗結果。</returns>
-        Task<Result<TPersistenceId[]>> GetAllId();
+        Task<Result<TPersistenceId[]>> GetAllIds();
     }
 }

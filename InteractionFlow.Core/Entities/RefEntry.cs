@@ -1,4 +1,4 @@
-namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
+namespace InteractionFlow.Core.Entities
 {
     /// <summary>
     /// 値を外部から更新できる Entry です。

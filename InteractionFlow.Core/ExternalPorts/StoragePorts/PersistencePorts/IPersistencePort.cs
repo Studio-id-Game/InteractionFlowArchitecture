@@ -2,9 +2,8 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts
+namespace InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts
 {
-
     /// <summary>
     /// ID で識別される値を保存・読み込みする Persistence ポートを表します。
     /// </summary>

@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Standard.Entities
+namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
     /// Function の状態を一時的に変更し、破棄時に元の状態へ戻すスコープです。

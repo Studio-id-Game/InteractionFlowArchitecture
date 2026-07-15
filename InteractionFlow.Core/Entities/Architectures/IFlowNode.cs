@@ -1,5 +1,3 @@
-using System;
-
 namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>

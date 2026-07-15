@@ -1,4 +1,4 @@
-namespace InteractionFlow.Standard.Entities
+namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
     /// Function が保持する現在の状態を取得または設定できることを表します。

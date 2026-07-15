@@ -1,3 +1,5 @@
+using InteractionFlow.Core.Entities.Architectures;
+
 namespace InteractionFlow.Standard.Entities.Consoles
 {
     /// <summary>

@@ -1,8 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
 using System;
 using System.Threading.Tasks;
 

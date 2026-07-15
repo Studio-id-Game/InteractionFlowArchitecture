@@ -3,7 +3,6 @@ using InteractionFlow.Core.Externals.Storages;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages
 {

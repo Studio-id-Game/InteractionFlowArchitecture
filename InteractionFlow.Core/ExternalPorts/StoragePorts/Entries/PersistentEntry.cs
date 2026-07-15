@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
+namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
 {
     /// <summary>
     /// 永続化 ID と値を関連付ける Entry です。
@@ -18,23 +18,6 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
         /// 永続化先を識別する ID を取得します。
         /// </summary>
         public TPersistentId FileID => fileID;
-
-        /// <summary>
-        /// 現在の値を指定された Persistence ポートへ保存します。
-        /// </summary>
-        /// <param name="fileController">保存に使用する Persistence ポート。</param>
-        /// <returns>保存結果。</returns>
-        public async Task<Result> Save(IPersistencePort<TPersistentId, TValue> fileController)
-        {
-            if (Value == null)
-            {
-                return new NullReferenceException(nameof(Value));
-            }
-            else
-            {
-                return await fileController.Save(fileID, Value).ConfigureAwait(false);
-            }
-        }
 
         /// <summary>
         /// 指定された Persistence ポートから値を読み込みます。
@@ -52,6 +35,25 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
                     return value.AsResult().StartAsync();
                 })
                 .ConfigureAwait(false);
+        }
+
+
+        /// <summary>
+        /// Entry の永続化 ID に対応する保存データを削除し、削除に成功した場合は保持する値を default にします。
+        /// </summary>
+        /// <param name="fileController">削除に使用する Persistence ポート。</param>
+        /// <returns>削除結果。</returns>
+        public async Task<Result> DeleteAndReset(IPersistencePort<TPersistentId, TValue> fileController)
+        {
+            return await fileController.Delete(FileID)
+                .ResolveAsync(
+                onSuccess: () =>
+                {
+                    Value = default;
+                    return Result.Success.StartAsync();
+                },
+                onFailure: e => e.AsResult().StartAsync()
+                );
         }
     }
 }

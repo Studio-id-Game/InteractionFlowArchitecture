@@ -2,7 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts
+namespace InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts
 {
     /// <summary>
     /// 値と保存用データ形式を相互変換する Serializer ポートを表します。

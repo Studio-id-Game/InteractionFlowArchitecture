@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
 using System;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts;
 using System.IO;
 using System.Threading.Tasks;
 

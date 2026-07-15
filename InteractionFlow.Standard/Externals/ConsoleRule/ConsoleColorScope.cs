@@ -1,4 +1,4 @@
-using InteractionFlow.Standard.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Standard.Entities.Consoles;
 using System;
 

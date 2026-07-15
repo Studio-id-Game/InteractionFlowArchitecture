@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles

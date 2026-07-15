@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts
@@ -9,7 +10,7 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts
     /// </summary>
     /// <typeparam name="TPersistenceId">永続化対象を識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
-    public interface IPersistencePort<TPersistenceId, TValue>
+    public interface IPersistencePort<TPersistenceId, TValue> : IFlowSubNode
     {
         /// <summary>
         /// 指定された ID に値を保存します。

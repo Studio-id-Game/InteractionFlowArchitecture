@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts;
 using System;
@@ -17,6 +18,13 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <param name="serializer">値とストリームの変換に使用する Serializer。</param>
     public abstract class FilePersistence<TFileId, TValue>(ISerializerPort<Stream, TValue> serializer) : IFilePersistencePort<TFileId, TValue>
     {
+        private readonly IDependencyNode[] dependency = [serializer];
+
+        /// <summary>
+        /// この Persistence が依存する補助ノードを取得します。
+        /// </summary>
+        public virtual ReadOnlySpan<IDependencyNode> Dependency => dependency;
+
         /// <summary>
         /// 保存先のルートパスを取得します。
         /// </summary>

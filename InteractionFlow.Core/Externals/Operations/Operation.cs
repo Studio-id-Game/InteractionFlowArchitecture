@@ -9,13 +9,13 @@ namespace InteractionFlow.Core.Externals.Operations
     /// </summary>
     public abstract class Operation : IOperationPort
     {
-        private readonly IFlowNode[] dependency;
+        private readonly IDependencyNode[] dependency;
 
         /// <summary>
         /// 依存ノードを保持し、派生クラスの状態を初期化します。
         /// </summary>
         /// <param name="dependency">この Operation が依存するフローノード。</param>
-        public Operation(params IFlowNode[] dependency)
+        public Operation(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
             ForceResetMemoryState();
@@ -24,7 +24,7 @@ namespace InteractionFlow.Core.Externals.Operations
         /// <summary>
         /// この Operation が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IFlowNode> Dependency => dependency;
+        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
 
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 

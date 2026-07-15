@@ -18,7 +18,7 @@ namespace InteractionFlow.Standard.Interactions
     public abstract class InteractionOptionalArg<TOption>(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        params IFlowNode[] dependency)
+        params IDependencyNode[] dependency)
         : Interaction(exceptionPort, cancellationPort, dependency)
     {
         private sealed class OptionScope(TOption? value)

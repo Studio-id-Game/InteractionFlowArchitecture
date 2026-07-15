@@ -9,7 +9,7 @@ namespace InteractionFlow.Core.SystemFlows
     /// <see cref="IFlowContext"/> を扱う <see cref="ISystemFlow"/> のデフォルト実装基底クラスです。
     /// </summary>
     /// <param name="dependency">この SystemFlow が依存するフローノード。</param>
-    public abstract class SystemFlow(params IFlowNode[] dependency) : SystemFlow<IFlowContext>(dependency)
+    public abstract class SystemFlow(params IDependencyNode[] dependency) : SystemFlow<IFlowContext>(dependency)
     {
     }
 
@@ -18,13 +18,13 @@ namespace InteractionFlow.Core.SystemFlows
     /// </summary>
     /// <typeparam name="TContext">SystemFlow が扱うコンテキストの型。</typeparam>
     /// <param name="dependency">この SystemFlow が依存するフローノード。</param>
-    public abstract class SystemFlow<TContext>(params IFlowNode[] dependency) : ISystemFlow<TContext>
+    public abstract class SystemFlow<TContext>(params IDependencyNode[] dependency) : ISystemFlow<TContext>
         where TContext : IFlowContext
     {
         /// <summary>
         /// この SystemFlow が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IFlowNode> Dependency => dependency;
+        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 指定されたコンテキストで SystemFlow を実行します。

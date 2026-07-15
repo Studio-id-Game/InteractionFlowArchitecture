@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
 using System;
 using System.IO;
@@ -14,6 +15,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     public abstract class DirectoryPersistence<TDirectoryId, TValue> : IDirectoryPersistencePort<TDirectoryId, TValue>
     {
+        /// <summary>
+        /// この Persistence が依存する補助ノードを取得します。
+        /// </summary>
+        public virtual ReadOnlySpan<IDependencyNode> Dependency => [];
+
         /// <summary>
         /// ルートパス配下の保存先を使用できるように初期化します。
         /// </summary>

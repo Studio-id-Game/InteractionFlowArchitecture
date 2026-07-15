@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts
@@ -8,7 +9,7 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts
     /// </summary>
     /// <typeparam name="TData">保存や転送に使用するデータ形式。</typeparam>
     /// <typeparam name="TValue">変換対象の値の型。</typeparam>
-    public interface ISerializerPort<TData, TValue>
+    public interface ISerializerPort<TData, TValue> : IFlowSubNode
     {
         /// <summary>
         /// 値を保存用データ形式へ変換します。

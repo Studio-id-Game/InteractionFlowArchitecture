@@ -16,7 +16,7 @@ namespace InteractionFlow.Core.Interactions
     public abstract class Interaction(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
-        params IFlowNode[] dependency)
+        params IDependencyNode[] dependency)
         : IInteraction
     {
         private sealed class NestedFlowContext(IFlowContext parent) : IFlowContext
@@ -32,7 +32,7 @@ namespace InteractionFlow.Core.Interactions
         /// <summary>
         /// 例外処理ポート、キャンセル処理ポート、および派生クラスから渡された依存ノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IFlowNode> Dependency => (IFlowNode[])[ExceptionPort, CancellationPort, .. dependency];
+        public ReadOnlySpan<IDependencyNode> Dependency => (IDependencyNode[])[ExceptionPort, CancellationPort, .. dependency];
 
         /// <summary>
         /// 通常の例外を処理する Reaction ポートを取得します。

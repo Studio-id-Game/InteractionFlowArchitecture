@@ -18,6 +18,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         public ConsoleWriter() : base()
         {
+            ResetFields();
+
             if (State == null)
                 throw new ArgumentNullException("state");
         }
@@ -31,6 +33,11 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// コンソール出力状態を既定値へ戻します。
         /// </summary>
         public override void ForceResetMemoryState()
+        {
+            ResetFields();
+        }
+
+        private void ResetFields()
         {
             State = ConsoleState.Default;
         }

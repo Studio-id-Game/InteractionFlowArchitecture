@@ -20,6 +20,7 @@ namespace InteractionFlow.Core.Externals.Storages
 
         /// <summary>
         /// キー比較方法と依存ノードを指定して、空の Storage を作成します。
+        /// 派生クラスの状態初期化は派生クラスのコンストラクタで行います。
         /// </summary>
         /// <param name="comparer">キー比較に使用する比較器。<see langword="null"/> の場合は既定の比較器を使用します。</param>
         /// <param name="dependency">この Storage が依存するフローノード。</param>
@@ -27,7 +28,6 @@ namespace InteractionFlow.Core.Externals.Storages
         {
             items = new(comparer);
             this.dependency = dependency;
-            ForceResetMemoryState();
         }
 
         /// <summary>

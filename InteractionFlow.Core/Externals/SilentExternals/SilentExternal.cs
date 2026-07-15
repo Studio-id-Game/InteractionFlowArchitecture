@@ -12,13 +12,12 @@ namespace InteractionFlow.Core.Externals.SilentExternals
         private readonly IDependencyNode[] dependency;
 
         /// <summary>
-        /// 依存ノードを保持し、派生クラスの状態を初期化します。
+        /// 依存ノードを保持します。派生クラスの状態初期化は派生クラスのコンストラクタで行います。
         /// </summary>
         /// <param name="dependency">この SilentExternal が依存するフローノード。</param>
         public SilentExternal(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
-            ForceResetMemoryState();
         }
 
         /// <summary>

@@ -19,6 +19,8 @@ namespace InteractionFlow.Standard.Externals.Operations
         /// </summary>
         public ConsoleOperation() : base()
         {
+            ResetFields();
+
             if (State == null)
                 throw new ArgumentNullException("state");
         }
@@ -27,6 +29,11 @@ namespace InteractionFlow.Standard.Externals.Operations
         /// コンソール入力状態を既定値へ戻します。
         /// </summary>
         public override void ForceResetMemoryState()
+        {
+            ResetFields();
+        }
+
+        private void ResetFields()
         {
             State = ConsoleOperationState.Default;
         }
@@ -170,6 +177,8 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// </summary>
             public Dummy() : base()
             {
+                ResetFields();
+
                 if (State == null)
                     throw new ArgumentNullException("state");
             }
@@ -178,6 +187,11 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// ダミー入力状態と返却値を既定値へ戻します。
             /// </summary>
             public override void ForceResetMemoryState()
+            {
+                ResetFields();
+            }
+
+            private void ResetFields()
             {
                 State = ConsoleOperationState.Default;
 

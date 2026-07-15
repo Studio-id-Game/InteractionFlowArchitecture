@@ -1,4 +1,6 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
+using System;
 using InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts;
 using System.IO;
 using System.Threading.Tasks;
@@ -11,6 +13,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
     /// <typeparam name="TValue">変換対象の値の型。</typeparam>
     public abstract class StreamSerializer<TValue> : ISerializerPort<Stream, TValue>
     {
+        /// <summary>
+        /// この Serializer が依存する補助ノードを取得します。
+        /// </summary>
+        public virtual ReadOnlySpan<IDependencyNode> Dependency => [];
+
         /// <summary>
         /// ストリームから値へ変換します。
         /// </summary>

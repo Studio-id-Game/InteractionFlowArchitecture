@@ -10,7 +10,7 @@ namespace InteractionFlow.Core.Externals.Reactions
     /// キャンセルを扱う Reaction のデフォルト実装基底クラスです。
     /// </summary>
     /// <param name="dependency">この Reaction が依存するフローノード。</param>
-    public abstract class CancellationHandling(params IFlowNode[] dependency) : ExceptionHandling<OperationCanceledException>(dependency), ICancellationPort
+    public abstract class CancellationHandling(params IDependencyNode[] dependency) : ExceptionHandling<OperationCanceledException>(dependency), ICancellationPort
     {
         /// <summary>
         /// キャンセル前処理、コンテキストのキャンセル待機とリセット、キャンセル後処理を順に実行します。

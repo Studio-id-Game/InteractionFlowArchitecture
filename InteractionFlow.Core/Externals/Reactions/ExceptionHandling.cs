@@ -10,7 +10,7 @@ namespace InteractionFlow.Core.Externals.Reactions
     /// <see cref="Exception"/> を扱う例外ハンドリング Reaction のデフォルト実装基底クラスです。
     /// </summary>
     /// <param name="dependency">この Reaction が依存するフローノード。</param>
-    public abstract class ExceptionHandling(params IFlowNode[] dependency) : ExceptionHandling<Exception>(dependency)
+    public abstract class ExceptionHandling(params IDependencyNode[] dependency) : ExceptionHandling<Exception>(dependency)
     {
     }
 
@@ -19,7 +19,7 @@ namespace InteractionFlow.Core.Externals.Reactions
     /// </summary>
     /// <typeparam name="TException">この Reaction が処理する例外の型。</typeparam>
     /// <param name="dependency">この Reaction が依存するフローノード。</param>
-    public abstract class ExceptionHandling<TException>(params IFlowNode[] dependency) : Reaction(dependency), IExceptionPort<TException>
+    public abstract class ExceptionHandling<TException>(params IDependencyNode[] dependency) : Reaction(dependency), IExceptionPort<TException>
         where TException : Exception
     {
         /// <summary>

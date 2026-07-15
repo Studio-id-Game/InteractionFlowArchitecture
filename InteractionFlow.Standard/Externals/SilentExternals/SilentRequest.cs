@@ -12,7 +12,7 @@ namespace InteractionFlow.Standard.Externals.SilentExternals
     /// <typeparam name="TResult">返す値の型。</typeparam>
     /// <typeparam name="TArg">実行に渡す引数の型。</typeparam>
     /// <param name="dependency">この SilentExternal が依存するフローノード。</param>
-    public abstract class SilentRequest<TResult, TArg>(params IFlowNode[] dependency) : SilentExternal(dependency), ISilentRequestPort<TResult, TArg>
+    public abstract class SilentRequest<TResult, TArg>(params IDependencyNode[] dependency) : SilentExternal(dependency), ISilentRequestPort<TResult, TArg>
     {
         /// <summary>
         /// 指定された引数で処理を実行し、結果を返します。

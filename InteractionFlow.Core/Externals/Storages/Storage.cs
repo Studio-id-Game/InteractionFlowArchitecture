@@ -15,7 +15,7 @@ namespace InteractionFlow.Core.Externals.Storages
     /// <typeparam name="TValue">保持する値の型。</typeparam>
     public abstract class Storage<TKey, TValue> : IStoragePort<TKey, TValue>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>
     {
-        private readonly IFlowNode[] dependency;
+        private readonly IDependencyNode[] dependency;
         private readonly Dictionary<TKey, TValue> items;
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace InteractionFlow.Core.Externals.Storages
         /// </summary>
         /// <param name="comparer">キー比較に使用する比較器。<see langword="null"/> の場合は既定の比較器を使用します。</param>
         /// <param name="dependency">この Storage が依存するフローノード。</param>
-        public Storage(IEqualityComparer<TKey>? comparer = null, params IFlowNode[] dependency)
+        public Storage(IEqualityComparer<TKey>? comparer = null, params IDependencyNode[] dependency)
         {
             items = new(comparer);
             this.dependency = dependency;
@@ -33,7 +33,7 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <summary>
         /// この Storage が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IFlowNode> Dependency => dependency;
+        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
 
         // IStoragePort<TKey, TValue>
         #region IStoragePort<TKey, TValue>

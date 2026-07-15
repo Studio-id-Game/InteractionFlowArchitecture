@@ -10,13 +10,13 @@ namespace InteractionFlow.Core.Externals.Reactions
     /// </summary>
     public abstract class Reaction : IReactionPort
     {
-        private readonly IFlowNode[] dependency;
+        private readonly IDependencyNode[] dependency;
 
         /// <summary>
         /// 依存ノードを保持し、派生クラスの状態を初期化します。
         /// </summary>
         /// <param name="dependency">この Reaction が依存するフローノード。</param>
-        public Reaction(params IFlowNode[] dependency)
+        public Reaction(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
             ForceResetMemoryState();
@@ -29,7 +29,7 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// <summary>
         /// この Reaction が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IFlowNode> Dependency => dependency;
+        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 派生クラスが保持するメモリ上の状態を初期化します。

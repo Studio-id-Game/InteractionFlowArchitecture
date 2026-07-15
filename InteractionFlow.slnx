@@ -16,7 +16,9 @@
     <Project Path="InteractionFlow.Samples.Notepad/InteractionFlow.Samples.Notepad.csproj" Id="372df045-4694-4d7c-a318-d0c5f78d234e" />
   </Folder>
   <Folder Name="/_Documents/">
-    <Project Path="docs/IDEView.csproj" />
+    <Project Path="docs/IDEView.csproj">
+      <Build Project="false" />
+    </Project>
   </Folder>
   <Folder Name="/_RootItems/">
     <File Path=".editorconfig" />

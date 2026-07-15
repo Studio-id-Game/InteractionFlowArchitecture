@@ -26,8 +26,8 @@ namespace InteractionFlow.Core.Entities.Architectures
         External,
 
         /// <summary>
-        /// ProgramFlow を生成するビルダー領域を表すブロックです。
+        /// SystemFlow を生成するビルダー領域を表すブロックです。
         /// </summary>
-        ProgramFlowBuilder,
+        SystemFlowBuilder,
     }
 }

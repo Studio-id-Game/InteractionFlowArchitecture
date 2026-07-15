@@ -1,36 +1,18 @@
-using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// ユーザー情報とキャンセル制御を保持する、基本的なフローコンテキストです。
+    /// キャンセル制御を保持する、基本的なフローコンテキストです。
     /// </summary>
     public class FlowContext : IFlowContext
     {
         /// <summary>
-        /// 指定したユーザー情報で新しいコンテキストを作成します。
+        /// 新しいコンテキストを作成します。
         /// </summary>
-        /// <param name="userToken">このコンテキストに紐づけるユーザー情報。</param>
-        public FlowContext(UserObject userToken)
+        public FlowContext()
         {
-            User = userToken;
         }
-
-        /// <summary>
-        /// 指定したユーザー情報とキャンセル制御で新しいコンテキストを作成します。
-        /// </summary>
-        /// <param name="userToken">このコンテキストに紐づけるユーザー情報。</param>
-        /// <param name="cancellation">このコンテキストで共有するキャンセル制御。</param>
-        public FlowContext(UserObject userToken, CancellationObject cancellation)
-        {
-            User = userToken;
-            Cancellation = cancellation;
-        }
-
-        /// <summary>
-        /// このコンテキストに紐づくユーザー情報を取得します。
-        /// </summary>
-        public UserObject User { get; }
 
         /// <summary>
         /// このコンテキストに紐づくキャンセル制御オブジェクトを取得します。
@@ -43,31 +25,9 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <param name="value">取得できた値。基本実装では常に既定値。</param>
         /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TryGet<T>(out T? value)
+        public virtual bool TryGet<T>([MaybeNullWhen(false)] out T value)
         {
             value = default;
-            return false;
-        }
-
-        /// <summary>
-        /// 基本コンテキストに指定した型の値を設定します。
-        /// </summary>
-        /// <typeparam name="T">設定する値の型。</typeparam>
-        /// <param name="value">設定する値。</param>
-        /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TrySet<T>(T? value)
-        {
-            return false;
-        }
-
-        /// <summary>
-        /// 基本コンテキストに指定した型の値を生成して設定します。
-        /// </summary>
-        /// <typeparam name="T">設定する値の型。</typeparam>
-        /// <param name="select">設定する値を生成する関数。</param>
-        /// <returns>基本実装では常に <see langword="false"/>。</returns>
-        public virtual bool TrySet<T>(Func<T> select)
-        {
             return false;
         }
     }

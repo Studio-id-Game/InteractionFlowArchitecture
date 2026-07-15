@@ -17,15 +17,15 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
-        public ValueTask<FlowEndToken> HandleCancellationAsync(IFlowContext context, OperationCanceledException exception)
+        /// <returns>キャンセル処理後のフロー終了結果。</returns>
+        public ValueTask<ReactionEnd> HandleCancellationAsync(IFlowContext context, OperationCanceledException exception)
         {
             var _BeforeCancellationCoreAsync = BeforeCancellationCoreAsync(context, exception);
             if (!_BeforeCancellationCoreAsync.IsCompletedSuccessfully)
             {
                 return SlowPathAsync(this, _BeforeCancellationCoreAsync, context, exception);
 
-                static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
+                static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
                 {
                     await before.ConfigureAwait(false);
                     await context.Cancellation.TryWaitAndResetAsync().ConfigureAwait(false);
@@ -38,7 +38,7 @@ namespace InteractionFlow.Core.Externals.Reactions
             {
                 return SlowPathAsync(this, _TryWaitAndResetAsync, context, exception);
 
-                static async ValueTask<FlowEndToken> SlowPathAsync(CancellationHandling @this, ValueTask<bool> before, IFlowContext context, OperationCanceledException exception)
+                static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask<bool> before, IFlowContext context, OperationCanceledException exception)
                 {
                     await before.ConfigureAwait(false);
                     return await @this.AfterCancellationCoreAsync(context, exception).ConfigureAwait(false);
@@ -53,8 +53,8 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
-        protected sealed override ValueTask<FlowEndToken> HandleExceptionCoreAsync(IFlowContext context, OperationCanceledException exception)
+        /// <returns>キャンセル処理後のフロー終了結果。</returns>
+        protected sealed override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
             return HandleCancellationAsync(context, exception);
         }
@@ -71,11 +71,11 @@ namespace InteractionFlow.Core.Externals.Reactions
         }
 
         /// <summary>
-        /// コンテキストのキャンセル待機とリセット後に、フロー終了トークンを生成します。
+        /// コンテキストのキャンセル待機とリセット後に、フロー終了結果を生成します。
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル処理後のフロー終了トークン。</returns>
-        protected abstract ValueTask<FlowEndToken> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception);
+        /// <returns>キャンセル処理後のフロー終了結果。</returns>
+        protected abstract ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception);
     }
 }

@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,19 +11,43 @@ namespace InteractionFlow.Core.Entities.Contexts
     /// </summary>
     public class CancellationObject
     {
+        // 通常のフローでは登録タスク数は少ないため、毎回走査せず、
+        // 完了済みタスクの保持コストが走査コストを上回り始める目安として 64 件から取り除く。
+        private const int CompactTaskCountThreshold = 64;
+
+        private readonly object lockObject = new();
+
         private CancellationTokenSource? tokenSource;
 
-        private readonly ConcurrentBag<Task> currentTasks = [];
+        private readonly List<Task> currentTasks = [];
 
         /// <summary>
         /// 登録済みのキャンセル対象タスクが存在するかどうかを取得します。
         /// </summary>
-        public bool HasTask => currentTasks.Any();
+        public bool HasTask
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    return currentTasks.Any(e => !e.IsCompleted);
+                }
+            }
+        }
 
         /// <summary>
         /// 現在のキャンセルトークンにキャンセルが要求されているかどうかを取得します。
         /// </summary>
-        public bool IsCancellationRequested => tokenSource?.IsCancellationRequested ?? false;
+        public bool IsCancellationRequested
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    return tokenSource?.IsCancellationRequested ?? false;
+                }
+            }
+        }
 
         /// <summary>
         /// キャンセル時に完了を待機する対象タスクを登録します。
@@ -31,8 +55,17 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <param name="task">キャンセル後のリセット時に待機するタスク。</param>
         public void AddCancelableTask(Task task)
         {
-            tokenSource ??= new();
-            currentTasks.Add(task);
+            lock (lockObject)
+            {
+                tokenSource ??= new();
+
+                if (currentTasks.Count >= CompactTaskCountThreshold)
+                {
+                    currentTasks.RemoveAll(e => e.IsCompleted);
+                }
+
+                currentTasks.Add(task);
+            }
         }
 
         /// <summary>
@@ -40,10 +73,16 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         public void Cancel()
         {
-            tokenSource ??= new();
+            CancellationTokenSource source;
 
-            if (!tokenSource.IsCancellationRequested)
-                tokenSource.Cancel();
+            lock (lockObject)
+            {
+                tokenSource ??= new();
+                source = tokenSource;
+            }
+
+            if (!source.IsCancellationRequested)
+                source.Cancel();
         }
 
         /// <summary>
@@ -52,20 +91,35 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <returns>リセットを実行した場合は <see langword="true"/>、キャンセル要求がない場合は <see langword="false"/>。</returns>
         public ValueTask<bool> TryWaitAndResetAsync()
         {
-            if (tokenSource == null || !tokenSource.IsCancellationRequested)
-                return new(false);
+            CancellationTokenSource source;
+            Task[] tasks;
+            bool isCompleted;
 
-            return new(WaitAllAsync());
-
-            async Task<bool> WaitAllAsync()
+            lock (lockObject)
             {
-                while (currentTasks.TryTake(out var task))
-                {
-                    await task.ConfigureAwait(false);
-                }
+                if (tokenSource == null || !tokenSource.IsCancellationRequested)
+                    return new(false);
 
-                tokenSource?.Dispose();
+                source = tokenSource;
+                tasks = [.. currentTasks];
+                currentTasks.Clear();
                 tokenSource = null;
+                isCompleted = tasks.Length == 0 || tasks.All(e => e.IsCompleted);
+            }
+
+            if (isCompleted)
+            {
+                source.Dispose();
+
+                return new(true);
+            }
+
+            return new(WaitAllAsync(source, tasks));
+
+            static async Task<bool> WaitAllAsync(CancellationTokenSource source, Task[] tasks)
+            {
+                await Task.WhenAll(tasks);
+                source.Dispose();
 
                 return true;
             }
@@ -77,8 +131,11 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <returns>キャンセル制御に使用するトークン。</returns>
         public CancellationToken GetToken()
         {
-            tokenSource ??= new();
-            return tokenSource.Token;
+            lock (lockObject)
+            {
+                tokenSource ??= new();
+                return tokenSource.Token;
+            }
         }
 
         /// <summary>
@@ -88,16 +145,18 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <returns>キャンセル要求がある場合は <see langword="true"/>。</returns>
         public bool TryGetCanceledException(out OperationCanceledException? canceledException)
         {
-            if (IsCancellationRequested)
+            lock (lockObject)
             {
-                var token = GetToken();
-                canceledException = new OperationCanceledException(token);
-                return true;
-            }
-            else
-            {
-                canceledException = null;
-                return false;
+                if (tokenSource?.IsCancellationRequested ?? false)
+                {
+                    canceledException = new OperationCanceledException(tokenSource.Token);
+                    return true;
+                }
+                else
+                {
+                    canceledException = null;
+                    return false;
+                }
             }
         }
     }

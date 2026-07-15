@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Standard.Entities;
@@ -23,46 +24,47 @@ namespace InteractionFlow.Samples.Parrot.Interactions
     {
         private static string DefaultHello => $"Hello! I'm Parrot, who are you?";
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             await reaction.Write(context, new ConsoleOutput($"## Parrot"));
 
-            var end = await TryCatchBlockAsync(context, Init);
+            var end = await Init(context);
 
             if (end.HasException) return end;
 
             do
             {
-                end = await TryCatchBlockAsync(context, SingleParrot, async () =>
-                {
-                    await Task.Delay(500);
-                });
+                end = await TrySingleParrotAsync(context);
 
             } while (!end.HasCanceled);
 
             return end;
         }
 
-        private async Task<FlowEndToken> Init(IFlowContext context)
+        protected override async Task OnCancellation(IFlowContext context)
         {
-            if (!context.TryGet<SampleSelected>(out var selectedSample))
+            await Task.Delay(500);
+        }
+
+        private async Task<ReactionEnd> Init(IFlowContext context)
+        {
+            if (!context.TryGet<RefEntity<SampleSelected>>(out var selectedSample))
             {
                 await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
                 return await reaction.Write(context, new ConsoleOutput(""));
             }
             else
             {
-                var end = await reaction.Write(context, new ConsoleOutput($"- {selectedSample}"));
+                var end = await reaction.Write(context, new ConsoleOutput($"- {selectedSample.Value}"));
 
-                if (!context.TryGet<ParrotHello>(out var hello) || hello.text == null)
-                {
-                    hello = new ParrotHello(DefaultHello);
-                }
+                var helloText = context.TryGet<RefEntity<ParrotHello>>(out var hello) && hello.Value.text != null
+                    ? hello.Value.text
+                    : DefaultHello;
 
-                if (!string.IsNullOrEmpty(hello.text))
+                if (!string.IsNullOrEmpty(helloText))
                 {
                     await NameHeader(context, "Parrot");
-                    end = await SlowTalk(context, hello.text);
+                    end = await SlowTalk(context, helloText);
                 }
 
                 return end;
@@ -70,7 +72,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         }
 
-        private async Task<FlowEndToken> SingleParrot(IFlowContext context)
+        private async Task<ReactionEnd> SingleParrot(IFlowContext context)
         {
             var input = await Input(context);
 
@@ -84,6 +86,22 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             await Task.Delay(100);
 
             return await Output(context, outputText);
+        }
+
+        private async Task<ReactionEnd> TrySingleParrotAsync(IFlowContext context)
+        {
+            try
+            {
+                return await SingleParrot(context);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                return await ExceptionPort.HandleExceptionAsync(context, e);
+            }
         }
 
         private async Task<ConsoleInputText> Input(IFlowContext context)
@@ -107,13 +125,13 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             return outputText;
         }
 
-        private async Task<FlowEndToken> Output(IFlowContext context, string reactionText)
+        private async Task<ReactionEnd> Output(IFlowContext context, string reactionText)
         {
             await NameHeader(context, "Parrot");
             return await SlowTalk(context, reactionText);
         }
 
-        private async Task<FlowEndToken> NameHeader(IFlowContext context, string name)
+        private async Task<ReactionEnd> NameHeader(IFlowContext context, string name)
         {
             using var reactionState = reaction.GetStateScope();
             reaction.State.Update(writeLine: false);
@@ -122,7 +140,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         }
 
-        private async Task<FlowEndToken> SlowTalk(IFlowContext context, string outputText)
+        private async Task<ReactionEnd> SlowTalk(IFlowContext context, string outputText)
         {
             using var reactionState = reaction.GetStateScope();
             reaction.State.Update(writeLine: false);

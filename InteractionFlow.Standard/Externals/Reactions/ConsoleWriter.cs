@@ -41,8 +41,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         /// <param name="context">出力時点のフローコンテキスト。</param>
         /// <param name="consoleOutput">出力する文字列。</param>
-        /// <returns>出力後のフロー終了トークン。</returns>
-        public ValueTask<FlowEndToken> Write(IFlowContext context, ConsoleOutput consoleOutput)
+        /// <returns>出力後のフロー終了結果。</returns>
+        public ValueTask<ReactionEnd> Write(IFlowContext context, ConsoleOutput consoleOutput)
         {
             using var cc = new ConsoleColorScope().GetStateScope();
             cc.State = State.ColorSet;
@@ -56,7 +56,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 Console.Write(consoleOutput.text);
             }
 
-            return new(CreateFlowEndToken(context));
+            return new(GetEnd());
         }
     }
 }

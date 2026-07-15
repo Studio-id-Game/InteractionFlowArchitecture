@@ -12,8 +12,6 @@ namespace InteractionFlow.Core.Externals.Reactions
     {
         private readonly IFlowNode[] dependency;
 
-        private FlowEndToken? lastFlowEndToken;
-
         /// <summary>
         /// 依存ノードを保持し、派生クラスの状態を初期化します。
         /// </summary>
@@ -39,21 +37,13 @@ namespace InteractionFlow.Core.Externals.Reactions
         public abstract void ForceResetMemoryState();
 
         /// <summary>
-        /// 指定されたコンテキストに対応するフロー終了トークンを作成または再利用します。
+        /// Reaction が決定したフロー終了結果を生成します。
         /// </summary>
-        /// <param name="context">フロー終了時点のコンテキスト。</param>
-        /// <returns>指定されたコンテキストに対応するフロー終了トークン。</returns>
-        protected FlowEndToken CreateFlowEndToken(IFlowContext context)
+        /// <param name="exception">Reaction が未解決として扱う例外。解決済みの場合は <see langword="null"/>。</param>
+        /// <returns>Reaction が生成したフロー終了結果。</returns>
+        protected static ReactionEnd GetEnd(Exception? exception = null)
         {
-            if (lastFlowEndToken == null || lastFlowEndToken.LastContext != context)
-            {
-                return lastFlowEndToken = new(context);
-            }
-            else
-            {
-                lastFlowEndToken.Exception = null;
-                return lastFlowEndToken;
-            }
+            return IReactionPort.GetEnd(exception);
         }
     }
 }

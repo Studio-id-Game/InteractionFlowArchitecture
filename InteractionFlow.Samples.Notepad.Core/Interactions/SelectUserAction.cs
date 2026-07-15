@@ -40,35 +40,35 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             Console.CursorTop = 0;
         }
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            return await TryCatchBlockAsync(context, async context =>
+            try
             {
-                try
+                using var scope = consoleReaction.GetStateScope();
+                scope.State.Update(writeLine: true);
+
+                await Write(context, "# Select your action :");
+
+                var (select, action) = await userActions.GetSelectAsync(context);
+
+                await Write(context, $"> UserAction - {select}");
+
+                FlowEndToken end;
+                if (action is Login login)
                 {
-                    using var scope = consoleReaction.GetStateScope();
-                    scope.State.Update(writeLine: true);
-
-                    await Write(context, "# Select your action :");
-
-                    var (select, action) = await userActions.GetSelectAsync(context);
-
-                    await Write(context, $"> UserAction - {select}");
-
-                    if (action is Login login)
-                    {
-                        return await login.ExecuteRetryLoopAsync(context);
-                    }
-                    else
-                    {
-                        return await action.ExecuteAsync(context);
-                    }
+                    end = await login.ExecuteRetryLoopAsync(context);
                 }
-                finally
+                else
                 {
-                    notepadDataFiles.ClearWithoutDispose();
+                    end = await action.ExecuteAsync(context);
                 }
-            });
+
+                return end.End;
+            }
+            finally
+            {
+                notepadDataFiles.ClearWithoutDispose();
+            }
         }
 
         private async Task Write(IFlowContext context, string text)

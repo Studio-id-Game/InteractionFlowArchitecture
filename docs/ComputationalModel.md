@@ -65,19 +65,19 @@ Interaction は、このアーキテクチャにおける最小の動作単位�
 
 ---
 
-## 意味の単位としての ProgramFlow
+## 意味の単位としての SystemFlow
 
-Interaction が内部の構造であるのに対し、ProgramFlow は外部から見た意味の単位です。
+Interaction が内部の構造であるのに対し、SystemFlow は System と User の間にある関係として単一の意味を持つ、System 側の意味単位です。
 
-- **ProgramFlow**  
-  内部構造を隠蔽し、外部的な意味として再構成する Interaction 操作列
+- **SystemFlow**  
+  System 側が User への反応プロセスとして Interaction を束ねるフロー単位
 
-ProgramFlow は複数の Interaction を束ね、それを一つの「意味ある振る舞い」として提示します。
+SystemFlow は、システム全体の処理手順ではなく、複数の Interaction を束ねて一つの「意味ある振る舞い」として提示します。
 
 これは、以下のような役割を持ちます：
 
 - 内部の状態遷移の複雑さを隠す
-- ユーザーや外部システムに対して、一貫した意味を提供する
+- User に対して、一貫した System 側の応答を提供する
 - システムの振る舞いを理解可能な単位に分節する
 
 チューリングマシンの比喩で言えば、個々の遷移規則ではなく、それらをまとめた「目的的な動作」に相当します。
@@ -88,7 +88,7 @@ ProgramFlow は複数の Interaction を束ね、それを一つの「意味あ�
 
 Interaction Flow アーキテクチャにおける実行は、以下の流れで理解されます：
 
-    ProgramFlow → Interaction → テープ操作（Operation / Storage / Reaction / SilentExternal）
+    SystemFlow → Interaction → テープ操作（Operation / Storage / Reaction / SilentExternal）
 
 この流れは常に、
 
@@ -114,7 +114,7 @@ Interaction Flow は、チューリングマシンの
 
 - すべての処理を「テープ操作」として統一的に捉える
 - 状態遷移を Interaction として明示化する
-- 意味の単位を ProgramFlow として分離する
+- 意味の単位を SystemFlow として分離する
 
 これにより、内部の計算構造と外部の意味構造を分離しつつ、一貫したモデルとして扱うことが可能になります。
 

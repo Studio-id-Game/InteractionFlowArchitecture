@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
@@ -26,58 +27,57 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         private readonly Parrot parrot = new(exception, cancellation, operation, reaction);
         private readonly Parrot parrotAuto = new(exception, cancellation, operationDummy, reaction);
 
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             await reaction.Write(context, new ConsoleOutput($"## Run Sample (Press Ctrl + C to cancel the sample.)"));
 
-            return await TryCatchBlockAsync(context, async (context) =>
+            if (!context.TryGet<RefEntity<SampleSelected>>(out var selected) || selected.Value.id.mode == SampleMode.None)
             {
-                if (!context.TryGet<SampleSelected>(out var selected) || selected.id.mode == SampleMode.None)
-                {
-                    await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
-                    return await reaction.Write(context, new ConsoleOutput(""));
-                }
+                await reaction.Write(context, new ConsoleOutput($"* Sample not selected."));
+                return await reaction.Write(context, new ConsoleOutput(""));
+            }
 
-                var mode = selected.id.mode;
+            var mode = selected.Value.id.mode;
 
-                if (mode == SampleMode.RepeatLast)
-                {
-                    lastSelectMemory.GetKey(context)
-                        .Then(key =>
-                        {
-                            return lastSelectMemory.GetOrCreate(key);
-                        })
-                        .Then(lastMode =>
-                        {
-                            mode = lastMode.Value.mode;
-                            return lastMode.AsResult();
-                        })
-                        .ThrowIfError();
-                }
+            if (mode == SampleMode.RepeatLast)
+            {
+                lastSelectMemory.GetKey(context)
+                    .Then(lastSelectMemory.GetOrCreate)
+                    .Then(lastMode =>
+                    {
+                        mode = lastMode.Value.mode;
+                        return lastMode.AsResult();
+                    })
+                    .ThrowIfError();
+            }
 
-                return mode switch
-                {
-                    SampleMode.Parrot => await parrot.ExecuteAsync(context),
-                    SampleMode.ParrotAuto => await ParrotAuto(context),
-                    SampleMode.ParrotAutoAndKill => await ParrotAutoAndKill(context),
-                    SampleMode.ParrotColorful => await ParrotColorful(context),
-                    SampleMode.ParrotCustomContext => await ParrotCustomContext(context),
-                    _ => await reaction.Write(context, new ConsoleOutput("Error")),
-                };
-            });
+            return mode switch
+            {
+                SampleMode.Parrot => await Parrot(context),
+                SampleMode.ParrotAuto => await ParrotAuto(context),
+                SampleMode.ParrotAutoAndKill => await ParrotAutoAndKill(context),
+                SampleMode.ParrotColorful => await ParrotColorful(context),
+                SampleMode.ParrotCustomContext => await ParrotCustomContext(context),
+                _ => await reaction.Write(context, new ConsoleOutput("Error")),
+            };
         }
 
 
-        private async Task<FlowEndToken> ParrotAuto(IFlowContext context)
+        private async Task<ReactionEnd> Parrot(IFlowContext context)
+        {
+            return await NestedExecuteAsync(parrot, context);
+        }
+
+        private async Task<ReactionEnd> ParrotAuto(IFlowContext context)
         {
             operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot!");
-            return await parrotAuto.ExecuteAsync(context);
+            return await NestedExecuteAsync(parrotAuto, context);
         }
 
-        private async Task<FlowEndToken> ParrotAutoAndKill(IFlowContext context)
+        private async Task<ReactionEnd> ParrotAutoAndKill(IFlowContext context)
         {
             operationDummy.DummyText = new ConsoleInputText("I'm Auto Text to Parrot! ...?");
-            var parrotTask = parrotAuto.ExecuteAsync(context);
+            var parrotTask = NestedExecuteAsync(parrotAuto, context);
             var cancelTask = Task.Delay(10000, context.Cancellation.GetToken())
                 .ContinueWith(async e =>
                 {
@@ -88,7 +88,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             return await parrotTask;
         }
 
-        private async Task<FlowEndToken> ParrotColorful(IFlowContext context)
+        private async Task<ReactionEnd> ParrotColorful(IFlowContext context)
         {
             var mainBackColor = ConsoleColor.DarkCyan;
             var mainColor = ConsoleColor.Cyan;
@@ -113,15 +113,15 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             using var op = operation.GetStateScope();
             operation.State.Update(foregroundColor: opColor, backgroundColor: opBackColor);
 
-            return await parrot.ExecuteAsync(context);
+            return await NestedExecuteAsync(parrot, context);
         }
 
-        private async Task<FlowEndToken> ParrotCustomContext(IFlowContext context)
+        private async Task<ReactionEnd> ParrotCustomContext(IFlowContext context)
         {
-            var newContext = new FlowContextGroup(context)
-                .AddImmutable(new ParrotHello($"Hello! I'm Parrot with Custom Context, who are you?"), out _);
+            var newContext = new ScopedFlowContext(context)
+                .With(new RefEntity<ParrotHello>(new($"Hello! I'm Parrot with Custom Context, who are you?")));
             context = newContext;
-            return await parrot.ExecuteAsync(context);
+            return await NestedExecuteAsync(parrot, context);
         }
     }
 }

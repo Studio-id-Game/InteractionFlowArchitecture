@@ -70,8 +70,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
-        /// <returns>キャンセル表示後のフロー終了トークン。</returns>
-        protected override ValueTask<FlowEndToken> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
+        /// <returns>キャンセル表示後のフロー終了結果。</returns>
+        protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
             using (var cc = new ConsoleColorScope().GetStateScope())
             {
@@ -89,7 +89,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 Console.WriteLine();
             }
 
-            return new(CreateFlowEndToken(context));
+            return new(GetEnd(exception));
         }
     }
 }

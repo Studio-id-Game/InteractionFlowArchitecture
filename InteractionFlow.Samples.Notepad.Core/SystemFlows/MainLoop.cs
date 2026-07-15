@@ -1,23 +1,22 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ProgramFlows;
+using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.Interactions;
-using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
+namespace InteractionFlow.Samples.Notepad.Core.SystemFlows
 {
     public class MainLoop(
         Login login,
         NoteListView noteListView,
         SelectUserAction selectUserAction,
         ConsoleWriting consoleWrite)
-        : ProgramFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
+        : SystemFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
     {
 
-        public override async Task<FlowEndToken> ExecuteAsync(NotepadContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(NotepadContext context)
         {
             FlowEndToken end;
             end = await login.ExecuteRetryLoopAsync(context);
@@ -29,12 +28,10 @@ namespace InteractionFlow.Samples.Notepad.Core.ProgramFlows
 
             do
             {
-                var loginedContext = end.LastContext as NotepadContext ?? throw new Exception();
-
-                await noteListView.ExecuteAsync(loginedContext);
+                await noteListView.ExecuteAsync(context);
                 await Write("");
 
-                end = await selectUserAction.ExecuteAsync(loginedContext);
+                end = await selectUserAction.ExecuteAsync(context);
                 await Write("");
                 if (end.HasCanceled)
                 {

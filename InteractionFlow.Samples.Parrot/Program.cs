@@ -4,7 +4,7 @@ using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Parrot.Externals.Storages;
 using InteractionFlow.Samples.Parrot.Interactions;
-using InteractionFlow.Samples.Parrot.ProgramFlows;
+using InteractionFlow.Samples.Parrot.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
 using System.Threading.Tasks;
@@ -36,23 +36,24 @@ namespace InteractionFlow.Samples.Parrot
         {
             using var globalScope = BuildScope();
 
-            var user = new UserObject("InteractionFlow.Sample.Parrot.Main");
-            var context = new FlowContext(user);
+            var context = new FlowContext();
 
-            using (var initializeApplication = globalScope.BuildProgramFlow<InitializeApplication, IFlowContext>())
+            using (var initializeApplication = globalScope.BuildSystemFlow<InitializeApplication, IFlowContext>())
             {
                 await initializeApplication.ExecuteAsync(context);
             }
 
-            using var selectAndRunSample = globalScope.BuildProgramFlow<SelectAndRunSample, IFlowContext>();
+            using var selectAndRunSample = globalScope.BuildSystemFlow<SelectAndRunSample, IFlowContext>();
 
             while (true)
             {
-                var end = await selectAndRunSample.ExecuteAsync(context);
-                var endState = end.LastContext.TryGet<SelectAndRunSampleEndState>(out var _endState) ?
-                    _endState : SelectAndRunSampleEndState.None;
+                var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
+                var contextScope = new ScopedFlowContext(context)
+                    .With(endState);
 
-                if (endState == SelectAndRunSampleEndState.CancelSelect)
+                await selectAndRunSample.ExecuteAsync(contextScope);
+
+                if (endState.Value == SelectAndRunSampleEndState.CancelSelect)
                     break;
             }
         }

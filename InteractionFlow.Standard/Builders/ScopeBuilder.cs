@@ -7,7 +7,7 @@ namespace InteractionFlow.Standard.Builders
     /// <summary>
     /// 登録済みサービスから <see cref="ScopeHandler"/> を生成する標準ビルダーです。
     /// </summary>
-    public class ScopeBuilder : ScopeServices
+    public class ScopeBuilder : ScopeServices, IScopeBuilder
     {
         /// <summary>
         /// 現在のサービス登録からスコープを生成し、親スコープを関連付けます。

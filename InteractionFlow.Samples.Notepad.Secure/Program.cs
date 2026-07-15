@@ -5,7 +5,7 @@ using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Serializer
 using InteractionFlow.Samples.Notepad.Core.Externals.Storages;
 using InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.ProgramFlows;
+using InteractionFlow.Samples.Notepad.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
@@ -53,13 +53,13 @@ namespace InteractionFlow.Samples.Notepad.Secure
 
             var scope = scopeBuilder.BuildScope();
 
-            var mainLoop = scope.BuildProgramFlow<MainLoop, NotepadContext>();
+            var mainLoop = scope.BuildSystemFlow<MainLoop, NotepadContext>();
 
             var context = new NotepadContext(NotepadUserObject.Public);
 
             var end = await mainLoop.ExecuteAsync(context);
 
-            end.LastContext.TryGet<NotepadUserObject>(out var notepadUser);
+            context.TryGet<NotepadUserObject>(out var notepadUser);
 
             Console.WriteLine($"[Exit Notepad] - Goodbye, {notepadUser?.Id}.");
         }

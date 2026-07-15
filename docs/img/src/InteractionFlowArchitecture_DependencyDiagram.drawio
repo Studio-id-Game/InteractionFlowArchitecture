@@ -1,0 +1,478 @@
+<mxfile host="Electron">
+  <diagram name="ページ-1" id="773wSmDRsAvDI4m1-Yli">
+    <mxGraphModel dx="1134" dy="613" grid="1" gridSize="10" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="760" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="oOA23ez299nQj47q5iFR-103" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="340" width="200" x="40" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-5" parent="oOA23ez299nQj47q5iFR-103" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=center;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;" value="SystemFlow &lt;br&gt;Builder Block" vertex="1">
+          <mxGeometry height="300" width="200" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-6" parent="oOA23ez299nQj47q5iFR-103" style="text;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=10;spacing=3;rounded=0;align=center;glass=0;shadow=1;html=1;whiteSpace=wrap;verticalAlign=top;labelPosition=center;verticalLabelPosition=middle;spacingLeft=0;" value="&lt;div&gt;&lt;div&gt;&lt;b&gt;DI コンテナのラッパー&lt;br&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;SystemFlow の依存オブジェクトを&lt;br&gt;注入する&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="76.67" width="200" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-81" connectable="0" parent="oOA23ez299nQj47q5iFR-103" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="50" width="160" x="20" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-80" parent="oOA23ez299nQj47q5iFR-81" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=default;align=center;verticalAlign=middle;rounded=0;fontFamily=Arial;" value="&lt;font&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;SystemFlow 生成 DI ビルダー&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="160" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-25" parent="oOA23ez299nQj47q5iFR-81" style="swimlane;whiteSpace=wrap;html=1;startSize=30;container=0;fontFamily=Arial;fontSize=10;" value="SystemFlow&lt;br&gt;Builder" vertex="1">
+          <mxGeometry height="50" width="160" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-58" edge="1" parent="oOA23ez299nQj47q5iFR-103" source="oOA23ez299nQj47q5iFR-25" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-56" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points" />
+            <mxPoint x="170" y="160" as="sourcePoint" />
+            <mxPoint x="150" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-28" connectable="0" parent="oOA23ez299nQj47q5iFR-58" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Arial;" value="生成" vertex="1">
+          <mxGeometry relative="1" x="-0.1143" y="-1" as="geometry">
+            <mxPoint x="-19" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-56" parent="oOA23ez299nQj47q5iFR-103" style="swimlane;whiteSpace=wrap;html=1;startSize=30;container=0;fontFamily=Arial;fontSize=10;" value="SystemFlow&lt;br&gt;Handler" vertex="1">
+          <mxGeometry height="70" width="160" x="20" y="250" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-60" parent="oOA23ez299nQj47q5iFR-56" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=center;verticalAlign=middle;rounded=0;fontFamily=Arial;" value="&lt;font style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;生成済み&amp;nbsp;&lt;/span&gt;&lt;/font&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;DI スコープ&lt;br&gt;+&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;生成済み&amp;nbsp;&lt;/span&gt;&lt;font style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;SystemFlow&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="40" width="160" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-2" connectable="0" parent="1" style="group;dropTarget=0;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="460" width="640" x="260" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-55" parent="oOA23ez299nQj47q5iFR-2" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fontStyle=1;spacing=5;dashed=1;spacingLeft=5;glass=0;shadow=1;" value="Layers" vertex="1">
+          <mxGeometry height="460" width="640" as="geometry" />
+        </mxCell>
+        <mxCell id="p8NXalxBoj3FPLYn3SBN-42" parent="oOA23ez299nQj47q5iFR-2" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Arial;fontSize=10;container=0;" value="各レイヤーは、スコープを持った一時的な Context を利用して次の層の動作を変更できる" vertex="1">
+          <mxGeometry height="32.85714285714286" width="463.448275862069" x="88.27586206896552" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-93" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="90" width="600" x="280" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-28" parent="oOA23ez299nQj47q5iFR-93" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;container=0;spacingLeft=5;" value="&lt;div&gt;Function External Layer&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-29" parent="oOA23ez299nQj47q5iFR-93" style="text;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=0;spacing=10;rounded=0;align=left;shadow=1;container=0;fontStyle=0;verticalAlign=bottom;spacingLeft=0;" value="&lt;span style=&quot;&quot; id=&quot;docs-internal-guid-e05309fc-7fff-ecf8-ab55-d977a82e0f61&quot;&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;span style=&quot;line-height: 200%;&quot;&gt;&lt;b&gt;外部依存の機能実装&lt;br&gt;&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;white-space: pre-wrap; line-height: 20px;&quot;&gt;機能のための&lt;/span&gt;&lt;/font&gt;&lt;span style=&quot;white-space: pre-wrap; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;実際の&lt;/span&gt;&lt;span style=&quot;white-space: pre-wrap; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;処理を行う&lt;/span&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;b style=&quot;line-height: 200%;&quot;&gt;&lt;/b&gt;&lt;/span&gt;&lt;/font&gt;&lt;/p&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="90" width="180" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-94" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="90" width="600" x="280" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-25" parent="oOA23ez299nQj47q5iFR-94" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;dashed=1;shadow=1;container=0;spacingLeft=5;" value="&lt;div&gt;Function Port Layer&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-26" parent="oOA23ez299nQj47q5iFR-94" style="text;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=0;spacing=10;rounded=0;align=left;shadow=1;container=0;fontStyle=0;verticalAlign=bottom;spacingLeft=0;" value="&lt;span style=&quot;&quot; id=&quot;docs-internal-guid-e05309fc-7fff-ecf8-ab55-d977a82e0f61&quot;&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;span style=&quot;text-align: center; white-space: pre-wrap; line-height: 20px;&quot;&gt;&lt;b&gt;Function のインターフェース&lt;br&gt;&lt;/b&gt;外部機能への依存を&lt;/span&gt;&lt;span style=&quot;text-align: center; white-space: pre-wrap;&quot;&gt;&lt;span style=&quot;line-height: 20px;&quot;&gt;抽象化する&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="90" width="160" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-95" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="80" width="600" x="280" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-34" parent="oOA23ez299nQj47q5iFR-95" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;container=0;spacingLeft=5;" value="&lt;div&gt;Interaction Layer&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-35" parent="oOA23ez299nQj47q5iFR-95" style="text;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=0;spacing=10;rounded=0;align=left;shadow=1;container=0;fontStyle=0;verticalAlign=bottom;spacingLeft=0;" value="&lt;span style=&quot;&quot; id=&quot;docs-internal-guid-e05309fc-7fff-ecf8-ab55-d977a82e0f61&quot;&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;span style=&quot;line-height: 200%;&quot;&gt;&lt;b&gt;Function Port のオーケストレーター&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;&lt;/font&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;span style=&quot;line-height: 200%;&quot;&gt;システム内部の目的を達成する&lt;/span&gt;&lt;/span&gt;&lt;/font&gt;&lt;/p&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="80" width="210" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-96" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="80" width="600" x="280" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-37" parent="oOA23ez299nQj47q5iFR-96" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;container=0;spacingLeft=5;" value="&lt;div&gt;SystemFlow Layer&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-38" parent="oOA23ez299nQj47q5iFR-96" style="text;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=0;spacing=10;rounded=0;align=left;glass=0;shadow=1;html=1;whiteSpace=wrap;verticalAlign=bottom;labelPosition=center;verticalLabelPosition=middle;spacingLeft=0;container=0;" value="&lt;div style=&quot;line-height: 200%;&quot;&gt;&lt;b&gt;Interaction のオーケストレーター&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;line-height: 200%;&quot;&gt;システムとユーザーの関係を構築する&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="210" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-64" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=0;fontFamily=Arial;fontSize=30;fontColor=default;spacing=20;shadow=0;" value="&lt;div&gt;Interaction Flow Architecture&lt;/div&gt;&lt;div&gt;&amp;nbsp;- Dependency Diagram&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="500" x="20" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-65" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=0;fontFamily=Arial;fontSize=10;fontColor=default;spacing=20;shadow=0;" value="&lt;div&gt;※ 破線矢印は依存をあらわす&lt;br&gt;※ 白抜き矢印は Port の実装をあらわす&lt;br&gt;※ 各レイヤー内での横方向の依存関係は規定しない&lt;/div&gt;&lt;div&gt;※ Storage の対象は DB や ファイルシステム、環境/個人設定など、永続や一時も問わない&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="520" x="540" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="zhujBX4-J8o0O1XK2xOP-66" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=10;fontColor=default;fillColor=default;shadow=0;" value="&lt;div&gt;version 3.6&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;2026.07.14&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="20" width="180" x="10" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-28" connectable="0" parent="1" style="group;fontFamily=Arial;align=left;spacingLeft=5;dropTarget=0;" value="" vertex="1">
+          <mxGeometry height="80" width="640" x="260" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-14" parent="LZMMrdI2l_j8gFAM54se-28" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=left;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;dropTarget=1;spacingLeft=5;" value="&lt;div&gt;External Block&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="640.0000000000002" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-21" parent="LZMMrdI2l_j8gFAM54se-28" style="text;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=0;spacing=10;rounded=0;align=left;shadow=1;container=0;fontStyle=0;verticalAlign=bottom;spacingLeft=0;" value="&lt;span style=&quot;&quot; id=&quot;docs-internal-guid-e05309fc-7fff-ecf8-ab55-d977a82e0f61&quot;&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent; font-weight: bold;&quot;&gt;外部ライブラリ / &lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent; font-weight: bold;&quot;&gt;フレームワーク / &lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent;&quot;&gt;&lt;b&gt;OS&lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;span style=&quot;line-height: 200%;&quot;&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;white-space: pre-wrap; line-height: 20px;&quot;&gt;機&lt;/span&gt;&lt;/font&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;能実現のための環境を提供する&lt;/span&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot; style=&quot;line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;&quot;&gt;&lt;font&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;b style=&quot;line-height: 200%;&quot;&gt;&lt;/b&gt;&lt;/span&gt;&lt;/font&gt;&lt;/p&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="80" width="213.33333333333331" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-10" connectable="0" parent="1" style="group;fillStyle=auto;labelBackgroundColor=none;textShadow=0;labelBorderColor=none;rounded=0;fontFamily=Arial;align=center;shadow=1;spacingTop=5;dropTarget=0;" value="" vertex="1">
+          <mxGeometry height="460" width="120" x="920" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-11" parent="LZMMrdI2l_j8gFAM54se-10" style="shape=card;whiteSpace=wrap;html=1;rounded=0;strokeColor=#666666;align=center;verticalAlign=top;fontFamily=Arial;fontSize=15;fillColor=#f5f5f5;size=20;flipH=1;legacyAnchorPoints=0;fontStyle=1;fontColor=#333333;shadow=1;spacingTop=5;" value="Domain Block" vertex="1">
+          <mxGeometry height="460" width="120" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-33" parent="LZMMrdI2l_j8gFAM54se-10" style="text;fontFamily=Arial;fontSize=10;fontColor=default;spacingTop=25;spacing=10;rounded=0;align=center;glass=0;shadow=1;html=1;whiteSpace=wrap;verticalAlign=top;labelPosition=center;verticalLabelPosition=middle;spacingLeft=0;" value="&lt;div&gt;&lt;div&gt;&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); white-space: pre-wrap; background-color: transparent;&quot;&gt;外部に依存しない&lt;br&gt;&lt;/b&gt;&lt;span style=&quot;white-space: pre-wrap;&quot;&gt;&lt;b&gt;データ構造 / 動作&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;white-space: pre-wrap;&quot;&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;System / Application / Service における前提を定義する&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="119.69" x="0.31" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-10" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Reaction" vertex="1">
+          <mxGeometry height="40" width="80" x="560" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-74" parent="oOA23ez299nQj47q5iFR-10" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="出力実体" vertex="1">
+          <mxGeometry height="20" width="80" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-5" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;swimlaneLine=1;fixedHeader=1;swimlaneHead=1;swimlaneBody=1;horizontal=1;noLabel=0;portConstraintRotation=0;connectable=1;allowArrows=1;container=0;fontFamily=Arial;align=center;verticalAlign=middle;spacing=0;fontSize=10;" value="&lt;font style=&quot;line-height: 100%;&quot;&gt;&lt;i&gt;&amp;lt;interface&amp;gt;&lt;br&gt;&lt;/i&gt;IOperationPort&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="80" x="460" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="v21YpkfBNWW9VAJ99eOe-12" parent="1" style="rounded=0;fontFamily=Arial;fontSize=10;fontStyle=1;spacing=2;whiteSpace=wrap;shadow=1;" value="外部イベント / &#xa;外部プロパティ" vertex="1">
+          <mxGeometry height="40" width="100" x="760" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="v21YpkfBNWW9VAJ99eOe-7" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=4.70534713179967;fontFamily=Arial;fontSize=10;strokeWidth=1;fontStyle=1;rounded=0;shadow=1;" value="DB / &lt;br&gt;File System" vertex="1">
+          <mxGeometry height="40" width="80" x="660" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="LZMMrdI2l_j8gFAM54se-34" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;strokeColor=default;align=center;verticalAlign=middle;spacing=2;fontFamily=Arial;fontSize=10;fontColor=default;fontStyle=1;fillColor=default;" value="Input" vertex="1">
+          <mxGeometry height="40" width="80" x="460" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;strokeColor=default;align=center;verticalAlign=middle;spacing=2;fontFamily=Arial;fontSize=10;fontColor=default;fontStyle=1;fillColor=default;" value="Output" vertex="1">
+          <mxGeometry height="40" width="80" x="560" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-23" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-9" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-34" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="470" y="460" as="sourcePoint" />
+            <mxPoint x="490" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-27" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-10" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-22" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="570" y="460" as="sourcePoint" />
+            <mxPoint x="530" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-28" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-11" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;" target="v21YpkfBNWW9VAJ99eOe-7" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="670" y="460" as="sourcePoint" />
+            <mxPoint x="660" y="610" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-29" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-12" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;" target="v21YpkfBNWW9VAJ99eOe-12" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="780" y="460" as="sourcePoint" />
+            <mxPoint x="810" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-30" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-9" style="endArrow=block;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;endFill=0;" target="oOA23ez299nQj47q5iFR-5" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="570" y="520" as="sourcePoint" />
+            <mxPoint x="570" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-13" connectable="0" parent="oOA23ez299nQj47q5iFR-30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="入力実装" vertex="1">
+          <mxGeometry relative="1" x="0.0776" y="1" as="geometry">
+            <mxPoint x="-26" y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-31" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-10" style="endArrow=block;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;endFill=0;" target="oOA23ez299nQj47q5iFR-7" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="570" y="420" as="sourcePoint" />
+            <mxPoint x="570" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-14" connectable="0" parent="oOA23ez299nQj47q5iFR-31" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="出力実装" vertex="1">
+          <mxGeometry relative="1" x="0.0939" y="-1" as="geometry">
+            <mxPoint x="-31" y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-32" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-11" style="endArrow=block;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;endFill=0;" target="oOA23ez299nQj47q5iFR-8" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="669.66" y="410" as="sourcePoint" />
+            <mxPoint x="669.66" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-15" connectable="0" parent="oOA23ez299nQj47q5iFR-32" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="永続化実装" vertex="1">
+          <mxGeometry relative="1" x="0.0776" y="2" as="geometry">
+            <mxPoint x="-31" y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-33" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-12" style="endArrow=block;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;fontFamily=Arial;endFill=0;" target="oOA23ez299nQj47q5iFR-6" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="740" y="500" as="sourcePoint" />
+            <mxPoint x="740" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-16" connectable="0" parent="oOA23ez299nQj47q5iFR-33" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="状態変化実装" vertex="1">
+          <mxGeometry relative="1" x="0.0776" as="geometry">
+            <mxPoint x="-40" y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-34" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-4" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-5" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="590" y="460" as="sourcePoint" />
+            <mxPoint x="590" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-35" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-4" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-7" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="588" y="310" as="sourcePoint" />
+            <mxPoint x="580" y="370" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-36" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-4" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-8" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="618" y="280" as="sourcePoint" />
+            <mxPoint x="610" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-37" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-4" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-6" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="708" y="300" as="sourcePoint" />
+            <mxPoint x="700" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-38" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-3" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=orthogonalEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-4" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="780" y="280" as="sourcePoint" />
+            <mxPoint x="1020" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-51" edge="1" parent="1" source="LZMMrdI2l_j8gFAM54se-5" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="zhujBX4-J8o0O1XK2xOP-37" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="140" />
+            </Array>
+            <mxPoint x="560" y="190" as="sourcePoint" />
+            <mxPoint x="560" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-7" connectable="0" parent="oOA23ez299nQj47q5iFR-51" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="Program の&lt;br&gt;要求で生成" vertex="1">
+          <mxGeometry relative="1" x="0.5839" y="2" as="geometry">
+            <mxPoint x="26" y="22" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-52" edge="1" parent="1" source="LZMMrdI2l_j8gFAM54se-5" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="zhujBX4-J8o0O1XK2xOP-34" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="220" />
+            </Array>
+            <mxPoint x="200" y="185" as="sourcePoint" />
+            <mxPoint x="290" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-6" connectable="0" parent="oOA23ez299nQj47q5iFR-52" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="&lt;font&gt;SystemFlow&lt;br&gt;の依存で生成&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.3062" as="geometry">
+            <mxPoint x="28" y="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-53" edge="1" parent="1" source="LZMMrdI2l_j8gFAM54se-5" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="zhujBX4-J8o0O1XK2xOP-25" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="250" y="300" as="sourcePoint" />
+            <mxPoint x="300" y="335" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-3" connectable="0" parent="oOA23ez299nQj47q5iFR-53" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="定義参照" vertex="1">
+          <mxGeometry relative="1" x="-0.7806" as="geometry">
+            <mxPoint x="25" y="15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-54" edge="1" parent="1" source="LZMMrdI2l_j8gFAM54se-5" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="zhujBX4-J8o0O1XK2xOP-28" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="360" y="380" as="sourcePoint" />
+            <mxPoint x="410" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-5" connectable="0" parent="oOA23ez299nQj47q5iFR-54" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="実装生成" vertex="1">
+          <mxGeometry relative="1" x="-0.8222" y="1" as="geometry">
+            <mxPoint x="27" y="16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-69" parent="1" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="仮想入力" vertex="1">
+          <mxGeometry height="20" width="80" x="460" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-84" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="260" width="100" x="930" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-50" edge="1" parent="oOA23ez299nQj47q5iFR-84" source="oOA23ez299nQj47q5iFR-43" style="endArrow=none;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=orthogonalEdgeStyle;endFill=0;dashPattern=1 4;fontFamily=Arial;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="49.82857142857142" y="230" as="sourcePoint" />
+            <mxPoint x="50" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-82" connectable="0" parent="oOA23ez299nQj47q5iFR-50" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Arial;fontSize=10;" value="（以下略…）" vertex="1">
+          <mxGeometry relative="1" x="0.02" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-43" parent="oOA23ez299nQj47q5iFR-84" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Entity_B" vertex="1">
+          <mxGeometry height="40" width="99.65182790350653" y="120" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-78" parent="oOA23ez299nQj47q5iFR-43" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;fillColor=default;strokeColor=default;" value="概念 B" vertex="1">
+          <mxGeometry height="20" width="100" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-83" connectable="0" parent="oOA23ez299nQj47q5iFR-84" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="99.99999999999991" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-26" parent="oOA23ez299nQj47q5iFR-83" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Entity_A" vertex="1">
+          <mxGeometry height="40" width="99.4777418552598" x="0.0022581447401130994" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-77" parent="oOA23ez299nQj47q5iFR-83" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;fillColor=default;strokeColor=default;" value="概念 A" vertex="1">
+          <mxGeometry height="20" width="99.99999999999991" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-44" edge="1" parent="oOA23ez299nQj47q5iFR-84" source="oOA23ez299nQj47q5iFR-26" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=orthogonalEdgeStyle;fontFamily=Arial;" target="oOA23ez299nQj47q5iFR-43" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="-54.70593389105628" y="150" as="sourcePoint" />
+            <mxPoint x="13.535359474535609" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-106" connectable="0" parent="oOA23ez299nQj47q5iFR-44" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="Domain で閉じた&lt;br&gt;内部依存の例" vertex="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-85" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="320" x="500" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-3" parent="oOA23ez299nQj47q5iFR-85" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="SystemFlow" vertex="1">
+          <mxGeometry height="40" width="320" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-65" parent="oOA23ez299nQj47q5iFR-85" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;fillColor=default;strokeColor=default;" value="Interaction を組み合わせてユーザーへの反応プロセスをフロー化" vertex="1">
+          <mxGeometry height="20" width="320" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-86" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="320" x="500" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-4" parent="oOA23ez299nQj47q5iFR-86" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Interaction" vertex="1">
+          <mxGeometry height="40" width="320" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-66" parent="oOA23ez299nQj47q5iFR-86" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;fillColor=default;strokeColor=default;" value="Function Port を組み合わせてシステムの目的をフロー化" vertex="1">
+          <mxGeometry height="20" width="320" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-87" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="50" width="80" x="560" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-7" parent="oOA23ez299nQj47q5iFR-87" style="swimlane;whiteSpace=wrap;html=1;startSize=30;swimlaneLine=1;fixedHeader=1;swimlaneHead=1;swimlaneBody=1;horizontal=1;noLabel=0;portConstraintRotation=0;connectable=1;allowArrows=1;container=0;fontFamily=Arial;align=center;verticalAlign=middle;spacing=0;fontSize=10;" value="&lt;font style=&quot;line-height: 100%;&quot;&gt;&lt;i&gt;&amp;lt;interface&amp;gt;&lt;br&gt;&lt;/i&gt;IReactionPort&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-70" parent="oOA23ez299nQj47q5iFR-87" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="仮想出力" vertex="1">
+          <mxGeometry height="20" width="80" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-88" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="50" width="80" x="660" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-8" parent="oOA23ez299nQj47q5iFR-88" style="swimlane;whiteSpace=wrap;html=1;startSize=30;swimlaneLine=1;fixedHeader=1;swimlaneHead=1;swimlaneBody=1;horizontal=1;noLabel=0;portConstraintRotation=0;connectable=1;allowArrows=1;container=0;fontFamily=Arial;align=center;verticalAlign=middle;spacing=0;fontSize=10;" value="&lt;font style=&quot;line-height: 100%;&quot;&gt;&lt;i&gt;&amp;lt;interface&amp;gt;&lt;br&gt;&lt;/i&gt;IStoragePort&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-71" parent="oOA23ez299nQj47q5iFR-88" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="仮想永続化" vertex="1">
+          <mxGeometry height="20" width="80" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-89" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="50" width="100" x="760" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-6" parent="oOA23ez299nQj47q5iFR-89" style="swimlane;whiteSpace=wrap;html=1;startSize=30;swimlaneLine=1;fixedHeader=1;swimlaneHead=1;swimlaneBody=1;horizontal=1;noLabel=0;portConstraintRotation=0;connectable=1;allowArrows=1;container=0;fontFamily=Arial;align=center;verticalAlign=middle;spacing=0;fontSize=10;" value="&lt;font style=&quot;line-height: 100%;&quot;&gt;&lt;i&gt;&amp;lt;interface&amp;gt;&lt;br&gt;&lt;/i&gt;ISilentExternalPort&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="100" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-72" parent="oOA23ez299nQj47q5iFR-89" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="仮想状態変化" vertex="1">
+          <mxGeometry height="20" width="100" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-90" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="80" x="460" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-9" parent="oOA23ez299nQj47q5iFR-90" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Operation" vertex="1">
+          <mxGeometry height="40" width="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-73" parent="oOA23ez299nQj47q5iFR-90" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="入力実体" vertex="1">
+          <mxGeometry height="20" width="80" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-91" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="80" x="660" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-11" parent="oOA23ez299nQj47q5iFR-91" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Storage" vertex="1">
+          <mxGeometry height="40" width="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-75" parent="oOA23ez299nQj47q5iFR-91" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="永続化実体" vertex="1">
+          <mxGeometry height="20" width="80" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-92" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="760" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-12" parent="oOA23ez299nQj47q5iFR-92" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="SilentExternal" vertex="1">
+          <mxGeometry height="40" width="100" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-76" parent="oOA23ez299nQj47q5iFR-92" style="text;whiteSpace=wrap;fontFamily=Arial;fontSize=10;verticalAlign=middle;align=center;fontStyle=0;strokeColor=default;fillColor=default;" value="状態変化実体" vertex="1">
+          <mxGeometry height="20" width="100" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-100" connectable="0" parent="1" style="group;fontFamily=Arial;" value="" vertex="1">
+          <mxGeometry height="120" width="150" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-102" parent="oOA23ez299nQj47q5iFR-100" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=default;align=center;verticalAlign=middle;rounded=0;fontFamily=Arial;" value="&lt;div style=&quot;font-size: 10px;&quot;&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;b&gt;エントリーポイント / &lt;br&gt;&lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;white-space: pre-wrap;&quot;&gt;&lt;b&gt;イベント / &lt;/b&gt;&lt;/span&gt;&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); white-space: pre-wrap; background-color: transparent;&quot;&gt;リクエスト&lt;/b&gt;&lt;span style=&quot;white-space: pre-wrap;&quot;&gt;&lt;b&gt; &lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 10px;&quot;&gt;&lt;span style=&quot;white-space-collapse: preserve;&quot;&gt;&lt;br&gt;&lt;div&gt;- Context 作成 / 再利用&lt;/div&gt;&lt;div&gt;- &lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;SystemFlow の実行&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Context 更新ループを維持する&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="150" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-101" parent="oOA23ez299nQj47q5iFR-100" style="swimlane;whiteSpace=wrap;html=1;startSize=20;container=0;fontFamily=Arial;fontSize=10;" value="Program" vertex="1">
+          <mxGeometry height="119.99999999999997" width="150" as="geometry">
+            <mxRectangle height="30" width="110" x="515" y="120" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-104" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-101" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="zhujBX4-J8o0O1XK2xOP-37" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="110" />
+            </Array>
+            <mxPoint x="300" y="270" as="sourcePoint" />
+            <mxPoint x="360" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-2" connectable="0" parent="oOA23ez299nQj47q5iFR-104" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Arial;" value="&lt;div&gt;SystemFlow&lt;/div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;Handler &lt;br&gt;を介して&lt;/span&gt;実行" vertex="1">
+          <mxGeometry relative="1" x="-0.3167" as="geometry">
+            <mxPoint x="3" y="-22" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-105" edge="1" parent="1" source="oOA23ez299nQj47q5iFR-101" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-5" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="240" y="130" as="sourcePoint" />
+            <mxPoint x="320" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ovAc6YV7muG8oOjWrxqH-1" connectable="0" parent="oOA23ez299nQj47q5iFR-105" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Arial;" value="&lt;font style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;SystemFlow&lt;br&gt;Handler の生成&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.5908" as="geometry">
+            <mxPoint x="45" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-107" edge="1" parent="1" source="zhujBX4-J8o0O1XK2xOP-37" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-11" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="820" y="270" as="sourcePoint" />
+            <mxPoint x="820" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-108" edge="1" parent="1" source="zhujBX4-J8o0O1XK2xOP-34" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-11" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="930" y="200" as="sourcePoint" />
+            <mxPoint x="970" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-109" edge="1" parent="1" source="zhujBX4-J8o0O1XK2xOP-25" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-11" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="930" y="350" />
+            </Array>
+            <mxPoint x="900" y="290" as="sourcePoint" />
+            <mxPoint x="940" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oOA23ez299nQj47q5iFR-110" edge="1" parent="1" source="zhujBX4-J8o0O1XK2xOP-28" style="endArrow=classic;html=1;rounded=0;dashed=1;endSize=8;strokeWidth=2;startSize=5;edgeStyle=elbowEdgeStyle;elbow=vertical;fontFamily=Arial;" target="LZMMrdI2l_j8gFAM54se-11" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="970" y="435" />
+            </Array>
+            <mxPoint x="920" y="410" as="sourcePoint" />
+            <mxPoint x="960" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

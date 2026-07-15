@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Core.ProgramFlows;
+using InteractionFlow.Core.SystemFlows;
 using System.Runtime.CompilerServices;
 
 namespace InteractionFlow.Standard.Builders
@@ -26,14 +26,14 @@ namespace InteractionFlow.Standard.Builders
         }
 
         /// <summary>
-        /// ProgramFlow 実装を scoped サービスとして登録します。
+        /// SystemFlow 実装を scoped サービスとして登録します。
         /// </summary>
-        /// <typeparam name="TImplementation">登録する ProgramFlow 実装型。</typeparam>
+        /// <typeparam name="TImplementation">登録する SystemFlow 実装型。</typeparam>
         /// <param name="this">登録先のサービス構成。</param>
         /// <returns>続けて登録を行うための現在のサービス構成。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IScopeServices UseProgramFlow<TImplementation>(this IScopeServices @this)
-            where TImplementation : class, IProgramFlow
+        public static IScopeServices UseSystemFlow<TImplementation>(this IScopeServices @this)
+            where TImplementation : class, ISystemFlow
         {
 
             return @this.Use<TImplementation>();

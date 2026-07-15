@@ -31,41 +31,38 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             consoleOperation,
             currentUserStorage)
     {
-        public override Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            return TryCatchBlockAsync(context, async (context) =>
-            {
-                using var consoleReactionScope = consoleReaction.GetStateScope();
-                using var consoleOperationScope = consoleOperation.GetStateScope();
-                consoleReactionScope.State.Update(writeLine: true);
-                consoleOperationScope.State.Update(writeLine: true);
+            using var consoleReactionScope = consoleReaction.GetStateScope();
+            using var consoleOperationScope = consoleOperation.GetStateScope();
+            consoleReactionScope.State.Update(writeLine: true);
+            consoleOperationScope.State.Update(writeLine: true);
 
-                return await currentUserStorage.GetKey(context).StartAsync()
-                    .ThenAsync(userKey =>
+            return currentUserStorage.GetKey(context).StartAsync()
+                .ThenAsync(userKey =>
+                {
+                    return Task.FromResult(currentUserStorage.GetOrCreate(userKey));
+                })
+                .ThenAsync(async currentUser =>
+                {
+                    if (currentUser.Value == null)
                     {
-                        return Task.FromResult(currentUserStorage.GetOrCreate(userKey));
-                    })
-                    .ThenAsync(async currentUser =>
-                    {
-                        if (currentUser.Value == null)
-                        {
-                            return new NullReferenceException("currentUser.Value == null");
-                        }
-                        var pass = await EnterPassAsync(context, consoleReactionScope);
-                        secureManager.GetUserKey(pass, currentUser.Value);
-                        consoleReactionScope.State.Update(writeLine: true);
-                        return Result.Success;
-                    })
-                    .ResolveAsync(
-                    onSuccess: async () =>
-                    {
-                        return await consoleReaction.Write(context, new("> Password Entered."));
-                    },
-                    onFailure: async e =>
-                    {
-                        return await consoleReaction.Write(context, new($"> Password Error : {e.Message}"));
-                    });
-            });
+                        return new NullReferenceException("currentUser.Value == null");
+                    }
+                    var pass = await EnterPassAsync(context, consoleReactionScope);
+                    secureManager.GetUserKey(pass, currentUser.Value);
+                    consoleReactionScope.State.Update(writeLine: true);
+                    return Result.Success;
+                })
+                .ResolveAsync(
+                onSuccess: async () =>
+                {
+                    return await consoleReaction.Write(context, new("> Password Entered."));
+                },
+                onFailure: async e =>
+                {
+                    return await consoleReaction.Write(context, new($"> Password Error : {e.Message}"));
+                });
         }
 
         private async Task<string> EnterPassAsync(IFlowContext context, FunctionStateScope<ConsoleState> consoleReactionScope)

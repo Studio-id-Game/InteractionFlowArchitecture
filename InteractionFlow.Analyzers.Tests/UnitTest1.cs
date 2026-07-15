@@ -206,14 +206,14 @@ public class InteractionFlowAnalyzersAnalyzerTests
     }
 
     /// <summary>
-    /// ProgramFlows 層が ExternalPorts / Externals / Builders 層へ依存したとき、
+    /// SystemFlows 層が ExternalPorts / Externals / Builders 層へ依存したとき、
     /// それぞれアーキテクチャ違反として診断することを確認します。
     /// </summary>
     [Theory]
     [InlineData("ExternalPorts", "ExternalPort")]
     [InlineData("Externals", "ExternalWorker")]
     [InlineData("Builders", "BuilderWorker")]
-    public async Task ProgramFlows_DisallowedLayerReferences_Report(string targetLayer, string targetType)
+    public async Task SystemFlows_DisallowedLayerReferences_Report(string targetLayer, string targetType)
     {
         var source = $$"""
             namespace App.{{targetLayer}}
@@ -223,9 +223,9 @@ public class InteractionFlowAnalyzersAnalyzerTests
                 }
             }
 
-            namespace App.ProgramFlows
+            namespace App.SystemFlows
             {
-                public class UserFlow
+                public class CustomFlow
                 {
                     public App.{{targetLayer}}.{{targetType}} Dependency { get; }
                 }
@@ -233,17 +233,17 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetLayer.Length + targetType.Length, 12, 32 + targetLayer.Length + targetType.Length)
-            .WithArguments("ProgramFlows", targetLayer, targetType);
+            .WithArguments("SystemFlows", targetLayer, targetType);
 
         await VerifyAsync(source, expected);
     }
 
     /// <summary>
-    /// Interactions 層が ProgramFlows / Externals / Builders 層へ依存したとき、
+    /// Interactions 層が SystemFlows / Externals / Builders 層へ依存したとき、
     /// それぞれアーキテクチャ違反として診断することを確認します。
     /// </summary>
     [Theory]
-    [InlineData("ProgramFlows", "ProgramFlow")]
+    [InlineData("SystemFlows", "SystemFlow")]
     [InlineData("Externals", "ExternalWorker")]
     [InlineData("Builders", "BuilderWorker")]
     public async Task Interactions_DisallowedLayerReferences_Report(string targetLayer, string targetType)
@@ -276,7 +276,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
     /// 抽象境界から具象フローや実装へ逆向きに依存する違反として診断することを確認します。
     /// </summary>
     [Theory]
-    [InlineData("ProgramFlows", "ProgramFlow")]
+    [InlineData("SystemFlows", "SystemFlow")]
     [InlineData("Interactions", "UseCase")]
     [InlineData("Externals", "ExternalWorker")]
     [InlineData("Builders", "BuilderWorker")]
@@ -310,7 +310,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
     /// 最内層の Domain から外側へ依存する違反として診断することを確認します。
     /// </summary>
     [Theory]
-    [InlineData("ProgramFlows", "ProgramFlow", "ProgramFlows")]
+    [InlineData("SystemFlows", "SystemFlow", "SystemFlows")]
     [InlineData("Interactions", "UseCase", "Interactions")]
     [InlineData("ExternalPorts", "ExternalPort", "ExternalPorts")]
     [InlineData("Externals", "ExternalWorker", "Externals")]
@@ -346,14 +346,14 @@ public class InteractionFlowAnalyzersAnalyzerTests
     /// レイヤー依存ルール上の正当な参照として診断しないことを確認します。
     /// </summary>
     [Theory]
-    [InlineData("ProgramFlows", "Interactions", "UseCase")]
-    [InlineData("ProgramFlows", "Entities", "Entity")]
+    [InlineData("SystemFlows", "Interactions", "UseCase")]
+    [InlineData("SystemFlows", "Entities", "Entity")]
     [InlineData("Interactions", "ExternalPorts", "ExternalPort")]
     [InlineData("Interactions", "Entities", "Entity")]
     [InlineData("Externals", "ExternalPorts", "ExternalPort")]
     [InlineData("Externals", "Entities", "Entity")]
     [InlineData("ExternalPorts", "Entities", "Entity")]
-    [InlineData("Builders", "ProgramFlows", "ProgramFlow")]
+    [InlineData("Builders", "SystemFlows", "SystemFlow")]
     [InlineData("Builders", "Interactions", "UseCase")]
     [InlineData("Builders", "ExternalPorts", "ExternalPort")]
     [InlineData("Builders", "Externals", "ExternalWorker")]

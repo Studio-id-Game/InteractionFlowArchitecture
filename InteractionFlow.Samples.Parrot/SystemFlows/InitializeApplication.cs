@@ -1,18 +1,18 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ProgramFlows;
+using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Standard.Interactions;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.Parrot.ProgramFlows
+namespace InteractionFlow.Samples.Parrot.SystemFlows
 {
 
     internal class InitializeApplication(
         ConsoleWriting writing,
         ConsoleSetup assigneCancelKey)
-        : ProgramFlow<IFlowContext>(writing, assigneCancelKey)
+        : SystemFlow<IFlowContext>(writing, assigneCancelKey)
     {
-        public override async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
         {
             await Write("# Interaction Flow Architecture's Sample : Parrot Application.");
             await Write("- Application Initializing Start...");

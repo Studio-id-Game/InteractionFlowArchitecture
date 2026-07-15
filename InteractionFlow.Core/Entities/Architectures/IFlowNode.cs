@@ -3,7 +3,7 @@ using System;
 namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
-    /// ProgramFlow、Interaction、FunctionPort など、フローを構成するノードを表します。
+    /// SystemFlow、Interaction、FunctionPort など、フローを構成するノードを表します。
     /// </summary>
     public interface IFlowNode
     {

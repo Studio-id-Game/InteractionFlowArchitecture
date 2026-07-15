@@ -28,11 +28,11 @@ namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.Reaction;
 
         /// <summary>
-        /// 指定された例外を処理し、フロー終了トークンへ変換します。
+        /// 指定された例外を処理し、フロー終了結果へ変換します。
         /// </summary>
         /// <param name="context">例外が発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理する例外。</param>
-        /// <returns>例外処理後のフロー終了トークン。</returns>
-        ValueTask<FlowEndToken> HandleExceptionAsync(IFlowContext context, T exception);
+        /// <returns>例外処理後のフロー終了結果。</returns>
+        ValueTask<ReactionEnd> HandleExceptionAsync(IFlowContext context, T exception);
     }
 }

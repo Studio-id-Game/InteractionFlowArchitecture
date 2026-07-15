@@ -1,3 +1,4 @@
+using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using System.IO;
 

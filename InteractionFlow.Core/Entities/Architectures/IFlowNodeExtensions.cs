@@ -1,12 +1,16 @@
 namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
-    /// <see cref="IFlowNode"/> の基本情報を取得する拡張メソッドを提供します。
+    /// <see cref="IFlowNode"/> の基本情報を具象型から取得する拡張メソッドを提供します。
     /// </summary>
+    /// <remarks>
+    /// <see cref="IFlowNode"/> のメンバーは、default interface member や明示的なインターフェイス実装によって提供される場合があります。
+    /// この拡張メソッド群は、具象型の変数からそれらのメンバーを簡潔に参照するための補助 API です。
+    /// </remarks>
     public static class IFlowNodeExtensions
     {
         /// <summary>
-        /// ノードの表示名を取得します。
+        /// <see cref="IFlowNode.Name"/> として定義されたノードの表示名を取得します。
         /// </summary>
         /// <typeparam name="T">対象ノードの型。</typeparam>
         /// <param name="this">対象ノード。</param>
@@ -14,7 +18,7 @@ namespace InteractionFlow.Core.Entities.Architectures
         public static string GetName<T>(this T @this) where T : IFlowNode => @this.Name;
 
         /// <summary>
-        /// ノードが属するフロー上のレイヤーを取得します。
+        /// <see cref="IFlowNode.Layer"/> として定義された、ノードが属するフロー上のレイヤーを取得します。
         /// </summary>
         /// <typeparam name="T">対象ノードの型。</typeparam>
         /// <param name="this">対象ノード。</param>
@@ -22,7 +26,7 @@ namespace InteractionFlow.Core.Entities.Architectures
         public static FlowLayerTypes GetLayer<T>(this T @this) where T : IFlowNode => @this.Layer;
 
         /// <summary>
-        /// FunctionPort レイヤー内での機能種別を取得します。
+        /// <see cref="IFlowNode.FunctionTypes"/> として定義された、FunctionPort レイヤー内での機能種別を取得します。
         /// </summary>
         /// <typeparam name="T">対象ノードの型。</typeparam>
         /// <param name="this">対象ノード。</param>

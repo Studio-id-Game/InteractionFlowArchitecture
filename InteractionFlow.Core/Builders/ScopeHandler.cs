@@ -4,8 +4,12 @@ using System.Collections.Generic;
 namespace InteractionFlow.Core.Builders
 {
     /// <summary>
-    /// 生成済みの DI スコープを保持し、自身と親スコープからサービスを解決するハンドラです。
+    /// 生成済みの依存解決スコープを保持し、自身と親スコープからサービスを解決するハンドラです。
     /// </summary>
+    /// <remarks>
+    /// このクラスは <see cref="IServiceProvider"/> と <see cref="IDisposable"/> によって表現できる最小限のスコープライフサイクルを扱います。
+    /// 特定の DI コンテナには依存せず、SystemFlowBuilder が生成したスコープの破棄と親スコープ探索を担当します。
+    /// </remarks>
     /// <param name="scope">このハンドラがライフタイムを管理する DI スコープ。</param>
     /// <param name="scopedProvider">このスコープ内でサービス解決を行うプロバイダー。</param>
     /// <param name="parents">自身で解決できない場合に探索する親スコープ。</param>
@@ -64,7 +68,7 @@ namespace InteractionFlow.Core.Builders
         }
 
         /// <summary>
-        /// 管理している DI スコープを破棄し、以降のサービス解決を無効にします。
+        /// 管理している依存解決スコープを破棄し、以降のサービス解決を無効にします。
         /// </summary>
         public void Dispose()
         {

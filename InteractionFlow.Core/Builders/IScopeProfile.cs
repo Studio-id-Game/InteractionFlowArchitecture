@@ -3,6 +3,9 @@ namespace InteractionFlow.Core.Builders
     /// <summary>
     /// 複数のサービス登録をまとめて適用するプロファイルを表します。
     /// </summary>
+    /// <remarks>
+    /// SystemFlowBuilder や ScopeBuilder に対して、用途ごとの依存関係セットを再利用可能な形で適用するための Core 契約です。
+    /// </remarks>
     public interface IScopeProfile
     {
         /// <summary>

@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
@@ -28,24 +29,24 @@ namespace InteractionFlow.Core.Externals.Reactions
                 static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
                 {
                     await before.ConfigureAwait(false);
-                    await context.Cancellation.TryWaitAndResetAsync().ConfigureAwait(false);
-                    return await @this.AfterCancellationCoreAsync(context, exception).ConfigureAwait(false);
+                    var waitAndResetResult = await context.Cancellation.WaitAndResetAsync().ConfigureAwait(false);
+                    return await @this.AfterCancellationCoreAsync(context, exception, waitAndResetResult).ConfigureAwait(false);
                 }
             }
 
-            var _TryWaitAndResetAsync = context.Cancellation.TryWaitAndResetAsync();
-            if (!_TryWaitAndResetAsync.IsCompletedSuccessfully)
+            var _WaitAndResetAsync = context.Cancellation.WaitAndResetAsync();
+            if (!_WaitAndResetAsync.IsCompletedSuccessfully)
             {
-                return SlowPathAsync(this, _TryWaitAndResetAsync, context, exception);
+                return SlowPathAsync(this, _WaitAndResetAsync, context, exception);
 
-                static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask<bool> before, IFlowContext context, OperationCanceledException exception)
+                static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask<Result> before, IFlowContext context, OperationCanceledException exception)
                 {
-                    await before.ConfigureAwait(false);
-                    return await @this.AfterCancellationCoreAsync(context, exception).ConfigureAwait(false);
+                    var waitAndResetResult = await before.ConfigureAwait(false);
+                    return await @this.AfterCancellationCoreAsync(context, exception, waitAndResetResult).ConfigureAwait(false);
                 }
             }
 
-            return AfterCancellationCoreAsync(context, exception);
+            return AfterCancellationCoreAsync(context, exception, _WaitAndResetAsync.Result);
         }
 
         /// <summary>
@@ -75,7 +76,8 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
+        /// <param name="waitAndResetResult">コンテキストのキャンセル待機とリセットの結果。</param>
         /// <returns>キャンセル処理後のフロー終了結果。</returns>
-        protected abstract ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception);
+        protected abstract ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception, Result waitAndResetResult);
     }
 }

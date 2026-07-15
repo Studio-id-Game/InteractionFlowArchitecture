@@ -8,6 +8,9 @@ namespace InteractionFlow.Core.Builders
     /// <summary>
     /// 生成済みの SystemFlow と、その SystemFlow のために作成されたスコープのライフタイムを管理します。
     /// </summary>
+    /// <remarks>
+    /// SystemFlow の実行対象と依存解決スコープを一体で保持し、破棄時にスコープも解放します。
+    /// </remarks>
     /// <typeparam name="TContext">SystemFlow が扱うコンテキストの型。</typeparam>
     /// <param name="scope">SystemFlow の依存解決に使用されたスコープ。</param>
     /// <param name="systemFlow">実行対象の SystemFlow。</param>

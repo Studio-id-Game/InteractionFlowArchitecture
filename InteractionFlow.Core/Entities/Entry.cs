@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace InteractionFlow.Core.Entities
 {
@@ -10,6 +11,21 @@ namespace InteractionFlow.Core.Entities
     /// <param name="value">初期値。</param>
     public abstract class Entry<TValue>(TValue? value) : IEntry, IDisposable
     {
+        private sealed class EntryReferenceEqualityComparer : IEqualityComparer<IEntry>
+        {
+            public static EntryReferenceEqualityComparer Instance { get; } = new();
+
+            public bool Equals(IEntry? x, IEntry? y)
+            {
+                return ReferenceEquals(x, y);
+            }
+
+            public int GetHashCode(IEntry obj)
+            {
+                return RuntimeHelpers.GetHashCode(obj);
+            }
+        }
+
         /// <summary>
         /// ラップしている値を取得します。
         /// </summary>
@@ -22,13 +38,23 @@ namespace InteractionFlow.Core.Entities
         /// <returns>
         /// 保持値が <typeparamref name="T"/> として取得できる場合は成功結果。
         /// 保持値が Entry の場合は、その Entry を再帰的に解決した結果。
-        /// 保持値がない場合、または指定型として取得できない場合は失敗結果。
+        /// 保持値がない場合、指定型として取得できない場合、または Entry の循環参照を検出した場合は失敗結果。
         /// </returns>
         public Result<T> Parse<T>()
         {
+            HashSet<IEntry> visitedEntries = new(EntryReferenceEqualityComparer.Instance);
+            return ((IEntry)this).Parse<T>(visitedEntries);
+        }
+
+        Result<T> IEntry.Parse<T>(ISet<IEntry> visitedEntries)
+        {
             if (Value == null)
             {
-                return new NullReferenceException(nameof(Value));
+                return new NullReferenceException($"Entry value is null. Requested type: {typeof(T).FullName}.");
+            }
+            else if (!visitedEntries.Add(this))
+            {
+                return new InvalidOperationException($"Circular Entry reference was detected. Requested type: {typeof(T).FullName}. Entry type: {GetType().FullName}.");
             }
             else if (Value is T t)
             {
@@ -40,7 +66,7 @@ namespace InteractionFlow.Core.Entities
             }
             else
             {
-                return new ArgumentException(nameof(T));
+                return new ArgumentException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
             }
 
         }

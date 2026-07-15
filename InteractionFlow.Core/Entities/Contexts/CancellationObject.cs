@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,8 +89,12 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <summary>
         /// キャンセル要求がある場合、登録済みタスクをすべて待機してキャンセル状態をリセットします。
         /// </summary>
-        /// <returns>リセットを実行した場合は <see langword="true"/>、キャンセル要求がない場合は <see langword="false"/>。</returns>
-        public ValueTask<bool> TryWaitAndResetAsync()
+        /// <returns>
+        /// 待機とリセットの結果。
+        /// キャンセル要求がない場合、登録タスクが正常完了した場合、または登録タスクがキャンセル完了した場合は成功結果を返します。
+        /// 登録タスクが通常例外で失敗した場合は失敗結果を返します。
+        /// </returns>
+        public ValueTask<Result> WaitAndResetAsync()
         {
             CancellationTokenSource source;
             Task[] tasks;
@@ -98,7 +103,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             lock (lockObject)
             {
                 if (tokenSource == null || !tokenSource.IsCancellationRequested)
-                    return new(false);
+                    return new(Result.Success);
 
                 source = tokenSource;
                 tasks = [.. currentTasks];
@@ -111,17 +116,63 @@ namespace InteractionFlow.Core.Entities.Contexts
             {
                 source.Dispose();
 
-                return new(true);
+                return new(GetCompletedResult(tasks));
             }
 
             return new(WaitAllAsync(source, tasks));
 
-            static async Task<bool> WaitAllAsync(CancellationTokenSource source, Task[] tasks)
+            static Result GetCompletedResult(Task[] tasks)
             {
-                await Task.WhenAll(tasks);
-                source.Dispose();
+                var exceptions = tasks
+                    .Where(e => e.IsFaulted)
+                    .SelectMany(e => e.Exception?.InnerExceptions ?? Enumerable.Empty<Exception>())
+                    .ToArray();
 
-                return true;
+                if (exceptions.Length == 0)
+                    return Result.Success;
+
+                return new AggregateException(exceptions);
+            }
+
+            static async Task<Result> WaitAllAsync(CancellationTokenSource source, Task[] tasks)
+            {
+                try
+                {
+                    List<Exception>? exceptions = null;
+
+                    foreach (var task in tasks)
+                    {
+                        try
+                        {
+                            await task.ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions ??= [];
+
+                            if (task.Exception == null)
+                            {
+                                exceptions.Add(e);
+                            }
+                            else
+                            {
+                                exceptions.AddRange(task.Exception.InnerExceptions);
+                            }
+                        }
+                    }
+
+                    if (exceptions == null || exceptions.Count == 0)
+                        return Result.Success;
+
+                    return new AggregateException(exceptions);
+                }
+                finally
+                {
+                    source.Dispose();
+                }
             }
         }
 

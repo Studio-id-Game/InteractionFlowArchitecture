@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -76,8 +77,9 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
+        /// <param name="waitAndResetResult">キャンセル待機とリセットの結果。</param>
         /// <returns>キャンセル表示後のフロー終了結果。</returns>
-        protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
+        protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception, Result waitAndResetResult)
         {
             using (var cc = new ConsoleColorScope())
             {
@@ -88,6 +90,11 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 }
 
                 Console.Write($"> Cancel Completed.");
+
+                if (!waitAndResetResult.Try(out var e))
+                {
+                    Console.Write($" Wait error: {e.Message}");
+                }
             }
 
             if (State.WriteLine)

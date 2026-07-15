@@ -102,11 +102,23 @@ namespace InteractionFlow.Core.Externals.Storages
         }
 
         /// <summary>
-        /// 保持している値を破棄可能であれば破棄し、メモリ上の登録状態を初期化します。
+        /// 保持している値を破棄可能であれば破棄し、メモリ上の登録状態を強制的に初期化します。
         /// </summary>
+        /// <remarks>
+        /// このメソッドは強制リセットとして、<see cref="CanRemoveValue(TKey, TValue)"/> による削除可否判定を行いません。
+        /// 保持している値を直接走査し、<see cref="IDisposable"/> を実装する値を破棄してから登録をすべて削除します。
+        /// </remarks>
         public virtual void ForceResetMemoryState()
         {
-            ClearAndDispose();
+            foreach (var value in items.Values)
+            {
+                if (value is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+
+            items.Clear();
         }
 
         /// <summary>

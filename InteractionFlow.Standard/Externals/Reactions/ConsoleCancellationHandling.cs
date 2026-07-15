@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -46,10 +45,10 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <returns>前処理の完了を表す値。</returns>
         protected override ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            using (var cc = new ConsoleColorScope().GetStateScope())
+            using (var cc = new ConsoleColorScope())
             {
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine();
                 }
@@ -57,7 +56,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 Console.Write($"* Cancel... : {exception.Message} ");
             }
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine();
             }
@@ -73,10 +72,10 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <returns>キャンセル表示後のフロー終了結果。</returns>
         protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            using (var cc = new ConsoleColorScope().GetStateScope())
+            using (var cc = new ConsoleColorScope())
             {
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine();
                 }
@@ -84,7 +83,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 Console.Write($"> Cancel Completed.");
             }
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine();
             }

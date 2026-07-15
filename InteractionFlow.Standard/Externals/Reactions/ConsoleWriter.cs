@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -44,10 +43,10 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <returns>出力後のフロー終了結果。</returns>
         public ValueTask<ReactionEnd> Write(IFlowContext context, ConsoleOutput consoleOutput)
         {
-            using var cc = new ConsoleColorScope().GetStateScope();
+            using var cc = new ConsoleColorScope();
             cc.State = State.ColorSet;
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine(consoleOutput.text);
             }

@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Operations;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -51,16 +50,6 @@ namespace InteractionFlow.Standard.Externals.Operations
         }
 
         /// <summary>
-        /// 標準入力からキーを取得します。
-        /// </summary>
-        /// <param name="context">入力操作に使用するフローコンテキスト。</param>
-        /// <returns>入力されたキー情報。</returns>
-        public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
-        {
-            return WaitUserKeyAsync(context, false);
-        }
-
-        /// <summary>
         /// 標準入力からキーを、表示有無を指定して取得します。
         /// </summary>
         /// <param name="context">入力操作に使用するフローコンテキスト。</param>
@@ -72,6 +61,16 @@ namespace InteractionFlow.Standard.Externals.Operations
             {
                 return new(Console.ReadKey(hideChar));
             }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 標準入力からキーを取得します。
+        /// </summary>
+        /// <param name="context">入力操作に使用するフローコンテキスト。</param>
+        /// <returns>入力されたキー情報。</returns>
+        public ValueTask<ConsoleInputKeyInfo> WaitUserKeyAsync(IFlowContext context)
+        {
+            return WaitUserKeyAsync(context, false);
         }
 
         private async Task<TInput> CancelableConsoleReadAsync<TInput>(IFlowContext context, Func<TInput> read)
@@ -111,16 +110,19 @@ namespace InteractionFlow.Standard.Externals.Operations
             var cancellationTask = Task.Delay(Timeout.Infinite, cancellationToken);
             var consoleTask = Task.Run(async () =>
             {
-                var result = Read(() =>
+                using var cc = new ConsoleColorScope();
+                cc.State = State.ColorSet;
+
+                var readResult = read();
+                keyEnd = true;
+                if (State.WriteLine)
                 {
-                    var result = read();
-                    keyEnd = true;
-                    return result;
-                });
+                    Console.WriteLine();
+                }
 
                 // これにより、入力終了+CancelWaitTimeの間待機し、CancelKeyPress -> CancellationTokenSource.Cancel() による条件チェックも正常に働く。
                 await Task.Delay(State.cancelWaitTime, cancellationToken).ConfigureAwait(false);
-                return result;
+                return readResult;
             });
 
             var endTask = await Task.WhenAny(cancellationTask, consoleTask).ConfigureAwait(false);
@@ -143,25 +145,12 @@ namespace InteractionFlow.Standard.Externals.Operations
             return await consoleTask.ConfigureAwait(false);
         }
 
-        private T Read<T>(Func<T> read)
-        {
-            using var cc = new ConsoleColorScope().GetStateScope();
-            cc.State = State.ColorSet;
-
-            var readResult = read();
-            if (State.writeLine)
-            {
-                Console.WriteLine();
-            }
-
-            return readResult;
-        }
 
         private void Write(string text)
         {
-            using var cc = new ConsoleColorScope().GetStateScope();
+            using var cc = new ConsoleColorScope();
             cc.State = State.ColorSet;
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine(text);
             }
@@ -261,9 +250,9 @@ namespace InteractionFlow.Standard.Externals.Operations
 
             private void Write(string text)
             {
-                using var cc = new ConsoleColorScope().GetStateScope();
+                using var cc = new ConsoleColorScope();
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine(text);
                 }

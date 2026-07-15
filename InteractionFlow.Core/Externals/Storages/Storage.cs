@@ -107,18 +107,40 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <remarks>
         /// このメソッドは強制リセットとして、<see cref="CanRemoveValue(TKey, TValue)"/> による削除可否判定を行いません。
         /// 保持している値を直接走査し、<see cref="IDisposable"/> を実装する値を破棄してから登録をすべて削除します。
+        /// 破棄時に発生した例外は集約して送出しますが、その場合も登録状態は初期化されます。
         /// </remarks>
+        /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
         public virtual void ForceResetMemoryState()
         {
-            foreach (var value in items.Values)
+            List<Exception>? exceptions = null;
+
+            try
             {
-                if (value is IDisposable disposable)
+                foreach (var value in items.Values)
                 {
-                    disposable.Dispose();
+                    if (value is IDisposable disposable)
+                    {
+                        try
+                        {
+                            disposable.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions ??= [];
+                            exceptions.Add(e);
+                        }
+                    }
                 }
             }
+            finally
+            {
+                items.Clear();
+            }
 
-            items.Clear();
+            if (exceptions != null && exceptions.Count > 0)
+            {
+                throw new AggregateException(exceptions);
+            }
         }
 
         /// <summary>

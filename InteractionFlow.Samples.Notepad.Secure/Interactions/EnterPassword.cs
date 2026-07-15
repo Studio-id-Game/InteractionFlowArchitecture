@@ -30,7 +30,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             consoleOperation,
             currentUserStorage)
     {
-        protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             using var consoleReactionScope = consoleReaction.GetStateScope();
             using var consoleOperationScope = consoleOperation.GetStateScope();

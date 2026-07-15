@@ -11,6 +11,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <summary>
     /// ディレクトリ単位で値を永続化するデフォルト実装基底クラスです。
     /// </summary>
+    /// <remarks>
+    /// このクラスは保存先ディレクトリの作成、削除、列挙と、
+    /// ディレクトリを利用した読み書きの呼び出しを担当します。
+    /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// </remarks>
     /// <typeparam name="TDirectoryId">ディレクトリを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     public abstract class DirectoryPersistence<TDirectoryId, TValue> : IDirectoryPersistencePort<TDirectoryId, TValue>

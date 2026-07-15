@@ -5,6 +5,10 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts
     /// <summary>
     /// ファイル単位で値を永続化する Persistence ポートを表します。
     /// </summary>
+    /// <remarks>
+    /// Core の <see cref="IPersistencePort{TPersistenceId, TValue}"/> に対して、
+    /// ファイルパス、ファイル名、拡張子などのファイルシステム固有の変換契約を追加します。
+    /// </remarks>
     /// <typeparam name="TFileId">ファイルを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     public interface IFilePersistencePort<TFileId, TValue> : IPersistencePort<TFileId, TValue>

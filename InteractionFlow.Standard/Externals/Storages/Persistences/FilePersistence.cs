@@ -13,6 +13,10 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <summary>
     /// ファイル単位で値を永続化するデフォルト実装基底クラスです。
     /// </summary>
+    /// <remarks>
+    /// このクラスは保存先ファイルの読み書きと列挙を担当します。
+    /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// </remarks>
     /// <typeparam name="TFileId">ファイルを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     /// <param name="serializer">値とストリームの変換に使用する Serializer。</param>

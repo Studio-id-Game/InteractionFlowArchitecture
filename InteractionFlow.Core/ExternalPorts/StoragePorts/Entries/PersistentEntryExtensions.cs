@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
 {
     /// <summary>
-    /// <see cref="PersistentEntry{TPersistentId, TValue}"/> と Persistence ポートをつなぐ拡張メソッドを提供します。
+    /// <see cref="PersistentEntry{TPersistenceId, TValue}"/> と Persistence ポートをつなぐ拡張メソッドを提供します。
     /// </summary>
     public static class PersistentEntryExtensions
     {

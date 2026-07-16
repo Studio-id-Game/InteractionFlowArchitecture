@@ -25,7 +25,15 @@ namespace InteractionFlow.Core.Interactions
 
             public bool TryGet<T>([MaybeNullWhen(false)] out T value)
             {
-                return parent.TryGet(out value);
+                if (Cancellation is T t)
+                {
+                    value = t;
+                    return true;
+                }
+                else
+                {
+                    return parent.TryGet(out value);
+                }
             }
         }
 

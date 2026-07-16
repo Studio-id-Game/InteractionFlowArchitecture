@@ -8,9 +8,16 @@ namespace InteractionFlow.Core.Entities.Contexts
     /// 既存のコンテキストに一時的な文脈値を重ねて扱うコンテキストです。
     /// </summary>
     /// <param name="parentContext">値の探索先となる元のコンテキスト。</param>
-    public sealed class ScopedFlowContext(IFlowContext parentContext) : IFlowContext
+    public sealed class ScopedFlowContext(IFlowContext parentContext) : IFlowContext, IDisposable
     {
-        private readonly List<object> values = [];
+        private sealed class Box<T>(T value) : Entry<T>(value)
+        {
+        }
+
+        private List<IEntry>? values = [];
+
+        private List<IEntry> Values => values ?? throw new ObjectDisposedException(nameof(ScopedFlowContext));
+        private bool disposedValue;
 
         /// <summary>
         /// 元のコンテキストに紐づくキャンセル制御オブジェクトを取得します。
@@ -31,7 +38,8 @@ namespace InteractionFlow.Core.Entities.Contexts
                 throw new ArgumentNullException(nameof(value));
             }
 
-            values.Insert(0, value);
+            Values.Add(new Box<T>(value));
+
             return this;
         }
 
@@ -41,18 +49,54 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <param name="value">取得できた値。取得できない場合は既定値。</param>
         /// <returns>値を取得できた場合は <see langword="true"/>、取得できない場合は <see langword="false"/>。</returns>
+        /// <remarks>
+        /// 追加された値が Entry の場合は、Entry が保持する値を再帰的に解決します。
+        /// Entry が要求型の値を持たない場合は探索を継続し、その他の解決失敗は例外として送出します。
+        /// </remarks>
         public bool TryGet<T>([MaybeNullWhen(false)] out T value)
         {
-            foreach (var item in values)
+            for (int i = Values.Count - 1; i >= 0; i--)
             {
-                if (item is T matched)
+                var item = Values[i];
+
+                if (item.Parse<T>().Try(out var v, out var e))
                 {
-                    value = matched;
+                    value = v;
                     return true;
                 }
+                else if (e.InnerException is null or not EntryValueNotFoundException)
+                {
+                    throw e;
+                }
+
             }
 
             return parentContext.TryGet(out value);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // マネージド状態を破棄します (マネージド オブジェクト)
+                }
+
+                values = null;
+
+                // アンマネージド リソース (アンマネージド オブジェクト) を解放し、ファイナライザーをオーバーライドします
+                // 大きなフィールドを null に設定します
+                disposedValue = true;
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            // このコードを変更しないでください。クリーンアップ コードを 'Dispose(bool disposing)' メソッドに記述します
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

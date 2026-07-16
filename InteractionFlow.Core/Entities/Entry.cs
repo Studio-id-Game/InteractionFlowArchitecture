@@ -50,7 +50,7 @@ namespace InteractionFlow.Core.Entities
         {
             if (Value == null)
             {
-                return new NullReferenceException($"Entry value is null. Requested type: {typeof(T).FullName}.");
+                return new EntryValueNotFoundException($"Entry value is null. Requested type: {typeof(T).FullName}.");
             }
             else if (!visitedEntries.Add(this))
             {
@@ -66,7 +66,7 @@ namespace InteractionFlow.Core.Entities
             }
             else
             {
-                return new ArgumentException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
+                return new EntryValueNotFoundException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
             }
 
         }

@@ -118,7 +118,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<ReactionEnd> ParrotCustomContext(IFlowContext context)
         {
-            var newContext = new ScopedFlowContext(context)
+            using var newContext = new ScopedFlowContext(context)
                 .With(new RefEntity<ParrotHello>(new($"Hello! I'm Parrot with Custom Context, who are you?")));
             context = newContext;
             return await NestedExecuteAsync(parrot, context);

@@ -16,12 +16,11 @@ namespace InteractionFlow.Samples.Parrot.SystemFlows
         RunSample runSample)
         : SystemFlow<IFlowContext>(writing, listSamples, selectSample, runSample)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext _context)
         {
-            context.TryGet<RefEntity<SelectAndRunSampleEndState>>(out var endState);
 
             var selectedSample = new RefEntity<SampleSelected>(new(new(SampleMode.None)));
-            context = new ScopedFlowContext(context)
+            using var context = new ScopedFlowContext(_context)
                 .With(selectedSample);
 
             async Task<FlowEndToken> Write(string text)
@@ -38,6 +37,8 @@ namespace InteractionFlow.Samples.Parrot.SystemFlows
 
             // Select
             var end = await selectSample.ExecuteAsync(context);
+
+            context.TryGet<RefEntity<SelectAndRunSampleEndState>>(out var endState);
 
             if (end.HasCanceled)
             {

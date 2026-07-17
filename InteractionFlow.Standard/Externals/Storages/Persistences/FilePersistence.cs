@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
 using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts;
 using System;
 using System.IO;
 using System.Linq;
@@ -13,6 +13,10 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <summary>
     /// ファイル単位で値を永続化するデフォルト実装基底クラスです。
     /// </summary>
+    /// <remarks>
+    /// このクラスは保存先ファイルの読み書きと列挙を担当します。
+    /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// </remarks>
     /// <typeparam name="TFileId">ファイルを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     /// <param name="serializer">値とストリームの変換に使用する Serializer。</param>
@@ -23,7 +27,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// <summary>
         /// この Persistence が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 保存先のルートパスを取得します。
@@ -185,7 +189,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// </summary>
         /// <param name="id">存在確認する ID。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        public Task<Result> Exist(TFileId id)
+        public Task<Result> Exists(TFileId id)
         {
             try
             {
@@ -210,7 +214,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// ルート配下にある対象拡張子のファイル ID をすべて取得します。
         /// </summary>
         /// <returns>保存されているファイル ID の配列。失敗時は失敗結果。</returns>
-        public Task<Result<TFileId[]>> GetAllId()
+        public Task<Result<TFileId[]>> GetAllIds()
         {
             try
             {

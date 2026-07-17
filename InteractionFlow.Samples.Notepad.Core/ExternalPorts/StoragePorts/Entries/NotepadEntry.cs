@@ -1,8 +1,8 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.Entries;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
 using System;
 using System.Threading.Tasks;
 
@@ -34,7 +34,7 @@ namespace InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Entrie
 
             if (data.HasChenged)
             {
-                var result = await Save(persistentController).ConfigureAwait(false);
+                var result = await this.Save(persistentController).ConfigureAwait(false);
                 data.ChangeSaved();
                 return result;
             }

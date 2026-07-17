@@ -1,8 +1,12 @@
 namespace InteractionFlow.Core.Builders
 {
     /// <summary>
-    /// スコープ内で利用するサービス登録を構成するためのインターフェースです。
+    /// スコープ内で利用するサービス登録を構成するための抽象インターフェースです。
     /// </summary>
+    /// <remarks>
+    /// SystemFlow の構築に必要な依存関係を、特定の DI コンテナ実装に依存しない形で登録します。
+    /// 具体的な登録方式やライフタイム管理は、Standard などの実装側が提供します。
+    /// </remarks>
     public interface IScopeServices
     {
         /// <summary>

@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace InteractionFlow.Analyzers

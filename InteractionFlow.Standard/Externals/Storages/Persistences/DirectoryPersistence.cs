@@ -11,6 +11,11 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <summary>
     /// ディレクトリ単位で値を永続化するデフォルト実装基底クラスです。
     /// </summary>
+    /// <remarks>
+    /// このクラスは保存先ディレクトリの作成、削除、列挙と、
+    /// ディレクトリを利用した読み書きの呼び出しを担当します。
+    /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// </remarks>
     /// <typeparam name="TDirectoryId">ディレクトリを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     public abstract class DirectoryPersistence<TDirectoryId, TValue> : IDirectoryPersistencePort<TDirectoryId, TValue>
@@ -18,7 +23,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// <summary>
         /// この Persistence が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlySpan<IDependencyNode> Dependency => [];
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
 
         /// <summary>
         /// ルートパス配下の保存先を使用できるように初期化します。
@@ -61,7 +66,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// </summary>
         /// <param name="id">存在確認する ID。</param>
         /// <returns>存在する場合は成功結果。存在しない場合は失敗結果。</returns>
-        public Task<Result> Exist(TDirectoryId id)
+        public Task<Result> Exists(TDirectoryId id)
         {
             try
             {
@@ -154,7 +159,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
         /// ルート直下にあるディレクトリ ID をすべて取得します。
         /// </summary>
         /// <returns>保存されているディレクトリ ID の配列。失敗時は失敗結果。</returns>
-        public virtual Task<Result<TDirectoryId[]>> GetAllId()
+        public virtual Task<Result<TDirectoryId[]>> GetAllIds()
         {
             try
             {

@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
 using System;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.SerializerPorts;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -16,7 +16,7 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
         /// <summary>
         /// この Serializer が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlySpan<IDependencyNode> Dependency => [];
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
 
         /// <summary>
         /// ストリームから値へ変換します。

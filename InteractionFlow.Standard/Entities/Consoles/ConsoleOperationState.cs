@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
@@ -27,7 +28,7 @@ namespace InteractionFlow.Standard.Entities.Consoles
         /// </summary>
         /// <param name="state">元にするコンソール状態。</param>
         /// <param name="cancelWaitTime">入力終了後にキャンセル検知を待つ時間。</param>
-        public ConsoleOperationState(ConsoleState state, int cancelWaitTime) : this(state.backgroundColor, state.foregroundColor, state.writeLine, cancelWaitTime)
+        public ConsoleOperationState(ConsoleState state, int cancelWaitTime) : this(state.BackgroundColor, state.ForegroundColor, state.WriteLine, cancelWaitTime)
         {
 
         }
@@ -38,17 +39,11 @@ namespace InteractionFlow.Standard.Entities.Consoles
         public int cancelWaitTime = cancelWaitTime;
 
         /// <summary>
-        /// 色と改行有無を <see cref="ConsoleState"/> として取得または設定します。
+        /// 色と改行有無を <see cref="ConsoleState"/> として取得します。
         /// </summary>
         public ConsoleState ConsoleState
         {
             get => this;
-            set
-            {
-                backgroundColor = value.backgroundColor;
-                foregroundColor = value.foregroundColor;
-                writeLine = value.writeLine;
-            }
         }
 
         /// <summary>
@@ -72,7 +67,7 @@ namespace InteractionFlow.Standard.Entities.Consoles
         /// <returns>現在の状態と同じ内容を持つコピー。</returns>
         public new ConsoleOperationState Copy()
         {
-            return new(backgroundColor, foregroundColor, writeLine, cancelWaitTime);
+            return new(BackgroundColor, ForegroundColor, WriteLine, cancelWaitTime);
         }
     }
 }

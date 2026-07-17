@@ -1,6 +1,6 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries;
 
 namespace InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts
 {

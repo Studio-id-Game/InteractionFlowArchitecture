@@ -1,9 +1,9 @@
-namespace InteractionFlow.Standard.Entities
+namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
     /// Function 状態を一時変更するスコープを作成する拡張メソッドを提供します。
     /// </summary>
-    public static class FunctionStateScopeExtention
+    public static class FunctionStateScopeExtension
     {
         /// <summary>
         /// 対象の現在状態を保存し、破棄時に復元する状態スコープを作成します。

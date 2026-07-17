@@ -1,6 +1,5 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using InteractionFlow.Standard.Externals.ConsoleRule;
@@ -19,6 +18,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         public ConsoleExceptionHandling()
         {
+            ResetFields();
+
             if (State == null)
                 throw new ArgumentNullException("state");
         }
@@ -33,6 +34,11 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         public override void ForceResetMemoryState()
         {
+            ResetFields();
+        }
+
+        private void ResetFields()
+        {
             ThrowException = false;
             State = ConsoleState.Default;
             State.Update(foregroundColor: ConsoleColor.Red);
@@ -46,10 +52,10 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <returns>例外表示後のフロー終了結果。</returns>
         protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
         {
-            using (var cc = new ConsoleColorScope().GetStateScope())
+            using (var cc = new ConsoleColorScope())
             {
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine();
                     Console.WriteLine($"* Exception: {exception.GetType().FullName}:");
@@ -62,7 +68,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 }
             }
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine();
             }

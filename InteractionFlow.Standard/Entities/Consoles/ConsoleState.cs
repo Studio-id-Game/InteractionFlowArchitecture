@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using System;
 
 namespace InteractionFlow.Standard.Entities.Consoles
@@ -33,28 +34,28 @@ namespace InteractionFlow.Standard.Entities.Consoles
         /// <summary>
         /// 背景色を保持します。
         /// </summary>
-        public ConsoleColor backgroundColor = backgroundColor;
+        public ConsoleColor BackgroundColor { get; private set; } = backgroundColor;
 
         /// <summary>
         /// 前景色を保持します。
         /// </summary>
-        public ConsoleColor foregroundColor = foregroundColor;
+        public ConsoleColor ForegroundColor { get; private set; } = foregroundColor;
 
         /// <summary>
         /// 出力後に改行するかどうかを保持します。
         /// </summary>
-        public bool writeLine = writeLine;
+        public bool WriteLine { get; private set; } = writeLine;
 
         /// <summary>
         /// 前景色と背景色を色セットとして取得または設定します。
         /// </summary>
         public ConsoleColorSet ColorSet
         {
-            get => new(foregroundColor, backgroundColor);
+            get => new(ForegroundColor, BackgroundColor);
             set
             {
-                foregroundColor = value.Foreground;
-                backgroundColor = value.Background;
+                ForegroundColor = value.Foreground;
+                BackgroundColor = value.Background;
             }
         }
 
@@ -67,13 +68,13 @@ namespace InteractionFlow.Standard.Entities.Consoles
         public void Update(ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null, bool? writeLine = null)
         {
             if (backgroundColor != null)
-                this.backgroundColor = backgroundColor.Value;
+                BackgroundColor = backgroundColor.Value;
 
             if (foregroundColor != null)
-                this.foregroundColor = foregroundColor.Value;
+                ForegroundColor = foregroundColor.Value;
 
             if (writeLine != null)
-                this.writeLine = writeLine.Value;
+                WriteLine = writeLine.Value;
         }
 
         /// <summary>
@@ -82,7 +83,7 @@ namespace InteractionFlow.Standard.Entities.Consoles
         /// <returns>現在の状態と同じ内容を持つコピー。</returns>
         public ConsoleState Copy()
         {
-            return new(backgroundColor, foregroundColor, writeLine);
+            return new(BackgroundColor, ForegroundColor, WriteLine);
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace InteractionFlow.Standard.Entities
+namespace InteractionFlow.Core.Entities.Architectures
 {
     /// <summary>
     /// Function が一時的に差し替え可能な状態として扱う値を表します。

@@ -10,7 +10,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Persistences
 {
 
     public class UserSecureDataFilePersistence(IUserSecureDataSerializerPort serializer)
-        : FilePersistence<NotepadUserKey, UserSecureData>(serializer), IUserSecureDataPersistencePort
+        : FilePersistence<NotepadUserKey, UserSecureData>((InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts.ISerializerPort<Stream, UserSecureData>)serializer), IUserSecureDataPersistencePort
     {
         public override string Extention => ".user";
 

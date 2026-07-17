@@ -1,6 +1,6 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using InteractionFlow.Standard.Externals.ConsoleRule;
@@ -19,6 +19,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         public ConsoleCancellationHandling() : base()
         {
+            ResetFields();
+
             if (State == null)
                 throw new ArgumentNullException("state");
         }
@@ -33,6 +35,11 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         public override void ForceResetMemoryState()
         {
+            ResetFields();
+        }
+
+        private void ResetFields()
+        {
             ThrowException = false;
             State = ConsoleState.Default;
             State.Update(foregroundColor: ConsoleColor.Yellow);
@@ -46,10 +53,10 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <returns>前処理の完了を表す値。</returns>
         protected override ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
         {
-            using (var cc = new ConsoleColorScope().GetStateScope())
+            using (var cc = new ConsoleColorScope())
             {
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine();
                 }
@@ -57,7 +64,7 @@ namespace InteractionFlow.Standard.Externals.Reactions
                 Console.Write($"* Cancel... : {exception.Message} ");
             }
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine();
             }
@@ -70,21 +77,27 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
         /// <param name="exception">処理するキャンセル例外。</param>
+        /// <param name="waitAndResetResult">キャンセル待機とリセットの結果。</param>
         /// <returns>キャンセル表示後のフロー終了結果。</returns>
-        protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception)
+        protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(IFlowContext context, OperationCanceledException exception, Result waitAndResetResult)
         {
-            using (var cc = new ConsoleColorScope().GetStateScope())
+            using (var cc = new ConsoleColorScope())
             {
                 cc.State = State.ColorSet;
-                if (State.writeLine)
+                if (State.WriteLine)
                 {
                     Console.WriteLine();
                 }
 
                 Console.Write($"> Cancel Completed.");
+
+                if (!waitAndResetResult.Try(out var e))
+                {
+                    Console.Write($" Wait error: {e.Message}");
+                }
             }
 
-            if (State.writeLine)
+            if (State.WriteLine)
             {
                 Console.WriteLine();
             }

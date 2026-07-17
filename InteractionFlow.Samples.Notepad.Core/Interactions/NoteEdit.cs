@@ -1,12 +1,13 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts.StoragePorts.Entries;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
@@ -301,7 +302,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 })
                 .ThenAsync(async notepadEntry =>
                 {
-                    var notepadDataKey = notepadEntry.FileID;
+                    var notepadDataKey = notepadEntry.PersistenceId;
 
                     return await notepadEntry.Load(notepadDataPersistence)
                         .ThenErrorAsync(e => Task.FromResult<Result<NotepadData>>(new Exception($"Can not load note as '{notepadDataKey.UserKey.Name}/{notepadDataKey.NoteId}'")))
@@ -310,7 +311,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 .ThenAsync(async e =>
                 {
                     var (notepad, notepadEntry) = e;
-                    var notepadDataKey = notepadEntry.FileID;
+                    var notepadDataKey = notepadEntry.PersistenceId;
 
                     var consoleWriter = new ConsoleTextWriter(consoleCursorPositionAccess, consoleReaction, consoleOperation);
                     await consoleWriter.InitAsync(context, notepad);

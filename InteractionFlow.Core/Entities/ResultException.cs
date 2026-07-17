@@ -4,11 +4,15 @@ using System.Diagnostics;
 namespace InteractionFlow.Core.Entities
 {
     /// <summary>
-    /// <see cref="Result"/> または <see cref="Result{TValue}"/> が失敗を保持するために使用する例外です。
+    /// <see cref="Result"/> または <see cref="Result{TValue}"/> が失敗や不正な成功値を表すために使用する例外です。
     /// </summary>
     public class ResultException : Exception
     {
         internal ResultException(Exception inner) : base($"ResultMessage : {inner.Message}", inner)
+        {
+        }
+
+        internal ResultException(string message, Exception? inner = null) : base($"ResultMessage : {message}", inner)
         {
         }
 

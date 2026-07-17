@@ -21,4 +21,4 @@ interactionflow_mode = Error
 
 # CodeStyle
 # dotnet_diagnostic.IDE0028.severity = warning
-# dotnet_diagnostic.IDE0290.severity = warning
+ dotnet_diagnostic.IDE0290.severity = none

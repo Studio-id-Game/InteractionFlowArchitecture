@@ -25,14 +25,24 @@ namespace InteractionFlow.Core.Interactions
 
             public bool TryGet<T>([MaybeNullWhen(false)] out T value)
             {
-                return parent.TryGet(out value);
+                if (Cancellation is T t)
+                {
+                    value = t;
+                    return true;
+                }
+                else
+                {
+                    return parent.TryGet(out value);
+                }
             }
         }
+
+        private readonly IDependencyNode[] dependencies = [exceptionPort, cancellationPort, .. dependency];
 
         /// <summary>
         /// 例外処理ポート、キャンセル処理ポート、および派生クラスから渡された依存ノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => (IDependencyNode[])[ExceptionPort, CancellationPort, .. dependency];
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
 
         /// <summary>
         /// 通常の例外を処理する Reaction ポートを取得します。

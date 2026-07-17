@@ -1,8 +1,14 @@
+using InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts;
+
 namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts
 {
     /// <summary>
     /// ディレクトリ単位で値を永続化する Persistence ポートを表します。
     /// </summary>
+    /// <remarks>
+    /// Core の <see cref="IPersistencePort{TPersistenceId, TValue}"/> に対して、
+    /// ディレクトリパスやディレクトリ名などのファイルシステム固有の変換契約を追加します。
+    /// </remarks>
     /// <typeparam name="TDirectoryId">ディレクトリを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     public interface IDirectoryPersistencePort<TDirectoryId, TValue> : IPersistencePort<TDirectoryId, TValue>

@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
@@ -6,7 +7,6 @@ using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
-using InteractionFlow.Standard.Entities;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
@@ -118,7 +118,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         private async Task<ReactionEnd> ParrotCustomContext(IFlowContext context)
         {
-            var newContext = new ScopedFlowContext(context)
+            using var newContext = new ScopedFlowContext(context)
                 .With(new RefEntity<ParrotHello>(new($"Hello! I'm Parrot with Custom Context, who are you?")));
             context = newContext;
             return await NestedExecuteAsync(parrot, context);

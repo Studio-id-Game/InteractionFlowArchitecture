@@ -4,8 +4,13 @@ using InteractionFlow.Core.SystemFlows;
 namespace InteractionFlow.Core.Builders
 {
     /// <summary>
-    /// 登録済みサービスから SystemFlow を生成するビルダーを表します。
+    /// 登録済みサービスから SystemFlow とその実行スコープを生成するビルダーを表します。
     /// </summary>
+    /// <remarks>
+    /// SystemFlowBuilder は、InteractionFlow Architecture における SystemFlow 構築の入口です。
+    /// Core では、SystemFlow の生成、依存解決スコープ、親スコープ探索の契約だけを定義します。
+    /// Microsoft.Extensions.DependencyInjection などの具体的な DI 実装は Standard 側などで提供されます。
+    /// </remarks>
     /// <typeparam name="TContext">生成する SystemFlow が扱うコンテキストの型。</typeparam>
     public interface ISystemFlowBuilder<TContext> : IScopeServices
         where TContext : IFlowContext

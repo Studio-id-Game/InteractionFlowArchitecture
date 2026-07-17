@@ -24,7 +24,7 @@ namespace InteractionFlow.Core.SystemFlows
         /// <summary>
         /// この SystemFlow が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 指定されたコンテキストで SystemFlow を実行します。

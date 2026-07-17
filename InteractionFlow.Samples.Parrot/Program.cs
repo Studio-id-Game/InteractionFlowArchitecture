@@ -48,7 +48,7 @@ namespace InteractionFlow.Samples.Parrot
             while (true)
             {
                 var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
-                var contextScope = new ScopedFlowContext(context)
+                using var contextScope = new ScopedFlowContext(context)
                     .With(endState);
 
                 await selectAndRunSample.ExecuteAsync(contextScope);

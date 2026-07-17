@@ -1,11 +1,10 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
-using InteractionFlow.Standard.Entities;
-using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
 using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
@@ -31,14 +30,14 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             consoleOperation,
             currentUserStorage)
     {
-        protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             using var consoleReactionScope = consoleReaction.GetStateScope();
             using var consoleOperationScope = consoleOperation.GetStateScope();
             consoleReactionScope.State.Update(writeLine: true);
             consoleOperationScope.State.Update(writeLine: true);
 
-            return currentUserStorage.GetKey(context).StartAsync()
+            return await currentUserStorage.GetKey(context).StartAsync()
                 .ThenAsync(userKey =>
                 {
                     return Task.FromResult(currentUserStorage.GetOrCreate(userKey));
@@ -49,7 +48,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                     {
                         return new NullReferenceException("currentUser.Value == null");
                     }
-                    var pass = await EnterPassAsync(context, consoleReactionScope);
+                    var pass = await EnterPassAsync(context);
                     secureManager.GetUserKey(pass, currentUser.Value);
                     consoleReactionScope.State.Update(writeLine: true);
                     return Result.Success;
@@ -65,18 +64,22 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                 });
         }
 
-        private async Task<string> EnterPassAsync(IFlowContext context, FunctionStateScope<ConsoleState> consoleReactionScope)
+        private async Task<string> EnterPassAsync(IFlowContext context)
         {
-            consoleReactionScope.State.Update(writeLine: true);
+            using var consoleReactionScope = consoleReaction.GetStateScope();
+            using var consoleOperationScope = consoleReaction.GetStateScope();
+
+            consoleReaction.State.Update(writeLine: true);
             await consoleReaction.Write(context, new("Enter Password: "));
 
             var pass = "";
-            consoleOperation.State.Update(writeLine: false);
-            consoleReactionScope.State.Update(writeLine: false);
 
+            consoleOperation.State.Update(writeLine: false, foregroundColor: ConsoleColor.Green);
+            consoleReaction.State.Update(writeLine: false, foregroundColor: ConsoleColor.Green);
             while (true)
             {
                 var key = (await consoleOperation.WaitUserKeyAsync(context, true)).key;
+
                 if (key.Key == ConsoleKey.Enter)
                 {
                     break;
@@ -102,8 +105,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
                 }
             }
 
-            consoleOperation.State.Update(writeLine: true);
-            consoleReactionScope.State.Update(writeLine: true);
+            consoleReaction.State.Update(writeLine: true);
             await consoleReaction.Write(context, new(""));
 
             return pass;

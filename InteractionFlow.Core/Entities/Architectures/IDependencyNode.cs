@@ -10,6 +10,6 @@ namespace InteractionFlow.Core.Entities.Architectures
         /// <summary>
         /// このノードが依存する他のノードを取得します。
         /// </summary>
-        ReadOnlySpan<IDependencyNode> Dependency { get; }
+        ReadOnlyMemory<IDependencyNode> Dependency { get; }
     }
 }

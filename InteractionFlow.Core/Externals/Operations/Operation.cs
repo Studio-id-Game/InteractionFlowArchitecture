@@ -12,19 +12,18 @@ namespace InteractionFlow.Core.Externals.Operations
         private readonly IDependencyNode[] dependency;
 
         /// <summary>
-        /// 依存ノードを保持し、派生クラスの状態を初期化します。
+        /// 依存ノードを保持します。派生クラスの状態初期化は派生クラスのコンストラクタで行います。
         /// </summary>
         /// <param name="dependency">この Operation が依存するフローノード。</param>
         public Operation(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
-            ForceResetMemoryState();
         }
 
         /// <summary>
         /// この Operation が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
 

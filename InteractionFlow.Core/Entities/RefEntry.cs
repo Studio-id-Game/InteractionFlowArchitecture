@@ -1,4 +1,4 @@
-namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
+namespace InteractionFlow.Core.Entities
 {
     /// <summary>
     /// 値を外部から更新できる Entry です。
@@ -10,6 +10,10 @@ namespace InteractionFlow.Standard.ExternalPorts.StoragePorts.Entries
         /// <summary>
         /// ラップしている値を取得または設定します。
         /// </summary>
+        /// <remarks>
+        /// <see cref="Entry{TValue}.Value"/> は基底型では外部から設定できないため、
+        /// 参照や状態更新を目的とする RefEntry では setter を公開するためにこのプロパティを再公開します。
+        /// </remarks>
         public new TValue? Value
         {
             get => base.Value;

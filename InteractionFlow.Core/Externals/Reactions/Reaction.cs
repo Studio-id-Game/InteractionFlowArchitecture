@@ -13,13 +13,12 @@ namespace InteractionFlow.Core.Externals.Reactions
         private readonly IDependencyNode[] dependency;
 
         /// <summary>
-        /// 依存ノードを保持し、派生クラスの状態を初期化します。
+        /// 依存ノードを保持します。派生クラスの状態初期化は派生クラスのコンストラクタで行います。
         /// </summary>
         /// <param name="dependency">この Reaction が依存するフローノード。</param>
         public Reaction(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
-            ForceResetMemoryState();
         }
 
         FlowLayerTypes IFlowNode.Layer => FlowLayerTypes.FunctionPort;
@@ -29,7 +28,7 @@ namespace InteractionFlow.Core.Externals.Reactions
         /// <summary>
         /// この Reaction が依存するフローノードを取得します。
         /// </summary>
-        public ReadOnlySpan<IDependencyNode> Dependency => dependency;
+        public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// 派生クラスが保持するメモリ上の状態を初期化します。

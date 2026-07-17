@@ -36,6 +36,11 @@ namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
         /// <returns>キャンセル処理後のフロー終了結果。</returns>
         ValueTask<ReactionEnd> IExceptionPort<OperationCanceledException>.HandleExceptionAsync(IFlowContext context, OperationCanceledException exception)
         {
+            if (ThrowException)
+            {
+                throw exception;
+            }
+
             return HandleCancellationAsync(context, exception);
         }
     }

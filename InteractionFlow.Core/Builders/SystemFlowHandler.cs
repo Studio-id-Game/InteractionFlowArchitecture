@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using System;
@@ -18,6 +19,11 @@ namespace InteractionFlow.Core.Builders
     {
         private ScopeHandler? scope = scope;
         private ISystemFlow<TContext>? systemFlow = systemFlow;
+
+        /// <summary>
+        /// 保持している SystemFlow を IDependencyNode として取得します
+        /// </summary>
+        public IDependencyNode Root => systemFlow ?? throw new ObjectDisposedException(nameof(SystemFlowHandler<TContext>));
 
         /// <summary>
         /// 保持している SystemFlow を指定されたコンテキストで実行します。

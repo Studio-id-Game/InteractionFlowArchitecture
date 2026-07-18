@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-    public class NoteDelete(
+    public sealed class NoteDelete(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,

@@ -15,7 +15,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 {
 
 
-    internal class Parrot(
+    internal sealed class Parrot(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleOperation operation,

@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-    public class NoteCreate(
+    public sealed class NoteCreate(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,

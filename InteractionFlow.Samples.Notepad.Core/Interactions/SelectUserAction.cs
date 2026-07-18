@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-    public class SelectUserAction(
+    public sealed class SelectUserAction(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,

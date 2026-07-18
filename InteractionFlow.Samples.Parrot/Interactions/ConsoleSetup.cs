@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
-    internal class ConsoleSetup(
+    internal sealed class ConsoleSetup(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         ICancellationWithConsole cancellationWithConsole,

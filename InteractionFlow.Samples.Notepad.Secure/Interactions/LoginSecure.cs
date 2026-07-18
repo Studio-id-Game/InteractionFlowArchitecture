@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Secure.Interactions
 {
 
-    internal class LoginSecure(
+    internal sealed class LoginSecure(
             IExceptionPort<Exception> exceptionPort,
             ICancellationPort cancellationPort,
             IConsoleWriter consoleReaction,

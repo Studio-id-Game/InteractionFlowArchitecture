@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
 {
 
-    public class NotepadUserDataDirectoryPersistence(
+    public sealed class NotepadUserDataDirectoryPersistence(
         INotepadDataPersistencePort filePersistence,
         INotepadDataStoragePort notepadStorage)
         : DirectoryPersistence<NotepadUserKey, NotepadUserData>(filePersistence, notepadStorage), INotepadUserDataPersistencePort

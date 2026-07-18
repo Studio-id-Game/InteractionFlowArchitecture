@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
 
-    public class NoteListView(
+    public sealed class NoteListView(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,

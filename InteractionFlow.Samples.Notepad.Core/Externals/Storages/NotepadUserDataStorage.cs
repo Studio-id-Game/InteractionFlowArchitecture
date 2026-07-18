@@ -7,7 +7,7 @@ using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Entries;
 
 namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages
 {
-    public class NotepadUserDataStorage : Storage<NotepadUserKey, NotepadUserEntry>, INotepadUserDataStoragePort
+    public sealed class NotepadUserDataStorage : Storage<NotepadUserKey, NotepadUserEntry>, INotepadUserDataStoragePort
     {
         protected override Result CanRemoveValue(NotepadUserKey key, NotepadUserEntry value)
         {

@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Operations;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -17,7 +18,8 @@ namespace InteractionFlow.Standard.Externals.Operations
         /// <summary>
         /// 既定のコンソール入力状態でインスタンスを作成します。
         /// </summary>
-        public ConsoleOperation() : base()
+        /// <param name="dependency">この Operation が依存するフローノード。</param>
+        public ConsoleOperation(params IDependencyNode[] dependency) : base(dependency)
         {
             ResetFields();
 
@@ -175,7 +177,8 @@ namespace InteractionFlow.Standard.Externals.Operations
             /// <summary>
             /// 既定のダミー入力状態でインスタンスを作成します。
             /// </summary>
-            public Dummy() : base()
+            /// <param name="dependency">この Operation が依存するフローノード。</param>
+            public Dummy(params IDependencyNode[] dependency) : base(dependency)
             {
                 ResetFields();
 

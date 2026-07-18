@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -17,7 +18,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <summary>
         /// 既定のキャンセル表示状態でインスタンスを作成します。
         /// </summary>
-        public ConsoleCancellationHandling() : base()
+        /// <param name="dependency">この Reaction が依存するフローノード。</param>
+        public ConsoleCancellationHandling(params IDependencyNode[] dependency) : base(dependency)
         {
             ResetFields();
 

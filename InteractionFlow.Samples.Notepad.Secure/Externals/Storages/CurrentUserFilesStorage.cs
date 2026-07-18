@@ -7,7 +7,7 @@ using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages
 {
-    public class CurrentUserFilesStorage : Storage<NotepadUserKey, PersistentEntry<NotepadUserKey, UserSecureData>>, ICurrentUserStoragePort
+    public sealed class CurrentUserFilesStorage : Storage<NotepadUserKey, PersistentEntry<NotepadUserKey, UserSecureData>>, ICurrentUserStoragePort
     {
         public NotepadUserKey LastUser { get; private set; }
 

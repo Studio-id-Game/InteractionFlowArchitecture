@@ -70,7 +70,7 @@ namespace InteractionFlow.Analyzers {
         }
         
         /// <summary>
-        ///   Invalid dependency node declaration ({0}) に類似しているローカライズされた文字列を検索します。
+        ///   Invalid dependency node declaration: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeAnalyzerMessageFormat {
             get {
@@ -124,7 +124,7 @@ namespace InteractionFlow.Analyzers {
         }
         
         /// <summary>
-        ///   Invalid layer dependency ({0}) に類似しているローカライズされた文字列を検索します。
+        ///   Invalid layer dependency: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string LayerDependencyAnalyzerMessageFormat {
             get {
@@ -142,7 +142,7 @@ namespace InteractionFlow.Analyzers {
         }
 
         /// <summary>
-        ///   Layer &apos;{0}&apos; must not depend on &apos;{1}&apos; (Type = &apos;{2}&apos;) に類似しているローカライズされた文字列を検索します。
+        ///   Layer &apos;{0}&apos; must not depend on &apos;{1}&apos;; referenced type: &apos;{2}&apos; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string LayerDependencyDisallowedReference {
             get {

@@ -122,7 +122,7 @@
     <comment>An optional longer localizable description of the dependency node diagnostic.</comment>
   </data>
   <data name="DependencyNodeAnalyzerMessageFormat" xml:space="preserve">
-    <value>依存ノード宣言規則に違反しています ({0})</value>
+    <value>依存ノード宣言規則に違反しています: {0}</value>
     <comment>The format-able common message the dependency node diagnostic displays.</comment>
   </data>
   <data name="DependencyNodeAnalyzerTitle" xml:space="preserve">
@@ -146,7 +146,7 @@
     <comment>An optional longer localizable description of the layer dependency diagnostic.</comment>
   </data>
   <data name="LayerDependencyAnalyzerMessageFormat" xml:space="preserve">
-    <value>レイヤー依存関係規則に違反しています ({0})</value>
+    <value>レイヤー依存関係規則に違反しています: {0}</value>
     <comment>The format-able common message the layer dependency diagnostic displays.</comment>
   </data>
   <data name="LayerDependencyAnalyzerTitle" xml:space="preserve">
@@ -154,7 +154,7 @@
     <comment>The title of the layer dependency diagnostic.</comment>
   </data>
   <data name="LayerDependencyDisallowedReference" xml:space="preserve">
-    <value>'{0}' による '{1}' への依存は許可されていません (Type = '{2}')</value>
+    <value>'{0}' は '{1}' に依存できません。参照型: '{2}'</value>
     <comment>The detail message shown when a layer references a disallowed layer or external namespace.</comment>
   </data>
 </root>

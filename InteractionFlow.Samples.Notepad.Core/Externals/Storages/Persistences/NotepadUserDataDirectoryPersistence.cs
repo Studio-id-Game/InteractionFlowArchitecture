@@ -13,7 +13,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
     public class NotepadUserDataDirectoryPersistence(
         INotepadDataPersistencePort filePersistence,
         INotepadDataStoragePort notepadStorage)
-        : DirectoryPersistence<NotepadUserKey, NotepadUserData>, INotepadUserDataPersistencePort
+        : DirectoryPersistence<NotepadUserKey, NotepadUserData>(filePersistence, notepadStorage), INotepadUserDataPersistencePort
     {
         public override string RootPath => Path.Combine(base.RootPath, "NotepadData");
 

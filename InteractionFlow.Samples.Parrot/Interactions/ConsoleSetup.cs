@@ -15,7 +15,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         ICancellationWithConsole cancellationWithConsole,
         IConsoleColorAccess consoleColorAccess,
         IConsoleWriter console)
-        : Interaction(exception, cancellation, cancellationWithConsole, console)
+        : Interaction(exception, cancellation, cancellationWithConsole, consoleColorAccess, console)
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {

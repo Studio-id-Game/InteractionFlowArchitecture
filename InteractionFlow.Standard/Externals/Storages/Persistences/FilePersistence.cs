@@ -20,14 +20,18 @@ namespace InteractionFlow.Standard.Externals.Storages.Persistences
     /// <typeparam name="TFileId">ファイルを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
     /// <param name="serializer">値とストリームの変換に使用する Serializer。</param>
-    public abstract class FilePersistence<TFileId, TValue>(ISerializerPort<Stream, TValue> serializer) : IFilePersistencePort<TFileId, TValue>
+    /// <param name="dependency">この Persistence が依存する補助ノード。</param>
+    public abstract class FilePersistence<TFileId, TValue>(
+        ISerializerPort<Stream, TValue> serializer,
+        params IDependencyNode[] dependency)
+        : IFilePersistencePort<TFileId, TValue>
     {
-        private readonly IDependencyNode[] dependency = [serializer];
+        private readonly IDependencyNode[] dependencies = [serializer, .. dependency];
 
         /// <summary>
         /// この Persistence が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
 
         /// <summary>
         /// 保存先のルートパスを取得します。

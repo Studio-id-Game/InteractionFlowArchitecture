@@ -25,7 +25,15 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         INotepadUserDataPersistencePort notepadUserDataPersistence,
         INotepadDataStoragePort notepadDataFiles,
         INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
+        Interaction(
+            exceptionPort,
+            cancellationPort,
+            consoleReaction,
+            consoleOperation,
+            notepadUserDataFiles,
+            notepadUserDataPersistence,
+            notepadDataFiles,
+            notepadDataPersistence)
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {

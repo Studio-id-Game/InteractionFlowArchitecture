@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
 using System;
 using System.IO;
@@ -11,7 +12,9 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
     /// 文字列形式の変換を基準に、ストリームとの相互変換も提供する Serializer 基底クラスです。
     /// </summary>
     /// <typeparam name="TValue">変換対象の値の型。</typeparam>
-    public abstract class TextSerializer<TValue> : StreamSerializer<TValue>, ISerializerPort<string, TValue>
+    /// <param name="dependency">この Serializer が依存する補助ノード。</param>
+    public abstract class TextSerializer<TValue>(params IDependencyNode[] dependency)
+        : StreamSerializer<TValue>(dependency), ISerializerPort<string, TValue>
     {
         /// <summary>
         /// 値を文字列へ変換します。

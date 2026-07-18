@@ -929,8 +929,222 @@ public class InteractionFlowAnalyzersAnalyzerTests
         await VerifyAsync(source, expectedNullable, expectedArray);
     }
 
+    /// <summary>
+    /// 通常コンストラクタで受け取った IDependencyNode 系の引数を Dependency が返す配列へ含めている場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_IncludesDependencies_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1, IDependencyNode node2, params IDependencyNode[] dependency)
+                    {
+                        this.dependency = [node1, node2, .. dependency];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// 通常コンストラクタで受け取った IDependencyNode 系の引数が Dependency に含まれていない場合、
+    /// 欠落した引数を診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_MissingDependency_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1, params IDependencyNode[] dependency)
+                    {
+                        this.dependency = [.. dependency];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(22, 32, 22, 37);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// プライマリコンストラクタで受け取った IDependencyNode 系の引数を Dependency が返す配列へ含めている場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_PrimaryConstructor_IncludesDependencies_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass(IPort node1, params IDependencyNode[] dependency) : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependencies = [node1, .. dependency];
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// IDependencyNode 実装クラスを継承するプライマリコンストラクタで、
+    /// 親へ流していない IDependencyNode 系の引数を診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_PrimaryConstructor_MissingBaseForward_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class BaseNode(params IDependencyNode[] dependency) : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependencies = dependency;
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
+                }
+
+                public abstract class ChildNode(IPort node1, params IDependencyNode[] dependency) : BaseNode(dependency)
+                {
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(25, 43, 25, 48);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// 継承拡張される抽象 IDependencyNode クラスの通常コンストラクタに
+    /// params IDependencyNode[] が無い場合、診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_AbstractConstructor_MissingParams_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1)
+                    {
+                        this.dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(22, 16, 22, 25);
+
+        await VerifyAsync(source, expected);
+    }
+
     private static DiagnosticResult ExpectedHidden(int startLine, int startColumn, int endLine, int endColumn)
         => new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
+            .WithSpan(startLine, startColumn, endLine, endColumn);
+
+    private static DiagnosticResult ExpectedDependencyHidden(int startLine, int startColumn, int endLine, int endColumn)
+        => new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(startLine, startColumn, endLine, endColumn);
 
     private static Task VerifyAsync(string source, params DiagnosticResult[] expected)
@@ -967,6 +1181,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             {OptionValues.Keys.interactionflow_mode} = {mode}
             {allowedRootsOption}
             dotnet_diagnostic.{InteractionFlowAnalyzersAnalyzer.DiagnosticId}.severity = {diagnosticSeverity}
+            dotnet_diagnostic.{InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId}.severity = {diagnosticSeverity}
 
             """;
 

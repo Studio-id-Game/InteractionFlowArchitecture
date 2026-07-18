@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Builders;
+using InteractionFlow.Core.Entities.Architectures;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -9,6 +10,14 @@ namespace InteractionFlow.Standard.Builders
     /// </summary>
     public abstract class ScopeServices : IScopeServices
     {
+        /// <summary>
+        /// 自信を初期化して、params IDependencyNode[] の自動解決を登録します
+        /// </summary>
+        protected ScopeServices()
+        {
+            Services.AddSingleton<IDependencyNode[]>([]);
+        }
+
         /// <summary>
         /// スコープ生成前のサービス登録コレクションを取得または設定します。
         /// </summary>

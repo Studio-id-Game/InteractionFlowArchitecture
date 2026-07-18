@@ -28,22 +28,22 @@ namespace InteractionFlow.Analyzers
         /// </summary>
         public const string DependencyNodeDiagnosticId = "InteractionFlowArchitecture002";
 
-        private static readonly LocalizableString Title =
+        private static readonly LocalizableString LayerDependencyAnalyzerTitle =
     new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString MessageFormat =
+        private static readonly LocalizableString LayerDependencyAnalyzerMessageFormat =
             new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString Description =
+        private static readonly LocalizableString LayerDependencyAnalyzerDescription =
             new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString DependencyNodeTitle =
+        private static readonly LocalizableString DependencyNodeAnalyzerTitle =
             new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString DependencyNodeMessageFormat =
+        private static readonly LocalizableString DependencyNodeAnalyzerMessageFormat =
             new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString DependencyNodeDescription =
+        private static readonly LocalizableString DependencyNodeAnalyzerDescription =
             new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
         // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
@@ -53,22 +53,37 @@ namespace InteractionFlow.Analyzers
         //private static readonly LocalizableString Description = "Interaction Flow Architecture - Invalid layer dependency";
         private const string Category = "Architecture";
 
-        private static readonly DiagnosticDescriptor Rule = new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
-        private static readonly DiagnosticDescriptor DependencyNodeRule = new(
-            DependencyNodeDiagnosticId,
-            DependencyNodeTitle,
-            DependencyNodeMessageFormat,
+        private static readonly DiagnosticDescriptor Rule = new(
+            DiagnosticId,
+            LayerDependencyAnalyzerTitle,
+            LayerDependencyAnalyzerMessageFormat,
             Category,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            description: DependencyNodeDescription);
+            description: LayerDependencyAnalyzerDescription);
+
+        private static readonly DiagnosticDescriptor DependencyNodeRule = new(
+            DependencyNodeDiagnosticId,
+            DependencyNodeAnalyzerTitle,
+            DependencyNodeAnalyzerMessageFormat,
+            Category,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: DependencyNodeAnalyzerDescription);
 
         private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> RulesBySeverity =
             Enum.GetValues(typeof(DiagnosticSeverity))
                 .Cast<DiagnosticSeverity>()
                 .ToImmutableDictionary(
                     severity => severity,
-                    severity => new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, severity, isEnabledByDefault: true, description: Description));
+                    severity => new DiagnosticDescriptor(
+                        DiagnosticId,
+                        Rule.Title,
+                        Rule.MessageFormat,
+                        Category,
+                        severity,
+                        isEnabledByDefault: true,
+                        description: Rule.Description));
 
         private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> DependencyNodeRulesBySeverity =
             Enum.GetValues(typeof(DiagnosticSeverity))
@@ -805,14 +820,13 @@ namespace InteractionFlow.Analyzers
 
                 if (disallowReferenceInfo.IsDisallow)
                 {
-                    var args = new string[]
-                    {
+                    var detailMessage = string.Format(
+                        Resources.LayerDependencyDisallowedReference,
                         disallowReferenceInfo.SourceShowName,
                         disallowReferenceInfo.TargetShowName,
-                        type.Name
-                    };
+                        type.Name);
 
-                    reportDiagnostic(Diagnostic.Create(rule, location, args));
+                    reportDiagnostic(Diagnostic.Create(rule, location, detailMessage));
                     return true;
                 }
                 else

@@ -61,7 +61,7 @@ namespace InteractionFlow.Analyzers {
         }
         
         /// <summary>
-        ///   Interaction Flow Architecture Rule - Invalid dependency node declaration に類似しているローカライズされた文字列を検索します。
+        ///   Interaction Flow Implementation Rule - Invalid dependency node declaration に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeAnalyzerDescription {
             get {
@@ -70,7 +70,7 @@ namespace InteractionFlow.Analyzers {
         }
         
         /// <summary>
-        ///   {0} に類似しているローカライズされた文字列を検索します。
+        ///   Invalid dependency node declaration ({0}) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeAnalyzerMessageFormat {
             get {
@@ -86,34 +86,34 @@ namespace InteractionFlow.Analyzers {
                 return ResourceManager.GetString("DependencyNodeAnalyzerTitle", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency' に類似しているローカライズされた文字列を検索します。
+        ///   IDependencyNode class must be sealed or declare &apos;params IDependencyNode[] dependency&apos; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeMustBeSealedOrHaveParams {
             get {
                 return ResourceManager.GetString("DependencyNodeMustBeSealedOrHaveParams", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   Parameter '{0}' must be included in Dependency に類似しているローカライズされた文字列を検索します。
+        ///   Parameter &apos;{0}&apos; must be included in Dependency に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeParameterMustBeIncludedInDependency {
             get {
                 return ResourceManager.GetString("DependencyNodeParameterMustBeIncludedInDependency", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   Parameter '{0}' must be passed to the base IDependencyNode constructor に類似しているローカライズされた文字列を検索します。
+        ///   Parameter &apos;{0}&apos; must be passed to the base IDependencyNode constructor に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string DependencyNodeParameterMustBePassedToBase {
             get {
                 return ResourceManager.GetString("DependencyNodeParameterMustBePassedToBase", resourceCulture);
             }
         }
-
+        
         /// <summary>
         ///   Interaction Flow Architecture Rule - Invalid layer dependency に類似しているローカライズされた文字列を検索します。
         /// </summary>
@@ -122,22 +122,31 @@ namespace InteractionFlow.Analyzers {
                 return ResourceManager.GetString("LayerDependencyAnalyzerDescription", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   Layer &apos;{0}&apos; must not depend on &apos;{1}&apos; (Type = &apos;{2}&apos;) に類似しているローカライズされた文字列を検索します。
+        ///   Invalid layer dependency ({0}) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string LayerDependencyAnalyzerMessageFormat {
             get {
                 return ResourceManager.GetString("LayerDependencyAnalyzerMessageFormat", resourceCulture);
             }
         }
-
+        
         /// <summary>
         ///   Invalid layer dependency に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string LayerDependencyAnalyzerTitle {
             get {
                 return ResourceManager.GetString("LayerDependencyAnalyzerTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Layer &apos;{0}&apos; must not depend on &apos;{1}&apos; (Type = &apos;{2}&apos;) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LayerDependencyDisallowedReference {
+            get {
+                return ResourceManager.GetString("LayerDependencyDisallowedReference", resourceCulture);
             }
         }
     }

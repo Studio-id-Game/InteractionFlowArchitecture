@@ -44,7 +44,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(7, 13, 7, 49)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(useCaseSource, additionalSources: [("BuilderWorker.cs", workerSource)], expected: expected);
     }
@@ -122,7 +122,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(14, 79, 14, 82)
-            .WithArguments("Interactions", "Builders", "BuilderType");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderType"));
 
         await VerifyAsync(source, expected);
     }
@@ -227,7 +227,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(12, 34, 12, 40)
-            .WithArguments("Interactions", "ThirdParty", "Client");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "ThirdParty", "Client"));
 
         await VerifyAsync(source, expected);
     }
@@ -260,7 +260,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetLayer.Length + targetType.Length, 12, 32 + targetLayer.Length + targetType.Length)
-            .WithArguments("SystemFlows", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("SystemFlows", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -293,7 +293,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetLayer.Length + targetType.Length, 12, 32 + targetLayer.Length + targetType.Length)
-            .WithArguments("Interactions", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -327,7 +327,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 15 + targetLayer.Length + targetType.Length, 12, 21 + targetLayer.Length + targetType.Length)
-            .WithArguments("ExternalPorts", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("ExternalPorts", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -363,7 +363,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetNamespace.Length + targetType.Length, 12, 32 + targetNamespace.Length + targetType.Length)
-            .WithArguments("Entities", targetShowName, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("Entities", targetShowName, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -462,7 +462,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 43, 12, 49)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -491,7 +491,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -520,7 +520,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "BuilderBase");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderBase"));
 
         await VerifyAsync(source, expected);
     }
@@ -549,7 +549,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "IBuilderContract");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "IBuilderContract"));
 
         await VerifyAsync(source, expected);
     }
@@ -579,7 +579,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 44, 12, 54)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -611,7 +611,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 21, 12, 24)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -644,7 +644,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(14, 20, 14, 52)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -678,7 +678,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(15, 20, 15, 51)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -712,7 +712,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(15, 20, 15, 51)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -745,7 +745,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(14, 40, 14, 57)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -803,7 +803,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Error)
             .WithSpan(12, 43, 12, 53)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, mode: "Error", expected: expected);
     }
@@ -834,7 +834,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
             .WithSpan(12, 43, 12, 53)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, mode: "Banana", expected: expected);
     }
@@ -911,7 +911,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 35, 12, 41)
-            .WithArguments("Interactions", "ThirdPartyX", "Client");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "ThirdPartyX", "Client"));
 
         await VerifyAsync(source, additionalSources: null, allowedRoots: "ThirdParty", expected: expected);
     }
@@ -949,9 +949,9 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expectedNullable = ExpectedHidden(18, 43, 18, 48)
-            .WithArguments("Interactions", "Builders", "BuilderValue");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderValue"));
         var expectedArray = ExpectedHidden(20, 45, 20, 50)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expectedNullable, expectedArray);
     }
@@ -1279,6 +1279,9 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         await VerifyAsync(source, expected);
     }
+
+    private static string ExpectedLayerDependencyDetail(string sourceLayer, string targetLayer, string typeName)
+        => string.Format(Resources.LayerDependencyDisallowedReference, sourceLayer, targetLayer, typeName);
 
     private static DiagnosticResult ExpectedHidden(int startLine, int startColumn, int endLine, int endColumn)
         => new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)

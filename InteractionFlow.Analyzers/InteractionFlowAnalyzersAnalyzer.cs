@@ -489,7 +489,10 @@ namespace InteractionFlow.Analyzers
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                var referencedMembers = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+                var referencedMembers = new HashSet<ISymbol>(SymbolEqualityComparer.Default)
+                {
+                    property
+                };
 
                 foreach (var syntaxReference in property.DeclaringSyntaxReferences)
                 {
@@ -583,7 +586,7 @@ namespace InteractionFlow.Analyzers
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                if (!(syntaxReference.GetSyntax(context.CancellationToken) is ConstructorDeclarationSyntax constructorDeclaration))
+                if (syntaxReference.GetSyntax(context.CancellationToken) is not ConstructorDeclarationSyntax constructorDeclaration)
                 {
                     continue;
                 }

@@ -972,6 +972,42 @@ public class InteractionFlowAnalyzersAnalyzerTests
     }
 
     /// <summary>
+    /// 通常コンストラクタで IDependencyNode 系の引数を Dependency auto-property に直接代入している場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_AssignsDependencyProperty_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public class Test : IDependencyNode
+                {
+                    public Test(IDependencyNode node1)
+                    {
+                        Dependency = new IDependencyNode[] { node1 };
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
     /// 通常コンストラクタで受け取った IDependencyNode 系の引数が Dependency に含まれていない場合、
     /// 欠落した引数を診断することを確認します。
     /// </summary>

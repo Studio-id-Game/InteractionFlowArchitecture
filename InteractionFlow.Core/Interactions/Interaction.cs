@@ -7,16 +7,6 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
 {
-    public class Test : IDependencyNode
-    {
-        public Test(IDependencyNode node1)
-        {
-            Dependency = new IDependencyNode[] { node1 };
-        }
-
-        public ReadOnlyMemory<IDependencyNode> Dependency { get; }
-    }
-
     /// <summary>
     /// <see cref="IInteraction"/> のデフォルト実装基底クラスです。
     /// </summary>

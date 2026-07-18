@@ -61,29 +61,83 @@ namespace InteractionFlow.Analyzers {
         }
         
         /// <summary>
-        ///   Interaction Flow Architecture Rule - Invalid layer dependency に類似しているローカライズされた文字列を検索します。
+        ///   Interaction Flow Architecture Rule - Invalid dependency node declaration に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string AnalyzerDescription {
+        internal static string DependencyNodeAnalyzerDescription {
             get {
-                return ResourceManager.GetString("AnalyzerDescription", resourceCulture);
+                return ResourceManager.GetString("DependencyNodeAnalyzerDescription", resourceCulture);
             }
         }
         
+        /// <summary>
+        ///   {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DependencyNodeAnalyzerMessageFormat {
+            get {
+                return ResourceManager.GetString("DependencyNodeAnalyzerMessageFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid dependency node declaration に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DependencyNodeAnalyzerTitle {
+            get {
+                return ResourceManager.GetString("DependencyNodeAnalyzerTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency' に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DependencyNodeMustBeSealedOrHaveParams {
+            get {
+                return ResourceManager.GetString("DependencyNodeMustBeSealedOrHaveParams", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Parameter '{0}' must be included in Dependency に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DependencyNodeParameterMustBeIncludedInDependency {
+            get {
+                return ResourceManager.GetString("DependencyNodeParameterMustBeIncludedInDependency", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Parameter '{0}' must be passed to the base IDependencyNode constructor に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DependencyNodeParameterMustBePassedToBase {
+            get {
+                return ResourceManager.GetString("DependencyNodeParameterMustBePassedToBase", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Interaction Flow Architecture Rule - Invalid layer dependency に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LayerDependencyAnalyzerDescription {
+            get {
+                return ResourceManager.GetString("LayerDependencyAnalyzerDescription", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Layer &apos;{0}&apos; must not depend on &apos;{1}&apos; (Type = &apos;{2}&apos;) に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string AnalyzerMessageFormat {
+        internal static string LayerDependencyAnalyzerMessageFormat {
             get {
-                return ResourceManager.GetString("AnalyzerMessageFormat", resourceCulture);
+                return ResourceManager.GetString("LayerDependencyAnalyzerMessageFormat", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   Invalid layer dependency に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string AnalyzerTitle {
+        internal static string LayerDependencyAnalyzerTitle {
             get {
-                return ResourceManager.GetString("AnalyzerTitle", resourceCulture);
+                return ResourceManager.GetString("LayerDependencyAnalyzerTitle", resourceCulture);
             }
         }
     }

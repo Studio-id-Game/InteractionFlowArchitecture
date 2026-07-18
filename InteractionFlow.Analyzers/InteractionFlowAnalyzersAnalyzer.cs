@@ -29,13 +29,22 @@ namespace InteractionFlow.Analyzers
         public const string DependencyNodeDiagnosticId = "InteractionFlowArchitecture002";
 
         private static readonly LocalizableString Title =
-    new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+    new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
         private static readonly LocalizableString MessageFormat =
-            new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
         private static readonly LocalizableString Description =
-            new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeTitle =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeMessageFormat =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeDescription =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
         // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
         // See https://github.com/dotnet/roslyn/blob/main/docs/analyzers/Localizing%20Analyzers.md for more on localization
@@ -47,12 +56,12 @@ namespace InteractionFlow.Analyzers
         private static readonly DiagnosticDescriptor Rule = new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
         private static readonly DiagnosticDescriptor DependencyNodeRule = new(
             DependencyNodeDiagnosticId,
-            "Incomplete dependency node declaration",
-            "{0}",
+            DependencyNodeTitle,
+            DependencyNodeMessageFormat,
             Category,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            description: "IDependencyNode constructor dependencies must be exposed through Dependency or passed to the base dependency node.");
+            description: DependencyNodeDescription);
 
         private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> RulesBySeverity =
             Enum.GetValues(typeof(DiagnosticSeverity))
@@ -357,7 +366,7 @@ namespace InteractionFlow.Analyzers
                         context,
                         analysisState,
                         location,
-                        "IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency' for derived dependency extension.");
+                        Resources.DependencyNodeMustBeSealedOrHaveParams);
                 }
 
                 foreach (var parameter in constructor.Parameters.Where(e => IsDependencyParameter(e, dependencyNode)))
@@ -372,7 +381,7 @@ namespace InteractionFlow.Analyzers
                                 context,
                                 analysisState,
                                 GetParameterDiagnosticLocation(parameter, constructor, typeLocation),
-                                $"IDependencyNode constructor parameter '{parameter.Name}' must be passed to the base IDependencyNode constructor.");
+                                string.Format(Resources.DependencyNodeParameterMustBePassedToBase, parameter.Name));
                         }
                     }
                     else if (!DependencyPropertyIncludesParameter(context, analysisState, type, dependencyNode, constructor, parameter))
@@ -381,7 +390,7 @@ namespace InteractionFlow.Analyzers
                             context,
                             analysisState,
                             GetParameterDiagnosticLocation(parameter, constructor, typeLocation),
-                            $"IDependencyNode constructor parameter '{parameter.Name}' must be included in Dependency.");
+                            string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, parameter.Name));
                     }
                 }
             }

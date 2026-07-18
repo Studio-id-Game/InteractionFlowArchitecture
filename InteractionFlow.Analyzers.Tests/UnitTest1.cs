@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
@@ -65,6 +66,32 @@ public class InteractionFlowAnalyzersAnalyzerTests
         Assert.Contains("thirdparty", roots, StringComparer.OrdinalIgnoreCase);
         Assert.Single(roots, x => x.Equals("thirdparty", StringComparison.OrdinalIgnoreCase));
         Assert.False(LayerNames.IsDisallowReference(roots, "App.Interactions", "ThirdParty.Lib", out _, out _));
+    }
+
+    /// <summary>
+    /// Dependency Node ルールの診断メッセージが Resources 経由で英語・日本語に切り替わることを確認します。
+    /// </summary>
+    [Fact]
+    public void DependencyNodeResources_LocalizesMessages()
+    {
+        var previousCulture = Resources.Culture;
+
+        try
+        {
+            Resources.Culture = CultureInfo.GetCultureInfo("en");
+            Assert.Equal(
+                "IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency'",
+                Resources.DependencyNodeMustBeSealedOrHaveParams);
+
+            Resources.Culture = CultureInfo.GetCultureInfo("ja");
+            Assert.Equal(
+                "IDependencyNode クラスは sealed にするか 'params IDependencyNode[] dependency' を宣言する必要があります",
+                Resources.DependencyNodeMustBeSealedOrHaveParams);
+        }
+        finally
+        {
+            Resources.Culture = previousCulture;
+        }
     }
 
     /// <summary>

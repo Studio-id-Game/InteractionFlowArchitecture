@@ -992,7 +992,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
             namespace App.Nodes
             {
-                public class Test : IDependencyNode
+                public sealed class Test : IDependencyNode
                 {
                     public Test(IDependencyNode node1)
                     {
@@ -1000,6 +1000,44 @@ public class InteractionFlowAnalyzersAnalyzerTests
                     }
 
                     public ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// sealed な IDependencyNode 実装クラスの通常コンストラクタに params IDependencyNode[] が無い場合でも、
+    /// 継承拡張対象外として診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_SealedConstructor_MissingParams_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public sealed class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IDependencyNode node1)
+                    {
+                        dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
                 }
             }
             """;
@@ -1171,6 +1209,46 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedDependencyHidden(22, 16, 22, 25);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// sealed ではない具象 IDependencyNode 実装クラスの通常コンストラクタに
+    /// params IDependencyNode[] が無い場合、診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NonSealedConstructor_MissingParams_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IDependencyNode node1)
+                    {
+                        this.dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(18, 16, 18, 25);
 
         await VerifyAsync(source, expected);
     }

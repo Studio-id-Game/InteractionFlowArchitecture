@@ -350,14 +350,14 @@ namespace InteractionFlow.Analyzers
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                if (type.IsAbstract && !HasParamsDependencyNodeParameter(constructor, dependencyNode))
+                if (!type.IsSealed && !HasParamsDependencyNodeParameter(constructor, dependencyNode))
                 {
                     var location = GetConstructorDiagnosticLocation(constructor, typeLocation);
                     ReportDependencyNodeDiagnostic(
                         context,
                         analysisState,
                         location,
-                        "IDependencyNode abstract class constructor must declare 'params IDependencyNode[] dependency' for derived dependency extension.");
+                        "IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency' for derived dependency extension.");
                 }
 
                 foreach (var parameter in constructor.Parameters.Where(e => IsDependencyParameter(e, dependencyNode)))

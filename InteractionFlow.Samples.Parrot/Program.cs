@@ -7,6 +7,7 @@ using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Samples.Parrot.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Interactions;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
@@ -44,6 +45,9 @@ namespace InteractionFlow.Samples.Parrot
             }
 
             using var selectAndRunSample = globalScope.BuildSystemFlow<SelectAndRunSample, IFlowContext>();
+
+            var treeText = DependencyTreeView.GetDependencyTreeText(selectAndRunSample.Root);
+            Console.WriteLine(treeText);
 
             while (true)
             {

@@ -2,8 +2,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using System;
-using System.Globalization;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Xunit;
 namespace InteractionFlow.Analyzers.Tests;
@@ -87,6 +87,45 @@ public class InteractionFlowAnalyzersAnalyzerTests
             Assert.Equal(
                 "IDependencyNode クラスは sealed にするか 'params IDependencyNode[] dependency' を宣言する必要があります",
                 Resources.DependencyNodeMustBeSealedOrHaveParams);
+        }
+        finally
+        {
+            Resources.Culture = previousCulture;
+        }
+    }
+
+    /// <summary>
+    /// Analyzer の共通文と詳細理由を組み合わせた診断メッセージが、
+    /// Resources 経由で英語・日本語に切り替わることを確認します。
+    /// </summary>
+    [Fact]
+    public void AnalyzerResources_ComposesCommonMessagesAndDetails()
+    {
+        var previousCulture = Resources.Culture;
+
+        try
+        {
+            Resources.Culture = CultureInfo.GetCultureInfo("en");
+            var layerDetail = string.Format(Resources.LayerDependencyDisallowedReference, "Interactions", "Builders", "BuilderWorker");
+            var dependencyNodeDetail = string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, "node1");
+
+            Assert.Equal(
+                "Invalid layer dependency: Layer 'Interactions' must not depend on 'Builders'; referenced type: 'BuilderWorker'",
+                string.Format(Resources.LayerDependencyAnalyzerMessageFormat, layerDetail));
+            Assert.Equal(
+                "Invalid dependency node declaration: Parameter 'node1' must be included in Dependency",
+                string.Format(Resources.DependencyNodeAnalyzerMessageFormat, dependencyNodeDetail));
+
+            Resources.Culture = CultureInfo.GetCultureInfo("ja");
+            layerDetail = string.Format(Resources.LayerDependencyDisallowedReference, "Interactions", "Builders", "BuilderWorker");
+            dependencyNodeDetail = string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, "node1");
+
+            Assert.Equal(
+                "レイヤー依存関係規則に違反しています: 'Interactions' は 'Builders' に依存できません。参照型: 'BuilderWorker'",
+                string.Format(Resources.LayerDependencyAnalyzerMessageFormat, layerDetail));
+            Assert.Equal(
+                "依存ノード宣言規則に違反しています: 引数 'node1' は Dependency に含める必要があります",
+                string.Format(Resources.DependencyNodeAnalyzerMessageFormat, dependencyNodeDetail));
         }
         finally
         {
@@ -1032,6 +1071,41 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// IDependencyNode.Dependency を明示的に実装している場合、
+    /// 同名の公開 Dependency プロパティではなく interface 実装側を検査することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_ExplicitDependencyProperty_IgnoresSameNamePublicProperty()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public sealed class Test(IDependencyNode node1) : IDependencyNode
+                {
+                    public ReadOnlyMemory<IDependencyNode> Dependency => new IDependencyNode[] { node1 };
+
+                    ReadOnlyMemory<IDependencyNode> IDependencyNode.Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(14, 46, 14, 51);
+
+        await VerifyAsync(source, expected);
     }
 
     /// <summary>

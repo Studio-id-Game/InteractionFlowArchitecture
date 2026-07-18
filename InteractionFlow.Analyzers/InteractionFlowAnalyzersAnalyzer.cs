@@ -29,7 +29,7 @@ namespace InteractionFlow.Analyzers
         public const string DependencyNodeDiagnosticId = "InteractionFlowArchitecture002";
 
         private static readonly LocalizableString LayerDependencyAnalyzerTitle =
-    new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
         private static readonly LocalizableString LayerDependencyAnalyzerMessageFormat =
             new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
@@ -548,10 +548,23 @@ namespace InteractionFlow.Analyzers
 
         private static bool IsDependencyProperty(IPropertySymbol property, INamedTypeSymbol dependencyNode)
         {
-            return property.Name == "Dependency" ||
-                property.ExplicitInterfaceImplementations.Any(e =>
-                    e.Name == "Dependency" &&
-                    SymbolEqualityComparer.Default.Equals(e.ContainingType, dependencyNode));
+            var dependencyProperty = dependencyNode.GetMembers("Dependency")
+                .OfType<IPropertySymbol>()
+                .FirstOrDefault(e => e.Parameters.Length == 0);
+
+            if (dependencyProperty == null)
+            {
+                return false;
+            }
+
+            if (property.ExplicitInterfaceImplementations.Any(e =>
+                SymbolEqualityComparer.Default.Equals(e, dependencyProperty)))
+            {
+                return true;
+            }
+
+            var implementation = property.ContainingType.FindImplementationForInterfaceMember(dependencyProperty);
+            return SymbolEqualityComparer.Default.Equals(implementation, property);
         }
 
         private static IEnumerable<ISymbol> GetReferencedMemberSymbols(

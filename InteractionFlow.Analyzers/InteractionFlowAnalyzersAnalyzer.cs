@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using System;
@@ -22,39 +23,90 @@ namespace InteractionFlow.Analyzers
         /// </summary>
         public const string DiagnosticId = "InteractionFlowArchitecture001";
 
-        private static readonly LocalizableString Title =
-    new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+        /// <summary>
+        /// The diagnostic identifier for incomplete IDependencyNode dependency declarations.
+        /// </summary>
+        public const string DependencyNodeDiagnosticId = "InteractionFlowArchitecture002";
 
-        private static readonly LocalizableString MessageFormat =
-            new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
+        private static readonly LocalizableString LayerDependencyAnalyzerTitle =
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString Description =
-            new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
+        private static readonly LocalizableString LayerDependencyAnalyzerMessageFormat =
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
-        // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
-        // See https://github.com/dotnet/roslyn/blob/main/docs/analyzers/Localizing%20Analyzers.md for more on localization
-        //private static readonly LocalizableString Title = "Invalid layer dependency";
-        //private static readonly LocalizableString MessageFormat = "Layer '{0}' must not depend on '{1}' (Type = '{2}')";
-        //private static readonly LocalizableString Description = "Interaction Flow Architecture - Invalid layer dependency";
+        private static readonly LocalizableString LayerDependencyAnalyzerDescription =
+            new LocalizableResourceString(nameof(Resources.LayerDependencyAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeAnalyzerTitle =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeAnalyzerMessageFormat =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
+
+        private static readonly LocalizableString DependencyNodeAnalyzerDescription =
+            new LocalizableResourceString(nameof(Resources.DependencyNodeAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
+
         private const string Category = "Architecture";
 
-        private static readonly DiagnosticDescriptor Rule = new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        private static readonly DiagnosticDescriptor Rule = new(
+            DiagnosticId,
+            LayerDependencyAnalyzerTitle,
+            LayerDependencyAnalyzerMessageFormat,
+            Category,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: LayerDependencyAnalyzerDescription);
+
+        private static readonly DiagnosticDescriptor DependencyNodeRule = new(
+            DependencyNodeDiagnosticId,
+            DependencyNodeAnalyzerTitle,
+            DependencyNodeAnalyzerMessageFormat,
+            Category,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: DependencyNodeAnalyzerDescription);
 
         private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> RulesBySeverity =
             Enum.GetValues(typeof(DiagnosticSeverity))
                 .Cast<DiagnosticSeverity>()
                 .ToImmutableDictionary(
                     severity => severity,
-                    severity => new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, severity, isEnabledByDefault: true, description: Description));
+                    severity => new DiagnosticDescriptor(
+                        DiagnosticId,
+                        Rule.Title,
+                        Rule.MessageFormat,
+                        Category,
+                        severity,
+                        isEnabledByDefault: true,
+                        description: Rule.Description));
+
+        private static readonly ImmutableDictionary<DiagnosticSeverity, DiagnosticDescriptor> DependencyNodeRulesBySeverity =
+            Enum.GetValues(typeof(DiagnosticSeverity))
+                .Cast<DiagnosticSeverity>()
+                .ToImmutableDictionary(
+                    severity => severity,
+                    severity => new DiagnosticDescriptor(
+                        DependencyNodeDiagnosticId,
+                        DependencyNodeRule.Title,
+                        DependencyNodeRule.MessageFormat,
+                        Category,
+                        severity,
+                        isEnabledByDefault: true,
+                        description: DependencyNodeRule.Description));
 
         private static DiagnosticDescriptor GetRule(DiagnosticSeverity severity)
         {
             return RulesBySeverity.TryGetValue(severity, out var rule) ? rule : Rule;
         }
 
+        private static DiagnosticDescriptor GetDependencyNodeRule(DiagnosticSeverity severity)
+        {
+            return DependencyNodeRulesBySeverity.TryGetValue(severity, out var rule) ? rule : DependencyNodeRule;
+        }
+
         /// <inheritdoc/>
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-               => ImmutableArray.Create(Rule);
+               => ImmutableArray.Create(Rule, DependencyNodeRule);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
@@ -64,7 +116,9 @@ namespace InteractionFlow.Analyzers
 
             context.RegisterCompilationStartAction(compilationContext =>
             {
-                var analysisState = new CompilationAnalyzerContext(compilationContext.Options.AnalyzerConfigOptionsProvider);
+                var analysisState = new CompilationAnalyzerContext(
+                    compilationContext.Compilation,
+                    compilationContext.Options.AnalyzerConfigOptionsProvider);
 
                 // ▼ 定義側
                 compilationContext.RegisterSymbolAction(context => AnalyzeProperty(context, analysisState), SymbolKind.Property);
@@ -132,6 +186,8 @@ namespace InteractionFlow.Analyzers
 
                 CheckTypeRecursive(analysisContext, iface);
             }
+
+            AnalyzeDependencyNodeType(context, type, analysisState);
         }
 
         private static void AnalyzeMethod(SymbolAnalysisContext context, CompilationAnalyzerContext analysisState)
@@ -280,6 +336,363 @@ namespace InteractionFlow.Analyzers
         }
 
         // =========================
+        // Dependency Node
+        // =========================
+
+        private static void AnalyzeDependencyNodeType(
+            SymbolAnalysisContext context,
+            INamedTypeSymbol type,
+            CompilationAnalyzerContext analysisState)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            var dependencyNode = analysisState.DependencyNodeType;
+            if (dependencyNode == null ||
+                type.TypeKind != TypeKind.Class ||
+                !IsDependencyNodeType(type, dependencyNode))
+            {
+                return;
+            }
+
+            var typeLocation = type.Locations.FirstOrDefault(loc => loc.IsInSource) ?? Location.None;
+            var options = analysisState.GetOptions(typeLocation);
+            if (!options.Enabled)
+            {
+                return;
+            }
+
+            var baseTypeIsDependencyNode = type.BaseType != null &&
+                type.BaseType.SpecialType != SpecialType.System_Object &&
+                IsDependencyNodeType(type.BaseType, dependencyNode);
+
+            foreach (var constructor in type.Constructors.Where(e => !e.IsStatic))
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                if (!type.IsSealed && !HasParamsDependencyNodeParameter(constructor, dependencyNode))
+                {
+                    var location = GetConstructorDiagnosticLocation(constructor, typeLocation);
+                    ReportDependencyNodeDiagnostic(
+                        context,
+                        analysisState,
+                        location,
+                        Resources.DependencyNodeMustBeSealedOrHaveParams);
+                }
+
+                foreach (var parameter in constructor.Parameters.Where(e => IsDependencyParameter(e, dependencyNode)))
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    if (baseTypeIsDependencyNode)
+                    {
+                        if (!ConstructorBaseCallIncludesParameter(context, analysisState, constructor, parameter))
+                        {
+                            ReportDependencyNodeDiagnostic(
+                                context,
+                                analysisState,
+                                GetParameterDiagnosticLocation(parameter, constructor, typeLocation),
+                                string.Format(Resources.DependencyNodeParameterMustBePassedToBase, parameter.Name));
+                        }
+                    }
+                    else if (!DependencyPropertyIncludesParameter(context, analysisState, type, dependencyNode, constructor, parameter))
+                    {
+                        ReportDependencyNodeDiagnostic(
+                            context,
+                            analysisState,
+                            GetParameterDiagnosticLocation(parameter, constructor, typeLocation),
+                            string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, parameter.Name));
+                    }
+                }
+            }
+        }
+
+        private static bool IsDependencyParameter(IParameterSymbol parameter, INamedTypeSymbol dependencyNode)
+        {
+            return IsDependencyNodeType(parameter.Type, dependencyNode);
+        }
+
+        private static bool IsDependencyNodeType(ITypeSymbol type, INamedTypeSymbol dependencyNode)
+        {
+            if (type is IArrayTypeSymbol array)
+            {
+                return IsDependencyNodeType(array.ElementType, dependencyNode);
+            }
+
+            if (SymbolEqualityComparer.Default.Equals(type, dependencyNode))
+            {
+                return true;
+            }
+
+            if (type is ITypeParameterSymbol typeParameter)
+            {
+                return typeParameter.ConstraintTypes.Any(e => IsDependencyNodeType(e, dependencyNode));
+            }
+
+            if (type is INamedTypeSymbol named)
+            {
+                return named.AllInterfaces.Any(e => SymbolEqualityComparer.Default.Equals(e, dependencyNode));
+            }
+
+            return false;
+        }
+
+        private static bool HasParamsDependencyNodeParameter(IMethodSymbol constructor, INamedTypeSymbol dependencyNode)
+        {
+            return constructor.Parameters.Any(parameter =>
+                parameter.IsParams &&
+                parameter.Type is IArrayTypeSymbol array &&
+                SymbolEqualityComparer.Default.Equals(array.ElementType, dependencyNode));
+        }
+
+        private static bool ConstructorBaseCallIncludesParameter(
+            SymbolAnalysisContext context,
+            CompilationAnalyzerContext analysisState,
+            IMethodSymbol constructor,
+            IParameterSymbol parameter)
+        {
+            foreach (var syntaxReference in constructor.DeclaringSyntaxReferences)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var syntax = syntaxReference.GetSyntax(context.CancellationToken);
+                var model = analysisState.GetSemanticModel(syntax.SyntaxTree);
+
+                if (syntax is ConstructorDeclarationSyntax constructorDeclaration)
+                {
+                    var initializer = constructorDeclaration.Initializer;
+                    if (initializer != null &&
+                        initializer.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.BaseConstructorInitializer) &&
+                        ContainsSymbolReference(initializer, parameter, model, context.CancellationToken))
+                    {
+                        return true;
+                    }
+                }
+                else if (syntax is TypeDeclarationSyntax typeDeclaration &&
+                    typeDeclaration.BaseList != null)
+                {
+                    foreach (var baseType in typeDeclaration.BaseList.Types)
+                    {
+                        context.CancellationToken.ThrowIfCancellationRequested();
+
+                        if (baseType.ToString().Contains("(") &&
+                            ContainsSymbolReference(baseType, parameter, model, context.CancellationToken))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DependencyPropertyIncludesParameter(
+            SymbolAnalysisContext context,
+            CompilationAnalyzerContext analysisState,
+            INamedTypeSymbol type,
+            INamedTypeSymbol dependencyNode,
+            IMethodSymbol constructor,
+            IParameterSymbol parameter)
+        {
+            var dependencyProperties = type.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(e => e.Parameters.Length == 0 && IsDependencyProperty(e, dependencyNode))
+                .ToImmutableArray();
+
+            if (dependencyProperties.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var property in dependencyProperties)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var referencedMembers = new HashSet<ISymbol>(SymbolEqualityComparer.Default)
+                {
+                    property
+                };
+
+                foreach (var syntaxReference in property.DeclaringSyntaxReferences)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    var syntax = syntaxReference.GetSyntax(context.CancellationToken);
+                    var model = analysisState.GetSemanticModel(syntax.SyntaxTree);
+
+                    if (ContainsSymbolReference(syntax, parameter, model, context.CancellationToken))
+                    {
+                        return true;
+                    }
+
+                    foreach (var referencedMember in GetReferencedMemberSymbols(syntax, model, type, context.CancellationToken))
+                    {
+                        referencedMembers.Add(referencedMember);
+                    }
+                }
+
+                foreach (var referencedMember in referencedMembers)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    if (MemberDeclarationIncludesParameter(context, analysisState, referencedMember, parameter) ||
+                        ConstructorAssignmentIncludesParameter(context, analysisState, constructor, referencedMember, parameter))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsDependencyProperty(IPropertySymbol property, INamedTypeSymbol dependencyNode)
+        {
+            var dependencyProperty = dependencyNode.GetMembers("Dependency")
+                .OfType<IPropertySymbol>()
+                .FirstOrDefault(e => e.Parameters.Length == 0);
+
+            if (dependencyProperty == null)
+            {
+                return false;
+            }
+
+            if (property.ExplicitInterfaceImplementations.Any(e =>
+                SymbolEqualityComparer.Default.Equals(e, dependencyProperty)))
+            {
+                return true;
+            }
+
+            var implementation = property.ContainingType.FindImplementationForInterfaceMember(dependencyProperty);
+            return SymbolEqualityComparer.Default.Equals(implementation, property);
+        }
+
+        private static IEnumerable<ISymbol> GetReferencedMemberSymbols(
+            SyntaxNode syntax,
+            SemanticModel model,
+            INamedTypeSymbol containingType,
+            CancellationToken cancellationToken)
+        {
+            foreach (var node in syntax.DescendantNodesAndSelf())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var symbol = model.GetSymbolInfo(node, cancellationToken).Symbol;
+                if ((symbol is IFieldSymbol || symbol is IPropertySymbol) &&
+                    SymbolEqualityComparer.Default.Equals(symbol.ContainingType, containingType))
+                {
+                    yield return symbol;
+                }
+            }
+        }
+
+        private static bool MemberDeclarationIncludesParameter(
+            SymbolAnalysisContext context,
+            CompilationAnalyzerContext analysisState,
+            ISymbol member,
+            IParameterSymbol parameter)
+        {
+            foreach (var syntaxReference in member.DeclaringSyntaxReferences)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var syntax = syntaxReference.GetSyntax(context.CancellationToken);
+                var model = analysisState.GetSemanticModel(syntax.SyntaxTree);
+                if (ContainsSymbolReference(syntax, parameter, model, context.CancellationToken))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ConstructorAssignmentIncludesParameter(
+            SymbolAnalysisContext context,
+            CompilationAnalyzerContext analysisState,
+            IMethodSymbol constructor,
+            ISymbol targetMember,
+            IParameterSymbol parameter)
+        {
+            foreach (var syntaxReference in constructor.DeclaringSyntaxReferences)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                if (syntaxReference.GetSyntax(context.CancellationToken) is not ConstructorDeclarationSyntax constructorDeclaration)
+                {
+                    continue;
+                }
+
+                var body = (SyntaxNode?)constructorDeclaration.Body ?? constructorDeclaration.ExpressionBody;
+                if (body == null)
+                {
+                    continue;
+                }
+
+                var model = analysisState.GetSemanticModel(body.SyntaxTree);
+                foreach (var assignment in body.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    var leftSymbol = model.GetSymbolInfo(assignment.Left, context.CancellationToken).Symbol;
+                    if (SymbolEqualityComparer.Default.Equals(leftSymbol, targetMember) &&
+                        ContainsSymbolReference(assignment.Right, parameter, model, context.CancellationToken))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsSymbolReference(
+            SyntaxNode syntax,
+            ISymbol symbol,
+            SemanticModel model,
+            CancellationToken cancellationToken)
+        {
+            foreach (var node in syntax.DescendantNodesAndSelf())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var referencedSymbol = model.GetSymbolInfo(node, cancellationToken).Symbol;
+                if (SymbolEqualityComparer.Default.Equals(referencedSymbol, symbol))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Location GetConstructorDiagnosticLocation(IMethodSymbol constructor, Location fallback)
+        {
+            return constructor.Locations.FirstOrDefault(loc => loc.IsInSource) ?? fallback;
+        }
+
+        private static Location GetParameterDiagnosticLocation(IParameterSymbol parameter, IMethodSymbol constructor, Location fallback)
+        {
+            return parameter.Locations.FirstOrDefault(loc => loc.IsInSource) ??
+                GetConstructorDiagnosticLocation(constructor, fallback);
+        }
+
+        private static void ReportDependencyNodeDiagnostic(
+            SymbolAnalysisContext context,
+            CompilationAnalyzerContext analysisState,
+            Location location,
+            string message)
+        {
+            var options = analysisState.GetOptions(location);
+            if (!options.Enabled)
+            {
+                return;
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(GetDependencyNodeRule(options.Mode), location, message));
+        }
+
+        // =========================
         // 実行コンテキスト
         // =========================
 
@@ -313,11 +726,16 @@ namespace InteractionFlow.Analyzers
                 analysisState);
         }
 
-        private sealed class CompilationAnalyzerContext(AnalyzerConfigOptionsProvider optionsProvider)
+        private sealed class CompilationAnalyzerContext(Compilation compilation, AnalyzerConfigOptionsProvider optionsProvider)
         {
             private readonly OptionValues disabledOptions = new(null);
+            private readonly Compilation compilation = compilation;
             private readonly ConcurrentDictionary<SyntaxTree, OptionValues> optionsByTree = new();
+            private readonly ConcurrentDictionary<SyntaxTree, SemanticModel> semanticModelByTree = new();
             private readonly ConcurrentDictionary<string, DisallowReferenceInfo> disallowReferenceCache = new(StringComparer.Ordinal);
+
+            public INamedTypeSymbol? DependencyNodeType { get; } =
+                compilation.GetTypeByMetadataName("InteractionFlow.Core.Entities.Architectures.IDependencyNode");
 
             public OptionValues GetOptions(Location location)
             {
@@ -344,6 +762,11 @@ namespace InteractionFlow.Analyzers
 
                     return new DisallowReferenceInfo(targetNamespace, isDisallow, sourceShowName, targetShowName);
                 });
+            }
+
+            public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
+            {
+                return semanticModelByTree.GetOrAdd(syntaxTree, tree => compilation.GetSemanticModel(tree));
             }
         }
 
@@ -405,14 +828,13 @@ namespace InteractionFlow.Analyzers
 
                 if (disallowReferenceInfo.IsDisallow)
                 {
-                    var args = new string[]
-                    {
+                    var detailMessage = string.Format(
+                        Resources.LayerDependencyDisallowedReference,
                         disallowReferenceInfo.SourceShowName,
                         disallowReferenceInfo.TargetShowName,
-                        type.Name
-                    };
+                        type.Name);
 
-                    reportDiagnostic(Diagnostic.Create(rule, location, args));
+                    reportDiagnostic(Diagnostic.Create(rule, location, detailMessage));
                     return true;
                 }
                 else

@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-    public class NoteCreate(
+    public sealed class NoteCreate(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,
@@ -25,7 +25,15 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         INotepadUserDataPersistencePort notepadUserDataPersistence,
         INotepadDataStoragePort notepadDataFiles,
         INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles)
+        Interaction(
+            exceptionPort,
+            cancellationPort,
+            consoleReaction,
+            consoleOperation,
+            notepadUserDataFiles,
+            notepadUserDataPersistence,
+            notepadDataFiles,
+            notepadDataPersistence)
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {

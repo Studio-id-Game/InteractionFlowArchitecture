@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Externals.Serializers
 {
-    internal class NotepadDataSimpleSerializer : TextSerializer<NotepadData>, INotepadDataSerializerPort
+    internal sealed class NotepadDataSimpleSerializer : TextSerializer<NotepadData>, INotepadDataSerializerPort
     {
         public override Task<Result<NotepadData>> Deserialize(Result<string> inputText, Result<NotepadData> refValue)
         {

@@ -7,7 +7,7 @@ using System;
 
 namespace InteractionFlow.Samples.Parrot.Externals.Storages
 {
-    internal class LastSelectMemory : Storage<bool, RefEntry<SampleID>>, ILastSelectMemory
+    internal sealed class LastSelectMemory : Storage<bool, RefEntry<SampleID>>, ILastSelectMemory
     {
         public override Result<bool> GetKey(IFlowContext context)
         {

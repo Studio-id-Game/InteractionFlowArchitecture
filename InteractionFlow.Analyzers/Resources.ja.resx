@@ -117,16 +117,44 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AnalyzerDescription" xml:space="preserve">
+  <data name="DependencyNodeAnalyzerDescription" xml:space="preserve">
+    <value>Interaction Flow 実装規則 - 依存ノード宣言規則</value>
+    <comment>An optional longer localizable description of the dependency node diagnostic.</comment>
+  </data>
+  <data name="DependencyNodeAnalyzerMessageFormat" xml:space="preserve">
+    <value>依存ノード宣言規則に違反しています: {0}</value>
+    <comment>The format-able common message the dependency node diagnostic displays.</comment>
+  </data>
+  <data name="DependencyNodeAnalyzerTitle" xml:space="preserve">
+    <value>依存ノード宣言規則の違反</value>
+    <comment>The title of the dependency node diagnostic.</comment>
+  </data>
+  <data name="DependencyNodeMustBeSealedOrHaveParams" xml:space="preserve">
+    <value>IDependencyNode クラスは sealed にするか 'params IDependencyNode[] dependency' を宣言する必要があります</value>
+    <comment>The detail message shown when a dependency node class can be inherited but cannot receive derived dependencies.</comment>
+  </data>
+  <data name="DependencyNodeParameterMustBeIncludedInDependency" xml:space="preserve">
+    <value>引数 '{0}' は Dependency に含める必要があります</value>
+    <comment>The detail message shown when a constructor dependency node is missing from Dependency.</comment>
+  </data>
+  <data name="DependencyNodeParameterMustBePassedToBase" xml:space="preserve">
+    <value>引数 '{0}' は基底 IDependencyNode コンストラクタへ渡す必要があります</value>
+    <comment>The detail message shown when a derived dependency node does not pass a constructor dependency to its base constructor.</comment>
+  </data>
+  <data name="LayerDependencyAnalyzerDescription" xml:space="preserve">
     <value>Interaction Flow アーキテクチャ規則 - 依存関係規則</value>
-    <comment>An optional longer localizable description of the diagnostic.</comment>
+    <comment>An optional longer localizable description of the layer dependency diagnostic.</comment>
   </data>
-  <data name="AnalyzerMessageFormat" xml:space="preserve">
-    <value>'{0}' による '{1}' への依存は、Interaction Flow アーキテクチャの依存関係規則に違反しています (Type = '{2}')</value>
-    <comment>The format-able message the diagnostic displays.</comment>
+  <data name="LayerDependencyAnalyzerMessageFormat" xml:space="preserve">
+    <value>レイヤー依存関係規則に違反しています: {0}</value>
+    <comment>The format-able common message the layer dependency diagnostic displays.</comment>
   </data>
-  <data name="AnalyzerTitle" xml:space="preserve">
-    <value>依存関係規則の違反</value>
-    <comment>The title of the diagnostic.</comment>
+  <data name="LayerDependencyAnalyzerTitle" xml:space="preserve">
+    <value>レイヤー依存関係規則の違反</value>
+    <comment>The title of the layer dependency diagnostic.</comment>
+  </data>
+  <data name="LayerDependencyDisallowedReference" xml:space="preserve">
+    <value>'{0}' は '{1}' に依存できません。参照型: '{2}'</value>
+    <comment>The detail message shown when a layer references a disallowed layer or external namespace.</comment>
   </data>
 </root>

@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
-    internal class RunSample(
+    internal sealed class RunSample(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleOperation operation,

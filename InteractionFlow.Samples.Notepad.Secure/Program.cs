@@ -55,6 +55,9 @@ namespace InteractionFlow.Samples.Notepad.Secure
 
             var mainLoop = scope.BuildSystemFlow<MainLoop, NotepadContext>();
 
+            var treeText = DependencyTreeView.GetDependencyTreeText(mainLoop.Root);
+            Console.WriteLine(treeText);
+
             var context = new NotepadContext(NotepadUserObject.Public);
 
             var end = await mainLoop.ExecuteAsync(context);

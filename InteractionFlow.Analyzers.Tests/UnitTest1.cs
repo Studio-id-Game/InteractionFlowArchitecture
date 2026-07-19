@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Xunit;
 namespace InteractionFlow.Analyzers.Tests;
@@ -43,7 +44,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(7, 13, 7, 49)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(useCaseSource, additionalSources: [("BuilderWorker.cs", workerSource)], expected: expected);
     }
@@ -65,6 +66,71 @@ public class InteractionFlowAnalyzersAnalyzerTests
         Assert.Contains("thirdparty", roots, StringComparer.OrdinalIgnoreCase);
         Assert.Single(roots, x => x.Equals("thirdparty", StringComparison.OrdinalIgnoreCase));
         Assert.False(LayerNames.IsDisallowReference(roots, "App.Interactions", "ThirdParty.Lib", out _, out _));
+    }
+
+    /// <summary>
+    /// Dependency Node ルールの診断メッセージが Resources 経由で英語・日本語に切り替わることを確認します。
+    /// </summary>
+    [Fact]
+    public void DependencyNodeResources_LocalizesMessages()
+    {
+        var previousCulture = Resources.Culture;
+
+        try
+        {
+            Resources.Culture = CultureInfo.GetCultureInfo("en");
+            Assert.Equal(
+                "IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency'",
+                Resources.DependencyNodeMustBeSealedOrHaveParams);
+
+            Resources.Culture = CultureInfo.GetCultureInfo("ja");
+            Assert.Equal(
+                "IDependencyNode クラスは sealed にするか 'params IDependencyNode[] dependency' を宣言する必要があります",
+                Resources.DependencyNodeMustBeSealedOrHaveParams);
+        }
+        finally
+        {
+            Resources.Culture = previousCulture;
+        }
+    }
+
+    /// <summary>
+    /// Analyzer の共通文と詳細理由を組み合わせた診断メッセージが、
+    /// Resources 経由で英語・日本語に切り替わることを確認します。
+    /// </summary>
+    [Fact]
+    public void AnalyzerResources_ComposesCommonMessagesAndDetails()
+    {
+        var previousCulture = Resources.Culture;
+
+        try
+        {
+            Resources.Culture = CultureInfo.GetCultureInfo("en");
+            var layerDetail = string.Format(Resources.LayerDependencyDisallowedReference, "Interactions", "Builders", "BuilderWorker");
+            var dependencyNodeDetail = string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, "node1");
+
+            Assert.Equal(
+                "Invalid layer dependency: Layer 'Interactions' must not depend on 'Builders'; referenced type: 'BuilderWorker'",
+                string.Format(Resources.LayerDependencyAnalyzerMessageFormat, layerDetail));
+            Assert.Equal(
+                "Invalid dependency node declaration: Parameter 'node1' must be included in Dependency",
+                string.Format(Resources.DependencyNodeAnalyzerMessageFormat, dependencyNodeDetail));
+
+            Resources.Culture = CultureInfo.GetCultureInfo("ja");
+            layerDetail = string.Format(Resources.LayerDependencyDisallowedReference, "Interactions", "Builders", "BuilderWorker");
+            dependencyNodeDetail = string.Format(Resources.DependencyNodeParameterMustBeIncludedInDependency, "node1");
+
+            Assert.Equal(
+                "レイヤー依存関係規則に違反しています: 'Interactions' は 'Builders' に依存できません。参照型: 'BuilderWorker'",
+                string.Format(Resources.LayerDependencyAnalyzerMessageFormat, layerDetail));
+            Assert.Equal(
+                "依存ノード宣言規則に違反しています: 引数 'node1' は Dependency に含める必要があります",
+                string.Format(Resources.DependencyNodeAnalyzerMessageFormat, dependencyNodeDetail));
+        }
+        finally
+        {
+            Resources.Culture = previousCulture;
+        }
     }
 
     /// <summary>
@@ -95,7 +161,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(14, 79, 14, 82)
-            .WithArguments("Interactions", "Builders", "BuilderType");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderType"));
 
         await VerifyAsync(source, expected);
     }
@@ -200,7 +266,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(12, 34, 12, 40)
-            .WithArguments("Interactions", "ThirdParty", "Client");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "ThirdParty", "Client"));
 
         await VerifyAsync(source, expected);
     }
@@ -233,7 +299,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetLayer.Length + targetType.Length, 12, 32 + targetLayer.Length + targetType.Length)
-            .WithArguments("SystemFlows", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("SystemFlows", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -266,7 +332,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetLayer.Length + targetType.Length, 12, 32 + targetLayer.Length + targetType.Length)
-            .WithArguments("Interactions", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -300,7 +366,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 15 + targetLayer.Length + targetType.Length, 12, 21 + targetLayer.Length + targetType.Length)
-            .WithArguments("ExternalPorts", targetLayer, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("ExternalPorts", targetLayer, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -336,7 +402,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 22 + targetNamespace.Length + targetType.Length, 12, 32 + targetNamespace.Length + targetType.Length)
-            .WithArguments("Entities", targetShowName, targetType);
+            .WithArguments(ExpectedLayerDependencyDetail("Entities", targetShowName, targetType));
 
         await VerifyAsync(source, expected);
     }
@@ -435,7 +501,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 43, 12, 49)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -464,7 +530,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -493,7 +559,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "BuilderBase");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderBase"));
 
         await VerifyAsync(source, expected);
     }
@@ -522,7 +588,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(10, 18, 10, 25)
-            .WithArguments("Interactions", "Builders", "IBuilderContract");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "IBuilderContract"));
 
         await VerifyAsync(source, expected);
     }
@@ -552,7 +618,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 44, 12, 54)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -584,7 +650,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 21, 12, 24)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -617,7 +683,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(14, 20, 14, 52)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -651,7 +717,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(15, 20, 15, 51)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -685,7 +751,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(15, 20, 15, 51)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -718,7 +784,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(14, 40, 14, 57)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expected);
     }
@@ -776,7 +842,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Error)
             .WithSpan(12, 43, 12, 53)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, mode: "Error", expected: expected);
     }
@@ -807,7 +873,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
 
         var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
             .WithSpan(12, 43, 12, 53)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, mode: "Banana", expected: expected);
     }
@@ -884,7 +950,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expected = ExpectedHidden(12, 35, 12, 41)
-            .WithArguments("Interactions", "ThirdPartyX", "Client");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "ThirdPartyX", "Client"));
 
         await VerifyAsync(source, additionalSources: null, allowedRoots: "ThirdParty", expected: expected);
     }
@@ -922,15 +988,381 @@ public class InteractionFlowAnalyzersAnalyzerTests
             """;
 
         var expectedNullable = ExpectedHidden(18, 43, 18, 48)
-            .WithArguments("Interactions", "Builders", "BuilderValue");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderValue"));
         var expectedArray = ExpectedHidden(20, 45, 20, 50)
-            .WithArguments("Interactions", "Builders", "BuilderWorker");
+            .WithArguments(ExpectedLayerDependencyDetail("Interactions", "Builders", "BuilderWorker"));
 
         await VerifyAsync(source, expectedNullable, expectedArray);
     }
 
+    /// <summary>
+    /// 通常コンストラクタで受け取った IDependencyNode 系の引数を Dependency が返す配列へ含めている場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_IncludesDependencies_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1, IDependencyNode node2, params IDependencyNode[] dependency)
+                    {
+                        this.dependency = [node1, node2, .. dependency];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// 通常コンストラクタで IDependencyNode 系の引数を Dependency auto-property に直接代入している場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_AssignsDependencyProperty_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public sealed class Test : IDependencyNode
+                {
+                    public Test(IDependencyNode node1)
+                    {
+                        Dependency = new IDependencyNode[] { node1 };
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// IDependencyNode.Dependency を明示的に実装している場合、
+    /// 同名の公開 Dependency プロパティではなく interface 実装側を検査することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_ExplicitDependencyProperty_IgnoresSameNamePublicProperty()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public sealed class Test(IDependencyNode node1) : IDependencyNode
+                {
+                    public ReadOnlyMemory<IDependencyNode> Dependency => new IDependencyNode[] { node1 };
+
+                    ReadOnlyMemory<IDependencyNode> IDependencyNode.Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(14, 46, 14, 51);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// sealed な IDependencyNode 実装クラスの通常コンストラクタに params IDependencyNode[] が無い場合でも、
+    /// 継承拡張対象外として診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_SealedConstructor_MissingParams_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public sealed class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IDependencyNode node1)
+                    {
+                        dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// 通常コンストラクタで受け取った IDependencyNode 系の引数が Dependency に含まれていない場合、
+    /// 欠落した引数を診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NormalConstructor_MissingDependency_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1, params IDependencyNode[] dependency)
+                    {
+                        this.dependency = [.. dependency];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(22, 32, 22, 37);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// プライマリコンストラクタで受け取った IDependencyNode 系の引数を Dependency が返す配列へ含めている場合、
+    /// Dependency Node ルールが診断しないことを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_PrimaryConstructor_IncludesDependencies_DoNotReport()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass(IPort node1, params IDependencyNode[] dependency) : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependencies = [node1, .. dependency];
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
+                }
+            }
+            """;
+
+        await VerifyAsync(source);
+    }
+
+    /// <summary>
+    /// IDependencyNode 実装クラスを継承するプライマリコンストラクタで、
+    /// 親へ流していない IDependencyNode 系の引数を診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_PrimaryConstructor_MissingBaseForward_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class BaseNode(params IDependencyNode[] dependency) : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependencies = dependency;
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependencies;
+                }
+
+                public abstract class ChildNode(IPort node1, params IDependencyNode[] dependency) : BaseNode(dependency)
+                {
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(25, 43, 25, 48);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// 継承拡張される抽象 IDependencyNode クラスの通常コンストラクタに
+    /// params IDependencyNode[] が無い場合、診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_AbstractConstructor_MissingParams_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public interface IPort : IDependencyNode
+                {
+                }
+
+                public abstract class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IPort node1)
+                    {
+                        this.dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(22, 16, 22, 25);
+
+        await VerifyAsync(source, expected);
+    }
+
+    /// <summary>
+    /// sealed ではない具象 IDependencyNode 実装クラスの通常コンストラクタに
+    /// params IDependencyNode[] が無い場合、診断することを確認します。
+    /// </summary>
+    [Fact]
+    public async Task DependencyNode_NonSealedConstructor_MissingParams_Reports()
+    {
+        var source = """
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode
+                {
+                    ReadOnlyMemory<IDependencyNode> Dependency { get; }
+                }
+            }
+
+            namespace App.Nodes
+            {
+                public class NodeClass : IDependencyNode
+                {
+                    private readonly IDependencyNode[] dependency;
+
+                    public NodeClass(IDependencyNode node1)
+                    {
+                        this.dependency = [node1];
+                    }
+
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            """;
+
+        var expected = ExpectedDependencyHidden(18, 16, 18, 25);
+
+        await VerifyAsync(source, expected);
+    }
+
+    private static string ExpectedLayerDependencyDetail(string sourceLayer, string targetLayer, string typeName)
+        => string.Format(Resources.LayerDependencyDisallowedReference, sourceLayer, targetLayer, typeName);
+
     private static DiagnosticResult ExpectedHidden(int startLine, int startColumn, int endLine, int endColumn)
         => new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
+            .WithSpan(startLine, startColumn, endLine, endColumn);
+
+    private static DiagnosticResult ExpectedDependencyHidden(int startLine, int startColumn, int endLine, int endColumn)
+        => new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId, DiagnosticSeverity.Hidden)
             .WithSpan(startLine, startColumn, endLine, endColumn);
 
     private static Task VerifyAsync(string source, params DiagnosticResult[] expected)
@@ -967,6 +1399,7 @@ public class InteractionFlowAnalyzersAnalyzerTests
             {OptionValues.Keys.interactionflow_mode} = {mode}
             {allowedRootsOption}
             dotnet_diagnostic.{InteractionFlowAnalyzersAnalyzer.DiagnosticId}.severity = {diagnosticSeverity}
+            dotnet_diagnostic.{InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId}.severity = {diagnosticSeverity}
 
             """;
 

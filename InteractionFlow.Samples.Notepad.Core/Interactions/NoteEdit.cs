@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-    public class NoteEdit(
+    public sealed class NoteEdit(
         IExceptionPort<Exception> exceptionPort,
         ICancellationPort cancellationPort,
         IConsoleWriter consoleReaction,
@@ -29,7 +29,16 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         INotepadDataStoragePort notepadDataFiles,
         INotepadUserDataPersistencePort notepadUserDataPersistence,
         INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadUserDataFiles, notepadDataFiles)
+        Interaction(
+            exceptionPort,
+            cancellationPort,
+            consoleReaction,
+            consoleCursorPositionAccess,
+            consoleOperation,
+            notepadUserDataFiles,
+            notepadDataFiles,
+            notepadUserDataPersistence,
+            notepadDataPersistence)
     {
         private class ConsoleTextWriter(IConsoleCursorPositionAccess consoleCursorPositionAccess, IConsoleWriter consoleReaction, IConsoleOperation consoleOperation)
         {

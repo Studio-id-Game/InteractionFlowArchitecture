@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Secure.Interactions
 
 {
-    internal class EnterPassword(
+    internal sealed class EnterPassword(
             IExceptionPort<Exception> exceptionPort,
             ICancellationPort cancellationPort,
             IConsoleWriter consoleReaction,

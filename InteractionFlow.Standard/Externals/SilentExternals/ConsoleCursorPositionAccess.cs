@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.Entities.Consoles;
 using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
@@ -12,6 +13,14 @@ namespace InteractionFlow.Standard.Externals.SilentExternals
     /// </summary>
     public class ConsoleCursorPositionAccess : SilentRequest<ConsoleCursorPosition, ConsoleCursorPosition>, IConsoleCursorPositionAccess
     {
+        /// <summary>
+        /// 依存ノードを保持するインスタンスを作成します。
+        /// </summary>
+        /// <param name="dependency">この SilentExternal が依存するフローノード。</param>
+        public ConsoleCursorPositionAccess(params IDependencyNode[] dependency) : base(dependency)
+        {
+        }
+
         /// <summary>
         /// 現在のカーソル位置を取得または設定します。
         /// </summary>

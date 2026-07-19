@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
-    internal class ListSamples(
+    internal sealed class ListSamples(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         IConsoleWriter console)

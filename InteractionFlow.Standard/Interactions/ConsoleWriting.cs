@@ -14,11 +14,13 @@ namespace InteractionFlow.Standard.Interactions
     /// <param name="exception">通常の例外をフロー終了時の反応へ変換するポート。</param>
     /// <param name="cancellation">キャンセルをフロー終了時の反応へ変換するポート。</param>
     /// <param name="consoleWrite">コンソール出力に使用する Reaction ポート。</param>
+    /// <param name="dependency">この Interaction が明示的に依存するフローノード。</param>
     public class ConsoleWriting(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
-        IConsoleWriter consoleWrite)
-        : InteractionOptionalArg<(ConsoleOutput?, ConsoleState?)>(exception, cancellation, consoleWrite)
+        IConsoleWriter consoleWrite,
+        params IDependencyNode[] dependency)
+        : InteractionOptionalArg<(ConsoleOutput?, ConsoleState?)>(exception, cancellation, [consoleWrite, .. dependency])
     {
         /// <summary>
         /// 出力内容と出力状態の既定オプションを取得します。

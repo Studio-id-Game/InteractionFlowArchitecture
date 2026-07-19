@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -16,7 +17,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <summary>
         /// 既定の例外表示状態でインスタンスを作成します。
         /// </summary>
-        public ConsoleExceptionHandling()
+        /// <param name="dependency">この Reaction が依存するフローノード。</param>
+        public ConsoleExceptionHandling(params IDependencyNode[] dependency) : base(dependency)
         {
             ResetFields();
 

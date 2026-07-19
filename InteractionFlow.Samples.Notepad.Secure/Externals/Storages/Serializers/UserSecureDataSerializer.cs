@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
 {
-    public class UserSecureDataSerializer : StreamSerializer<UserSecureData>, IUserSecureDataSerializerPort
+    public sealed class UserSecureDataSerializer : StreamSerializer<UserSecureData>, IUserSecureDataSerializerPort
     {
         public override async Task<Result<UserSecureData>> Deserialize(Result<Stream> inputData, Result<UserSecureData> refValue)
         {

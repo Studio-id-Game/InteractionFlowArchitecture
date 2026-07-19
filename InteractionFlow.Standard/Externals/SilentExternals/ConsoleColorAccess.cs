@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using System;
@@ -10,6 +11,14 @@ namespace InteractionFlow.Standard.Externals.SilentExternals
     /// </summary>
     public class ConsoleColorAccess : SilentRequest<(ConsoleColor foreground, ConsoleColor background), (ConsoleColor? foreground, ConsoleColor? background)>, IConsoleColorAccess
     {
+        /// <summary>
+        /// 依存ノードを保持するインスタンスを作成します。
+        /// </summary>
+        /// <param name="dependency">この SilentExternal が依存するフローノード。</param>
+        public ConsoleColorAccess(params IDependencyNode[] dependency) : base(dependency)
+        {
+        }
+
         /// <summary>
         /// 現在の前景色を取得または設定します。
         /// </summary>

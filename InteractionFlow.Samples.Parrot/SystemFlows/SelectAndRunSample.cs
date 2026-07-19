@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.SystemFlows
 {
-    internal class SelectAndRunSample(
+    internal sealed class SelectAndRunSample(
         ConsoleWriting writing,
         ListSamples listSamples,
         SelectSample selectSample,

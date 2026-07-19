@@ -117,16 +117,44 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AnalyzerDescription" xml:space="preserve">
+  <data name="LayerDependencyAnalyzerDescription" xml:space="preserve">
     <value>Interaction Flow Architecture Rule - Invalid layer dependency</value>
-    <comment>An optional longer localizable description of the diagnostic.</comment>
+    <comment>An optional longer localizable description of the layer dependency diagnostic.</comment>
   </data>
-  <data name="AnalyzerMessageFormat" xml:space="preserve">
-    <value>Layer '{0}' must not depend on '{1}' (Type = '{2}')</value>
-    <comment>The format-able message the diagnostic displays.</comment>
+  <data name="LayerDependencyAnalyzerMessageFormat" xml:space="preserve">
+    <value>Invalid layer dependency: {0}</value>
+    <comment>The format-able common message the layer dependency diagnostic displays.</comment>
   </data>
-  <data name="AnalyzerTitle" xml:space="preserve">
+  <data name="LayerDependencyAnalyzerTitle" xml:space="preserve">
     <value>Invalid layer dependency</value>
-    <comment>The title of the diagnostic.</comment>
+    <comment>The title of the layer dependency diagnostic.</comment>
+  </data>
+  <data name="LayerDependencyDisallowedReference" xml:space="preserve">
+    <value>Layer '{0}' must not depend on '{1}'; referenced type: '{2}'</value>
+    <comment>The detail message shown when a layer references a disallowed layer or external namespace.</comment>
+  </data>
+  <data name="DependencyNodeAnalyzerDescription" xml:space="preserve">
+    <value>Interaction Flow Implementation Rule - Invalid dependency node declaration</value>
+    <comment>An optional longer localizable description of the dependency node diagnostic.</comment>
+  </data>
+  <data name="DependencyNodeAnalyzerMessageFormat" xml:space="preserve">
+    <value>Invalid dependency node declaration: {0}</value>
+    <comment>The format-able common message the dependency node diagnostic displays.</comment>
+  </data>
+  <data name="DependencyNodeAnalyzerTitle" xml:space="preserve">
+    <value>Invalid dependency node declaration</value>
+    <comment>The title of the dependency node diagnostic.</comment>
+  </data>
+  <data name="DependencyNodeMustBeSealedOrHaveParams" xml:space="preserve">
+    <value>IDependencyNode class must be sealed or declare 'params IDependencyNode[] dependency'</value>
+    <comment>The detail message shown when a dependency node class can be inherited but cannot receive derived dependencies.</comment>
+  </data>
+  <data name="DependencyNodeParameterMustBeIncludedInDependency" xml:space="preserve">
+    <value>Parameter '{0}' must be included in Dependency</value>
+    <comment>The detail message shown when a constructor dependency node is missing from Dependency.</comment>
+  </data>
+  <data name="DependencyNodeParameterMustBePassedToBase" xml:space="preserve">
+    <value>Parameter '{0}' must be passed to the base IDependencyNode constructor</value>
+    <comment>The detail message shown when a derived dependency node does not pass a constructor dependency to its base constructor.</comment>
   </data>
 </root>

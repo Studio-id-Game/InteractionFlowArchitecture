@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.SystemFlows
 {
-    public class MainLoop(
+    public sealed class MainLoop(
         Login login,
         NoteListView noteListView,
         SelectUserAction selectUserAction,

@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
 using InteractionFlow.Standard.Entities.Consoles;
@@ -16,7 +17,8 @@ namespace InteractionFlow.Standard.Externals.Reactions
         /// <summary>
         /// 既定のコンソール出力状態でインスタンスを作成します。
         /// </summary>
-        public ConsoleWriter() : base()
+        /// <param name="dependency">この Reaction が依存するフローノード。</param>
+        public ConsoleWriter(params IDependencyNode[] dependency) : base(dependency)
         {
             ResetFields();
 

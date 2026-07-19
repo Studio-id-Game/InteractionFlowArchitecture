@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Secure.Interactions
 {
 
-    internal class LoginSecure(
+    internal sealed class LoginSecure(
             IExceptionPort<Exception> exceptionPort,
             ICancellationPort cancellationPort,
             IConsoleWriter consoleReaction,
@@ -40,7 +40,11 @@ namespace InteractionFlow.Samples.Notepad.Secure.Interactions
             consoleOperation,
             notepadUserDataFiles,
             notepadDataFiles,
-            notepadUserDataPersistence)
+            notepadUserDataPersistence,
+            currentUserStorage,
+            userSecureDataPersistence,
+            notepadDataPersistence,
+            enterPassword)
     {
         private const string ExceptionDataKey_CurrentUserEntry = "currentUserEntry";
 

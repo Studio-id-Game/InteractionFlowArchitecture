@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.SilentExternals;
 using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
@@ -12,6 +13,14 @@ namespace InteractionFlow.Standard.Externals.SilentExternals
     public class CancellationWithConsole : SilentExternal, ICancellationWithConsole
     {
         ConsoleCancelEventHandler? cancelKeyPress;
+
+        /// <summary>
+        /// 依存ノードを保持するインスタンスを作成します。
+        /// </summary>
+        /// <param name="dependency">この SilentExternal が依存するフローノード。</param>
+        public CancellationWithConsole(params IDependencyNode[] dependency) : base(dependency)
+        {
+        }
 
         /// <summary>
         /// 指定されたコンテキストに対して Ctrl+C キャンセル連携を設定します。

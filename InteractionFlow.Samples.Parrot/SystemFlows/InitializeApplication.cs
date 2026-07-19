@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Parrot.SystemFlows
 {
 
-    internal class InitializeApplication(
+    internal sealed class InitializeApplication(
         ConsoleWriting writing,
         ConsoleSetup assigneCancelKey)
         : SystemFlow<IFlowContext>(writing, assigneCancelKey)

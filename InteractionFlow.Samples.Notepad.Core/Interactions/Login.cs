@@ -24,8 +24,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleOperation consoleOperation,
         INotepadUserDataStoragePort notepadUserDataFiles,
         INotepadDataStoragePort notepadDataFiles,
-        INotepadUserDataPersistencePort notepadUserDataPersistence) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleOperation, notepadUserDataFiles, notepadDataFiles)
+        INotepadUserDataPersistencePort notepadUserDataPersistence,
+        params IDependencyNode[] dependency) :
+        Interaction(
+            exceptionPort,
+            cancellationPort,
+            [consoleReaction,
+                consoleOperation,
+                notepadUserDataFiles,
+                notepadDataFiles,
+                notepadUserDataPersistence,
+                .. dependency])
     {
         protected IConsoleWriter ConsoleReaction => consoleReaction;
         protected IConsoleOperation ConsoleOperation => consoleOperation;

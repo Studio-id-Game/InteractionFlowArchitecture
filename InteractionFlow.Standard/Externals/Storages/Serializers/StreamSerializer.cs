@@ -11,12 +11,13 @@ namespace InteractionFlow.Standard.Externals.Storages.Serializers
     /// <see cref="Stream"/> と値を相互変換する Serializer の基底クラスです。
     /// </summary>
     /// <typeparam name="TValue">変換対象の値の型。</typeparam>
-    public abstract class StreamSerializer<TValue> : ISerializerPort<Stream, TValue>
+    /// <param name="dependency">この Serializer が依存する補助ノード。</param>
+    public abstract class StreamSerializer<TValue>(params IDependencyNode[] dependency) : ISerializerPort<Stream, TValue>
     {
         /// <summary>
         /// この Serializer が依存する補助ノードを取得します。
         /// </summary>
-        public virtual ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
+        public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
         /// ストリームから値へ変換します。

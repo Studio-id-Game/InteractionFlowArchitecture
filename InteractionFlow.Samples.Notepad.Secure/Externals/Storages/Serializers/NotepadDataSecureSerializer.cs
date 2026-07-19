@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers
 {
-    internal class NotepadDataSecureSerializer(ISecureManagerPort secureManager, ICurrentUserStoragePort currentUserStorage) : StreamSerializer<NotepadData>, INotepadDataSerializerPort
+    internal sealed class NotepadDataSecureSerializer(ISecureManagerPort secureManager, ICurrentUserStoragePort currentUserStorage)
+        : StreamSerializer<NotepadData>(currentUserStorage), INotepadDataSerializerPort
     {
         private SecretBuffer GetUserKey()
         {

@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
-    internal class ConsoleSetup(
+    internal sealed class ConsoleSetup(
         IExceptionPort<Exception> exception,
         ICancellationPort cancellation,
         ICancellationWithConsole cancellationWithConsole,
         IConsoleColorAccess consoleColorAccess,
         IConsoleWriter console)
-        : Interaction(exception, cancellation, cancellationWithConsole, console)
+        : Interaction(exception, cancellation, cancellationWithConsole, consoleColorAccess, console)
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {

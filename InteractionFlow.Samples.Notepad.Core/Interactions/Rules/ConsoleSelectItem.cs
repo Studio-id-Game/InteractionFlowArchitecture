@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
+using InteractionFlow.Standard.Console.Entities;
+using InteractionFlow.Standard.Console.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.Console.ExternalPorts.SilentExternalPorts;
 using System;
 using System.Collections.Generic;
 using System.Linq;

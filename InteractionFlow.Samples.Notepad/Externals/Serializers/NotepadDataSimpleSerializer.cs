@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.SerializerPorts;
-using InteractionFlow.Standard.Externals.Storages.Serializers;
+using InteractionFlow.Standard.Serialization.Externals.Serializers;
 using System.Linq;
 using System.Threading.Tasks;
 

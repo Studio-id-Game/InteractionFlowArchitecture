@@ -4,7 +4,7 @@ using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Serializer
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
-using InteractionFlow.Standard.Externals.Storages.Serializers;
+using InteractionFlow.Standard.Serialization.Externals.Serializers;
 using System;
 using System.IO;
 using System.Linq;

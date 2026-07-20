@@ -5,9 +5,9 @@ using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
-using InteractionFlow.Standard.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
+using InteractionFlow.Standard.Console.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.Console.ExternalPorts.SilentExternalPorts;
 using System;
 using System.Threading.Tasks;
 

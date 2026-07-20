@@ -4,7 +4,7 @@ using InteractionFlow.Core.Externals.SilentExternals;
 using InteractionFlow.Standard.ExternalPorts.SilentExternalPorts;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.Externals.SilentExternals
+namespace InteractionFlow.Standard.Console.Externals.SilentExternals
 {
     /// <summary>
     /// 引数を受け取り、外部実行環境から値を返す SilentExternal 実装の基底クラスです。

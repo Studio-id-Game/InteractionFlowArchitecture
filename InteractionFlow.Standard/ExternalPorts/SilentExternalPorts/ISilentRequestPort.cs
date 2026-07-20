@@ -3,7 +3,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.SilentExternalPorts;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.ExternalPorts.SilentExternalPorts
+namespace InteractionFlow.Standard.Console.ExternalPorts.SilentExternalPorts
 {
     /// <summary>
     /// 引数を受け取り、ユーザーに直接見えない値を返す SilentExternal ポートを表します。

@@ -1,6 +1,6 @@
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
-using InteractionFlow.Standard.ExternalPorts.StoragePorts.PersistencePorts;
+using InteractionFlow.Standard.FileSystem.ExternalPorts.PersistencePorts;
 
 namespace InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.PersistencePorts
 {

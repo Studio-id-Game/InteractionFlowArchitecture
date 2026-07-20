@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Parrot.Interactions;
-using InteractionFlow.Standard.Interactions;
+using InteractionFlow.Standard.Console.Interactions;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.SystemFlows

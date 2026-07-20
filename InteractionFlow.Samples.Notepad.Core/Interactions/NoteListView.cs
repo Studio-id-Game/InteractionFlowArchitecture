@@ -6,8 +6,8 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
-using InteractionFlow.Standard.Entities.Consoles;
-using InteractionFlow.Standard.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.Console.Entities;
+using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 

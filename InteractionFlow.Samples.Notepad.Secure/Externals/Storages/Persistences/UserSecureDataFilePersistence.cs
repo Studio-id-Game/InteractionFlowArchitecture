@@ -2,7 +2,7 @@ using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SerializerPorts;
-using InteractionFlow.Standard.Externals.Storages.Persistences;
+using InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences;
 using System;
 using System.IO;
 

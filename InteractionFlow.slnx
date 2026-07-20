@@ -8,6 +8,7 @@
     <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
   </Folder>
   <Folder Name="/Samples/">
+    <Project Path="InteractionFlow.Samples.HelloDoor/InteractionFlow.Samples.HelloDoor.csproj" />
     <Project Path="InteractionFlow.Samples.Parrot/InteractionFlow.Samples.Parrot.csproj" />
   </Folder>
   <Folder Name="/Samples/Notepad/">

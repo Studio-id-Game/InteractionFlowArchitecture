@@ -9,10 +9,13 @@
 </p>
 
 <p align="center">
-  <strong>Interaction shapes Context, and Context shapes Interaction.</strong>
+  <i>
+    Interaction shapes Context, <br>
+    and Context shapes Interaction.
+  </i>
 </p>
 
-Interaction Flow Architecture は、サービスを「コードの配置」だけではなく、User と System の間に続く Interaction と Context の循環として設計するためのアーキテクチャです。
+Interaction Flow Architecture は、サービスを「コードの配置」だけではなく、User と System の間に続く Interaction と Runtime Context の循環として設計するためのアーキテクチャです。
 
 このリポジトリは、その考え方を C# / .NET で実装するためのベースライブラリ、標準実装、Analyzer、サンプルを提供します。
 
@@ -42,20 +45,20 @@ Interaction Flow Architecture は、サービスを「コードの配置」だ�
 
 設計したいものは、User が何を行い、System がどう受け取り、何を返し、その結果として次の Interaction がどう変わるかです。
 
-Interaction Flow Architecture は、この流れを `Interaction` と Runtime の `Context` を中心に表現します。Runtime では User がサービスを体験し、Development では開発者が同じ構造をコードとして設計し、AI はその構造を読み取って補助します。
+Interaction Flow Architecture は、この流れを `Interaction` と `Runtime Context` を中心に表現します。Runtime では User がサービスを体験し、Development では開発者が同じ構造をコードとして設計し、AI はその構造を読み取って補助します。
 
-ここで扱う `Context` には二つの意味があります。ひとつは、プログラムの Architecture 上で `SystemFlow` や `Interaction` に渡される Runtime Context です。もうひとつは、開発者や AI が設計意図を理解するために読むメタ的な Context です。この README では、単に `Context` と書く場合は Runtime Context を指し、開発者や AI の理解に関わる文脈は `Meta Context` または共有 Context として区別します。
+ここで扱う `Context` には二つの意味があります。ひとつは、プログラムの Architecture 上で `SystemFlow` や `Interaction` に渡される Runtime Context です。もうひとつは、開発者や AI が設計意図を理解するために読むメタ的な Context です。この README では、単に `Context` と書く場合は Runtime Context を指し、開発者や AI の理解に関わる文脈は `Meta Context` または共有 Meta Context として区別します。
 
 ## コアコンセプト (Core Concept)
 
 > Interaction shapes Context, and Context shapes Interaction.
 
-Interaction の実行を通じて Runtime Context は更新されます。更新された Context は、次に選ばれる Interaction、表示される Reaction、必要になる Operation、保存される Storage を変えます。
+Interaction の実行を通じて Runtime Context は更新されます。更新された Runtime Context は、次に選ばれる Interaction、表示される Reaction、必要になる Operation、保存される Storage を変えます。
 
 この循環が最小単位です。
 
 ```text
-Interaction -> Context -> next Interaction -> next Context -> ...
+Interaction -> Runtime Context -> next Interaction -> next Runtime Context -> ...
 ```
 
 この README では、次の言葉を共通言語として使います。
@@ -63,7 +66,7 @@ Interaction -> Context -> next Interaction -> next Context -> ...
 - `User`: System と相互作用する主体。人間だけでなく、AI エージェント、ロボット、他システムも含みます。
 - `SystemFlow`: System 側が User への反応プロセスとして Interaction を束ねる単位。
 - `Interaction`: システム内部の目的を達成する意味単位。
-- `Context`: 現在の SystemFlow に関する状態、状況、文脈的情報。
+- `Runtime Context` (`Context`): 現在の SystemFlow に関する状態、状況、文脈的情報。
 - `Function`: Interaction から呼び出される外部機能の単位。Port と External に分けて扱います。
   - `Function Port`: Interaction から見える外部機能の抽象契約。
   - `Function External`: Port を実装する具体的な外部依存。
@@ -87,9 +90,9 @@ Interaction -> Context -> next Interaction -> next Context -> ...
 
 ## ユーザー体験 (User Experience)
 
-User から見たサービスは、画面や API エンドポイントの集合ではなく、Interaction と Context の連続です。
+User から見たサービスは、画面や API エンドポイントの集合ではなく、Interaction と Runtime Context の連続です。
 
-たとえば、同じボタンを押しても、ログイン前とログイン後では意味が変わります。同じ入力でも、前の会話、保存済みデータ、権限、現在の選択状態によって System の反応は変わります。つまり、体験は「操作そのもの」ではなく「Context の中で解釈された Interaction」です。
+たとえば、同じボタンを押しても、ログイン前とログイン後では意味が変わります。同じ入力でも、前の会話、保存済みデータ、権限、現在の選択状態によって System の反応は変わります。つまり、体験は「操作そのもの」ではなく「Runtime Context の中で解釈された Interaction」です。
 
 Interaction Flow Architecture は、この体験の連続性を Runtime の中心に置きます。
 
@@ -101,17 +104,17 @@ Interaction Flow Architecture は、この体験の連続性を Runtime の中�
 
 ```text
 1. User が Open または Close を入力する
-2. System は現在の Context を見る
+2. System は現在の Runtime Context を見る
 3. ドアが閉まっていて、入力が Open なら、ドアを開ける
 4. ドアが開いていて、入力が Close なら、ドアを閉める
 5. すでに同じ状態なら、その状態を Reaction として返す
 ```
 
-ここで重要なのは、Interaction が単独で意味を持つのではないことです。同じ `Open` という入力でも、Context が「閉じている」なら開けられ、「開いている」ならすでに開いているという Reaction になります。そして、その結果として更新された Context が、次の Interaction を形作ります。
+ここで重要なのは、Interaction が単独で意味を持つのではないことです。同じ `Open` という入力でも、Runtime Context が「閉じている」なら開けられ、「開いている」ならすでに開いているという Reaction になります。そして、その結果として更新された Runtime Context が、次の Interaction を形作ります。
 
 ## Context Loop
 
-Context Loop は、SystemFlow の実行によって Context が更新され、その更新済み Context が次回以降に再利用される循環です。
+Context Loop は、SystemFlow の実行によって Runtime Context が更新され、その更新済み Runtime Context が次回以降に再利用される循環です。
 
 ![Interaction Flow Architecture flow diagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
 
@@ -120,12 +123,12 @@ Context Loop は、SystemFlow の実行によって Context が更新され、�
 図の Runtime は、次の流れとして読めます。
 
 - `Program` がエントリーポイント、イベント、リクエストを受け取る。
-- `Program` が `Context` を作成または再利用する。
+- `Program` が `Runtime Context` を作成または再利用する。
 - `SystemFlow Builder Block` が `SystemFlow` と依存オブジェクトを構築する。
 - `SystemFlow` が `Interaction` を実行する。
 - `Interaction` が Function Port を通じて Operation / Reaction / Storage / SilentExternal を利用する。
-- 実行結果として `Context` が更新される。
-- 更新された `Context` が次の Interaction に引き継がれる。
+- 実行結果として `Runtime Context` が更新される。
+- 更新された `Runtime Context` が次の Interaction に引き継がれる。
 
 サービス全体は、単一の巨大なフローではなく、複数の Context Loop の集合として設計できます。
 
@@ -134,7 +137,7 @@ Context Loop は、SystemFlow の実行によって Context が更新され、�
 Runtime の責務は、次の要素に分けられます。
 
 - `Interaction`: System 内部の目的を達成するために Function Port をオーケストレーションする。
-- `Context`: 現在の SystemFlow に関する状態、状況、文脈情報を渡し、必要に応じて更新する。
+- `Runtime Context`: 現在の SystemFlow に関する状態、状況、文脈情報を渡し、必要に応じて更新する。
 - `Function`: Interaction が利用する外部機能。Port と External の境界で依存を分離する。
   - `Function Port`: Interaction が依存する抽象契約。
   - `Function External`: Port を実装し、実行環境へ接続する具体実装。
@@ -162,7 +165,7 @@ Function の子要素である `Operation`、`Storage`、`Reaction`、`SilentExt
 
 Interaction Flow を設計することは、ユーザー体験を設計することです。
 
-UI を中心に考えると、「どの画面に何を置くか」が先に立ちます。Interaction を中心に考えると、「User はどの Context で何を行い、System はどの Context を返すべきか」が先に立ちます。
+UI を中心に考えると、「どの画面に何を置くか」が先に立ちます。Interaction を中心に考えると、「User はどの Runtime Context で何を行い、System はどの Runtime Context を返すべきか」が先に立ちます。
 
 この順序にすると、画面、CLI、API、AI エージェント、ゲームループなどの入出力形態が変わっても、体験の意味を保ちやすくなります。
 
@@ -183,7 +186,7 @@ UI を中心に考えると、「どの画面に何を置くか」が先に立�
 このアーキテクチャでは、開発者の判断が次の問いに集約されます。
 
 - この目的は `SystemFlow` か、`Interaction` か。
-- この値は `Context` か、Domain の Entity か、Storage に保存される Data か。
+- この値は Runtime Context か、Domain の Entity か、Storage に保存される Data か。
 - この外部依存は Operation / Reaction / Storage / SilentExternal のどれか。
 - この依存は Port と External の境界を越えていないか。
 
@@ -195,9 +198,9 @@ Interaction は、システム内部における単一の意味を持つ処理�
 
 SystemFlow は、User への反応プロセスとして Interaction を束ねます。SystemFlow は全システムの処理手順ではなく、User と System の関係として一つの意味を持つ単位です。
 
-## Context を設計する (Designing Context)
+## Runtime Context を設計する (Designing Runtime Context)
 
-Context は、フローの現在地を表す文脈です。単なる mutable state ではなく、次の Interaction を決めるために共有される情報です。
+Runtime Context は、フローの現在地を表す文脈です。単なる mutable state ではなく、次の Interaction を決めるために共有される情報です。
 
 設計時は、次の境界を明確にします。
 
@@ -206,7 +209,7 @@ Context は、フローの現在地を表す文脈です。単なる mutable sta
 - Domain Entity: System の前提として外部に依存しない概念。
 - Storage Data: 保存、復元、共有の対象になる情報。
 
-Context は広げすぎると何でも入る袋になります。狭すぎると Interaction 間の関係がコード外に漏れます。所有者、ライフサイクル、更新理由が説明できる範囲で定義します。
+Runtime Context は広げすぎると何でも入る袋になります。狭すぎると Interaction 間の関係がコード外に漏れます。所有者、ライフサイクル、更新理由が説明できる範囲で定義します。
 
 ## Context の更新を制御する (Controlling Context Updates)
 
@@ -232,7 +235,7 @@ Runtime Context は誰でも自由に更新できるものではありません�
 
 `SystemFlow` は Interaction を束ねます。`Interaction` は Port を束ねます。`Function Port` は外部機能を抽象化します。`Function External` は具体的な外部依存を扱います。`Domain` は外部に依存しない前提を定義します。
 
-責務が混ざると、Context がどこで形成され、どこで更新されたのかが読めなくなります。
+責務が混ざると、Runtime Context がどこで形成され、どこで更新されたのかが読めなくなります。
 
 ### API設計 (API Design)
 
@@ -246,7 +249,7 @@ Builder のスコープ構造、親スコープとの合成、ライフタイム
 
 ### 命名 (Naming)
 
-命名は、Interaction と Context を中心にします。
+命名は、Interaction と Runtime Context を中心にします。
 
 - User への反応プロセスは `SystemFlows` に置く。
 - システム内部の意味単位は `Interactions` に置く。
@@ -261,7 +264,7 @@ Builder のスコープ構造、親スコープとの合成、ライフタイム
 
 型は、設計意図を表すために使います。
 
-Context の型は、どの SystemFlow が何を前提に実行されるかを表します。Port の型は、Interaction がどの外部機能を必要としているかを表します。Domain の型は、System が外部に依存せずに保持する概念を表します。
+Runtime Context の型は、どの SystemFlow が何を前提に実行されるかを表します。Port の型は、Interaction がどの外部機能を必要としているかを表します。Domain の型は、System が外部に依存せずに保持する概念を表します。
 
 型によって責務を表すことで、アーキテクチャの境界をコード補完、コンパイル、Analyzer に乗せられます。
 
@@ -301,22 +304,23 @@ Interaction Flow Architecture は、AI に渡す Meta Context を圧縮します
 
 Runtime と Development は、同じ構造を別の向きから見ています。
 
-Runtime では、User が Operation を行い、Reaction を受け取り、Context が更新されます。Development では、開発者が SystemFlow、Interaction、Port、External、Domain を設計し、その Context Loop を実装します。
+Runtime では、User が Operation を行い、Reaction を受け取り、Runtime Context が更新されます。Development では、開発者が SystemFlow、Interaction、Port、External、Domain を設計し、その設計意図を Meta Context として残します。
 
 見えているものは違いますが、扱っているモデルは同じです。
 
 ## 一つの共有モデル (One Shared Model)
 
-共有する概念は二つです。
+共有する概念は三つです。
 
 - `Interaction Flow`
-- `Context`
+- `Runtime Context`
+- `Meta Context`
 
 Users experience it.
 Developers design it.
 AI learns it.
 
-User は Interaction Flow を体験します。開発者は Interaction Flow を設計します。AI は Interaction Flow を学習し、補助します。
+User は Interaction Flow と Runtime Context の変化を体験します。開発者は Interaction Flow と Runtime Context を設計し、その判断を Meta Context に残します。AI は Meta Context から構造を学習し、実装や検証を補助します。
 
 この三者が同じモデルを共有できることが、このアーキテクチャの実用上の価値です。
 
@@ -338,27 +342,27 @@ User は Interaction Flow を体験します。開発者は Interaction Flow を
 
 Interaction は、User と System の間に起きる作用であり、System 内部では目的を持った状態遷移のまとまりです。
 
-Interaction は単なる関数呼び出しではありません。Operation を読み、Storage を参照し、必要な外部状態に触れ、Reaction を返し、Context を次へ進めます。
+Interaction は単なる関数呼び出しではありません。Operation を読み、Storage を参照し、必要な外部状態に触れ、Reaction を返し、Runtime Context を次へ進めます。
 
 このアーキテクチャが Interaction を中心に置くのは、サービスの体験が Interaction の連続として現れるからです。
 
-## Context
+## Runtime Context
 
 Runtime Context は、現在の SystemFlow に関する状態、状況、文脈的情報です。
 
 Runtime Context は state と似ていますが、意味が少し違います。state は値そのものに注目します。Runtime Context は、その値が次の Interaction をどう変えるかに注目します。
 
-たとえば「ログイン済み」という値は state です。その値によって「ノート一覧を表示できる」「編集できる」「ログイン画面に戻す」といった次の Interaction が決まるとき、それは Context として働きます。
+たとえば「ログイン済み」という値は state です。その値によって「ノート一覧を表示できる」「編集できる」「ログイン画面に戻す」といった次の Interaction が決まるとき、それは Runtime Context として働きます。
 
-## 共有Context (Shared Context)
+## 共有 Meta Context (Shared Meta Context)
 
-人、AI、サービスは、それぞれ違う形で Context を扱います。
+人、AI、サービスは、それぞれ違う形で Runtime Context と Meta Context を扱います。
 
 Service は Runtime Context を使って Interaction を進めます。User はその結果を体験として受け取ります。開発者は Runtime Context をコードとして設計し、その設計意図を README、図、命名、型、コメントという Meta Context に残します。AI はその Meta Context を読み取り、Runtime Context を扱う実装を補助します。
 
 共有 Meta Context が明確であるほど、協調は楽になります。説明が短くなり、誤解が減り、変更の影響範囲が見えやすくなります。
 
-## アーキテクチャは共有Contextである (Architecture as Shared Context)
+## アーキテクチャは共有 Meta Context である (Architecture as Shared Meta Context)
 
 Architecture は、コードのルール集だけではありません。
 
@@ -782,7 +786,7 @@ namespace InteractionFlow.Samples.HelloDoor
 }
 ```
 
-この分割では、`Entities` が Context に載る値、`ExternalPorts` が Interaction から見える外部依存の契約、`Externals` が Console 実装、`Interactions` が Context 更新の判断、`SystemFlows` が Interaction の継続実行、`Program` が DI と初期 Context の組み立てを担当します。`DoorSystemFlow` は `while (true)` で `OperateDoor` を繰り返し、空入力で終了要求が出るまで Context Loop を継続します。
+この分割では、`Entities` が Context に載る値、`ExternalPorts` が Interaction から見える外部依存の契約、`Externals` が Console 入出力と DoorState 更新の具体処理、`Interactions` が入力取得から Reaction 呼び出しまでの流れ、`SystemFlows` が Interaction の継続実行、`Program` が DI と初期 Context の組み立てを担当します。`DoorSystemFlow` は `while (true)` で `OperateDoor` を繰り返し、空入力で終了要求が出るまで Context Loop を継続します。
 
 ## 次のステップ (Next Step)
 
@@ -807,8 +811,8 @@ namespace InteractionFlow.Samples.HelloDoor
 
 Door は、最小構成の Interaction Flow を説明するための概念サンプルです。
 
-- 目的: Context によって同じ Interaction の結果が変わることを示す
-- Context: ドアが開いているか、閉まっているか
+- 目的: Runtime Context によって同じ Interaction の結果が変わることを示す
+- Runtime Context: ドアが開いているか、閉まっているか
 - Operation: `Open` / `Close` のキーワード入力
 - Interaction: OperateDoor
 - Reaction: 開いた、閉じた、すでに開いている、すでに閉じている
@@ -819,8 +823,8 @@ Door は、最小構成の Interaction Flow を説明するための概念サン
 
 Counter は、状態更新を伴う Context Loop を説明するための概念サンプルです。
 
-- 目的: Interaction が Context を更新し、次の表示や入力可能範囲が変わることを示す
-- Context: 現在値、上限、下限
+- 目的: Interaction が Runtime Context を更新し、次の表示や入力可能範囲が変わることを示す
+- Runtime Context: 現在値、上限、下限
 - Interaction: Increment / Decrement / Reset
 - Storage: 必要に応じて現在値を保存する
 
@@ -830,8 +834,8 @@ Counter は、状態更新を伴う Context Loop を説明するための概念�
 
 Inventory は、Storage を利用した Interaction Flow の例として位置づけられます。
 
-- 目的: Context と永続化されたデータの境界を示す
-- Context: 現在選択中のアイテム、操作中のユーザー、表示条件
+- 目的: Runtime Context と永続化されたデータの境界を示す
+- Runtime Context: 現在選択中のアイテム、操作中のユーザー、表示条件
 - Storage: アイテム一覧、在庫数、変更履歴
 - Interaction: AddItem / RemoveItem / ListItems
 
@@ -842,7 +846,7 @@ Inventory は、Storage を利用した Interaction Flow の例として位置�
 Dialogue は、複数の Interaction が連続する会話型フローの例です。
 
 - 目的: Reaction が次の Operation を誘導し、Context Loop が会話を進めることを示す
-- Context: 会話の現在地、選択済み項目、キャンセル状態
+- Runtime Context: 会話の現在地、選択済み項目、キャンセル状態
 - Interaction: Prompt / Select / Confirm / Execute
 
 現在のリポジトリでは、`InteractionFlow.Samples.Parrot` の `SelectAndRunSample` と `InteractionFlow.Samples.Notepad.Core` の `MainLoop` が、複数 Interaction を束ねる実例です。

@@ -18,7 +18,9 @@ namespace InteractionFlow.Samples.HelloDoor
         {
             var builder = new ScopeBuilder();
 
+            // Port と External 実装、Interaction を DI に登録します。
             builder
+                // Interaction の基底クラスが利用する例外/キャンセル表示 Port も登録します。
                 .Apply(ConsoleBuilder.Profile)
                 .UseFunction<IDoorOperation, ConsoleDoorOperation>()
                 .UseFunction<IDoorReaction, ConsoleDoorReaction>()

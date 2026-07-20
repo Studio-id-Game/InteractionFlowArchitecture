@@ -736,7 +736,7 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
 }
 ```
 
-Step 9. Program で DI、初期 Context、SystemFlow 実行を組み立てます。
+Step 9. Program で DI、初期 Context、SystemFlow 実行を組み立てます。`OperateDoor` は独自の `IDoorOperation` / `IDoorReaction` だけでなく、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための `IExceptionPort<Exception>` / `ICancellationPort` も必要とします。`ConsoleBuilder.Profile` は、この例外/キャンセル表示 Port の Console 実装を登録するために適用します。
 
 `Program.cs`
 
@@ -763,6 +763,7 @@ namespace InteractionFlow.Samples.HelloDoor
 
             // Port と External 実装、Interaction を DI に登録します。
             builder
+                // Interaction の基底クラスが利用する例外/キャンセル表示 Port も登録します。
                 .Apply(ConsoleBuilder.Profile)
                 .UseFunction<IDoorOperation, ConsoleDoorOperation>()
                 .UseFunction<IDoorReaction, ConsoleDoorReaction>()

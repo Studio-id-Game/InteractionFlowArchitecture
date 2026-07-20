@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.Serialization.Storage.Serializers
+namespace InteractionFlow.Standard.Serialization.Externals.Serializers
 {
     /// <summary>
     /// 文字列形式の変換を基準に、ストリームとの相互変換も提供する Serializer 基底クラスです。

@@ -42,13 +42,15 @@ Interaction Flow Architecture は、サービスを「コードの配置」だ�
 
 設計したいものは、User が何を行い、System がどう受け取り、何を返し、その結果として次の Interaction がどう変わるかです。
 
-Interaction Flow Architecture は、この流れを `Interaction` と `Context` を中心に表現します。Runtime では User がサービスを体験し、Development では開発者が同じ構造をコードとして設計し、AI はその構造を読み取って補助します。三者が別々の説明を持つのではなく、一つの共有モデルを使うことを目指します。
+Interaction Flow Architecture は、この流れを `Interaction` と Runtime の `Context` を中心に表現します。Runtime では User がサービスを体験し、Development では開発者が同じ構造をコードとして設計し、AI はその構造を読み取って補助します。
+
+ここで扱う `Context` には二つの意味があります。ひとつは、プログラムの Architecture 上で `SystemFlow` や `Interaction` に渡される Runtime Context です。もうひとつは、開発者や AI が設計意図を理解するために読むメタ的な Context です。この README では、単に `Context` と書く場合は Runtime Context を指し、開発者や AI の理解に関わる文脈は `Meta Context` または共有 Context として区別します。
 
 ## コアコンセプト (Core Concept)
 
 > Interaction shapes Context, and Context shapes Interaction.
 
-Interaction は Context を更新します。更新された Context は、次に選ばれる Interaction、表示される Reaction、必要になる Operation、保存される Storage を変えます。
+Interaction の実行を通じて Runtime Context は更新されます。更新された Context は、次に選ばれる Interaction、表示される Reaction、必要になる Operation、保存される Storage を変えます。
 
 この循環が最小単位です。
 
@@ -62,10 +64,14 @@ Interaction -> Context -> next Interaction -> next Context -> ...
 - `SystemFlow`: System 側が User への反応プロセスとして Interaction を束ねる単位。
 - `Interaction`: システム内部の目的を達成する意味単位。
 - `Context`: 現在の SystemFlow に関する状態、状況、文脈的情報。
-- `Operation`: User からの入力や外部条件の取得。
-- `Reaction`: User が観測できる出力や終了時の反応。
-- `Storage`: 永続または一時の状態管理。
-- `External`: UI、DB、ファイルシステム、OS、外部サービスなど、具体的な外部依存。
+- `Function`: Interaction から呼び出される外部機能の単位。Port と External に分けて扱います。
+  - `Function Port`: Interaction から見える外部機能の抽象契約。
+  - `Function External`: Port を実装する具体的な外部依存。
+  - `Operation`: User からの入力や外部条件の取得。
+  - `Reaction`: User が観測できる出力や終了時の反応。
+  - `Storage`: 永続または一時の状態管理。
+  - `SilentExternal`: User に直接見えない外部状態や外部イベントの扱い。
+- `External`: UI、DB、ファイルシステム、OS、外部サービスなど、Function External が接続する具体的な実行環境。
 
 ![Interaction Flow Architecture overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
 
@@ -96,8 +102,8 @@ Interaction Flow Architecture は、この体験の連続性を Runtime の中�
 ```text
 1. User が Open または Close を入力する
 2. System は現在の Context を見る
-3. ドアが閉まっていて Open なら、ドアを開ける
-4. ドアが開いていて Close なら、ドアを閉める
+3. ドアが閉まっていて、入力が Open なら、ドアを開ける
+4. ドアが開いていて、入力が Close なら、ドアを閉める
 5. すでに同じ状態なら、その状態を Reaction として返す
 ```
 
@@ -117,7 +123,7 @@ Context Loop は、SystemFlow の実行によって Context が更新され、�
 - `Program` が `Context` を作成または再利用する。
 - `SystemFlow Builder Block` が `SystemFlow` と依存オブジェクトを構築する。
 - `SystemFlow` が `Interaction` を実行する。
-- `Interaction` が Port を通じて Operation / Reaction / Storage / SilentExternal を利用する。
+- `Interaction` が Function Port を通じて Operation / Reaction / Storage / SilentExternal を利用する。
 - 実行結果として `Context` が更新される。
 - 更新された `Context` が次の Interaction に引き継がれる。
 
@@ -129,10 +135,14 @@ Runtime の責務は、次の要素に分けられます。
 
 - `Interaction`: System 内部の目的を達成するために Function Port をオーケストレーションする。
 - `Context`: 現在の SystemFlow に関する状態、状況、文脈情報を渡し、必要に応じて更新する。
-- `Operation`: User 入力や外部条件を取得する。
-- `Reaction`: User に観測可能な出力、完了、キャンセル、例外処理を返す。
-- `Storage`: DB、ファイルシステム、設定、メモリなどへの状態保存と取得を扱う。
-- `External`: OS、Framework、UI、DB、外部サービスなどの具体的な実装環境を扱う。
+- `Function`: Interaction が利用する外部機能。Port と External の境界で依存を分離する。
+  - `Function Port`: Interaction が依存する抽象契約。
+  - `Function External`: Port を実装し、実行環境へ接続する具体実装。
+  - `Operation`: User 入力や外部条件を取得する。
+  - `Reaction`: User に観測可能な出力、完了、キャンセル、例外処理を返す。
+  - `Storage`: DB、ファイルシステム、設定、メモリなどへの状態保存と取得を扱う。
+  - `SilentExternal`: User に直接見えない外部状態や外部イベントを扱う。
+- `External`: OS、Framework、UI、DB、外部サービスなどの具体的な実行環境。
 
 実行フローは下に進みます。
 
@@ -144,7 +154,7 @@ SystemFlow -> Interaction -> Function Port -> Function External -> External
 
 ### 実行時の振る舞い
 
-`Operation`、`Storage`、`Reaction`、`SilentExternal` は、必要に応じて中断、例外、キャンセル、mutable な状態を扱います。
+Function の子要素である `Operation`、`Storage`、`Reaction`、`SilentExternal` は、必要に応じて中断、例外、キャンセル、mutable な状態を扱います。
 
 一方で、`SystemFlow` と `Interaction` は中断を外へ投げっぱなしにする単位ではありません。例外やキャンセルを Reaction に変換し、User に観測可能な終了として扱います。また、SystemFlow / Interaction の実行中に一時的な遷移状態を持つことはありますが、フローのスコープ終了時に破棄されるものとして設計します。
 
@@ -166,9 +176,9 @@ UI を中心に考えると、「どの画面に何を置くか」が先に立�
 
 ## 開発体験 (Development Experience)
 
-開発者も Runtime と同じ Context を扱っています。
+開発者は、Runtime Context そのものと、それを設計・理解するための Meta Context の両方を扱います。
 
-コードを書くことは、単に処理を並べることではありません。どの Context を受け取り、どの Interaction を実行し、どの Port を通じて外部に触れ、どの Reaction で終えるかを定義することです。
+コードを書くことは、単に処理を並べることではありません。どの Runtime Context を受け取り、どの Interaction を実行し、どの Port を通じて外部に触れ、どの Reaction で終えるかを定義することです。README、図、命名、型、コメントは、その設計判断を開発者や AI が読むための Meta Context になります。
 
 このアーキテクチャでは、開発者の判断が次の問いに集約されます。
 
@@ -200,16 +210,17 @@ Context は広げすぎると何でも入る袋になります。狭すぎると
 
 ## Context の更新を制御する (Controlling Context Updates)
 
-Context は誰でも自由に更新できるものではありません。
+Runtime Context は誰でも自由に更新できるものではありません。
 
-- `Operation` は、User 入力や外部条件を読み取る。
-- `Reaction` は、User へ結果を返し、終了状態を表す。
-- `Storage` は、永続または一時の状態を保存、復元する。
-- `SilentExternal` は、User に直接見えない外部状態や外部イベントを扱う。
-- `Interaction` は、これらの Port を組み合わせて Context の意味ある更新を構成する。
+- `Function` は、Port / External の境界を通じて外部機能を扱う。
+  - `Operation` は、User 入力や外部条件を読み取る。
+  - `Reaction` は、User へ結果を返し、終了状態を表す。
+  - `Storage` は、永続または一時の状態を保存、復元する。
+  - `SilentExternal` は、User に直接見えない外部状態や外部イベントを扱う。
+- `Interaction` は、これらの Function Port を組み合わせて Runtime Context の意味ある更新を構成する。
 - `SystemFlow` は、Interaction の順序と終了の意味を構成する。
 
-この分担により、Context 更新の理由が Interaction Flow 上に残ります。
+この分担により、Runtime Context 更新の理由が Interaction Flow 上に残ります。
 
 ## デザイン言語としてのコード (Code as a Design Language)
 
@@ -256,9 +267,9 @@ Context の型は、どの SystemFlow が何を前提に実行されるかを表
 
 ### ドキュメント (Documentation)
 
-ドキュメントも Context の一部です。
+ドキュメントは、Runtime Context ではなく Meta Context の一部です。
 
-README は、プロジェクト全体の共有 Context です。図は、構造を短時間で復元するための圧縮 Context です。コメントは、コードだけでは読み取れない設計判断を残す Context です。
+README は、プロジェクト全体の共有 Meta Context です。図は、構造を短時間で復元するための圧縮された Meta Context です。コメントは、コードだけでは読み取れない設計判断を残す Meta Context です。
 
 特に図を更新する場合は、対応する `.context.md` と `.svg` も更新し、AI と人間の両方が同じ意味を参照できるようにします。
 
@@ -270,9 +281,9 @@ Analyzer は、人間の注意力だけに依存せず、アーキテクチャ�
 
 ## AIとの協調 (AI Collaboration)
 
-AI は Context を読み取る存在です。
+AI は Meta Context を読み取り、Runtime Context を扱うコードを補助する存在です。
 
-Interaction Flow Architecture は、AI に渡す Context を圧縮します。ファイル構成、名前空間、図、README、Analyzer のルールが揃っていると、AI は「この変更はどの責務に属するか」「どの境界を越えてはいけないか」を短い文脈で復元できます。
+Interaction Flow Architecture は、AI に渡す Meta Context を圧縮します。ファイル構成、名前空間、図、README、Analyzer のルールが揃っていると、AI は「この変更はどの責務に属するか」「どの境界を越えてはいけないか」を短い文脈で復元できます。
 
 人間はモデルを設計し、AI はモデルを展開します。人間は意味と境界を決め、AI はその境界の内側で実装、検証、反復を支援します。
 
@@ -333,9 +344,9 @@ Interaction は単なる関数呼び出しではありません。Operation を�
 
 ## Context
 
-Context は、現在の SystemFlow に関する状態、状況、文脈的情報です。
+Runtime Context は、現在の SystemFlow に関する状態、状況、文脈的情報です。
 
-Context は state と似ていますが、意味が少し違います。state は値そのものに注目します。Context は、その値が次の Interaction をどう変えるかに注目します。
+Runtime Context は state と似ていますが、意味が少し違います。state は値そのものに注目します。Runtime Context は、その値が次の Interaction をどう変えるかに注目します。
 
 たとえば「ログイン済み」という値は state です。その値によって「ノート一覧を表示できる」「編集できる」「ログイン画面に戻す」といった次の Interaction が決まるとき、それは Context として働きます。
 
@@ -343,23 +354,23 @@ Context は state と似ていますが、意味が少し違います。state �
 
 人、AI、サービスは、それぞれ違う形で Context を扱います。
 
-User は体験として Context を受け取ります。開発者はコードとドキュメントとして Context を設計します。AI はファイル、図、命名、型、コメントから Context を読み取ります。
+Service は Runtime Context を使って Interaction を進めます。User はその結果を体験として受け取ります。開発者は Runtime Context をコードとして設計し、その設計意図を README、図、命名、型、コメントという Meta Context に残します。AI はその Meta Context を読み取り、Runtime Context を扱う実装を補助します。
 
-共有 Context が明確であるほど、協調は楽になります。説明が短くなり、誤解が減り、変更の影響範囲が見えやすくなります。
+共有 Meta Context が明確であるほど、協調は楽になります。説明が短くなり、誤解が減り、変更の影響範囲が見えやすくなります。
 
 ## アーキテクチャは共有Contextである (Architecture as Shared Context)
 
 Architecture は、コードのルール集だけではありません。
 
-Architecture は、チーム、AI、User をつなぐ共有 Context です。どこに何を書くか、どの責務を混ぜないか、どの言葉で設計を語るかを揃えることで、サービスの体験と実装の構造が同じ方向を向きます。
+Architecture は、チームと AI をつなぎ、User 体験の設計判断を共有する Meta Context です。どこに何を書くか、どの責務を混ぜないか、どの言葉で設計を語るかを揃えることで、サービスの体験と実装の構造が同じ方向を向きます。
 
-Interaction Flow Architecture は、User の体験、開発者の実装、AI の理解を、Interaction と Context という一つのモデルに集約します。
+Interaction Flow Architecture は、User の体験、開発者の実装、AI の理解を、Interaction、Runtime Context、Meta Context の関係として整理します。
 
 ## 計算モデルとしての補助線 (Computational Model)
 
-Interaction Flow Architecture は、チューリングマシンとしても説明できます。
+Interaction Flow Architecture の Function (Port / External) は、チューリングマシンとしても説明できます。
 
-この見方では、Interaction は状態遷移、Operation / Reaction / Storage / SilentExternal は「読み取り、書き込み、外部への作用」を担うテープ操作に相当します。これはアーキテクチャの出発点を置き換えるものではなく、Interaction と Context の循環を計算モデルとして検証しやすくするための補助線です。
+この見方では、Function Port / Function External の子要素である Operation / Reaction / Storage / SilentExternal は、「読み取り、書き込み、外部への作用」を担うテープ操作に相当します。これはアーキテクチャの出発点を置き換えるものではなく、Interaction と Runtime Context の循環を計算モデルとして検証しやすくするための補助線です。
 
 詳しい説明は [計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
 
@@ -534,26 +545,27 @@ namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts
 }
 ```
 
-Step 4. Interaction から見える出力 Port を定義します。Interaction は Console を直接書かず、この Port だけを呼びます。
+Step 4. Interaction から見える出力 Port を定義します。直前に入力された `DoorCommand` を受け取り、`DoorState` Context の更新と結果表示を担当します。
 
 `ExternalPorts/ReactionPorts/IDoorReaction.cs`
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Samples.HelloDoor.Entities;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts
 {
     internal interface IDoorReaction : IReactionPort
     {
-        // User に観測できる結果を返します。
-        ValueTask<ReactionEnd> WriteAsync(IFlowContext context, string message);
+        // 直前に入力された DoorCommand をもとに Context を更新し、結果を表示します。
+        ValueTask<ReactionEnd> ReactAsync(IFlowContext context, DoorCommand command);
     }
 }
 ```
 
-Step 5. 入力 Port を Console で実装します。ここが外部依存の実体です。
+Step 5. 入力 Port を Console で実装します。ここが Operation の External 実装です。
 
 `Externals/Operations/ConsoleDoorOperation.cs`
 
@@ -591,13 +603,14 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
 }
 ```
 
-Step 6. 出力 Port を Console で実装します。`ReactionEnd` を返すことで、Interaction の終了結果になります。
+Step 6. 出力 Port を Console で実装します。ここが Reaction の External 実装で、`DoorCommand` に応じて `DoorState` Context を更新し、User へ結果を表示します。
 
 `Externals/Reactions/ConsoleDoorReaction.cs`
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
+using InteractionFlow.Samples.HelloDoor.Entities;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
@@ -610,17 +623,50 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
         {
         }
 
-        public ValueTask<ReactionEnd> WriteAsync(IFlowContext context, string message)
+        public ValueTask<ReactionEnd> ReactAsync(IFlowContext context, DoorCommand command)
         {
-            Console.WriteLine(message);
+            if (!context.TryGet<DoorState>(out var door))
+            {
+                Console.WriteLine("No door context.");
+                return new(GetEnd());
+            }
+
+            Console.WriteLine(GetMessageAndUpdateState(door, command));
             // Reaction が正常に完了したことを Interaction へ返します。
             return new(GetEnd());
+        }
+
+        private static string GetMessageAndUpdateState(DoorState door, DoorCommand command)
+        {
+            switch (command)
+            {
+                case DoorCommand.Open when !door.IsOpen:
+                    door.IsOpen = true;
+                    return "The door opens.";
+
+                case DoorCommand.Open:
+                    return "The door is already open.";
+
+                case DoorCommand.Close when door.IsOpen:
+                    door.IsOpen = false;
+                    return "The door closes.";
+
+                case DoorCommand.Close:
+                    return "The door is already closed.";
+
+                case DoorCommand.Exit:
+                    door.ExitRequested = true;
+                    return "Goodbye.";
+
+                default:
+                    return "Use Open or Close.";
+            }
         }
     }
 }
 ```
 
-Step 7. Interaction を実装します。ここで Command と Context を見て、ドアを開けるか閉めるかを決めます。
+Step 7. Interaction を実装します。ここでは入力を取得し、その直後の `DoorCommand` を Reaction へ渡します。ドア状態の更新と表示は Reaction 側に委譲します。
 
 `Interactions/OperateDoor.cs`
 
@@ -628,7 +674,6 @@ Step 7. Interaction を実装します。ここで Command と Context を見て
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.HelloDoor.Entities;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
 using System;
@@ -645,44 +690,9 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            if (!context.TryGet<DoorState>(out var door))
-            {
-                return await reaction.WriteAsync(context, "No door context.");
-            }
-
             // 入力は Port から取得します。Console 実装かどうかは Interaction からは見えません。
             var command = await operation.ReadCommandAsync(context);
-
-            return command switch
-            {
-                DoorCommand.Open when !door.IsOpen => await OpenAsync(),
-                DoorCommand.Open => await reaction.WriteAsync(context, "The door is already open."),
-                DoorCommand.Close when door.IsOpen => await CloseAsync(),
-                DoorCommand.Close => await reaction.WriteAsync(context, "The door is already closed."),
-                DoorCommand.Exit => await ExitAsync(),
-                _ => await reaction.WriteAsync(context, "Use Open or Close."),
-            };
-
-            async Task<ReactionEnd> OpenAsync()
-            {
-                // Context を更新し、次の Interaction から見える状態を変えます。
-                door.IsOpen = true;
-                return await reaction.WriteAsync(context, "The door opens.");
-            }
-
-            async Task<ReactionEnd> CloseAsync()
-            {
-                // Context を更新し、次の Interaction から見える状態を変えます。
-                door.IsOpen = false;
-                return await reaction.WriteAsync(context, "The door closes.");
-            }
-
-            async Task<ReactionEnd> ExitAsync()
-            {
-                // SystemFlow のループ終了条件を Context に残します。
-                door.ExitRequested = true;
-                return await reaction.WriteAsync(context, "Goodbye.");
-            }
+            return await reaction.ReactAsync(context, command);
         }
     }
 }
@@ -753,7 +763,7 @@ namespace InteractionFlow.Samples.HelloDoor
 
             // Port と External 実装、Interaction を DI に登録します。
             builder
-                .Apply(ConsoleBuilder.ProfileUseCancellation)
+                .Apply(ConsoleBuilder.Profile)
                 .UseFunction<IDoorOperation, ConsoleDoorOperation>()
                 .UseFunction<IDoorReaction, ConsoleDoorReaction>()
                 .UseInteraction<OperateDoor>();

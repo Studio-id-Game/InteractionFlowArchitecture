@@ -19,7 +19,7 @@ namespace InteractionFlow.Samples.HelloDoor
             var builder = new ScopeBuilder();
 
             builder
-                .Apply(ConsoleBuilder.ProfileUseCancellation)
+                .Apply(ConsoleBuilder.Profile)
                 .UseFunction<IDoorOperation, ConsoleDoorOperation>()
                 .UseFunction<IDoorReaction, ConsoleDoorReaction>()
                 .UseInteraction<OperateDoor>();

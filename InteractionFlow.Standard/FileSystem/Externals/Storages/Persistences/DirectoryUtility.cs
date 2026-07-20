@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace InteractionFlow.Standard.FileSystem.Externals.Persistences
+namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
 {
     /// <summary>
     /// ルート配下に限定してディレクトリを作成するユーティリティです。

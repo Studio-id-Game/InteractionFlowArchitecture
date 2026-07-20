@@ -1,6 +1,6 @@
 using InteractionFlow.Core.ExternalPorts.StoragePorts.PersistencePorts;
 
-namespace InteractionFlow.Standard.FileSystem.ExternalPorts.PersistencePorts
+namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.PersistencePorts
 {
     /// <summary>
     /// ファイル単位で値を永続化する Persistence ポートを表します。

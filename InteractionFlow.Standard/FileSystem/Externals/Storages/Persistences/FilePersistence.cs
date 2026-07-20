@@ -1,13 +1,13 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
-using InteractionFlow.Standard.FileSystem.ExternalPorts.PersistencePorts;
+using InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.PersistencePorts;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.FileSystem.Externals.Persistences
+namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
 {
 
     /// <summary>

@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.Serialization.Externals.Serializers
+namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
 {
     /// <summary>
     /// <see cref="Stream"/> と値を相互変換する Serializer の基底クラスです。

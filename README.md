@@ -1,220 +1,255 @@
-# Interaction Flow Architecture
+# Interaction Flow Architecture　<a id="top"></a>
 
 <p align="center">
-  <img
-    src="./docs/icon/icon_flat.svg"
-    alt="Interaction Flow Architecture icon"
-    width="128"
-  >
+    <img
+        src="./docs/icon/icon_flat.svg"
+        alt="Interaction Flow Architecture icon"
+        width="128"
+    >
+    <p align="center">
+    <i>
+        Interaction shapes Context, <br>
+        and Context shapes Interaction.
+    </i>
+    </p>
 </p>
+
+<br>
 
 <p align="center">
-  <i>
-    Interaction shapes Context, <br>
-    and Context shapes Interaction.
-  </i>
+    このアーキテクチャは、<br/>
+    開発対象となるシステムを「コードやレイヤーの塊」として見るだけではなく、<br/>
+    <b>「ユーザーとシステムの境界で生まれる相互作用」と「循環する文脈」</b> をコード表現に落とし込み、<br/>
+    ユーザー体験を直接設計するためのアーキテクチャです。
 </p>
 
-Interaction Flow Architecture は、System を「コードの配置」だけではなく、User と System の間に続く Interaction と Context の循環として設計するためのアーキテクチャです。
 
-このリポジトリは、その考え方を C# / .NET で実装するためのベースライブラリ、標準実装、Analyzer、サンプルを提供します。
-
-## 目次 (Table of Contents)
-
-- [ビジョン (Vision)](#vision)
-- [ランタイム (Runtime)](#runtime)
-- [開発 (Development)](#development)
-- [ランタイム × 開発 (Runtime × Development)](#runtime-development)
-- [哲学 (Philosophy)](#philosophy)
-- [パッケージ (Packages)](#packages)
-- [はじめに (Getting Started)](#getting-started)
-- [サンプル (Examples)](#examples)
-- [ロードマップ (Roadmap)](#roadmap)
-- [補足資料 (References)](#references)
-- [確認が必要な点 (Open Questions)](#open-questions)
+- [パッケージとインストール](#packages)
+- [ビジョン](#vision)
+- [Context Loop & System Flow](#context-loop-system-flow)
+- [哲学](#philosophy)
+- [はじめに](#getting-started)
+- [サンプル](#examples)
+- [実装](#implementation)
+- [ロードマップ](#roadmap)
+- [補足資料](#references)
+- [確認が必要な点](#open-questions)
 
 ---
 
-<a id="vision"></a>
+# パッケージとインストール <a id="packages"></a>
 
-# ビジョン (Vision)
+このリポジトリは、Interaction Flow Architecture を C# / .NET で実装するための、
+ベースライブラリやAnalyzerのパッケージ、サンプルプログラム等を提供します。
 
-## なぜ新しいアーキテクチャなのか？ (Why a New Architecture?)
+`Core`、`Standard`、`Samples` の詳細な責務と更新方針は [Core / Standard / Samples の役割](./docs/RoleOfMainProjects.md) を参照してください。
 
-レイヤードアーキテクチャやクリーンアーキテクチャは、コードの依存方向や責務分離を整理する強力な考え方です。一方で、対話的な UI、ゲームループ、エージェント、複雑な入力と出力を持つアプリケーションでは、開発者が本当に設計したいものは「どのクラスをどこに置くか」だけではありません。
+## Core
+- `InteractionFlow.Core` は、アーキテクチャ概念を定義する最小パッケージです。
+- Target Framework: `netstandard2.1` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Core
+  ```
 
-設計したいものは、User が何を行い、System がどう受け取り、何を返し、その結果として次の Interaction がどう変わるかです。
+## Standard
+- `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
+- Target Framework: `netstandard2.1` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Standard
+  ```
+**通常はこのパッケージをインストールするのが最短です。**
 
-Interaction Flow Architecture は、この流れを `Interaction` と `Context` を中心に表現します。Runtime では User が System を体験し、Development では開発者が同じ構造をコードとして設計し、AI はその構造を読み取って補助します。
+## Analyzer
+- `InteractionFlow.Analyzers` は、Interaction Flow Architecture のルールを検査する Roslyn Analyzer です。
+- Target Framework: `netstandard2.0` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Analyzers
+  ```
+  
+**より強力なアーキテクチャ支援を受けるために導入を推奨します。（プロジェクトファイルから `PrivateAssets="all"` を付ける事を推奨）**
 
-このアーキテクチャでは、コードが偶然 User 体験 (UX) を生むのではなく、User 体験を設計した結果がコードになります。Architecture は単なる整理規則ではなく、User 体験を直接設計するための制約でもあります。
-
-この README の基本用語は `Context` と `Meta Context` です。`Context` は、プログラムの Architecture 上で `SystemFlow` や `Interaction` に渡される状態、状況、文脈的情報を指します。`Meta Context` は、開発者や AI が設計意図を理解するために読む README、図、命名、型、コメントなどの文脈です。`Runtime Context` は基本用語ではなく、`Meta Context` と明示的に対比したい箇所でだけ、実行時の `Context` を指す説明表現として使います。
-
-## コアコンセプト (Core Concept)
-
-> Interaction shapes Context, and Context shapes Interaction.
-
-Interaction の実行を通じて Context は更新されます。更新された Context は、次に選ばれる Interaction、User が受け取る反応、必要になる入力、次回以降に残る情報を変えます。
-
-この循環が最小単位です。
-
-```text
-Interaction -> Context -> next Interaction -> next Context -> ...
+標準的なインストール:
+```xml
+<ItemGroup>
+  <PackageReference Include="InteractionFlow.Standard" Version="0.5.0" />
+  <PackageReference Include="InteractionFlow.Analyzers" Version="0.5.0" PrivateAssets="all" />
+</ItemGroup>
 ```
 
-この README では、次の言葉を共通言語として使います。まず Runtime と Development の両方で共有する概念を定義し、その後に Development で具体化し、Runtime では補助的に参照する実装語彙を置きます。
+## Samples
+- `InteractionFlow.Samples.*` は、Architecture の使い方を具体例として確認するためのプロジェクト群です。
+- 個別サンプルの目的と読み方は [サンプル解説](#examples) にまとめています。
 
-共有概念:
+## Others
 
-- `User`: System と相互作用する主体。人間だけでなく、AI エージェント、ロボット、他システムも含みます。
-- `System`: User の行為を Context の中で解釈し、Reaction と次の Context を返す対象。
-- `SystemFlow`: System 側が User への反応プロセスとして Interaction を束ねる単位。
-- `Interaction`: システム内部の目的を達成する意味単位。
-- `Context`: 現在の SystemFlow に関する状態、状況、文脈的情報。単なる state ではなく、次の Interaction を変える意味づけを含みます。
+- `InteractionFlow.PackageInstallCheck` は、リポジトリ運用のための補助プロジェクトです。
+
+---
+
+# ビジョン <a id="vision"></a>
+
+## なぜ、新しいアーキテクチャが必要なのか？
+
+> <I>相互作用をクリーンに保つための制約を持ったアーキテクチャ。</I>
+
+レイヤードアーキテクチャやクリーンアーキテクチャは、コードの依存方向や責務分離を整理する強力な考え方です。一方で、これらのアーキテクチャモデルは、モデル上の要素と実際のコードとの対応関係を強くは定めません。
+
+そのため、設計上の境界とコード上の境界の一致を継続的に保証することは難しく、両者の間に乖離が生じる可能性があります。また、同じ名称や図を共有していても、開発者ごとに異なる対応関係を想定できるため、解釈の余地が設計の自由度としてだけでなく、認識の曖昧さとしても現れます。
+
+特に、対話的な UI、ゲームループ、エージェントなど、複雑な入力と出力を持つシステムでは、処理が複数のレイヤーを横断しながら、継続的に状態を更新し、次の振る舞いを形成します。そのため、アーキテクチャモデル上の責務分割だけでは、実際のコードがどのような実行フローを形成するのかを十分に表現できず、コードとモデルの対応関係はさらに曖昧になります。
+
+このようなインタラクティブなシステムの開発において、開発者が本当に設計したいものは、「どのクラスをどのレイヤーに置くか」だけではありません。ユーザーが何を行い、システムがそれをどう受け取り、その結果として文脈がどう変化し、次の相互作用がどのように形づくられるかという、相互作用の流れによる「ユーザー体験（UX）」そのものです。
+
+Interaction Flow Architecture は、レイヤー構造による責務分離を維持しながら、相互作用をコード上の基本単位として設計します。これにより、モデルとコードの対応関係を明確に保ちつつ、ユーザーとシステムの間に生まれる相互作用の流れ＝「ユーザー体験」を、そのままコードとして記述できます。
+
+このアーキテクチャでは、コードを実行した結果としてユーザー体験が生まれるのではなく、コードそのものがユーザー体験の設計言語になります。
+
+Interaction Flow Architecture は、単なるコードの整理規則ではありません。**「ユーザー体験」をクリーンに保つための制約を持ったアーキテクチャ**です。
+
+## コアコンセプト
+
+> <I>相互作用が文脈を形作り、文脈が相互作用を形作る。</I>
+
+Interaction Flow Architecture では、
+ユーザーとシステムの相互作用（`Interaction`）と、相互作用の状態を表す文脈（`Context`）を用いて、相互作用が文脈を更新し、新しい文脈が次の相互作用に影響する過程の繰り返し（`Context Loop`）として、システムを表現します。
+
+```text
+Context -> Interaction -> next Context -> next Interaction -> ...
+```
+
+このアーキテクチャでは、次の言葉を共通言語として使います。
+
+### 基本概念:
+
+- `User`: System と相互作用する主体。人間だけでなく、ロボット、AI エージェント、動物など、様々な主体を含む。
+- `Context`: 現在の相互作用に関する状態や状況に、次の相互作用に影響を与える文脈的な意味を持たせた情報。
+- `System`: `User` と相互作用する開発対象。`Context` を介して `User` の行為に反応し、動作する。
+- `Context Loop`: `System` と `User` の間にある、 `Context` を介した繰り返しの反応プロセス。
+- `System Flow`: `Context Loop` の一環として、複数の相互作用を通じて `System` が `User` との関係を構築するための単位。
+- `Interaction`: `Context Loop` の一環として、`System` が内部の目的を達成するための相互作用の単位。
+
+### 実装概念:
+
+- `Function`: `Interaction` から呼び出される外部機能の単位。
+  
+  `Interaction` が扱う抽象的な契約である `Function Port` と、<br/>
+  `External` に依存した具体的な実装である `Function External` がある。
+
+  - `Operation`: `Function`の一種。`User` が操作できる入力を受け付ける機能。
+  - `Reaction`: `Function`の一種。`User` が観測できる反応を提供する機能。
+  - `Storage`: `Function`の一種。`Context` の文脈的な意味とは独立して、データを保持する機能。
+  - `Silent External`: `Function`の一種。`Context` の文脈的な意味とは独立して、外部と連携するその他の機能。
+
+- `System Flow Builder`: `System Flow` を実行可能な形に組み立てるビルダー。
+- `Domain`: `System` の前提となる、外部に依存しないデータ構造や動作の定義。
+- `External`: UI、DB、ファイルシステム、OS、外部サービスなど、`Function External` が接続する具体的な実行環境。
+
+### 説明概念:
+
 - `Meta Context`: 開発者や AI が設計意図を理解するために読む文脈。
 
-実装で使う語彙:
+  ドキュメント、図、命名、型、コメントなどの、設計意図を理解するために読まれる開発時のみの文脈です。
+  `Meta Context` と 通常の `Context` を明示的に対比したい箇所では、通常の `Context` を `Runtime Context` と特別に呼びます。
 
-- `Function`: Interaction から呼び出される外部機能の単位。Port と External に分けて扱います。
-  - `Function Port`: Interaction から見える外部機能の抽象契約。
-  - `Function External`: Port を実装する具体的な外部依存。
-  - `Operation`: User からの入力や外部条件の取得。
-  - `Reaction`: User が観測できる出力や終了時の反応。
-  - `Storage`: 永続または一時の状態管理。
-  - `SilentExternal`: User に直接見えない外部状態や外部イベントの扱い。
-- `External`: UI、DB、ファイルシステム、OS、外部サービスなど、Function External が接続する具体的な実行環境。
 
+#### アーキテクチャの全体図:
 ![Interaction Flow Architecture overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
 
 代替テキスト: [InteractionFlowArchitecture_Overview.context.md](./docs/img/InteractionFlowArchitecture_Overview.context.md)
 
 ---
+<br/>
 
-<a id="runtime"></a>
+# Context Loop & System Flow <a id="context-loop-system-flow"></a>
 
-# ランタイム (Runtime)
+## Context Loop の具体例
 
-> ユーザーが System とどのように関わるか。
-
-## ユーザー体験 (User Experience)
-
-User から見た System は、画面や API エンドポイントの集合ではなく、Interaction と Context の連続です。
-
-たとえば、同じボタンを押しても、ログイン前とログイン後では意味が変わります。同じ入力でも、前の会話、保存済みデータ、権限、現在の選択状態によって System の反応は変わります。つまり、体験は「操作そのもの」ではなく「Context の中で解釈された Interaction」です。
-
-Interaction Flow Architecture は、この体験の連続性を Runtime の中心に置きます。
-
-## 最初の Interaction (First Interaction)
-
-🚪 ドアを開閉する (Open / Close the Door)
+> <I>さぁ、ドアを開けて。</I>
 
 最小の Context Loop は、ドアの例で考えると直感的です。
 
+🚪 ドアを開閉する (Open / Close the Door)
 ```text
-1. User が Open または Close を入力する
-2. System は現在の Context を見る
-3. ドアが閉まっていて、入力が Open なら、ドアを開ける
-4. ドアが開いていて、入力が Close なら、ドアを閉める
-5. すでに同じ状態なら、その状態を Reaction として返す
+# ドアの Context Loop
+
+1. Operation : User がドア（System）を操作する（Open / Close）
+2. Reaction : その操作と、ドアの開閉状態（Context）を参照して…
+     case A : ドアが Close で入力が Open なら、ドアを開ける
+     case B : ドアが Open で入力が Open なら、ドアはすでに開いている
+     case C : ドアが Open で入力が Close なら、ドアを閉める
+     case D : ドアが Close で入力が Close なら、ドアはすでに閉まっている
+3. ドアの開閉状態（Context）を引き継いだまま、(1.)に戻る
 ```
 
-ここで重要なのは、Interaction が単独で意味を持つのではないことです。同じ `Open` という入力でも、Context が「閉じている」なら開けられ、「開いている」ならすでに開いているという Reaction になります。そして、その結果として更新された Context が、次の Interaction を形作ります。
+このドアの Context Loop は、 1つの Operation と 1つの Reaction を組み合わせた、1つの Interaction が繰り返されるループとして記述されています。
 
-## Context Loop
+この Interaction の結果は、同じ `Open` という操作（Operation）でも、ドアの開閉状態（Context）が「Close」なら開けられ、「Open」ならすでに開いているという反応（Reaction）になります。そして、ここで更新されたドアの開閉状態（Context）は、次の Interaction を変化させます。
 
-Context Loop は、User の操作と System の反応によって Context が更新され、その更新済み Context が次の体験に影響する循環です。
+このように、
+
+1. Interaction が、
+2. Operation や Reaction を通じて Context を更新し、
+3. 次の Interaction を変化させる。
+
+というループが、Context Loop の基本となります。
+
+また、System Flow は、複数の Interaction をまとめることで、System における1つのユーザー体験として Context Loop を表現します。ドアの Context Loop の例は、1つの Interaction で構成される最小の System Flow であるとも言えます。
+
+## User から見た Context Loop & System Flow
+
+> <I>User は、System との関係を構築する。</I>
+
+User は、ドアの Context Loop を次のように体験します。
+
+1. ドア（System）を見つける
+2. ドアの操作（Operation）を実行する
+3. 操作の結果を表す反応（Reaction）を受け取る
+4. (2.)と(3.)を繰り返すことで、ドアの状態（Context）を理解しながら操作できるようになる
+
+特に、(4.) で経験する Context Loop によって、User はドア（System）との関係を構築します。
+これこそが、System Flow が「System が User との関係を構築するための単位」である理由と目的です。
+
+また、(2.) Operation と (3.) Reaction は User と System で実行・観測する立場が反転します。
+- User は Operation を実行し、System は User の Operation を受け取る
+- System は Reaction を実行し、User は System の Reaction を受け取る
+
+## 開発者から見た Context Loop & System Flow
+
+> <I>開発者は、User との関係をデザインする。</I>
+
+開発者は、ドアの Context Loop を次のように設計します。
+
+1. ドア（System）の状態（Context）を定義する
+2. ドアの操作（Operation）を定義する
+3. ドアの反応（Reaction）を定義する
+4. 操作と反応を組み合わせて、ドアの相互作用（Interaction）を実装する
+5. Interaction を組み合わせて、ドアと User との関係（System Flow）をデザインする
+
+特に、(5.) でデザインする System Flow は、ユーザーが体験する Context Loop として実装します。
 
 ![Interaction Flow Architecture flow diagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
 
 代替テキスト: [InteractionFlowArchitecture_FlowDiagram.context.md](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
 
-User から見ると、流れは次のように見えます。
+## 共有される Context Loop & System Flow
 
-- User が何かを行う。
-- System は現在の Context の中で、その行為の意味を解釈する。
-- System は User に観測できる反応を返す。
-- その結果として Context が変わる。
-- 変わった Context によって、次に可能な行為や反応が変わる。
+> <I>Context Loop と System Flow によって、開発者 / System / User が同じ世界を共有する。</I>
 
-System 全体は、単一の巨大なフローではなく、複数の Context Loop の集合として設計できます。
+開発者によりデザインされた System Flow と、それによって User が体験する Context Loop は、開発者 / System / User が同じ世界を共有するための共通モデルとなります。
 
-## ランタイムモデル (Runtime Model)
+- 開発者は、System Flow をデザインし、Context Loop として実装する
+- System は、System Flow を実行し、Context Loop を提供する
+- User は、System Flow の中で、Context Loop を体験する
 
-Runtime は、User から見える体験の流れとして読みます。ここで使う `Operation`、`Reaction`、`Storage`、`SilentExternal` は実装クラスの説明ではなく、体験上の役割を指すための補助用語です。
+冒頭で、インタラクティブなシステムの開発において、開発者が本当に設計したいものは「ユーザー体験」であると述べました。
 
-- User が何かを行う (`Operation`): 入力、選択、操作、外部から起きる変化。
-- System は現在の文脈を見る (`Context`): その行為がどのような意味を持つかを決める状況。
-- 行為が体験上の意味になる (`Interaction`): User の行為が Context の中で解釈されたもの。
-- User が反応を受け取る (`Reaction`): 表示、応答、完了、キャンセル、エラー。
-- 次回以降の体験に影響する情報が残る (`Storage`): User の次の体験に影響する記憶。
-- User には直接見えない条件が体験を変える (`SilentExternal`): 権限、時刻、接続状態、外部イベントなど。
-
-ここでは、UI、DB、ファイル、DI、クラス構成などの実装詳細は扱いません。Runtime で説明するのは、User がどの Context で何を行い、System がどの Reaction を返し、その結果として次の体験がどう変わるかです。
-
-## ユーザーフローとして読む (Reading as User Flow)
-
-Runtime では、Interaction Flow を User の体験として読みます。
-
-重要なのは、「どの画面に何があるか」よりも、「User はどの Context で何を行い、System はどの Context と Reaction を返すか」です。
-
-この見方にすると、画面、CLI、API、AI エージェント、ゲームループなどの入出力形態が違っても、User が体験している意味を同じ言葉で説明できます。
+ここで述べた Context Loop こそが、実行モデルとしての「ユーザー体験」であり、System Flow のデザインこそが、「ユーザー体験の設計」となります。**System Flow のデザインによって、開発者がユーザー体験を直接設計できるようになる**ことが、Interaction Flow Architecture の最大の利点です。
 
 ---
 
-<a id="development"></a>
-
-# 開発 (Development)
-
-> 開発者が System とどのように関わるか。
-
-## 開発体験 (Development Experience)
-
-Development は、Runtime で読んだ User Flow を実装構造へ写す視点です。開発者は、SystemFlow や Interaction に渡される Context そのものと、それを設計・理解するための Meta Context の両方を扱います。ここでは両者を対比するため、前者を Runtime Context と呼ぶことがあります。
-
-コードを書くことは、単に処理を並べることではありません。どの Context を受け取り、どの Interaction を実行し、どの Port を通じて外部に触れ、どの Reaction で終えるかを定義することです。README、図、命名、型、コメントは、その設計判断を開発者や AI が読むための Meta Context になります。
-
-このアーキテクチャでは、開発者の判断が次の問いに集約されます。
-
-- この目的は `SystemFlow` か、`Interaction` か。
-- この値は Context か、Domain の Entity か、Storage に保存される Data か。
-- この外部依存は Operation / Reaction / Storage / SilentExternal のどれか。
-- この依存は Port と External の境界を越えていないか。
-
-## ユーザー体験を実装へ写す (Translating User Experience)
-
-Development では、Runtime で読んだ User Flow を実装へ写します。
-
-UI を中心に考えると、「どの画面に何を置くか」が先に立ちます。Interaction を中心に考えると、「User はどの Context で何を行い、System はどの Context と Reaction を返すべきか」が先に立ちます。
-
-この順序にすると、入出力形態が変わっても、体験の意味を保ったまま実装を差し替えやすくなります。
-
-## 実装フロー (Implementation Flow)
-
-Development では、Runtime で見えていた User Flow を、実装可能な単位へ分解します。
-
-```text
-Program -> SystemFlow -> Interaction -> Function Port -> Function External -> External
-```
-
-各要素の役割は次のように分かれます。
-
-- `Program`: エントリーポイント、イベント、リクエストを受け取り、初期 Context と依存関係を組み立てる。
-- `SystemFlow`: User への反応プロセスとして Interaction の順序と終了の意味を構成する。
-- `Interaction`: Context を読み、Function Port を組み合わせて、意味ある Context 更新と Reaction を構成する。
-- `Function Port`: Interaction から見える外部機能の抽象契約。
-- `Function External`: Port を実装し、具体的な実行環境へ接続する。
-- `External`: UI、Console、DB、ファイルシステム、OS、外部サービスなどの実行環境。
-
-実装フローの目的は、User Flow の意味を保ったまま、どこに Context を置き、どこに外部依存との境界を置くかを決めることです。Runtime で説明した体験上の流れを、Development では型、クラス、Port、External、DI の組み立てとして表現します。
-
-## Interaction Flow を設計する (Designing Interaction Flow)
-
-Interaction は、システム内部における単一の意味を持つ処理単位として設計します。
-
-大きすぎる Interaction は、Context 更新の理由が読みにくくなります。小さすぎる Interaction は、システム内での意味を失い、単なる関数分割になります。目安は「User から見えない内部目的として、名前を付けられるか」です。
-
-SystemFlow は、User への反応プロセスとして Interaction を束ねます。SystemFlow は全システムの処理手順ではなく、User と System の関係として一つの意味を持つ単位です。
 
 ## Context を設計する (Designing Context)
 

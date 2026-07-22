@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="ページ-1" id="3Xbq4vFLTSfR9uiX2c7m">
-    <mxGraphModel dx="1567" dy="847" grid="0" gridSize="8" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="512" pageHeight="512" math="0" shadow="0">
+    <mxGraphModel dx="3656" dy="1976" grid="0" gridSize="8" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="512" pageHeight="512" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -58,10 +58,10 @@
         <mxCell id="Mt3cbpyJMOsXprLyaBS2-6" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.partConcEllipse;startAngle=0.25;endAngle=0.75;arcWidth=0.36;rounded=0;hachureGap=5;strokeColor=light-dark(#72CBFF,#72CBFF);strokeWidth=8;align=center;fontFamily=Helvetica;fontSize=12;fontColor=#5AA9E6;labelBackgroundColor=none;fillColor=#039AFF;" value="" vertex="1">
           <mxGeometry height="176" width="352" x="80" y="256" as="geometry" />
         </mxCell>
-        <mxCell id="85mWJBxLpcSnoBcggrBp-2" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.partConcEllipse;startAngle=0.6010676439328775;endAngle=0.6776616205697394;arcWidth=0.36;rounded=0;hachureGap=5;strokeColor=light-dark(#72CBFF,#72CBFF);strokeWidth=8;align=center;fontFamily=Helvetica;fontSize=12;fontColor=#5AA9E6;labelBackgroundColor=none;fillColor=light-dark(#72CBFF,#72CBFF);flipH=1;legacyAnchorPoints=0;" value="" vertex="1">
-          <mxGeometry height="176" width="352" x="80" y="256" as="geometry" />
+        <mxCell id="Mt3cbpyJMOsXprLyaBS2-8" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.partConcEllipse;startAngle=0.5268001258780504;endAngle=0.7067928575831266;arcWidth=0.14;rounded=0;hachureGap=5;strokeColor=none;strokeWidth=8;align=center;fontFamily=Helvetica;fontSize=12;fontColor=#5AA9E6;labelBackgroundColor=none;fillColor=light-dark(#000000,#000000);opacity=20;" value="" vertex="1">
+          <mxGeometry height="168" width="344" x="84" y="260" as="geometry" />
         </mxCell>
-        <mxCell id="85mWJBxLpcSnoBcggrBp-4" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.partConcEllipse;startAngle=0.6169917681873902;endAngle=0.637391245162546;arcWidth=0.36;rounded=0;hachureGap=5;strokeColor=light-dark(#72CBFF,#72CBFF);strokeWidth=8;align=center;fontFamily=Helvetica;fontSize=12;fontColor=#5AA9E6;labelBackgroundColor=none;fillColor=light-dark(#72CBFF,#72CBFF);flipH=0;legacyAnchorPoints=0;" value="" vertex="1">
+        <mxCell id="85mWJBxLpcSnoBcggrBp-2" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.partConcEllipse;startAngle=0.62170760883716;endAngle=0.6874076386694326;arcWidth=0.36;rounded=0;hachureGap=5;strokeColor=light-dark(#72CBFF,#72CBFF);strokeWidth=8;align=center;fontFamily=Helvetica;fontSize=12;fontColor=#5AA9E6;labelBackgroundColor=none;fillColor=light-dark(#72CBFF,#72CBFF);flipH=1;legacyAnchorPoints=0;" value="" vertex="1">
           <mxGeometry height="176" width="352" x="80" y="256" as="geometry" />
         </mxCell>
       </root>

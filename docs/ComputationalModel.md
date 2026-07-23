@@ -22,25 +22,54 @@ Interaction Flow は、この構造をソフトウェアアーキテクチャに
 
 ## テープ操作としての機能分類
 
-チューリングマシンの視点に立つと、システムの機能は「どのテープに対して、どのような読み書きを行うか」によって整理できます。
+チューリングマシンの視点に立つと、システムの機能は
+「どのテープに対して、どのような読み書きを行うか」によって整理できます。
 
-Interaction Flow における主要な機能分類は以下の通りです：
+Interaction Flow では、Function が扱うテープを、物理的な接続先ではなく、
+そのテープがアーキテクチャ上で持つ意味と目的によって分類します。
 
-- **Operation**  
-  ユーザーが書き込んだテープの読み取り  
-  （外部からの入力を解釈する）
+最初の基準は、そのテープが `User` との相互作用を担うかどうかです。
+`User` との相互作用を担う場合は、情報の向きによって二つに分かれます。
+`User` と相互作用しないテープは、次に、情報の記録そのものを目的とするかで分かれます。
 
-- **Reaction**  
-  ユーザーに読み取られるテープの書き込み  
-  （外部への出力を生成する）
+この分類は、次のような判断の流れとして表せます。
 
-- **Storage**  
-  内部テープの読み書き  
-  （状態や履歴など、内部情報の管理）
+- **Function が扱うテープ**
 
-- **SilentExternal**  
-  外部実行環境に読み書きされるテープへの読み書き  
-  （ユーザーには直接見えない形で外部システムに影響を与える/与えられる）
+  - **`User` と相互作用するテープ**
+
+    - **Operation**: `System` が `User` からの入力を解釈するためのテープ
+
+      `User` が書き込み `System` が読み取る
+
+    - **Reaction**: `User` が `System` からの反応を解釈するためのテープ
+
+      `System` が書き込み `User` が読み取る
+
+  - **`User` と相互作用しないテープ**
+
+    - **Storage**: `System` が情報を記録するためのテープ
+
+      `System` が書き込み `System` が読み取る
+
+    - **Silent External**: `System` が記録以外の目的を達成するためのテープ
+
+      `System` が書き込み、外部環境が読み取る。
+
+      または、外部環境が書き込み、`System` が読み取る
+
+ここでいう目的は、テープの物理的な配置とは異なります。
+たとえば、DB やファイルシステムは `System` の外部に存在しますが、
+状態や履歴を記録するために利用するなら Storage に分類されます。
+一方、外部イベントや外部プロパティとのやり取りは、
+`User` との相互作用や記録を目的としないため Silent External に分類されます。
+
+したがって Silent External は、Operation、Reaction、Storage のいずれにも含まれない
+外部連携を受け入れる分類です。これは便宜的な未分類ではなく、
+三つの分類では表現できない外部連携を Function として扱うために導かれます。
+
+なお、この分類は外部との境界を持つ Function を対象とします。
+外部のテープを必要としない純粋な計算や規則は、Domain や Interaction の内部として表現されます。
 
 これらはすべて、「テープ」という共通のメタファーの上で統一的に理解できます。
 
@@ -55,9 +84,9 @@ Interaction は、このアーキテクチャにおける最小の動作単位�
 
 すなわち Interaction は、単一の処理ではなく、
 
-- 読み取り（Operation / SilentExternal）
+- 読み取り（Operation / Silent External）
 - 内部更新（Storage）
-- 外部出力（Reaction / SilentExternal）
+- 外部出力（Reaction / Silent External）
 
 といった複数の操作を組み合わせた、「状態遷移のまとまり」です。
 
@@ -65,14 +94,14 @@ Interaction は、このアーキテクチャにおける最小の動作単位�
 
 ---
 
-## 意味の単位としての SystemFlow
+## 意味の単位としての System Flow
 
-Interaction が内部の構造であるのに対し、SystemFlow は System と User の間にある関係として単一の意味を持つ、System 側の意味単位です。
+Interaction が内部の構造であるのに対し、System Flow は System と User の間にある関係として単一の意味を持つ、System 側の意味単位です。
 
-- **SystemFlow**  
+- **System Flow**  
   System 側が User への反応プロセスとして Interaction を束ねるフロー単位
 
-SystemFlow は、システム全体の処理手順ではなく、複数の Interaction を束ねて一つの「意味ある振る舞い」として提示します。
+System Flow は、システム全体の処理手順ではなく、複数の Interaction を束ねて一つの「意味ある振る舞い」として提示します。
 
 これは、以下のような役割を持ちます：
 
@@ -88,7 +117,7 @@ SystemFlow は、システム全体の処理手順ではなく、複数の Inter
 
 Interaction Flow アーキテクチャにおける実行は、以下の流れで理解されます：
 
-    SystemFlow → Interaction → テープ操作（Operation / Storage / Reaction / SilentExternal）
+    System Flow → Interaction → テープ操作（Operation / Storage / Reaction / Silent External）
 
 この流れは常に、
 
@@ -114,7 +143,7 @@ Interaction Flow は、チューリングマシンの
 
 - すべての処理を「テープ操作」として統一的に捉える
 - 状態遷移を Interaction として明示化する
-- 意味の単位を SystemFlow として分離する
+- 意味の単位を System Flow として分離する
 
 これにより、内部の計算構造と外部の意味構造を分離しつつ、一貫したモデルとして扱うことが可能になります。
 

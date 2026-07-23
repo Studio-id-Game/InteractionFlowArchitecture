@@ -142,38 +142,31 @@ Context -> Interaction -> next Context -> next Interaction -> ...
 
 ### 基本概念:
 
-- `User`: System と相互作用する主体。人間だけでなく、ロボット、AI エージェント、動物など、様々な主体を含む。
-- `Context`: 現在の相互作用に関する状態や状況に、次の相互作用に影響を与える文脈的な意味を持たせた情報。
-- `System`: `User` と相互作用する開発対象。`Context` を介して `User` の行為に反応し、動作する。
-- `Context Loop`: `System` と `User` の間にある、 `Context` を介した繰り返しの反応プロセス。
-- `System Flow`: `Context Loop` の一環として、複数の相互作用を通じて `System` が `User` との関係を構築するための単位。
-- `Interaction`: `Context Loop` の一環として、`System` が内部の目的を達成するための相互作用の単位。
+| <div style="width: 110px;">名称</div> | 対象 |
+| --- | --- |
+| `User` |  System と相互作用する主体。人間だけでなく、ロボット、AI エージェント、動物など、様々な主体を含む。 |
+| `Context` | 現在の相互作用に関する状態や状況に、次の相互作用に影響を与える文脈的な意味を持たせた情報。 |
+| `System` | `User` と相互作用する開発対象。`Context` を介して `User` の行為に反応し、動作する。 |
+| `Context Loop` | `System` と `User` の間にある、 `Context` を介した繰り返しの反応プロセス。 |
+| `System Flow` | `Context Loop` の一環として、複数の相互作用を通じて `System` が `User` との関係を構築するための単位。|
+| `Interaction` | `Context Loop` の一環として、`System` が内部の目的を達成するための相互作用の単位。|
 
 ### 実装概念:
 
-- `Function`: `Interaction` から呼び出される外部機能の単位。
-  
-  `Interaction` が扱う抽象的な契約である `Function Port` と、<br/>
-  `External` に依存した具体的な実装である `Function External` がある。
-
-  - `Operation`: `Function`の一種。`User` が操作できる入力を受け付ける機能。
-  - `Reaction`: `Function`の一種。`User` が観測できる反応を提供する機能。
-  - `Storage`: `Function`の一種。`Context` の文脈的な意味とは独立して、データを保持する機能。
-  - `Silent External`: `Function`の一種。`Context` の文脈的な意味とは独立して、外部と連携するその他の機能。
-
-- `System Flow Builder`: `System Flow` を実行可能な形に組み立てるビルダー。
-- `Domain`: `System` の前提となる、外部に依存しないデータ構造や動作の定義。
-- `External`: UI、DB、ファイルシステム、OS、外部サービスなど、`Function External` が接続する具体的な実行環境。
-
-### 説明概念:
-
-- `Meta Context`: 開発者や AI が設計意図を理解するために読む文脈。
-
-  ドキュメント、図、命名、型、コメントなどの、設計意図を理解するために読まれる開発時のみの文脈です。
-  `Meta Context` と 通常の `Context` を明示的に対比したい箇所では、通常の `Context` を `Runtime Context` と特別に呼びます。
-
+| <div style="width: 110px;">名称</div> | 対象 |
+| --- | --- |
+| `Domain` | `System` の前提となる、外部に依存しないデータ構造や動作の定義。 |
+| `External` | UI、DB、ファイルシステム、OS、外部サービスなど、具体的な実行環境。 |
+| `Function` | `Interaction` から呼び出される機能の単位。|
+| `Function Port` | `Interaction` が扱う `Function` の抽象。|
+| `Function External` | `Interaction` が扱う `Function` の実装。`External` に依存出来る。|
+| `Operation` | `Function` の一種。`User` が操作できる入力を受け付ける機能。 |
+| `Reaction` | `Function` の一種。`User` が観測できる反応を提供する機能。 |
+| `Storage` | `Function` の一種。`Context` の文脈的な意味とは独立して、データを保持する機能。 |
+| `Silent External` | `Function` の一種。`User` との相互作用やデータの記録を目的とせず、外部環境と情報をやり取りする機能。 |
 
 #### アーキテクチャの全体図:
+
 ![Interaction Flow Architecture overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
 
 代替テキスト: [Interaction Flow Architecture - Overview Context](./docs/img/InteractionFlowArchitecture_Overview.context.md)
@@ -330,7 +323,9 @@ dotnet run --project InteractionFlow.Samples.HelloDoor
 
 #### Step 1. User 入力を Interaction が扱うコマンドとして定義します。
 
-`Entities/DoorCommand.cs`
+<details>
+<summary><code>Entities/DoorCommand.cs</code> のコードを表示</summary>
+
 ```csharp
 namespace InteractionFlow.Samples.HelloDoor.Entities
 {
@@ -344,11 +339,15 @@ namespace InteractionFlow.Samples.HelloDoor.Entities
 }
 ```
 
+</details>
+
 #### Step 2. Context に載せるドアの状態を定義します。
 
 `IsOpen` は現在の開閉状態、`ExitRequested` は SystemFlow のループ終了要求です。
 
-`Entities/DoorState.cs`
+<details>
+<summary><code>Entities/DoorState.cs</code> のコードを表示</summary>
+
 ```csharp
 namespace InteractionFlow.Samples.HelloDoor.Entities
 {
@@ -361,11 +360,15 @@ namespace InteractionFlow.Samples.HelloDoor.Entities
 }
 ```
 
+</details>
+
 #### Step 3. Interaction から扱うユーザー操作を定義します。
 
 ユーザー操作の `DoorCommand` への変換を担当します。
 
-`ExternalPorts/OperationPorts/IDoorOperation.cs`
+<details>
+<summary><code>ExternalPorts/OperationPorts/IDoorOperation.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.OperationPorts;
@@ -381,11 +384,15 @@ namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts
 }
 ```
 
+</details>
+
 #### Step 4. Interaction から扱うシステム反応を定義します。
 
 指定された `DoorCommand` による Context への影響と結果表示を担当します。
 
-`ExternalPorts/ReactionPorts/IDoorReaction.cs`
+<details>
+<summary><code>ExternalPorts/ReactionPorts/IDoorReaction.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
@@ -401,11 +408,15 @@ namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts
 }
 ```
 
+</details>
+
 #### Step 5. ユーザー操作 を Console で実装します。
 
 Console 標準入力による `DoorCommand` の取得を担当します。
 
-`Externals/Operations/ConsoleDoorOperation.cs`
+<details>
+<summary><code>Externals/Operations/ConsoleDoorOperation.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Operations;
@@ -439,12 +450,16 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
 }
 ```
 
+</details>
+
 #### Step 6. システム反応 を Console で実装します。
 
 `DoorCommand` に応じた `DoorState` Context の更新と、
 Console 標準出力による User への結果表示を担当します。
 
-`Externals/Reactions/ConsoleDoorReaction.cs`
+<details>
+<summary><code>Externals/Reactions/ConsoleDoorReaction.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals.Reactions;
@@ -503,11 +518,15 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
 }
 ```
 
+</details>
+
 #### Step 7. 相互作用を実装します。
 
 ここではユーザー操作（`IDoorOperation`）から `DoorCommand` を取得し、`IDoorReaction` へ渡します。ドア状態の更新と結果表示は Reaction 側で行われています。
 
-`Interactions/OperateDoor.cs`
+<details>
+<summary><code>Interactions/OperateDoor.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
@@ -535,11 +554,15 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
 }
 ```
 
+</details>
+
 #### Step 8. ユーザー体験を実装します。
 
 `OperateDoor` を繰り返し、Context に終了要求が出るまで Context Loop を継続します。
 
-`SystemFlows/DoorSystemFlow.cs`
+<details>
+<summary><code>SystemFlows/DoorSystemFlow.cs</code> のコードを表示</summary>
+
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
@@ -573,11 +596,14 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
 }
 ```
 
+</details>
+
 #### Step 9. エントリーポイントで、実行環境の組み立てと実行を実装します。
 
 `ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。
 
-`Program.cs`
+<details>
+<summary><code>Program.cs</code> のコードを表示</summary>
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
@@ -620,6 +646,8 @@ namespace InteractionFlow.Samples.HelloDoor
 }
 ```
 
+</details>
+
 #### 実行結果
 
 ```text
@@ -639,27 +667,24 @@ Goodbye.
 
 この例では、それぞれの要素は以下のように分割された責務と関心を持っています。
 
-- `Entities.DoorState`: ドアの状態を表現する
-  - 関心：ドアはどのような情報を持つか？
-- `ExternalPorts.IDoorOperation`: ユーザーによるドアの操作を抽象化する
-  - 関心：ユーザーはドアに対して何ができるか？
-- `ExternalPorts.IDoorReaction`: システムによるドアの反応を抽象化する
-  - 関心：ドアはユーザーに対して何ができるか？
-- `Externals.ConsoleDoorOperation`: Console 標準入力でドアを操作する
-  - 関心：ユーザーからドアへの操作をどのように実現できるか？
-- `Externals.ConsoleDoorReaction`: Console 標準出力でドアを反応させる
-  - 関心：ドアからユーザーへの反応をどのように実現できるか？
-- `Interactions.OperateDoor`: ユーザーとドアの相互作用を実装する
-  - 関心：ドアはユーザーとどのように相互作用するか？
-- `SystemFlows`: ドアシステムにおけるユーザー体験を実装する
-  - 関心：ドアはユーザーとどのように交流するか？
-- `Program`: `ScopeBuilder` を用いてシステムを実体化し、組み立てた初期 Context と共に実行する
-  - 関心：どのドアと、どのユーザーを組み合わせるか？
+| 要素 | 責務 | 関心 |
+| --- | --- | --- |
+| `Entities.DoorState`             | ドアの状態の表現 | ドアはどのような情報を持つか？ |
+| `OperationPorts.IDoorOperation`   | ユーザーによるドアの操作の抽象化 | ユーザーはドアに対して何ができるか？ |
+| `ReactionPorts.IDoorReaction`    | システムによるドアの反応の抽象化 | ドアはユーザーに対して何ができるか？ |
+| `Operations.ConsoleDoorOperation` | Console によるドアの操作の実装 | ドアの操作をどのように実現できるか？ |
+| `Reactions.ConsoleDoorReaction`  | Console によるドアの反応の実装 | ドアの反応をどのように実現できるか？ |
+| `Interactions.OperateDoor`       | ドアとユーザーの相互作用の実装 | ドアはユーザーとどのように相互作用するか？ |
+| `SystemFlows.DoorSystemFlow`                    | ドアにおけるユーザー体験の実装 | ドアはユーザーにどのように体験されるか？ |
+| `Program`                        | システムの実体化<br/>Context の組み立て<br/>システムの実行 | どんなドアと、どんなユーザーを組み合わせるか？ |
 
 このような責務と関心の分離は、コードをクリーンに保つことだけが目的ではありません。
 コードのクリーンさを保ちながら、ユーザー体験と、ユーザー体験の設計をクリーンに保つための分離です。
 
-#### 💡 Tips: なぜ Reaction が Context を更新するのか？
+
+<details>
+
+<summary><strong>💡 Tips: なぜ Reaction が Context を更新するのか？</strong></summary>
 
 この例では、Context を更新しているのは、`OperateDoor` (Interaction) ではなく、`ConsoleDoorReaction` です。
 
@@ -686,6 +711,8 @@ Goodbye.
 
 この設計はユーザー体験だけでなく、開発者体験にもメリットがあります。
 Reaction が Context を更新することで、Reaction の未実装や適用漏れが Context の未更新やUI上の無反応として自然に現れ、責務の漏れを早い段階で発見できます。
+
+</details>
 
 ## 次のステップ (Next Step)
 
@@ -763,7 +790,7 @@ Storage を含む実用寄りの Context Loop を見たい場合に適してい�
 - Interaction: `EnterPassword`、`LoginSecure`
 - 見どころ: Port / External の境界によって、既存 Flow を拡張できること
 
-差し替え可能な Port 設計と、AI や開発者が読むべき Meta Context を小さく保つ効果を確認できます。
+Port や Flow の差し替え可能な設計を確認できます。
 
 ---
 
@@ -796,7 +823,7 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 代替テキスト: [Interaction Flow Architecture - Dependency Diagram Context](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
 
 ライブラリ内部の構造、パッケージ間の責務、Builder や Analyzer の位置づけについては、以下の資料を参考にしてください。
-- **[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md)**
+- ⭐ **[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md)**
 - [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
 - [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)

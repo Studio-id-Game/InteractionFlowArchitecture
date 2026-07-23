@@ -1,8 +1,27 @@
-[README に戻る](./README.md)
+[Interaction Flow Architecture](./README.md)
 
 # ライブラリの実装
 
-## このページの目的
+## 目次
+
+- [このページの目的](#purpose)
+- [README の概念とライブラリの対応](#concept-mapping)
+- [Context Loop がライブラリ上で実行されるまで](#context-loop-execution)
+- [Hello Door で見る一周の流れ](#hello-door-flow)
+- [Context の実装](#context)
+- [SystemFlow の実装](#systemflow)
+- [Interaction の実装](#interaction)
+- [Function Port と Function External](#function)
+- [ReactionEnd と FlowEndToken](#reaction-end-flow-end-token)
+- [Builder と実行スコープ](#builder)
+- [実行時の依存ノードツリー](#dependency-tree)
+- [ライブラリが保証することと設計原則](#guarantees-and-principles)
+- [Context Loop を支える補助機構](#supporting-mechanisms)
+- [Analyzer による設計支援](#analyzer)
+- [パッケージ境界との対応](#package-boundaries)
+- [現在の不完全な点と将来の改善候補](#future-improvements)
+
+## このページの目的 <a id="purpose"></a>
 
 README では、Interaction Flow Architecture を次のような Context Loop として説明しています。
 
@@ -24,7 +43,7 @@ Context → Interaction → next Context → next Interaction → ...
 
 個別 API の引数、戻り値、例外などの詳細は、各型の XML ドキュメントコメントも参照してください。
 
-## README の概念とライブラリの対応
+## README の概念とライブラリの対応 <a id="concept-mapping"></a>
 
 README で定義している概念と、主に対応するライブラリ要素は次のとおりです。
 
@@ -53,7 +72,7 @@ DB やファイルシステムの永続データまでを含む広い概念で�
 外部保存先と読み書きする `IPersistencePort`、保存形式を変換する `ISerializerPort`
 へ分割して実装しています。
 
-## Context Loop がライブラリ上で実行されるまで
+## Context Loop がライブラリ上で実行されるまで <a id="context-loop-execution"></a>
 
 ライブラリ上の主要な呼び出しは、次の方向へ進みます。
 
@@ -91,7 +110,7 @@ Context Loop は専用の `ContextLoop` クラスによって実装されてい�
 Context を再利用しながら Interaction を構成する SystemFlow の処理が、実行モデルとしての
 Context Loop になります。
 
-## Hello Door で見る一周の流れ
+## Hello Door で見る一周の流れ <a id="hello-door-flow"></a>
 
 `InteractionFlow.Samples.HelloDoor` は、一つの Interaction を繰り返す最小の SystemFlow です。
 
@@ -265,7 +284,7 @@ README では、Reaction を
 - [`IDoorReaction.cs`](./InteractionFlow.Samples.HelloDoor/ExternalPorts/ReactionPorts/IDoorReaction.cs)
 - [`ConsoleDoorReaction.cs`](./InteractionFlow.Samples.HelloDoor/Externals/Reactions/ConsoleDoorReaction.cs)
 
-## Context の実装
+## Context の実装 <a id="context"></a>
 
 ### IFlowContext が提供する最小契約
 
@@ -426,7 +445,7 @@ Context を作成した呼び出し側
   └─ 不要になった時点で破棄する
 ```
 
-## SystemFlow の実装
+## SystemFlow の実装 <a id="systemflow"></a>
 
 `ISystemFlow<TContext>` は、指定した Context 型で SystemFlow を実行する契約です。
 
@@ -448,7 +467,7 @@ SystemFlow 基底クラスがループや分岐方法を固定しているわけ
 逐次実行、条件分岐、繰り返し、別の SystemFlow の実行などを、
 派生クラスがユーザー体験に合わせて構成します。
 
-## Interaction の実装
+## Interaction の実装 <a id="interaction"></a>
 
 `Interaction` は、Function Port を組み合わせて一回の相互作用を実行する基底クラスです。
 
@@ -473,7 +492,7 @@ Interaction 固有の Function の組み合わせへ集中できます。
 「User に観測可能な Reaction が実際に行われたこと」まで検証しません。
 それらは Port の設計、実装、Analyzer、コードレビューによって維持するアーキテクチャ上の規約です。
 
-## Function Port と Function External
+## Function Port と Function External <a id="function"></a>
 
 ### Function Port
 
@@ -552,7 +571,7 @@ return await consoleWrite.Write(context, output);
 この仕組みにより、一回の Function 呼び出しだけ表示設定などを変更し、
 その一時設定を Runtime Context や後続の Interaction へ残さずに済みます。
 
-## ReactionEnd と FlowEndToken
+## ReactionEnd と FlowEndToken <a id="reaction-end-flow-end-token"></a>
 
 ### ReactionEnd
 
@@ -658,7 +677,7 @@ User が観測できる反応や未解決例外へ変換するかを決めます
 `OnSuccess` や `Then` へ渡した処理が例外を送出した場合、その例外は通常どおり呼び出し側へ送出されます。
 失敗として伝播させる場合は、処理側が例外を失敗 `Result` へ変換する必要があります。
 
-## Builder と実行スコープ
+## Builder と実行スコープ <a id="builder"></a>
 
 SystemFlow を実行するには、SystemFlow、Interaction、Port 実装、
 例外処理、キャンセル処理などを組み立てる必要があります。
@@ -703,7 +722,7 @@ SystemFlow Scope
 
 Builder の詳細は、[SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md) も参照してください。
 
-## 実行時の依存ノードツリー
+## 実行時の依存ノードツリー <a id="dependency-tree"></a>
 
 SystemFlow、Interaction、Function Port 実装は `IDependencyNode` として、
 実行時に依存しているノードのインスタンスを `Dependency` に保持します。
@@ -758,7 +777,7 @@ Interaction、Function の実体を観察するための構造です。
 この実行時ツリーから欠落しないように、`Dependency` または基底コンストラクターへ
 渡されていることを検査します。
 
-## ライブラリが保証することと設計原則
+## ライブラリが保証することと設計原則 <a id="guarantees-and-principles"></a>
 
 Interaction Flow Architecture のすべての意味が、C# の型だけで完全に保証されるわけではありません。
 
@@ -782,7 +801,7 @@ Exception Port が例外を再送出する設定の場合や、例外・キャ�
 型による制約は、設計判断を不要にするためのものではありません。
 README と Philosophy が示す「User と System の関係」をコード上でも追えるようにするための支援です。
 
-## Context Loop を支える補助機構
+## Context Loop を支える補助機構 <a id="supporting-mechanisms"></a>
 
 ここまでの型が Context Loop の主要な実行経路です。
 ライブラリは、実用的な Context やデータ保持を支えるため、さらに次の機構を提供します。
@@ -1066,7 +1085,7 @@ Storage、PersistentEntry、Persistence、Serializer の責務は次のように
 | Persistence | 保存先との読み書きを行う |
 | Serializer | 値と保存形式を変換する |
 
-## Analyzer による設計支援
+## Analyzer による設計支援 <a id="analyzer"></a>
 
 `InteractionFlow.Analyzers` は、アーキテクチャの境界をコード編集中に確認するための
 Roslyn Analyzer です。
@@ -1121,9 +1140,9 @@ Analyzer は、設計の意味を完全に証明するものではありませ�
 このリポジトリでは、ルートの `.editorconfig` で Analyzer を有効にし、
 診断モードを `Error` に設定しています。
 
-詳細は [`InteractionFlow.Analyzers/README.md`](./InteractionFlow.Analyzers/README.md) を参照してください。
+詳細は [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md) を参照してください。
 
-## パッケージ境界との対応
+## パッケージ境界との対応 <a id="package-boundaries"></a>
 
 ライブラリの実装は、次のプロジェクトへ分けられています。
 
@@ -1162,9 +1181,9 @@ API の使い方と責務分割を検証します。
 - `Notepad`: FileSystem、Serializer、Console を接続する実行構成
 - `Notepad.Secure`: Port 実装と実行構成を差し替える例
 
-詳細は [Core / Standard / Samples の役割](./docs/RoleOfMainProjects.md) を参照してください。
+詳細は [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
 
-## 現在の不完全な点と将来の改善候補
+## 現在の不完全な点と将来の改善候補 <a id="future-improvements"></a>
 
 ここまでに説明した実装は、現在の Architecture を利用できる形にしたものですが、すべての設計意図を型や Analyzer で強制できているわけではありません。また、比較的新しい概念には、既存実装との統合をさらに進められる部分があります。
 
@@ -1273,4 +1292,8 @@ Root から依存を辿る表示はツリーとして読みながら、
 
 ---
 
-[README に戻る](./README.md)
+## 目次
+
+[このページの目的](#purpose) | [README の概念とライブラリの対応](#concept-mapping) | [Context Loop がライブラリ上で実行されるまで](#context-loop-execution) | [Hello Door で見る一周の流れ](#hello-door-flow) | [Context の実装](#context) | [SystemFlow の実装](#systemflow) | [Interaction の実装](#interaction) | [Function Port と Function External](#function) | [ReactionEnd と FlowEndToken](#reaction-end-flow-end-token) | [Builder と実行スコープ](#builder) | [実行時の依存ノードツリー](#dependency-tree) | [ライブラリが保証することと設計原則](#guarantees-and-principles) | [Context Loop を支える補助機構](#supporting-mechanisms) | [Analyzer による設計支援](#analyzer) | [パッケージ境界との対応](#package-boundaries) | [現在の不完全な点と将来の改善候補](#future-improvements)
+
+[Interaction Flow Architecture](./README.md)

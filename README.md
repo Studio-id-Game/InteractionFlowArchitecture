@@ -30,12 +30,12 @@
 - [ビジョン](#vision)
 - [Context Loop & System Flow](#context-loop-system-flow)
 - [はじめに](#getting-started)
-- [サンプル](#examples)
+- [サンプル解説](#examples)
 - [Philosophy](#philosophy)
 - [ライブラリの実装](#implementation)
 - [計算モデルとしての補助線](#computational-model)
 - [ロードマップ](#roadmap)
-- [補足資料](#references)
+- [資料まとめ](#references)
 
 ---
 
@@ -47,7 +47,7 @@
 
 まず使い始めたい場合はこの章や [はじめに](#getting-started) から、設計やコンセプトを理解したい場合は [ビジョン](#vision) から読み進めてください。
 
-`Core`、`Standard`、`Samples` の詳細な責務と更新方針は [Core / Standard / Samples の役割](./docs/RoleOfMainProjects.md) を参照してください。
+`Core`、`Standard`、`Samples` の詳細な責務と更新方針は [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
 
 **もっとも標準的なインストール:**
 ```xml
@@ -176,7 +176,7 @@ Context -> Interaction -> next Context -> next Interaction -> ...
 #### アーキテクチャの全体図:
 ![Interaction Flow Architecture overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
 
-代替テキスト: [InteractionFlowArchitecture_Overview.context.md](./docs/img/InteractionFlowArchitecture_Overview.context.md)
+代替テキスト: [Interaction Flow Architecture - Overview Context](./docs/img/InteractionFlowArchitecture_Overview.context.md)
 
 ---
 <br/>
@@ -216,7 +216,7 @@ Context -> Interaction -> next Context -> next Interaction -> ...
 
 また、System Flow は、複数の Interaction をまとめることで、System における1つのユーザー体験として Context Loop を表現します。ドアの Context Loop の例は、1つの Interaction で構成される最小の System Flow であるとも言えます。
 
-[「はじめに」](#getting-started) では、このモデルを実際のコードとして実装する手順を、ステップに分けて解説しています。
+[はじめに](#getting-started) では、このモデルを実際のコードとして実装する手順を、ステップに分けて解説しています。
 
 ## User から見た Context Loop & System Flow
 
@@ -252,7 +252,7 @@ User は、ドアの Context Loop を次のように体験します。
 
 ![Interaction Flow Architecture flow diagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
 
-代替テキスト: [InteractionFlowArchitecture_FlowDiagram.context.md](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
+代替テキスト: [Interaction Flow Architecture - Flow Diagram Context](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
 
 ## 共有される Context Loop & System Flow
 
@@ -714,7 +714,7 @@ Reaction が Context を更新することで、Reaction の未実装や適用�
 - SystemFlow: `DoorSystemFlow`
 - 見どころ: 独自 Port / Console External / Interaction / SystemFlow / Program の最小分割
 
-最初に読むサンプルとして位置づけています。詳細な実装手順は [Hello Door](#hello-door-) にあります。
+最初に読むサンプルとして位置づけています。詳細な実装手順は [Hello Door 🚪](#hello-door-) にあります。
 
 ## InteractionFlow.Samples.Parrot
 
@@ -793,13 +793,13 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 
 ![Interaction Flow Architecture dependency diagram](./docs/img/InteractionFlowArchitecture_DependencyDiagram.svg)
 
-代替テキスト: [InteractionFlowArchitecture_DependencyDiagram.context.md](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
+代替テキスト: [Interaction Flow Architecture - Dependency Diagram Context](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
 
 ライブラリ内部の構造、パッケージ間の責務、Builder や Analyzer の位置づけについては、以下の資料を参考にしてください。
-- **[⭐ ライブラリの実装](./LIBRARY_IMPLEMENTATION.md)**
-- [Core / Standard / Samples の役割](./docs/RoleOfMainProjects.md) 
+- **[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md)**
+- [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
-- [InteractionFlow.Analyzers/README](./InteractionFlow.Analyzers/README.md)
+- [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
 
 ---
 
@@ -809,7 +809,7 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 
 この見方では、Function Port / Function External の子要素である Operation / Reaction / Storage / Silent External が、「読み取り、書き込み、外部への作用」を担うテープ操作に相当します。Interaction と Context の循環を、計算モデルとして理解しやすくするための見方です。
 
-詳しい説明は [ライブラリの実装](./docs/ComputationalModel.md) や [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md) を参照してください。
+詳しい説明は [計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
 
 ---
 
@@ -821,21 +821,21 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 - Standard API の拡充
 - Analyzer による依存関係ルール検査の強化
 - Unity Engine 向けの Standard.Unity API の開発
-- （検討中：ライブラリの実装として、Context の更新権利を Reaction に限定する）
+- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の不完全な点と将来の改善候補](./LIBRARY_IMPLEMENTATION.md/#future-improvements) を参照
 
 ---
 
 # 資料まとめ <a id="references"></a>
 
-- [Core / Standard / Samples の役割](./docs/RoleOfMainProjects.md)
+- [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
 - [計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md)
 - [Interaction Flow - Philosophy](./PHILOSOPHY.md)
 - [ライブラリの実装](LIBRARY_IMPLEMENTATION.md)
-- [InteractionFlow.Analyzers/README](./InteractionFlow.Analyzers/README.md)
+- [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
 
 ---
 
 ## 目次
 
-[Vision](#vision) | [Context Loop と System Flow](#context-loop-system-flow) | [Philosophy](#philosophy) | [Packages](#packages) | [Getting Started](#getting-started) | [Examples](#examples) | [Roadmap](#roadmap) | [References](#references) 
+[パッケージとインストール](#packages) | [ビジョン](#vision) | [Context Loop & System Flow](#context-loop-system-flow) | [はじめに](#getting-started) | [サンプル解説](#examples) | [Philosophy](#philosophy) | [ライブラリの実装](#implementation) | [計算モデルとしての補助線](#computational-model) | [ロードマップ](#roadmap) | [資料まとめ](#references)

@@ -36,7 +36,7 @@
 
 ### SystemFlow Layer
 
-`SystemFlow Layer` は Interaction のオーケストレーターである。ユーザーへの反応プロセスを構成する責務を持つ。
+`SystemFlow Layer` は Interaction のオーケストレーターである。システムとユーザーの関係を構築する責務を持つ。
 
 ### Interaction Layer
 
@@ -88,7 +88,7 @@
 - `Context` は現在の `SystemFlow` に関する状態・状況・文脈情報である
 - `SystemFlow` は `Context` を元に実行され、実行中に `Context` を更新する
 - 更新された `Context` を再利用することで、連続した Interaction が実現される
-- `Layers` はユーザーへの反応プロセスから具体的な機能実装までを段階的に扱う
+- `Layers` はシステムとユーザーの関係の構築から具体的な機能実装までを段階的に扱う
 - `Blocks` は SystemFlow 構築、Domain 前提、External 依存を分離して表す
 - `Domain Block` と `External Block` を分けることで、外部依存しない前提と外部機能実装を区別する
 

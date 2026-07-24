@@ -30,7 +30,7 @@
 
 `System / Application / Service` は、Layer 群と Block 群を含む中心領域である。
 
-ここで `SystemFlow` が実行され、ユーザーへの反応プロセス、システム目的、機能目的が段階的に実現される。
+ここで `SystemFlow` が実行され、ユーザーの目的、システムの目的、機能の目的が段階的に実現される。
 
 ### Context 状態
 
@@ -57,7 +57,7 @@
 
 Layer 群には次の要素がある。
 
-- `SystemFlow Layer`: Interaction のオーケストレーター。ユーザーへの反応プロセスを構成する
+- `SystemFlow Layer`: Interaction のオーケストレーター。システムとユーザーの関係を構築する
 - `Interaction Layer`: Function Port のオーケストレーター。システム内部の目的を達成する
 - `Function Port Layer`: Function のインターフェース。外部機能への依存を抽象化する
 - `Function External Layer`: 外部依存の機能実装。機能のための実際の処理を行う
@@ -95,11 +95,11 @@ Layer 群には次の要素がある。
 
 `Program` が `SystemFlow` を構築し、Layer 群での実行を開始することを表す。
 
-### P2. ユーザーへの反応プロセス
+### P2. ユーザーの目的の実現
 
 `P2` は `SystemFlow Layer` に対応する青い下向きフローである。
 
-Interaction をオーケストレーションし、ユーザーへの反応プロセスを構成する段階を表す。
+Interaction をオーケストレーションし、ユーザーの目的を実現する段階を表す。
 
 ### P3. システムの目的の実現
 
@@ -161,7 +161,7 @@ Function または External 側から外部依存や外部リソースへ動作�
 
 - `Program` がトリガーを受け取り、`Context` を準備する
 - `SystemFlow Builder Block` が `SystemFlow` を構築する
-- Layer 群が、ユーザーへの反応プロセス、システム目的、機能目的を段階的に実現する
+- Layer 群が、ユーザーの目的、システムの目的、機能の目的を段階的に実現する
 - `Function Port Layer` が Function のインターフェースとして外部機能への依存を抽象化する
 - `Function External Layer` と `External Block` が外部依存を伴う実際の処理を担う
 - `User` の Operation と Reaction が相互作用を進める

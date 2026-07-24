@@ -42,12 +42,15 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 
 `Layers` は `System / Application / Service` 内の主要な縦方向構造である。図には「各レイヤーは、スコープを持った一時的な `Context` を利用して次の層の動作を変更できる」と示されている。
 
-- `SystemFlow Layer`: `Interaction` のオーケストレーターであり、ユーザーへの反応プロセスを構成する。
+- `SystemFlow Layer`: `Interaction` のオーケストレーターであり、システムとユーザーの関係を構築する。
 - `Interaction Layer`: `Function Port` のオーケストレーターであり、システム内部の目的を達成する。
 - `Function Port Layer`: Function のインターフェース。外部機能への依存を抽象化する。
 - `Function External Layer`: 外部依存の機能実装であり、機能のための実際の処理を行う。
 
 `SystemFlow` は `Interaction` に依存する。`Interaction` は `IOperationPort`、`IReactionPort`、`IStoragePort`、`ISilentExternalPort` に依存する。
+
+`SystemFlow` から `Interaction` への依存には、
+`Interaction を組み合わせてユーザーへの反応プロセスをフロー化` というラベルがある。
 
 ### Domain Block
 

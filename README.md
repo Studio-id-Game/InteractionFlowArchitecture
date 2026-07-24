@@ -54,6 +54,12 @@
   <PackageReference Include="InteractionFlow.Analyzers" Version="0.5.0" PrivateAssets="all" />
 </ItemGroup>
 ```
+**アナライザーの有効化:**
+```ini
+# .editorconfig
+[*.cs]
+interactionflow_enabled = True
+```
 
 ## Core
 - `InteractionFlow.Core` は、アーキテクチャ概念を定義する最小パッケージです。
@@ -78,6 +84,12 @@
 - Installation:
   ```bash
   dotnet add package InteractionFlow.Analyzers
+  ```
+- アナライザーの有効化
+  ```ini
+  # .editorconfig
+  [*.cs]
+  interactionflow_enabled = True
   ```
   
 **より強力なアーキテクチャ支援を受けるために導入を推奨します。**<br>
@@ -273,10 +285,16 @@ NuGet から利用する場合は、標準実装を含む `InteractionFlow.Stand
 dotnet add package InteractionFlow.Standard
 ```
 
-設計ルールの検査も有効にする場合は Analyzer を追加します。
+設計ルールの検査も有効にする場合は Analyzer を追加し、`.editorconfig` で有効化します。
 
 ```bash
 dotnet add package InteractionFlow.Analyzers
+```
+
+```ini
+# .editorconfig
+[*.cs]
+interactionflow_enabled = True
 ```
 
 プロジェクトファイルに直接書く場合は、Analyzer に `PrivateAssets="all"` を付けることを推奨します。
@@ -726,7 +744,7 @@ Interaction Flow とその実装ライブラリについて、三つの異なる
 | 原理的に知りたい | [計算モデル](#computational-model) | [ライブラリの実装](#implementation) | [Philosophy](#philosophy) |
 | 実践的に知りたい | [ライブラリの実装](#implementation) | [計算モデル](#computational-model) | [Philosophy](#philosophy) |
 
-
+各自の適切なタイミングで、[サンプル解説](#examples) を参考に実装例を学ぶこともおすすめします。
 
 <details>
 

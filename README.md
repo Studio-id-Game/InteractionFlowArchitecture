@@ -837,7 +837,7 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 
 この見方では、Function Port / Function External の子要素である Operation / Reaction / Storage / Silent External が、「読み取り、書き込み、外部への作用」を担うテープ操作に相当します。Interaction と Context の循環を、計算モデルとして理解しやすくするための見方です。
 
-詳しい説明は [計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
+詳しい説明は [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md) を参照してください。
 
 ---
 
@@ -857,7 +857,7 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 
 - [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
-- [計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md)
+- [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md)
 - [Interaction Flow - Philosophy](./PHILOSOPHY.md)
 - [ライブラリの実装](LIBRARY_IMPLEMENTATION.md)
 - [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)

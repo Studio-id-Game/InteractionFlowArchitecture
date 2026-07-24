@@ -41,29 +41,37 @@ Context → Interaction → next Context → next Interaction → ...
 ### README の概念とライブラリの対応 <a id="concept-mapping"></a>
 
 README で定義している概念と、主に対応するライブラリ要素は次のとおりです。
+これは概念全体と型の一対一対応ではなく、実装の中心となる型や実行経路です。
 
 | アーキテクチャ概念 | 主なライブラリ要素 | 実装上の役割 |
 | --- | --- | --- |
 | `User` | 特定の型には固定されない | Operation を行い、Reaction を観測する主体 |
-| `Context` | `IFlowContext` | `Context` をプログラムで扱うためのインターフェースとして、現在の相互作用に必要な文脈値とキャンセル制御を提供する |
-| `Context Loop` | `SystemFlow` が `IFlowContext` インスタンスを参照しながら Interaction を実行する処理 | Interaction の結果を次の Interaction へ引き継ぐ |
-| `System Flow` | `ISystemFlow<TContext>` / `SystemFlow<TContext>` | Interaction の順序、継続、終了を構成する |
-| `Interaction` | `IInteraction` / `Interaction` | Function Port を組み合わせ、システム内部の目的を一段進める |
+| `Context` | `IFlowContext` | System が次の相互作用に必要な文脈値を取得し、キャンセルを制御するためのインターフェース |
+| `Context Loop` | `SystemFlow` が実行状態を参照しながら Interaction を選択・実行する処理 | Interaction の結果を次の選択と相互作用へつなげる |
+| `System Flow` | `ISystemFlow<TContext>` / `SystemFlow<TContext>` | Interaction の合成、選択、継続、終了を構成する |
+| `Interaction` | `IInteraction` / `Interaction` | Function Port と Domain の規則を組み合わせ、システム内部の目的を一段進める |
 | `Operation` | `IOperationPort` とその実装 | User による操作や入力を受け取る |
 | `Reaction` | `IReactionPort` とその実装 | `Context` の変化や処理結果を User が観測できる反応として表す |
-| `Storage` | `IStoragePort` とその実装 | `IFlowContext` インスタンスとは別の寿命で、再利用する値をメモリ上に保持する |
-| `Silent External` | `ISilentExternalPort` とその実装 | User に直接観測されない外部環境とのやりとりを行う |
+| `Storage` | `IStoragePort` とその実装 | `Context` の文脈的な意味から独立して、再利用する値をメモリ上に保持する |
+| `Silent External` | `ISilentExternalPort` とその実装 | User との相互作用やデータの記録を目的とせず、外部環境と連携する |
 | `Function Port` | `IOperationPort`、`IReactionPort` など | Interaction から見える外部機能の契約 |
 | `Function External` | Port を実装する Operation、Reaction、Storage など | Port の意味を Console、ファイル、OS などの実行環境へ接続する |
 | `System Flow Builder` | `ScopeBuilder`、`SystemFlowBuilder<TContext>`、Handler | SystemFlow と依存オブジェクトを実行可能なスコープとして組み立てる |
 | `Domain` | 主に `Entities` 名前空間の型 | 外部環境に依存しないデータ構造、規則、前提を表す |
 
-`User` や `Context Loop` は、一つのクラスへ直接対応する概念ではありません。
-複数の型が作る実行経路全体によって表現されます。
+`User` や `Context Loop` は、一つのクラスへ直接対応せず、複数の型による実行経路全体で表現されます。
+`IFlowContext` が提供するのは System が扱う `Context` の一部であり、
+User の認識や UI、Operation の戻り値、Reaction の出力までを集約するものではありません。
+計算モデルでは、分散した文脈全体を `ContextTape` として整理していますが、`IFlowContext` と同じ実体ではありません。
+詳しくは
+[User と System の間にある ContextTape](./COMPUTATIONAL_MODEL.md#user-と-system-の間にある-contexttape)
+を参照してください。
+
 以降では、アーキテクチャ上の概念を `Context`、
 実行時に API 間で受け渡されるオブジェクトを `IFlowContext` インスタンスと表記します。
-また、入力が物理的に外部から来るかではなく、User から System への相互作用を
-構成するかどうかで Operation と Silent External を区別します。
+Function の分類は物理的な配置ではなく、利用目的に基づきます。
+User から System への相互作用を構成するものは Operation、データの記録を目的とするものは Storage、
+そのどちらにも該当しない外部環境との連携は Silent External です。
 
 README とアーキテクチャ図の `Storage` は、メモリ上の一時データから
 DB やファイルシステムの永続データまでを含む広い概念です。
@@ -77,8 +85,10 @@ DB やファイルシステムの永続データまでを含む広い概念で�
 
 ### Context Loop がライブラリ上で実行されるまで <a id="context-loop-execution"></a>
 
-Context Loop は専用の `ContextLoop` クラスではなく、`IFlowContext` インスタンスを再利用しながら
-SystemFlow が Interaction を構成する実行経路として表現されます。
+Context Loop は専用の `ContextLoop` クラスではありません。
+ライブラリでは、そのうち System 側の処理を、SystemFlow が実行状態に応じて
+Interaction を選択・実行し、結果を次の相互作用へつなぐ経路として表現します。
+同じ `IFlowContext` インスタンスの継続利用は代表的な構成ですが、API 上の必須条件ではありません。
 
 ```text
 Program
@@ -86,14 +96,17 @@ Program
   ├─ IFlowContext インスタンスを準備する
   └─ SystemFlowHandler
        └─ SystemFlow
-            └─ Interaction
+            ├─ IFlowContext、直前の終了結果、依存オブジェクトを参照する
+            └─ Interaction を選択・実行する
                  ├─ Operation / Storage / Silent External
+                 ├─ Domain の規則
                  └─ Reaction
-                      └─ 文脈値の更新と User が観測する反応
+                      └─ User が観測可能な反応と、必要に応じた文脈値の更新
 ```
 
 一回の Interaction が完了しても、Context Loop 全体が終了するとは限りません。
-SystemFlow は、現在の `IFlowContext` インスタンスと Interaction の結果から、次の Interaction を実行するか、
+SystemFlow は、現在の `IFlowContext` インスタンス、Interaction の終了結果、
+許可された依存を通じて観測できる Domain の状態などから、次の Interaction を実行するか、
 `FlowEndToken` を返して終了するかを決めます。
 
 ### Hello Door で見る一周の流れ <a id="hello-door-flow"></a>
@@ -136,13 +149,13 @@ Task<FlowEndToken> ExecuteAsync(TContext context);
 ```
 
 `SystemFlow<TContext>` 基底クラスは、派生クラスの `ExecuteCoreAsync` を実行し、
-返された Interaction の終了結果を SystemFlow に渡された `IFlowContext` インスタンスへ結び直します。
+返された `FlowEndToken` の終了結果を、SystemFlow に渡された `IFlowContext` インスタンスへ結び直します。
 
 派生 SystemFlow が主に決めるのは次の内容です。
 
-- どの Interaction を使用するか
-- どの順序で実行するか
-- `IFlowContext` インスタンスから取得できるどの情報を継続条件として使うか
+- どの Interaction、または別の SystemFlow を合成するか
+- どの順序、条件分岐、反復によって実行するか
+- `IFlowContext` インスタンス、終了結果、許可された依存のどの情報を選択や継続条件に使うか
 - どの時点で SystemFlow を終了するか
 
 SystemFlow 基底クラスがループや分岐方法を固定しているわけではありません。
@@ -151,7 +164,9 @@ SystemFlow 基底クラスがループや分岐方法を固定しているわけ
 
 ### Interaction の実装 <a id="interaction"></a>
 
-`Interaction` は、Function Port を組み合わせて相互作用を一段進める基底クラスです。
+`Interaction` は、Function Port による入出力やデータ操作と Domain の規則を組み合わせ、
+相互作用に関するシステム内部の目的を一段進める基底クラスです。
+複数の Function 呼び出しや Domain の計算を含めても、SystemFlow からは一つの実行単位として扱われます。
 
 派生クラスが実装する中心処理は次のメソッドです。
 
@@ -170,9 +185,12 @@ protected abstract Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context);
 これにより、派生 Interaction は例外表示やキャンセル表示の実装を直接持たず、
 Interaction 固有の Function の組み合わせへ集中できます。
 
-ただし、基底クラスは「Interaction が必ず Operation を呼ぶこと」や
-「User に観測可能な Reaction が実際に行われたこと」まで検証しません。
-それらは Port の設計、実装、Analyzer、コードレビューによって維持するアーキテクチャ上の規約です。
+Interaction は、Operation、Storage、Silent External のすべてを呼ぶ必要はなく、
+User からの入力を必要としない Interaction では Operation を含まない構成も可能です。
+一方、正常完了時の `ReactionEnd` は Reaction 系 API から取得するように制限されています。
+ただし、基底クラスは User に観測可能な Reaction が実際に行われたことや、
+その反応と `Context` の更新が対応していることまでは検証しません。
+これらは Port の設計、実装、Analyzer、コードレビューによって維持します。
 
 ### Function Port と Function External <a id="function"></a>
 
@@ -186,8 +204,8 @@ Function Port は、Interaction から見える外部機能の契約です。
 | --- | --- | --- |
 | Operation | `IOperationPort` | User による操作や入力を受け取る |
 | Reaction | `IReactionPort` | User が観測できる反応を提供する |
-| Storage | `IStoragePort` | `IFlowContext` インスタンスとは別の寿命で値を保持する |
-| Silent External | `ISilentExternalPort` | User に直接観測されない外部環境と連携する |
+| Storage | `IStoragePort` | `Context` の文脈的な意味から独立して値を保持する |
+| Silent External | `ISilentExternalPort` | User との相互作用や記録を目的とせず、外部環境と連携する |
 
 Port は「Console へ表示する」「特定の DB へ保存する」といった実現方法ではなく、
 Interaction が必要とする機能の意味を定義します。
@@ -231,8 +249,12 @@ Operation、Reaction、Storage、Silent External の Port は `IFlowNodeStateful
 実装が保持するメモリ上の状態を明示的に初期化する `ForceResetMemoryState` を定義します。
 
 `Context` が Interaction 間で引き継ぐ文脈であるのに対し、Function の状態は
-外部機能の設定やキャッシュです。`ForceResetMemoryState` はスコープ破棄時に
-自動実行されないため、強制的な再初期化が必要な場合に呼び出し側が使用します。
+外部機能の設定やキャッシュ、入力の加工履歴、出力効果の進行状態など、
+Function が自身の振る舞いを実現するために保持する内部状態です。
+これらは `IFlowContext` が提供する文脈値とは別に管理されますが、
+Function の実行結果を通じて後続の Interaction の選択に影響することがあります。
+`ForceResetMemoryState` はスコープ破棄時に自動実行されないため、
+強制的な再初期化が必要な場合に呼び出し側が使用します。
 
 `IHasFunctionState<TState>` を実装する Function は、
 `FunctionStateScope<TState>` により状態を一時的に差し替え、破棄時に元へ戻せます。
@@ -653,10 +675,10 @@ Interaction Flow Architecture のすべての意味が、C# の型だけで完�
 | SystemFlow が必ず例外・キャンセル時に終了する | 派生 SystemFlow の継続条件に依存する |
 | Interaction の正常完了時の戻り値が `FlowEndToken` である | `IInteraction` のメソッドシグネチャが規定する |
 | Interaction 基底クラスが例外とキャンセルを Port へ委譲する | `Interaction` 基底実装が提供する |
-| Reaction が必ず利用される | `ReactionEnd` の `internal` コンストラクタが制限する |
+| `ReactionEnd` の生成が Reaction 系の契約を経由する | `internal` コンストラクタと Reaction Port の `GetEnd` が制限する |
 | Reaction が必ず User に観測される | 原理上保証できない |
 | `IFlowContext` インスタンスの値を型で取得する | `IFlowContext.TryGet<T>` が提供する |
-| `Context` 更新が必ず Reaction 内だけで行われる | 現在は保証しない。設計上の理想として推奨し、実用性を検証している |
+| `IFlowContext` が提供する文脈値の更新が Reaction 内だけで行われる | 現在は保証しない。設計上の理想として推奨し、実用性を検証している |
 | Interaction の結果が `IFlowContext` インスタンスの文脈値へ適切に反映される | 設計とレビューに依存する |
 | namespace 依存方向 | Analyzer が有効な場合に検査する |
 | namespace 名を使わずに意味的なレイヤーを完全判定する | 現在の Analyzer では保証しない |
@@ -667,10 +689,12 @@ Exception Port が例外を再送出する設定の場合や、例外・キャ�
 型による制約は、設計判断を不要にするためのものではありません。
 README と Philosophy が示す「User と System の関係」をコード上でも追えるようにするための支援です。
 
-Interaction Flow Architecture では、`Context` は Reaction によって更新されるべきだと考えます。
-一方、この原則を強制しても実務上の問題が生じないことは、
+Interaction Flow Architecture では、Reaction が User に観測可能な反応を提供し、
+その反応と対応して、次の相互作用に必要な `Context` が更新されることを理想とします。
+一方、`IFlowContext` から取得した可変オブジェクトは、現在の型ではどのレイヤーからも変更できます。
+この更新を Reaction だけに制限しても実務上の問題が生じないことは、
 まだ十分な利用例によって確認されていません。
-そのため、現在の型と Analyzer は `Context` の更新経路を Reaction だけに制限していません。
+そのため、現在の型と Analyzer は、`IFlowContext` が提供する文脈値の更新経路を制限していません。
 今後、利用例と実装経験が蓄積し、実用上の問題がないと判断できた場合は、
 この理想を検査可能な具体的制約へ昇格させる予定です。
 
@@ -707,7 +731,7 @@ namespace、`Context` 更新と Reaction の意味的な対応、複雑な依存
 
 | 課題 | 現在の制約 | 検討方向 |
 | --- | --- | --- |
-| `Context` 更新 | 取得した参照型はどのレイヤーからも変更できる（[`IFlowContext` の実装](#context)） | 利用例を通じて Reaction に更新を限定しても問題がないか検証し、妥当性を確認できた場合は型または Analyzer の制約へ昇格する |
+| `IFlowContext` の文脈値更新 | 取得した参照型はどのレイヤーからも変更できる（[`IFlowContext` の実装](#context)） | 利用例を通じて Reaction に更新を限定しても問題がないか検証し、妥当性を確認できた場合は型または Analyzer の制約へ昇格する |
 | Entry の所有権 | `IFlowContext` インスタンス、Storage、PersistentEntry で破棄責務が統一されていない（[データ保持と永続化](#data-and-persistence)） | 所有・借用と置換時の破棄を型または API で表す |
 | ReactionEnd と Result | 終了結果と局所結果が別の型である（[ReactionEnd と FlowEndToken](#reaction-end-flow-end-token)） | Reaction 固有の生成制約を保ったまま内部表現を共通化する |
 | Function のレイヤー情報 | External の実体も `FunctionPort` として見える場合がある（[Function Port と Function External](#function)） | 契約上の分類と実行時レイヤーを分離する |

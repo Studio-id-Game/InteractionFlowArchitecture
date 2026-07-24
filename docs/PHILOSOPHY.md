@@ -1,4 +1,4 @@
-[Interaction Flow Architecture](./README.md)
+[Interaction Flow Architecture](../README.md)
 
 # Interaction Flow - Philosophy
 
@@ -146,4 +146,4 @@ Interaction Flow Architecture の真の目的は、新しいデザインパタ�
 > ソフトウェアもまた、そんな世界の一つである。**
 
 ---
-[Interaction Flow Architecture](./README.md)
+[Interaction Flow Architecture](../README.md)

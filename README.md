@@ -811,7 +811,7 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 
 その結果として、コードの構造とユーザー体験の構造が自然に対応し、開発品質とサービス品質を同じ視点で設計できます。
 
-より詳しい思想や背景については、 [Interaction Flow - Philosophy](PHILOSOPHY.md) を参照してください。
+より詳しい思想や背景については、 [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md) を参照してください。
 
 ---
 
@@ -824,7 +824,7 @@ Interaction Flow Architecture は、現実の相互作用を観察すること�
 代替テキスト: [Interaction Flow Architecture - Dependency Diagram Context](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
 
 ライブラリ内部の構造、パッケージ間の責務、Builder や Analyzer の位置づけについては、以下の資料を参考にしてください。
-- ⭐ **[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md)**
+- ⭐ **[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md)**
 - [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
 - [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
@@ -849,7 +849,7 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 - Standard API の拡充
 - Analyzer による依存関係ルール検査の強化
 - Unity Engine 向けの Standard.Unity API の開発
-- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の制約と改善候補](./LIBRARY_IMPLEMENTATION.md#future-improvements) を参照
+- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の制約と改善候補](./docs/LIBRARY_IMPLEMENTATION.md#future-improvements) を参照
 
 ---
 
@@ -858,8 +858,8 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 - [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
 - [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
 - [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md)
-- [Interaction Flow - Philosophy](./PHILOSOPHY.md)
-- [ライブラリの実装](LIBRARY_IMPLEMENTATION.md)
+- [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md)
+- [ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md)
 - [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
 
 ---

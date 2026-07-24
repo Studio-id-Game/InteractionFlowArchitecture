@@ -1,4 +1,4 @@
-[Interaction Flow Architecture](./README.md)
+[Interaction Flow Architecture](../README.md)
 
 # ライブラリの実装
 
@@ -107,15 +107,15 @@ Program
 
 | 段階 | 担当 | 主なソース |
 | --- | --- | --- |
-| 実行環境の選択 | `Program` が Port 実装を Builder へ登録する | [`Program.cs`](./InteractionFlow.Samples.HelloDoor/Program.cs)、[`SystemFlowBuilder.cs`](./InteractionFlow.Standard/Builders/SystemFlowBuilder.cs) |
-| Context の準備 | `FlowContext` に `DoorState` を重ねる | [`FlowContext.cs`](./InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`ScopedFlowContext.cs`](./InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)、[`DoorState.cs`](./InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
-| 継続の判断 | `DoorSystemFlow` が終了要求まで `OperateDoor` を繰り返す | [`DoorSystemFlow.cs`](./InteractionFlow.Samples.HelloDoor/SystemFlows/DoorSystemFlow.cs)、[`SystemFlow.cs`](./InteractionFlow.Core/SystemFlows/SystemFlow.cs) |
-| 相互作用 | `OperateDoor` が Operation の結果である `DoorCommand` を Reaction へ渡す | [`OperateDoor.cs`](./InteractionFlow.Samples.HelloDoor/Interactions/OperateDoor.cs)、[`Interaction.cs`](./InteractionFlow.Core/Interactions/Interaction.cs)、[`DoorCommand.cs`](./InteractionFlow.Samples.HelloDoor/Entities/DoorCommand.cs) |
-| 相互作用 - Operation | `IDoorOperation` が `DoorCommand` を結果として返す | [`IDoorOperation.cs`](./InteractionFlow.Samples.HelloDoor/ExternalPorts/OperationPorts/IDoorOperation.cs)、[`ConsoleDoorOperation.cs`](./InteractionFlow.Samples.HelloDoor/Externals/Operations/ConsoleDoorOperation.cs) |
-| 相互作用 - Reaction | `IDoorReaction` が `DoorState` を更新して結果を表示する | [`IDoorReaction.cs`](./InteractionFlow.Samples.HelloDoor/ExternalPorts/ReactionPorts/IDoorReaction.cs)、[`ConsoleDoorReaction.cs`](./InteractionFlow.Samples.HelloDoor/Externals/Reactions/ConsoleDoorReaction.cs) |
+| 実行環境の選択 | `Program` が Port 実装を Builder へ登録する | [`Program.cs`](../InteractionFlow.Samples.HelloDoor/Program.cs)、[`SystemFlowBuilder.cs`](../InteractionFlow.Standard/Builders/SystemFlowBuilder.cs) |
+| Context の準備 | `FlowContext` に `DoorState` を重ねる | [`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`ScopedFlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)、[`DoorState.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
+| 継続の判断 | `DoorSystemFlow` が終了要求まで `OperateDoor` を繰り返す | [`DoorSystemFlow.cs`](../InteractionFlow.Samples.HelloDoor/SystemFlows/DoorSystemFlow.cs)、[`SystemFlow.cs`](../InteractionFlow.Core/SystemFlows/SystemFlow.cs) |
+| 相互作用 | `OperateDoor` が Operation の結果である `DoorCommand` を Reaction へ渡す | [`OperateDoor.cs`](../InteractionFlow.Samples.HelloDoor/Interactions/OperateDoor.cs)、[`Interaction.cs`](../InteractionFlow.Core/Interactions/Interaction.cs)、[`DoorCommand.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorCommand.cs) |
+| 相互作用 - Operation | `IDoorOperation` が `DoorCommand` を結果として返す | [`IDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/ExternalPorts/OperationPorts/IDoorOperation.cs)、[`ConsoleDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/Externals/Operations/ConsoleDoorOperation.cs) |
+| 相互作用 - Reaction | `IDoorReaction` が `DoorState` を更新して結果を表示する | [`IDoorReaction.cs`](../InteractionFlow.Samples.HelloDoor/ExternalPorts/ReactionPorts/IDoorReaction.cs)、[`ConsoleDoorReaction.cs`](../InteractionFlow.Samples.HelloDoor/Externals/Reactions/ConsoleDoorReaction.cs) |
 
 実装手順とコード全体は、
-[Interaction Flow Architecture - Hello Door 🚪](./README.md#hello-door-) を参照してください。
+[Interaction Flow Architecture - Hello Door 🚪](../README.md#hello-door-) を参照してください。
 Reaction と Context 更新の対応は設計原則であり、型による保証範囲については
 [ライブラリが保証することと設計原則](#guarantees-and-principles) にまとめています。
 
@@ -248,7 +248,7 @@ Builder は一度 Build すると再利用できません。標準登録はス�
 子スコープで解決できない依存は親から解決されます。Handler の破棄は自身のスコープを
 無効にしますが、親スコープや外部から渡された Context は破棄しません。
 
-Builder の詳細は、[SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md) も参照してください。
+Builder の詳細は、[SystemFlow Builder の詳細](./SystemFlowBuilder.md) も参照してください。
 
 ### 実行時の依存ノードツリー <a id="dependency-tree"></a>
 
@@ -664,7 +664,7 @@ Analyzer は `interactionflow_enabled = True` の場合に有効になります�
 namespace、Context 更新と Reaction の意味的な対応、複雑な依存グラフ全体までは検査しません。
 このリポジトリでは `.editorconfig` で有効化し、診断モードを `Error` にしています。
 
-詳細は [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md) を参照してください。
+詳細は [InteractionFlow.Analyzers](../InteractionFlow.Analyzers/README.md) を参照してください。
 
 ### パッケージ境界との対応 <a id="package-boundaries"></a>
 
@@ -674,7 +674,7 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 | `InteractionFlow.Standard` | DI、Console、FileSystem、Serializer などの標準実装を提供する |
 | `InteractionFlow.Samples.*` | Core と Standard を具体的な Context Loop として組み立て、API を検証する |
 
-詳細は [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
+詳細は [.Core/.Standard/.Samples それぞれの役割](./RoleOfMainProjects.md) を参照してください。
 
 ## 現在の制約と改善候補 <a id="future-improvements"></a>
 
@@ -699,4 +699,4 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 
 [全体像](#overview) | [Context Loop の実行経路](#execution-path) | [SystemFlow・Interaction・実行環境](#runtime-components) | [Context と終了結果](#context-and-results) | [データ保持と永続化](#data-and-persistence) | [設計上の保証とプロジェクト境界](#architecture-boundaries) | [現在の制約と改善候補](#future-improvements)
 
-[Interaction Flow Architecture](./README.md)
+[Interaction Flow Architecture](../README.md)

@@ -7,7 +7,7 @@
 - [全体像](#overview)
 - [Context Loop の実行経路](#execution-path)
 - [SystemFlow・Interaction・実行環境](#runtime-components)
-- [Context と終了結果](#context-and-results)
+- [`IFlowContext` インスタンスと終了結果](#context-and-results)
 - [データ保持と永続化](#data-and-persistence)
 - [設計上の保証とプロジェクト境界](#architecture-boundaries)
 - [現在の制約と改善候補](#future-improvements)
@@ -30,7 +30,7 @@ Context → Interaction → next Context → next Interaction → ...
 
 - README のアーキテクチャ概念が、どの型に対応するか
 - `Program` から `SystemFlow`、`Interaction`、`Function` へ、処理がどう進むか
-- Context がどこで参照・更新され、次の Interaction へどう引き継がれるか
+- `Context` がどこで参照・更新され、次の Interaction へどう引き継がれるか
 - ライブラリが型として保証することと、設計原則として期待することの違い
 - Builder、Storage、Analyzer が Context Loop の実装をどう支えるか
 
@@ -45,13 +45,13 @@ README で定義している概念と、主に対応するライブラリ要素�
 | アーキテクチャ概念 | 主なライブラリ要素 | 実装上の役割 |
 | --- | --- | --- |
 | `User` | 特定の型には固定されない | Operation を行い、Reaction を観測する主体 |
-| `Context` | `IFlowContext` | Context をプログラムで扱うためのインターフェースとして、現在の相互作用に必要な文脈値とキャンセル制御を提供する |
-| `Context Loop` | `SystemFlow` が Context を参照しながら Interaction を実行する処理 | Interaction の結果を次の Interaction へ引き継ぐ |
+| `Context` | `IFlowContext` | `Context` をプログラムで扱うためのインターフェースとして、現在の相互作用に必要な文脈値とキャンセル制御を提供する |
+| `Context Loop` | `SystemFlow` が `IFlowContext` インスタンスを参照しながら Interaction を実行する処理 | Interaction の結果を次の Interaction へ引き継ぐ |
 | `System Flow` | `ISystemFlow<TContext>` / `SystemFlow<TContext>` | Interaction の順序、継続、終了を構成する |
 | `Interaction` | `IInteraction` / `Interaction` | Function Port を組み合わせ、システム内部の目的を一段進める |
 | `Operation` | `IOperationPort` とその実装 | User による操作や入力を受け取る |
-| `Reaction` | `IReactionPort` とその実装 | Context の変化や処理結果を User が観測できる反応として表す |
-| `Storage` | `IStoragePort` とその実装 | Context とは別の寿命で、再利用する値をメモリ上に保持する |
+| `Reaction` | `IReactionPort` とその実装 | `Context` の変化や処理結果を User が観測できる反応として表す |
+| `Storage` | `IStoragePort` とその実装 | `IFlowContext` インスタンスとは別の寿命で、再利用する値をメモリ上に保持する |
 | `Silent External` | `ISilentExternalPort` とその実装 | User に直接観測されない外部環境とのやりとりを行う |
 | `Function Port` | `IOperationPort`、`IReactionPort` など | Interaction から見える外部機能の契約 |
 | `Function External` | Port を実装する Operation、Reaction、Storage など | Port の意味を Console、ファイル、OS などの実行環境へ接続する |
@@ -60,6 +60,8 @@ README で定義している概念と、主に対応するライブラリ要素�
 
 `User` や `Context Loop` は、一つのクラスへ直接対応する概念ではありません。
 複数の型が作る実行経路全体によって表現されます。
+以降では、アーキテクチャ上の概念を `Context`、
+実行時に API 間で受け渡されるオブジェクトを `IFlowContext` インスタンスと表記します。
 また、入力が物理的に外部から来るかではなく、User から System への相互作用を
 構成するかどうかで Operation と Silent External を区別します。
 
@@ -75,23 +77,23 @@ DB やファイルシステムの永続データまでを含む広い概念で�
 
 ### Context Loop がライブラリ上で実行されるまで <a id="context-loop-execution"></a>
 
-Context Loop は専用の `ContextLoop` クラスではなく、Context を再利用しながら
+Context Loop は専用の `ContextLoop` クラスではなく、`IFlowContext` インスタンスを再利用しながら
 SystemFlow が Interaction を構成する実行経路として表現されます。
 
 ```text
 Program
   ├─ Builder で実行環境を構築する
-  ├─ Context を準備する
+  ├─ IFlowContext インスタンスを準備する
   └─ SystemFlowHandler
        └─ SystemFlow
             └─ Interaction
                  ├─ Operation / Storage / Silent External
                  └─ Reaction
-                      └─ Context の更新と User が観測する反応
+                      └─ 文脈値の更新と User が観測する反応
 ```
 
 一回の Interaction が完了しても、Context Loop 全体が終了するとは限りません。
-SystemFlow は、現在の Context と Interaction の結果から、次の Interaction を実行するか、
+SystemFlow は、現在の `IFlowContext` インスタンスと Interaction の結果から、次の Interaction を実行するか、
 `FlowEndToken` を返して終了するかを決めます。
 
 ### Hello Door で見る一周の流れ <a id="hello-door-flow"></a>
@@ -110,7 +112,7 @@ Program
 | 段階 | 担当 | 主なソース |
 | --- | --- | --- |
 | 実行環境の選択 | `Program` が Port 実装を Builder へ登録する | [`Program.cs`](../InteractionFlow.Samples.HelloDoor/Program.cs)、[`SystemFlowBuilder.cs`](../InteractionFlow.Standard/Builders/SystemFlowBuilder.cs) |
-| Context の準備 | `FlowContext` に `DoorState` を重ねる | [`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`ScopedFlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)、[`DoorState.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
+| `IFlowContext` インスタンスの準備 | `FlowContext` に `DoorState` を重ねる | [`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`ScopedFlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)、[`DoorState.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
 | 継続の判断 | `DoorSystemFlow` が終了要求まで `OperateDoor` を繰り返す | [`DoorSystemFlow.cs`](../InteractionFlow.Samples.HelloDoor/SystemFlows/DoorSystemFlow.cs)、[`SystemFlow.cs`](../InteractionFlow.Core/SystemFlows/SystemFlow.cs) |
 | 相互作用 | `OperateDoor` が Operation の結果である `DoorCommand` を Reaction へ渡す | [`OperateDoor.cs`](../InteractionFlow.Samples.HelloDoor/Interactions/OperateDoor.cs)、[`Interaction.cs`](../InteractionFlow.Core/Interactions/Interaction.cs)、[`DoorCommand.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorCommand.cs) |
 | 相互作用 - Operation | `IDoorOperation` が `DoorCommand` を結果として返す | [`IDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/ExternalPorts/OperationPorts/IDoorOperation.cs)、[`ConsoleDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/Externals/Operations/ConsoleDoorOperation.cs) |
@@ -118,7 +120,7 @@ Program
 
 実装手順とコード全体は、
 [Interaction Flow Architecture - Hello Door 🚪](../README.md#hello-door-) を参照してください。
-Reaction と Context 更新の対応は設計原則であり、型による保証範囲については
+Reaction と `Context` 更新の対応は設計原則であり、型による保証範囲については
 [ライブラリが保証することと設計原則](#guarantees-and-principles) にまとめています。
 
 ## SystemFlow・Interaction・実行環境 <a id="runtime-components"></a>
@@ -127,20 +129,20 @@ Reaction と Context 更新の対応は設計原則であり、型による保�
 
 ### SystemFlow の実装 <a id="systemflow"></a>
 
-`ISystemFlow<TContext>` は、指定した Context 型で SystemFlow を実行する契約です。
+`ISystemFlow<TContext>` は、指定した `IFlowContext` 実装型で SystemFlow を実行する契約です。
 
 ```csharp
 Task<FlowEndToken> ExecuteAsync(TContext context);
 ```
 
 `SystemFlow<TContext>` 基底クラスは、派生クラスの `ExecuteCoreAsync` を実行し、
-返された Interaction の終了結果を SystemFlow に渡された Context へ結び直します。
+返された Interaction の終了結果を SystemFlow に渡された `IFlowContext` インスタンスへ結び直します。
 
 派生 SystemFlow が主に決めるのは次の内容です。
 
 - どの Interaction を使用するか
 - どの順序で実行するか
-- Context のどの情報を継続条件として使うか
+- `IFlowContext` インスタンスから取得できるどの情報を継続条件として使うか
 - どの時点で SystemFlow を終了するか
 
 SystemFlow 基底クラスがループや分岐方法を固定しているわけではありません。
@@ -149,7 +151,7 @@ SystemFlow 基底クラスがループや分岐方法を固定しているわけ
 
 ### Interaction の実装 <a id="interaction"></a>
 
-`Interaction` は、Function Port を組み合わせて一回の相互作用を実行する基底クラスです。
+`Interaction` は、Function Port を組み合わせて相互作用を一段進める基底クラスです。
 
 派生クラスが実装する中心処理は次のメソッドです。
 
@@ -163,7 +165,7 @@ protected abstract Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context);
 - キャンセル対象タスクの登録
 - `OperationCanceledException` の Cancellation Port への委譲
 - その他の例外の Exception Port への委譲
-- `ReactionEnd` と実行時 Context から `FlowEndToken` を作成
+- `ReactionEnd` と実行時の `IFlowContext` インスタンスから `FlowEndToken` を作成
 
 これにより、派生 Interaction は例外表示やキャンセル表示の実装を直接持たず、
 Interaction 固有の Function の組み合わせへ集中できます。
@@ -184,7 +186,7 @@ Function Port は、Interaction から見える外部機能の契約です。
 | --- | --- | --- |
 | Operation | `IOperationPort` | User による操作や入力を受け取る |
 | Reaction | `IReactionPort` | User が観測できる反応を提供する |
-| Storage | `IStoragePort` | Context とは別の寿命で値を保持する |
+| Storage | `IStoragePort` | `IFlowContext` インスタンスとは別の寿命で値を保持する |
 | Silent External | `ISilentExternalPort` | User に直接観測されない外部環境と連携する |
 
 Port は「Console へ表示する」「特定の DB へ保存する」といった実現方法ではなく、
@@ -228,7 +230,7 @@ Console / File System / OS / External Service
 Operation、Reaction、Storage、Silent External の Port は `IFlowNodeStateful` を継承し、
 実装が保持するメモリ上の状態を明示的に初期化する `ForceResetMemoryState` を定義します。
 
-Context が Interaction 間で引き継ぐ文脈であるのに対し、Function の状態は
+`Context` が Interaction 間で引き継ぐ文脈であるのに対し、Function の状態は
 外部機能の設定やキャッシュです。`ForceResetMemoryState` はスコープ破棄時に
 自動実行されないため、強制的な再初期化が必要な場合に呼び出し側が使用します。
 
@@ -248,7 +250,7 @@ Builder と Handler は、依存オブジェクトの構築と実行スコープ
 
 Builder は一度 Build すると再利用できません。標準登録はスコープ単位で共有され、
 子スコープで解決できない依存は親から解決されます。Handler の破棄は自身のスコープを
-無効にしますが、親スコープや外部から渡された Context は破棄しません。
+無効にしますが、親スコープや外部から渡された `IFlowContext` インスタンスは破棄しません。
 
 Builder の詳細は、[SystemFlow Builder の詳細](./SystemFlowBuilder.md) も参照してください。
 
@@ -273,15 +275,16 @@ DoorSystemFlow
 
 依存宣言の検査は [Analyzer による設計支援](#analyzer) にまとめています。
 
-## Context と終了結果 <a id="context-and-results"></a>
+## `IFlowContext` インスタンスと終了結果 <a id="context-and-results"></a>
 
-この章では、フロー間で引き継がれる Context と、Reaction から SystemFlow まで伝播する終了結果を説明します。
+この章では、フロー間で引き継がれる `IFlowContext` インスタンスと、
+Reaction から SystemFlow まで伝播する終了結果を説明します。
 
-### Context の実装 <a id="context"></a>
+### `IFlowContext` の実装 <a id="context"></a>
 
 #### IFlowContext が提供する最小契約
 
-`IFlowContext` は、Context の具体的なデータ構造を固定しません。
+`IFlowContext` は、`Context` の具体的なデータ構造を固定しません。
 
 ```csharp
 public interface IFlowContext
@@ -294,10 +297,10 @@ public interface IFlowContext
 
 提供するのは次の二つです。
 
-- その Context に紐づくキャンセル制御
+- その `IFlowContext` インスタンスに紐づくキャンセル制御
 - 型を指定して文脈値を取得する仕組み
 
-Interaction は、特定の Context 実装へキャストする代わりに、
+Interaction は、特定の `IFlowContext` 実装へキャストする代わりに、
 原則として `TryGet<T>` により必要な文脈値を要求できます。
 
 `TryGet<T>` は、要求型の値が存在しない場合に `false` を返します。
@@ -306,16 +309,17 @@ Interaction は、特定の Context 実装へキャストする代わりに、
 解決失敗を検出した場合は例外を送出します。
 破棄済みの `ScopedFlowContext` に対する呼び出しも `ObjectDisposedException` になります。
 
-#### Context に置く値の読み取りと更新
+#### `IFlowContext` インスタンスが提供する文脈値の読み取りと更新
 
 `IFlowContext` の基本契約は `TryGet<T>` による読み取りです。
 任意の値を置換する `Set<T>` や、値を削除する `Remove<T>` は定義していません。
 
-その意味で、Context が公開する値のアクセスは基本的に ReadOnly です。
+その意味で、`IFlowContext` インスタンスが公開する値へのアクセスは基本的に ReadOnly です。
 ただし、これは取得した参照型オブジェクトの内部状態まで不変にするという意味ではありません。
 Hello Door の `DoorState` のような mutable な参照型を取得した場合、そのプロパティは更新できます。
 
-値そのものを置き換える必要がある場合は、`RefEntry<TValue>` を Context に追加できます。
+値そのものを置き換える必要がある場合は、`RefEntry<TValue>` を
+`ScopedFlowContext` インスタンスに追加できます。
 `Entry<TValue>.Value` は外部からは読み取り専用ですが、
 `RefEntry<TValue>` は `Value` の setter を公開します。
 
@@ -329,7 +333,8 @@ if (context.TryGet<RefEntry<int>>(out var count))
 }
 ```
 
-同じ Context から `TryGet<int>` を呼ぶと、`RefEntry<int>` の内側にある現在値を取得できます。
+同じ `IFlowContext` インスタンスから `TryGet<int>` を呼ぶと、
+`RefEntry<int>` の内側にある現在値を取得できます。
 ラッパー自体が必要な場合は `TryGet<RefEntry<int>>` を使用し、その `Value` を更新します。
 
 #### FlowContext
@@ -337,19 +342,21 @@ if (context.TryGet<RefEntry<int>>(out var count))
 `FlowContext` は `CancellationObject` を持つ最小実装です。
 基本実装の `TryGet<T>` では、この `CancellationObject` 自身を文脈値として取得できます。
 
-`FlowContext` は現在の Context を扱う最小実装であり、
+`FlowContext` は現在の `Context` を扱う最小の `IFlowContext` 実装であり、
 それ単独で Context Loop 全体を表すものではありません。
-Context が Interaction 間で引き継がれ、更新され続ける実行過程全体によって、
+`IFlowContext` インスタンスが Interaction 間で引き継がれ、
+それが提供する文脈値が更新され続ける実行過程全体によって、
 Context Loop が形づくられます。
 
 #### ScopedFlowContext
 
-`ScopedFlowContext` は、親 Context の値を参照しながら、一時的な値を追加します。
+`ScopedFlowContext` は、親の `IFlowContext` インスタンスが提供する値を参照しながら、
+一時的な値を追加します。
 
 ```text
 ScopedFlowContext
   ├─ 新しく追加された値を新しい順に探索する
-  └─ 見つからなければ親 Context を探索する
+  └─ 見つからなければ親 IFlowContext インスタンスを探索する
 ```
 
 同じ型の値を複数追加した場合は、後から追加された値が先に見つかります。
@@ -358,14 +365,15 @@ ScopedFlowContext
 `ScopedFlowContext.Dispose` は、追加値を破棄しません。
 内部の探索リストを解放し、追加値の操作と探索を利用不能にします。
 破棄後に `With` または `TryGet<T>` を呼ぶと `ObjectDisposedException` が発生します。
-`Cancellation` は探索リストを使用せず親 Context へ委譲するため、破棄後も取得できます。
+`Cancellation` は探索リストを使用せず親の `IFlowContext` インスタンスへ委譲するため、
+破棄後も取得できます。
 
 追加値が `IDisposable` であり、破棄が必要な場合、その値の所有者が別途破棄する必要があります。
 
 #### CancellationObject のライフサイクル
 
 `CancellationObject` は、キャンセル要求に使用するトークンと、
-キャンセル時に完了を待つタスクを Context 単位で管理します。
+キャンセル時に完了を待つタスクを `IFlowContext` インスタンス単位で管理します。
 
 ```text
 処理が GetToken() で CancellationToken を取得する
@@ -380,7 +388,7 @@ CancellationHandling 基底実装が WaitAndResetAsync() を実行する
     ├─ 登録済みタスクの完了を待つ
     └─ キャンセル状態をリセットする
     ↓
-同じ Context を次の処理へ再利用できる
+同じ IFlowContext インスタンスを次の処理へ再利用できる
 ```
 
 `Cancel()` はタスクを強制終了しません。
@@ -388,13 +396,14 @@ CancellationHandling 基底実装が WaitAndResetAsync() を実行する
 キャンセル要求へ応答する必要があります。
 
 標準の `CancellationHandling` がキャンセル処理後に状態をリセットするのは、
-一度キャンセルされた Context を
-永久にキャンセル済みのままにせず、Context Loop の次の処理へ再利用できるようにするためです。
+一度キャンセルされた `IFlowContext` インスタンスを永久にキャンセル済みのままにせず、
+Context Loop の次の処理へ再利用できるようにするためです。
 
-#### ネストした Interaction の Context
+#### ネストした Interaction の `IFlowContext` インスタンス
 
-`Interaction.NestedExecuteAsync` は、親 Context の文脈値を参照できる内部 Context を作成します。
-この内部 Context は親とは別の `CancellationObject` を持ち、親のキャンセル要求と連動します。
+`Interaction.NestedExecuteAsync` は、親の `IFlowContext` インスタンスが提供する文脈値を
+参照できる内部の `IFlowContext` インスタンスを作成します。
+この内部インスタンスは親とは別の `CancellationObject` を持ち、親のキャンセル要求と連動します。
 
 独立したキャンセル制御を使用する主な理由は、キャンセル待機処理の循環待機を避けるためです。
 親 Interaction と子 Interaction が同じ `CancellationObject` を使用すると、
@@ -413,10 +422,11 @@ CancellationHandling 基底実装が WaitAndResetAsync() を実行する
 同時に、親のキャンセルトークンを子の `Cancel` へ登録することで、
 親から子へのキャンセル伝播は維持します。
 
-したがって、すべての Context が常に同じ `CancellationObject` を共有するわけではありません。
+したがって、すべての `IFlowContext` インスタンスが
+常に同じ `CancellationObject` を共有するわけではありません。
 
-- `ScopedFlowContext` は親の `CancellationObject` を共有する
-- ネスト実行用 Context は独立したキャンセル制御を持ち、親キャンセルと連動する
+- `ScopedFlowContext` インスタンスは親の `CancellationObject` を共有する
+- ネスト実行用の `IFlowContext` インスタンスは独立したキャンセル制御を持ち、親キャンセルと連動する
 
 という違いがあります。
 
@@ -425,14 +435,15 @@ CancellationHandling 基底実装が WaitAndResetAsync() を実行する
 これにより、親 Interaction の `ExecuteAsync` が、親側の Exception Port または
 Cancellation Port を通じて結果をもう一度処理できます。
 
-#### Context の所有権
+#### `IFlowContext` インスタンスの所有権
 
-`SystemFlow.ExecuteAsync` と `Interaction.ExecuteAsync` は、渡された Context を破棄しません。
+`SystemFlow.ExecuteAsync` と `Interaction.ExecuteAsync` は、
+渡された `IFlowContext` インスタンスを破棄しません。
 
-Context の寿命は、次のように考えます。
+`IFlowContext` インスタンスの寿命は、次のように考えます。
 
 ```text
-Context を作成した呼び出し側
+IFlowContext インスタンスを作成した呼び出し側
   ├─ SystemFlow へ渡す
   ├─ 必要なら次の SystemFlow へ再利用する
   └─ 不要になった時点で破棄する
@@ -450,17 +461,19 @@ User が実際に反応を観測したことまでは証明しません。
 
 #### FlowEndToken
 
-`FlowEndToken` は `ReactionEnd` と、そのフローの実行に渡された Context を結びつけます。
+`FlowEndToken` は `ReactionEnd` と、
+そのフローの実行に渡された `IFlowContext` インスタンスを結びつけます。
 
 ```text
 FlowEndToken
-  ├─ LastContext: そのフローの ExecuteAsync に渡された Context
+  ├─ LastContext: そのフローの ExecuteAsync に渡された IFlowContext インスタンス
   └─ End: ReactionEnd
 ```
 
-Interaction は Reaction の結果を実行時 Context と結合し、SystemFlow はその `End` を
-SystemFlow 自身に渡された Context へ結び直します。このため `LastContext` は内部 Context の
-全来歴ではなく、現在の実行境界を表します。`FlowEndToken` は Context を破棄せず、
+Interaction は Reaction の結果を実行時の `IFlowContext` インスタンスと結合し、
+SystemFlow はその `End` を SystemFlow 自身に渡された `IFlowContext` インスタンスへ結び直します。
+このため `LastContext` は内部の `IFlowContext` インスタンスの全来歴ではなく、
+現在の実行境界を表します。`FlowEndToken` は `IFlowContext` インスタンスを破棄せず、
 所有権も取得しません。
 
 #### Result、ReactionEnd、FlowEndToken の役割
@@ -471,7 +484,7 @@ SystemFlow 自身に渡された Context へ結び直します。このため `L
 | --- | --- | --- |
 | `Result` / `Result<TValue>` | Function や補助処理 | 局所処理の成功、成功値、または失敗 |
 | `ReactionEnd` | Reaction / Interaction | Reaction 系 API が確定した Interaction の終了結果 |
-| `FlowEndToken` | Interaction / SystemFlow 境界 | 終了結果と、その実行境界へ渡された Context |
+| `FlowEndToken` | Interaction / SystemFlow 境界 | 終了結果と、その実行境界へ渡された `IFlowContext` インスタンス |
 
 `Result` の失敗が、自動的に `ReactionEnd` へ変換されるわけではありません。
 Interaction や Reaction は、Function が返した失敗をどのように処理し、
@@ -506,7 +519,7 @@ User が観測できる反応や未解決例外へ変換するかを決めます
 
 `Entry<TValue>` は、値をラップし、要求された型として値を解決するための基底クラスです。
 別の Entry を保持する場合は再帰的に解決し、循環参照は失敗結果になります。
-`RefEntry<TValue>` は setter を公開し、Context や Storage に置いた値を
+`RefEntry<TValue>` は setter を公開し、`IFlowContext` インスタンスや Storage に置いた値を
 明示的に差し替えられるようにします。
 
 ### Storage
@@ -514,7 +527,7 @@ User が観測できる反応や未解決例外へ変換するかを決めます
 `IStoragePort` は、メモリ上に生成した値をキー単位で保持する Function Port です。
 
 ```text
-Context
+IFlowContext インスタンス
   └─ Storage のキーを提供する
         ↓
 Storage
@@ -526,9 +539,10 @@ Storage
 `Storage<TKey, TValue>` は、Dictionary を使う外部副作用に依存しない既定基底実装です。
 `GetOrCreate` で作成して登録した値は、Storage が所有するメモリ上の値として扱われます。
 
-#### Context から Storage のキーを取得する
+#### IFlowContext インスタンスから Storage のキーを取得する
 
-`GetKey(IFlowContext)` は、現在の Context から Storage のキーを取得する契約です。
+`GetKey(IFlowContext)` は、現在の `IFlowContext` インスタンスから
+Storage のキーを取得する契約です。
 既定実装は `context.TryGet<TKey>` を使用し、取得できなければ失敗 `Result<TKey>` を返します。
 派生 Storage はこの処理を差し替え、複数の文脈値からキーを構成できます。
 
@@ -635,15 +649,15 @@ Interaction Flow Architecture のすべての意味が、C# の型だけで完�
 
 | 内容 | 現在の実装 |
 | --- | --- |
-| SystemFlow が受け取る Context 型 | ジェネリック型制約と API が規定する |
+| SystemFlow が受け取る `IFlowContext` 実装型 | ジェネリック型制約と API が規定する |
 | SystemFlow が必ず例外・キャンセル時に終了する | 派生 SystemFlow の継続条件に依存する |
 | Interaction の正常完了時の戻り値が `FlowEndToken` である | `IInteraction` のメソッドシグネチャが規定する |
 | Interaction 基底クラスが例外とキャンセルを Port へ委譲する | `Interaction` 基底実装が提供する |
 | Reaction が必ず利用される | `ReactionEnd` の `internal` コンストラクタが制限する |
 | Reaction が必ず User に観測される | 原理上保証できない |
-| Context の値を型で取得する | `IFlowContext.TryGet<T>` が提供する |
-| Context 更新が必ず Reaction 内だけで行われる | 現在は保証しない。設計上の理想として推奨し、実用性を検証している |
-| Context が Interaction の結果を適切に保持する | 設計とレビューに依存する |
+| `IFlowContext` インスタンスの値を型で取得する | `IFlowContext.TryGet<T>` が提供する |
+| `Context` 更新が必ず Reaction 内だけで行われる | 現在は保証しない。設計上の理想として推奨し、実用性を検証している |
+| Interaction の結果が `IFlowContext` インスタンスの文脈値へ適切に反映される | 設計とレビューに依存する |
 | namespace 依存方向 | Analyzer が有効な場合に検査する |
 | namespace 名を使わずに意味的なレイヤーを完全判定する | 現在の Analyzer では保証しない |
 
@@ -653,10 +667,10 @@ Exception Port が例外を再送出する設定の場合や、例外・キャ�
 型による制約は、設計判断を不要にするためのものではありません。
 README と Philosophy が示す「User と System の関係」をコード上でも追えるようにするための支援です。
 
-Interaction Flow Architecture では、Context は Reaction によって更新されるべきだと考えます。
+Interaction Flow Architecture では、`Context` は Reaction によって更新されるべきだと考えます。
 一方、この原則を強制しても実務上の問題が生じないことは、
 まだ十分な利用例によって確認されていません。
-そのため、現在の型と Analyzer は Context の更新経路を Reaction だけに制限していません。
+そのため、現在の型と Analyzer は `Context` の更新経路を Reaction だけに制限していません。
 今後、利用例と実装経験が蓄積し、実用上の問題がないと判断できた場合は、
 この理想を検査可能な具体的制約へ昇格させる予定です。
 
@@ -671,7 +685,7 @@ Roslyn Analyzer です。
 | `InteractionFlowArchitecture002` | `IDependencyNode` の依存引数が実行時グラフから欠落しないか検査する |
 
 Analyzer は `interactionflow_enabled = True` の場合に有効になります。対象レイヤー名を含まない
-namespace、Context 更新と Reaction の意味的な対応、複雑な依存グラフ全体までは検査しません。
+namespace、`Context` 更新と Reaction の意味的な対応、複雑な依存グラフ全体までは検査しません。
 このリポジトリでは `.editorconfig` で有効化し、診断モードを `Error` にしています。
 
 詳細は [InteractionFlow.Analyzers](../InteractionFlow.Analyzers/README.md) を参照してください。
@@ -680,7 +694,7 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 
 | プロジェクト | 役割 |
 | --- | --- |
-| `InteractionFlow.Core` | Context、SystemFlow、Interaction、Port などの概念と基本契約を定義する |
+| `InteractionFlow.Core` | `Context`、SystemFlow、Interaction、Port などの概念と基本契約を定義する |
 | `InteractionFlow.Standard` | DI、Console、FileSystem、Serializer などの標準実装を提供する |
 | `InteractionFlow.Samples.*` | Core と Standard を具体的な Context Loop として組み立て、API を検証する |
 
@@ -693,13 +707,13 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 
 | 課題 | 現在の制約 | 検討方向 |
 | --- | --- | --- |
-| Context 更新 | 取得した参照型はどのレイヤーからも変更できる（[Context の実装](#context)） | 利用例を通じて Reaction に更新を限定しても問題がないか検証し、妥当性を確認できた場合は型または Analyzer の制約へ昇格する |
-| Entry の所有権 | Context、Storage、PersistentEntry で破棄責務が統一されていない（[データ保持と永続化](#data-and-persistence)） | 所有・借用と置換時の破棄を型または API で表す |
+| `Context` 更新 | 取得した参照型はどのレイヤーからも変更できる（[`IFlowContext` の実装](#context)） | 利用例を通じて Reaction に更新を限定しても問題がないか検証し、妥当性を確認できた場合は型または Analyzer の制約へ昇格する |
+| Entry の所有権 | `IFlowContext` インスタンス、Storage、PersistentEntry で破棄責務が統一されていない（[データ保持と永続化](#data-and-persistence)） | 所有・借用と置換時の破棄を型または API で表す |
 | ReactionEnd と Result | 終了結果と局所結果が別の型である（[ReactionEnd と FlowEndToken](#reaction-end-flow-end-token)） | Reaction 固有の生成制約を保ったまま内部表現を共通化する |
 | Function のレイヤー情報 | External の実体も `FunctionPort` として見える場合がある（[Function Port と Function External](#function)） | 契約上の分類と実行時レイヤーを分離する |
 | SystemFlow の終了結果 | 継続・中断の判断は派生 SystemFlow に委ねられる（[SystemFlow の実装](#systemflow)） | 合成 API や未確認結果の Analyzer 支援を検討する |
-| 同一スコープの並行実行 | 共有される可変状態の並行安全性を保証しない。通常は逐次実行し、並行時は Scope と Context を分ける | 原則を逐次実行とするか、状態分離・同期を導入する |
-| ライフタイム | Scope、Context、Cancellation、Entry、Function を統一する所有権モデルがない（[Builder と実行スコープ](#builder)） | 非同期破棄を含む共通規則を整理する |
+| 同一スコープの並行実行 | 共有される可変状態の並行安全性を保証しない。通常は逐次実行し、並行時は Scope と `IFlowContext` インスタンスを分ける | 原則を逐次実行とするか、状態分離・同期を導入する |
+| ライフタイム | Scope、`IFlowContext` インスタンス、Cancellation、Entry、Function を統一する所有権モデルがない（[Builder と実行スコープ](#builder)） | 非同期破棄を含む共通規則を整理する |
 | 依存グラフ | 循環を検査せず、再合流の表示方法も定義していない（[実行時の依存ノードツリー](#dependency-tree)） | DAG として検証し、再合流を参照として表示する |
 | Analyzer の範囲 | namespace 外の型や意味的規則は検査しない（[Analyzer による設計支援](#analyzer)） | Layer 判定と、型だけでは保証できない規則の支援範囲を拡張する |
 
@@ -707,6 +721,6 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 
 ## 目次
 
-[全体像](#overview) | [Context Loop の実行経路](#execution-path) | [SystemFlow・Interaction・実行環境](#runtime-components) | [Context と終了結果](#context-and-results) | [データ保持と永続化](#data-and-persistence) | [設計上の保証とプロジェクト境界](#architecture-boundaries) | [現在の制約と改善候補](#future-improvements)
+[全体像](#overview) | [Context Loop の実行経路](#execution-path) | [SystemFlow・Interaction・実行環境](#runtime-components) | [`IFlowContext` インスタンスと終了結果](#context-and-results) | [データ保持と永続化](#data-and-persistence) | [設計上の保証とプロジェクト境界](#architecture-boundaries) | [現在の制約と改善候補](#future-improvements)
 
 [Interaction Flow Architecture](../README.md)

@@ -130,7 +130,9 @@ Interaction Flow Architecture は、単なるコードの整理規則ではあ�
 > <I>相互作用が文脈を形作り、文脈が相互作用を形作る。</I>
 
 Interaction Flow Architecture では、
-ユーザーとシステムの相互作用（`Interaction`）と、相互作用の状態を表す文脈（`Context`）を用いて、相互作用が文脈を更新し、新しい文脈が次の相互作用に影響する過程の繰り返し（`Context Loop`）として、システムを表現します。
+ユーザーとシステムの相互作用を `Interaction`、
+相互作用の状態を表す文脈を `Context` として捉えます。
+そして、相互作用が文脈を更新し、新しい文脈が次の相互作用に影響する過程の繰り返し、すなわち `Context Loop` としてシステムを表現します。
 
 ```text
 Context -> Interaction -> next Context -> next Interaction -> ...
@@ -452,7 +454,7 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
 
 #### Step 6. システム反応 を Console で実装します。
 
-`DoorCommand` に応じた `DoorState` Context の更新と、
+`DoorCommand` に応じた `DoorState` の更新と、
 Console 標準出力による User への結果表示を担当します。
 
 <details>

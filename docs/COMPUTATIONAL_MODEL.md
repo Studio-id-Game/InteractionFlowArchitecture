@@ -2,11 +2,11 @@
 
 ---
 
-# 計算モデルとしての Interaction Flow アーキテクチャ <a id="computational-model-detail"></a>
+# 計算モデルとしての Interaction Flow Architecture <a id="computational-model-detail"></a>
 
 ## チューリングマシンという原型
 
-計算モデルとしての Interaction Flow アーキテクチャは、**チューリングマシン** に着想を得ています。
+計算モデルとしての Interaction Flow Architecture は、**チューリングマシン** に着想を得ています。
 
 チューリングマシンとは、以下の要素から構成される抽象的な計算モデルです。
 
@@ -16,7 +16,7 @@
 
 このモデルの本質は、「**読み取り → 状態遷移 → 書き込み**」という最小単位の繰り返しによって、任意の計算を表現できる点にあります。
 
-計算モデルとしての Interaction Flow アーキテクチャは、この構造をソフトウェアアーキテクチャに写像したものです。
+計算モデルとしての Interaction Flow Architecture は、この構造をソフトウェアアーキテクチャに写像したものです。
 
 ---
 
@@ -396,7 +396,7 @@ System Flow も一意に定まる状態遷移を継続します。
 > `ContextTape` 以外の少なくとも一つのテープが無限拡張可能で、
 > System Flow が停止状態に達するまで（到達しない場合は無限に）
 > Interaction の選択と実行を反復できるなら、
-> 計算モデルとしての Interaction Flow アーキテクチャは任意の決定性チューリングマシンを模倣でき、
+> 計算モデルとしての Interaction Flow Architecture は任意の決定性チューリングマシンを模倣でき、
 > チューリング完全です。
 
 この模倣では Silent External を必要としません。外部環境を計算能力に含める場合に、
@@ -441,7 +441,7 @@ Domain や Storage から移さないことの根拠になります。
 
 ## まとめ
 
-計算モデルとしての Interaction Flow アーキテクチャは、チューリングマシンの
+計算モデルとしての Interaction Flow Architecture は、チューリングマシンの
 
 - テープ
 - 読み書き
@@ -495,7 +495,7 @@ Domain や Storage から移さないことの根拠になります。
 `IFlowContext` を可能な限り小さく保ちながら、計算モデルを維持する
 
 - `ContextTape` の実現に必要な状態を単一の `IFlowContext` に集約せず、複数の場所へ分散できる
-  - Operation と Reaction が、相互作用を翻訳・加工するための状態を保持できる
+  - Operation と Reaction が、相互作用に伴う入出力を翻訳・加工するための状態を保持できる
   - `ScopedFlowContext` によって一時的な文脈を重ねられる
 - システムの計算能力（チューリング完全性）は `ContextTape` の無限性に依存しない
   - Storage や Domain が、計算能力に必要な計算テープを担う

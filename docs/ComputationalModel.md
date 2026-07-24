@@ -82,7 +82,7 @@ ContextTape
 連携を目的として使われる外部イベントや外部プロパティ は Silent External に分類されます。
 
 特に Silent External は、「`User` との相互作用や記録に関与しない外部テープに対応する機能」です。
-この分類は、実質的に Operation、Reaction、Storage のいずれにも含まれない機能を受け入れるために導かれた、意図的な「その他」の分類です。
+この分類は、Operation、Reaction、Storage のいずれにも含まれない機能を受け入れるために導かれた、意図的な「その他」の分類です。
 
 また、ソフトウェアとして実装される Domain の処理は、内部に閉じた計算可能な処理であると仮定します。
 この仮定のもとでは、Domain の処理も原理的にチューリングマシンのテープ、状態、遷移規則として表現できます。
@@ -369,20 +369,62 @@ Domain や Storage から移さないことの根拠になります。
 
 その特徴は以下に集約されます。
 
-- `User` と `System` の間の文脈を `ContextTape` として捉える
-- Operation と Reaction を、`ContextTape` に対する方向の異なる読み書きとして捉える
-- Domain 内部のテープ、Storage が扱う記録用テープ、`ContextTape` などを、役割の異なるテープとして捉える
-- Domain 内部を含む計算可能な処理を、テープ操作と遷移規則として統一的に捉える
-- `FlowState` を、System Flow の評価と Interaction の選択を制御する有限状態として捉える
-- Interaction を、構成状態に作用するアーキテクチャ上の最小の状態遷移演算子であり、マクロ遷移として捉える
-- System Flow を、記述上は合成式、逐次評価上は遷移関数として捉える
-- System Flow の遷移関数を表形式に正規化したものを、遷移表として捉える
-- System Flow の評価によって構成状態を順に遷移させ、`Context Loop` を進行させる
-- `ContextTape` 以外の少なくとも一つの計算テープに無限性を仮定することで、任意のチューリングマシンを模倣する
-- チューリング完全性を `ContextTape` の無限性に依存させず、`IFlowContext` の契約を小さく保つ
+### テープ
 
-これにより、役割の異なるテープ、状態遷移演算子、その合成式、遷移関数、式の評価を
-一貫した計算モデルとして扱うことができます。
+- `User` と `System` の間の文脈を `ContextTape` として捉える
+- Domain 内部のテープ、Storage が扱う記録用テープ、`ContextTape` を、それぞれ役割の異なる計算テープとして捉える
+- Silent External を、`User` との相互作用を担わず、記録も目的としない外部テープに対応する機能として捉える
+
+### テープ操作
+
+- Operation と Reaction を、`ContextTape` に対する方向の異なる読み書きとして捉える
+- Domain 内部を含む計算可能な処理を、テープ操作と遷移規則として統一的に捉える
+
+### 状態遷移
+
+- `FlowState` を、System Flow の評価と Interaction の選択を制御する有限状態として捉える
+- Interaction を、構成状態に作用する最小の状態遷移演算子（マクロ遷移）として捉える
+- System Flow を、記述上は合成式、逐次評価上は遷移関数として捉える
+- System Flow の遷移関数を表形式へ正規化したものを遷移表として捉える
+- System Flow の評価によって構成状態を順に遷移させ、`Context Loop` を進行させる
+
+### 計算能力
+
+- `ContextTape` 以外の少なくとも一つの計算テープに無限性を仮定することで、任意のチューリングマシンを模倣する
+
+これにより、役割の異なるテープ、状態遷移演算子、その合成式、遷移関数、式の評価を、一貫した計算モデルとして扱うことができます。
+
+---
+
+また、この計算モデルから、次の設計および実装上の帰結が得られます。
+
+### Function の分類
+
+テープの役割とアクセス方向に基づいて、Function の分類を明確にする
+
+- テープの物理的な配置を分類基準にしない
+- Operation と Reaction の対称性
+- Storage と Silent External の違い
+- Silent External を便宜的な「その他」の分類にしないこと
+
+### `IFlowContext` を小さく保つ
+
+`IFlowContext` を可能な限り小さく保ちながら、計算モデルを維持する
+
+- `ContextTape` を単一の `IFlowContext` に固定せず、複数の場所へ分散して実現できる
+  - Operation と Reaction によって、文脈に関係する状態を保持できる
+  - `ScopedFlowContext` によって一時的な文脈を重ねられる
+- システムの計算能力（チューリング完全性）は `ContextTape` の無限性に依存しない
+  - Storage や Domain で計算能力を担保する
+- System Flow の制御状態を持つ必要はない
+
+### Interaction と System Flow の責務
+
+「状態遷移」と「合成と選択」で責務を分離する
+
+- Interaction は、構成状態に作用する計算モデル上の一つの状態遷移として実装する
+- System Flow は、現在の構成状態に応じた Interaction の合成と選択に集中する
+- Interaction は Reaction によって完了し、`ContextTape`（`User` との相互作用）を次の状態へ進める
 
 ---
 

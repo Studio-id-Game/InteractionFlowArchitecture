@@ -140,6 +140,22 @@ Reaction と `Context` 更新の対応は設計原則であり、型による保
 
 この章では、フローを構成する実行単位と、それらを実行可能な環境へ組み立てる仕組みを説明します。
 
+### 依存関係の全体図
+
+![Interaction Flow Architecture dependency diagram](./img/InteractionFlowArchitecture_DependencyDiagram.svg)
+
+代替テキスト: [Interaction Flow Architecture - Dependency Diagram Context](./img/InteractionFlowArchitecture_DependencyDiagram.context.md)
+
+この図は実行順序ではなく、SystemFlow、Interaction、Function Port、Function External、
+Domain、外部環境、および Builder の概念上の依存構造を示します。
+
+現在のライブラリでは、図中の広義の `Storage` を、メモリ上の値を所有する Storage、
+外部保存先と読み書きする Persistence、保存形式を変換する Serializer に分割しています。
+また、Function Port と Function External の境界はソース配置と Analyzer では区別されますが、
+現在の実行時レイヤーメタデータだけでは区別できない場合があります。
+これらの実装上の差異については、[Function Port と Function External](#function) および
+[データ保持と永続化](#data-and-persistence) を参照してください。
+
 ### SystemFlow の実装 <a id="systemflow"></a>
 
 `ISystemFlow<TContext>` は、指定した `IFlowContext` 実装型で SystemFlow を実行する契約です。

@@ -1,8 +1,8 @@
-﻿[Readme](../README.md#programflow-builder-block)
+﻿[Readme](../README.md#implementation)
 
  ---
 
-# .Core/.Standard/.Samples それぞれの役割
+# .Core/.Standard/.Samples それぞれの役割 <a id="main-project-roles"></a>
 
 本ドキュメントでは、中心となるC#プロジェクト（.Core/.Standard/.Samples）の役割について説明します。
 

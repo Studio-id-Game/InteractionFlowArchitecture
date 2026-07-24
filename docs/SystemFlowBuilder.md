@@ -1,8 +1,8 @@
-[Readme](../README.md#programflow-builder-block)
+[Readme](../README.md#implementation)
 
  ---
 
-# SystemFlow Builder の詳細
+# SystemFlow Builder の詳細 <a id="systemflow-builder"></a>
 
 本ドキュメントでは、Interaction Flow Architecture における **SystemFlow Builder** の構造と設計意図について説明します。
 
@@ -22,6 +22,9 @@ SystemFlow Builder は、**SystemFlow の実行単位とその依存関係を構
 
 ScopeBuilder は再利用可能なスコープの構築に使用され、  
 SystemFlowBuilder は再利用可能な SystemFlow の実行単位を構築するために使用されます。
+
+どちらの Builder も、一度 Build すると同じインスタンスを再利用できません。
+再利用されるのは、Builder が生成した Scope や SystemFlow の実行単位です。
 
 ---
 
@@ -129,11 +132,9 @@ var endToken = await systemFlow.ExecuteAsync(currentContext);
 ScopeBuilder / SystemFlowBuilder は、スコープを**単なるツリーではなくグラフ構造**として扱います。
 
 ```text
-        [Parent Scope A]
-               ↑
-        [Parent Scope B]
-               ↑
-           [SystemFlow Scope]
+        [SystemFlow Scope]
+          ├─ Parent Scope A
+          └─ Parent Scope B
 ```
 
 この構造により：
@@ -142,7 +143,12 @@ ScopeBuilder / SystemFlowBuilder は、スコープを**単なるツリーでは
 * 共通依存を共有しつつ、個別の差し替えが可能
 * 柔軟な依存関係構築が可能
 
-ただし、循環参照はエラーとして扱われます。
+自身のスコープで解決できないサービスは、`parents` に渡した順で親スコープを探索します。
+複数の親が同じサービスを提供する場合は、最初に解決できた親のサービスが使われます。
+
+親スコープのグラフに循環がある場合、`ScopeHandler` は訪問済みスコープの探索を打ち切り、
+その経路ではサービスを未解決として扱います。循環自体を専用エラーとして報告するわけではありません。
+探索対象の親スコープがすでに破棄されている場合は例外が発生します。
 
 ---
 
@@ -178,11 +184,14 @@ ScopeBuilder / SystemFlowBuilder は、スコープを**単なるツリーでは
 
 ### 3. 部分ビルドの可能性
 
-本アーキテクチャでは、依存関係が一方向かつ隣接した層に制限されています：
+本アーキテクチャにおける主要な組み立て経路は次のとおりです：
 
 > SystemFlow → Interaction → Function Port ← Function External
 
-この性質により：
+Domain への依存や、Builder が各要素を生成するための依存は、この経路とは別に存在します。
+実際に許可される namespace 間の依存方向は Analyzer の規則に従います。
+
+この構造により：
 
 * 一部のスコープのみを構築する「部分ビルド」が可能
 * 必要な依存だけを組み合わせて実行できる
@@ -212,4 +221,4 @@ SystemFlow Builder は、以下の特徴を持つ構築機構です：
 これにより、本アーキテクチャにおける「構造の明確さ」と「実装の柔軟性」を両立しています。
 
 ---
-[Readme](../README.md#programflow-builder-block) | [PageTop](#programflow-builder-の詳細) 
+[Readme](../README.md#implementation) | [PageTop](#systemflow-builder)

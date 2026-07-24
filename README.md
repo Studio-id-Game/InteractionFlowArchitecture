@@ -748,7 +748,8 @@ Reaction が Context を更新することで、Reaction の未実装や適用�
 `Parrot` は、Console 標準実装と複数 SystemFlow の組み立てを確認するためのサンプルです。
 
 - 目的: サンプル選択から実行までの会話型フローを確認する
-- Context: 選択状態、キャンセル状態、前回選択
+- Context: 選択状態、キャンセル状態
+- Storage: `ILastSelectMemory` による前回選択の保持
 - SystemFlow: `InitializeApplication`、`SelectAndRunSample`
 - Interaction: `ListSamples`、`SelectSample`、`RunSample`、`ConsoleSetup`
 - 見どころ: `ScopedFlowContext`、Memory Storage、Console Profile、依存ツリー表示
@@ -785,8 +786,8 @@ Storage を含む実用寄りの Context Loop を見たい場合に適してい�
 `Notepad.Secure` は、`Notepad` の実行構成を差し替え、セキュアな保存とログインを追加するサンプルです。
 
 - 目的: Core の Interaction Flow を保ったまま、Storage / Serializer / Login を差し替える
-- Context: `NotepadContext` と現在ユーザーのセキュア情報
-- Storage: `ICurrentUserStoragePort`、ユーザーデータ永続化、暗号化されたノートデータ
+- Context: `NotepadContext`
+- Storage: `ICurrentUserStoragePort` による現在ユーザーのセキュア情報、ユーザーデータ永続化、暗号化されたノートデータ
 - Interaction: `EnterPassword`、`LoginSecure`
 - 見どころ: Port / External の境界によって、既存 Flow を拡張できること
 
@@ -848,7 +849,7 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 - Standard API の拡充
 - Analyzer による依存関係ルール検査の強化
 - Unity Engine 向けの Standard.Unity API の開発
-- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の不完全な点と将来の改善候補](./LIBRARY_IMPLEMENTATION.md/#future-improvements) を参照
+- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の制約と改善候補](./LIBRARY_IMPLEMENTATION.md#future-improvements) を参照
 
 ---
 

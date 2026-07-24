@@ -25,8 +25,8 @@ Analyzer は開発時だけ利用するため、プロジェクトファイル�
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="InteractionFlow.Standard" Version="0.4.0" />
-  <PackageReference Include="InteractionFlow.Analyzers" Version="0.4.1" PrivateAssets="all" />
+  <PackageReference Include="InteractionFlow.Standard" Version="0.5.0" />
+  <PackageReference Include="InteractionFlow.Analyzers" Version="0.5.0" PrivateAssets="all" />
 </ItemGroup>
 ```
 

@@ -4,7 +4,7 @@
 
 <p align="center">
   <img
-    src="./docs/img/illustration/ChatGPT_Header01_s.png"
+    src="./img/illustration/ChatGPT_Header01_s.png"
     alt="Interaction Flow Architecture concept illustration"
     width="100%"
   >

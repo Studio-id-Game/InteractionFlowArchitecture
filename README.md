@@ -148,7 +148,7 @@ Context -> Interaction -> next Context -> next Interaction -> ...
 | `Context` | 現在の相互作用に関する状態や状況に、次の相互作用に影響を与える文脈的な意味を持たせた情報。 |
 | `System` | `User` と相互作用する開発対象。`Context` を介して `User` の行為に反応し、動作する。 |
 | `Context Loop` | `System` と `User` の間にある、 `Context` を介した繰り返しの反応プロセス。 |
-| `System Flow` | `Context Loop` の一環として、複数の相互作用を通じて `System` が `User` との関係を構築するための単位。|
+| `System Flow` | `Context Loop` の一環として、一つ以上の相互作用を通じて `System` が `User` との関係を構築するための単位。|
 | `Interaction` | `Context Loop` の一環として、`System` が内部の目的を達成するための相互作用の単位。|
 
 ### 実装概念:

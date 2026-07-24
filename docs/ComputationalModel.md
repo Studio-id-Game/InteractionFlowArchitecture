@@ -71,11 +71,10 @@ ContextTape
 
 | テープの役割 | 書き手 | 読み手 | 対応する機能または遷移規則 |
 | --- | --- | --- | --- |
-| `ContextTape` | `User` | `System` | Operation |
-| `ContextTape` | `System` | `User` | Reaction |
+| `ContextTape` | `User` <br/> `System` | `System` <br/> `User` | Operation <br/> Reaction |
 | 記録用テープ | `System` | `System` | Storage |
-| その他の外部テープ | `System` または外部環境 | 外部環境または `System` | Silent External |
-| Domain 内部のテープ | `System` 内部 | `System` 内部 | Domain の計算・遷移規則 |
+| その他の外部テープ | 外部環境 <br/> `System` | `System` <br/> 外部環境 | Silent External |
+| Domain 内部のテープ | `System` | `System` | Domain の計算・遷移規則 |
 
 ここでの分類は、テープの物理的な配置とは対応しません。
 同じく `System` の外部にあるテープに対応する機能であっても、

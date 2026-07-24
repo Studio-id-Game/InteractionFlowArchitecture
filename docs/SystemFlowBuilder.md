@@ -10,10 +10,10 @@
 
 ## 概要
 
-SystemFlow Builder は、**SystemFlow の実行単位とその依存関係を構築・管理するための仕組み**です。
+SystemFlow Builder は、**SystemFlow の実行単位とその依存関係を構築・管理するための仕組み** です。
 
 本アーキテクチャでは、Dependency Injection（DI）とライフタイム管理を明確に分離し、
-**スコープ単位での依存関係管理**を可能にしています。
+**スコープ単位での依存関係管理** を可能にしています。
 
 この仕組みは、以下の2つのビルダーによって構成されます：
 
@@ -32,12 +32,12 @@ SystemFlowBuilder は再利用可能な SystemFlow の実行単位を構築す�
 
 ### 役割
 
-ScopeBuilder は、**独立したライフタイムを持つスコープ**を構築するためのビルダーです。
+ScopeBuilder は、**独立したライフタイムを持つスコープ** を構築するためのビルダーです。
 
 * 事前に登録された型情報をもとに Dependency Injection を構成
 * スコープのライフタイムを管理する `ScopeHandler` を生成
 
-さらに、親となるスコープを指定することで、**複数スコープ間の依存関係を統合**できます。
+さらに、親となるスコープを指定することで、**複数スコープ間の依存関係を統合** できます。
 
 ### インターフェース
 
@@ -55,7 +55,7 @@ public interface IScopeBuilder : IScopeServices
 
 > 子スコープ ＞ 親スコープ
 
-これにより、親スコープの定義をベースにしつつ、**部分的な上書きや差し替え**が可能になります。
+これにより、親スコープの定義をベースにしつつ、**部分的な上書きや差し替え** が可能になります。
 
 ```text
 1.      親スコープで IStorage を FileStorage として登録
@@ -69,7 +69,7 @@ public interface IScopeBuilder : IScopeServices
 
 ### 役割
 
-SystemFlowBuilder は、**SystemFlow とその実行スコープを一体として構築・管理するビルダー**です。
+SystemFlowBuilder は、**SystemFlow とその実行スコープを一体として構築・管理するビルダー** です。
 
 * SystemFlow に対応するスコープを生成
 * SystemFlow とスコープのライフタイムを一致させる
@@ -129,7 +129,7 @@ var endToken = await systemFlow.ExecuteAsync(currentContext);
 
 ## スコープ構造と依存関係
 
-ScopeBuilder / SystemFlowBuilder は、スコープを**単なるツリーではなくグラフ構造**として扱います。
+ScopeBuilder / SystemFlowBuilder は、スコープを **単なるツリーではなくグラフ構造** として扱います。
 
 ```text
         [SystemFlow Scope]

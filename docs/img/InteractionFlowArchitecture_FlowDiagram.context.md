@@ -10,7 +10,7 @@
 
 `Program` は `Context` を作成または再利用し、`SystemFlow` を構築して実行し、更新された `Context` を次回以降へ引き継ぐ。`User` は Operation と Reaction を通じてシステムと相互作用する。`System / Application / Service` は Layer と Block を通じて `SystemFlow` を実行し、外部依存は External 側で扱う。
 
-この図の中心的な意味は、**相互作用を `SystemFlow` として実行し、その過程で `Context` を更新し、更新後の `Context` を次の相互作用に再利用する**ことである。
+この図の中心的な意味は、**相互作用を `SystemFlow` として実行し、その過程で `Context` を更新し、更新後の `Context` を次の相互作用に再利用する** ことである。
 
 ## 主要な構成要素
 
@@ -167,7 +167,7 @@ Function または External 側から外部依存や外部リソースへ動作�
 - `User` の Operation と Reaction が相互作用を進める
 - `Context` が更新され、次の相互作用へ再利用される
 
-要約すると、この図は **`SystemFlow` の実行を通じて `Context` を更新し続ける Interaction の実行モデル**を表している。
+要約すると、この図は **`SystemFlow` の実行を通じて `Context` を更新し続ける Interaction の実行モデル** を表している。
 
 ## 推定事項
 

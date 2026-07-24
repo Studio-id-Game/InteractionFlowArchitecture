@@ -92,7 +92,7 @@
 - `Blocks` は SystemFlow 構築、Domain 前提、External 依存を分離して表す
 - `Domain Block` と `External Block` を分けることで、外部依存しない前提と外部機能実装を区別する
 
-要約すると、この図は **Interaction Flow Architecture の構造的な見取り図**であり、`Context` を中心に、ユーザーとの相互作用、レイヤー構造、ドメイン前提、外部依存の分担を表している。
+要約すると、この図は **Interaction Flow Architecture の構造的な見取り図** であり、`Context` を中心に、ユーザーとの相互作用、レイヤー構造、ドメイン前提、外部依存の分担を表している。
 
 ## 推定事項
 

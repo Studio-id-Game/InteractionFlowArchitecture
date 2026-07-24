@@ -100,7 +100,7 @@ System Flow の評価を制御する `FlowState` が必要です。
 この計算モデルでは、Interaction による状態遷移の対象全体を **構成状態** として扱います。
 構成状態には、次の要素が含まれます。
 
-- System Flow の評価位置
+- System Flow の評価を制御する有限状態（`FlowState`）
 - `ContextTape` の状態
 - Domain の状態
 - 記録用テープや外部環境を含む、その他のテープの状態
@@ -111,8 +111,9 @@ System Flow の評価を制御する `FlowState` が必要です。
 Cₙ = (FlowStateₙ, ContextTapeₙ, DomainStateₙ, OtherTapesₙ)
 ```
 
-`FlowStateₙ` は、System Flow のどこを評価しているか、次に評価されうる Interaction は
-どれかを表す計算モデル上の状態です。`IFlowContext` に保持される特定の値を意味しません。
+`FlowStateₙ` は、System Flow の評価と Interaction の選択を制御する有限状態です。
+具体的な評価位置の表現方法を規定するものではなく、
+`IFlowContext` に保持される特定の値を意味するものでもありません。
 
 ここでいう構成状態は、単一のデータ構造や、ライブラリが一括して保持する値ではありません。
 計算モデル上、状態遷移の前後を比較するために、分散した状態をまとめて表したものです。
@@ -183,8 +184,8 @@ System Flow を一つの状態遷移ずつ評価する場合、System Flow は�
 Cₙ ──Iₖ──> Cₙ₊₁
 ```
 
-直列に並ぶ式では評価位置に応じて次の Interaction が選ばれ、
-分岐や反復を含む式では、評価位置に加えて `ContextTape`、Domain、
+直列に並ぶ式では `FlowState` に応じて次の Interaction が選ばれ、
+分岐や反復を含む式では、`FlowState` に加えて `ContextTape`、Domain、
 その他のテープの状態も選択に影響します。
 
 この遷移関数を「現在の構成状態と適用する Interaction の対応」として
@@ -373,6 +374,7 @@ Domain や Storage から移さないことの根拠になります。
 - Operation と Reaction を、`ContextTape` に対する方向の異なる読み書きとして捉える
 - Domain 内部のテープ、Storage が扱う記録用テープ、`ContextTape` などを、役割の異なるテープとして捉える
 - Domain 内部を含む計算可能な処理を、テープ操作と遷移規則として統一的に捉える
+- `FlowState` を、System Flow の評価と Interaction の選択を制御する有限状態として捉える
 - Interaction を、構成状態に作用するアーキテクチャ上の最小の状態遷移演算子であり、マクロ遷移として捉える
 - System Flow を、記述上は合成式、逐次評価上は遷移関数として捉える
 - System Flow の遷移関数を表形式に正規化したものを、遷移表として捉える

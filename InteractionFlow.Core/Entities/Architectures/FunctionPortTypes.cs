@@ -11,7 +11,7 @@ namespace InteractionFlow.Core.Entities.Architectures
         None = 0,
 
         /// <summary>
-        /// ユーザー入力や条件の取得を担当する Operation ポートです。
+        /// User による操作や入力の取得を担当する Operation ポートです。
         /// </summary>
         Operation,
 

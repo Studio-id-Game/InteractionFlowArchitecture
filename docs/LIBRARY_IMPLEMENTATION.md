@@ -45,11 +45,11 @@ README で定義している概念と、主に対応するライブラリ要素�
 | アーキテクチャ概念 | 主なライブラリ要素 | 実装上の役割 |
 | --- | --- | --- |
 | `User` | 特定の型には固定されない | Operation を行い、Reaction を観測する主体 |
-| `Context` | `IFlowContext` | 現在の相互作用に必要な文脈値とキャンセル制御を提供する |
+| `Context` | `IFlowContext` | Context をプログラムで扱うためのインターフェースとして、現在の相互作用に必要な文脈値とキャンセル制御を提供する |
 | `Context Loop` | `SystemFlow` が Context を参照しながら Interaction を実行する処理 | Interaction の結果を次の Interaction へ引き継ぐ |
 | `System Flow` | `ISystemFlow<TContext>` / `SystemFlow<TContext>` | Interaction の順序、継続、終了を構成する |
 | `Interaction` | `IInteraction` / `Interaction` | Function Port を組み合わせ、システム内部の目的を一段進める |
-| `Operation` | `IOperationPort` とその実装 | User の操作や外部条件を入力として受け取る |
+| `Operation` | `IOperationPort` とその実装 | User による操作や入力を受け取る |
 | `Reaction` | `IReactionPort` とその実装 | Context の変化や処理結果を User が観測できる反応として表す |
 | `Storage` | `IStoragePort` とその実装 | Context とは別の寿命で、再利用する値をメモリ上に保持する |
 | `Silent External` | `ISilentExternalPort` とその実装 | User に直接観測されない外部環境とのやりとりを行う |
@@ -60,6 +60,8 @@ README で定義している概念と、主に対応するライブラリ要素�
 
 `User` や `Context Loop` は、一つのクラスへ直接対応する概念ではありません。
 複数の型が作る実行経路全体によって表現されます。
+また、入力が物理的に外部から来るかではなく、User から System への相互作用を
+構成するかどうかで Operation と Silent External を区別します。
 
 README とアーキテクチャ図の `Storage` は、メモリ上の一時データから
 DB やファイルシステムの永続データまでを含む広い概念です。
@@ -180,7 +182,7 @@ Function Port は、Interaction から見える外部機能の契約です。
 
 | 種類 | Port | 意味 |
 | --- | --- | --- |
-| Operation | `IOperationPort` | User の操作や外部条件を受け取る |
+| Operation | `IOperationPort` | User による操作や入力を受け取る |
 | Reaction | `IReactionPort` | User が観測できる反応を提供する |
 | Storage | `IStoragePort` | Context とは別の寿命で値を保持する |
 | Silent External | `ISilentExternalPort` | User に直接観測されない外部環境と連携する |
@@ -335,9 +337,10 @@ if (context.TryGet<RefEntry<int>>(out var count))
 `FlowContext` は `CancellationObject` を持つ最小実装です。
 基本実装の `TryGet<T>` では、この `CancellationObject` 自身を文脈値として取得できます。
 
-`FlowContext` 自体が、アプリケーション固有の状態や「関係の歴史」を自動的に保存するわけではありません。
-呼び出し側が Context を再利用し、その Context から取得できる値が更新され続けることで、
-過去の相互作用が次の相互作用へ引き継がれます。
+`FlowContext` は現在の Context を扱う最小実装であり、
+それ単独で Context Loop 全体を表すものではありません。
+Context が Interaction 間で引き継がれ、更新され続ける実行過程全体によって、
+Context Loop が形づくられます。
 
 #### ScopedFlowContext
 
@@ -639,7 +642,7 @@ Interaction Flow Architecture のすべての意味が、C# の型だけで完�
 | Reaction が必ず利用される | `ReactionEnd` の `internal` コンストラクタが制限する |
 | Reaction が必ず User に観測される | 原理上保証できない |
 | Context の値を型で取得する | `IFlowContext.TryGet<T>` が提供する |
-| Context 更新が必ず Reaction 内だけで行われる | 現在は保証しない |
+| Context 更新が必ず Reaction 内だけで行われる | 現在は保証しない。設計上の理想として推奨し、実用性を検証している |
 | Context が Interaction の結果を適切に保持する | 設計とレビューに依存する |
 | namespace 依存方向 | Analyzer が有効な場合に検査する |
 | namespace 名を使わずに意味的なレイヤーを完全判定する | 現在の Analyzer では保証しない |
@@ -649,6 +652,13 @@ Exception Port が例外を再送出する設定の場合や、例外・キャ�
 
 型による制約は、設計判断を不要にするためのものではありません。
 README と Philosophy が示す「User と System の関係」をコード上でも追えるようにするための支援です。
+
+Interaction Flow Architecture では、Context は Reaction によって更新されるべきだと考えます。
+一方、この原則を強制しても実務上の問題が生じないことは、
+まだ十分な利用例によって確認されていません。
+そのため、現在の型と Analyzer は Context の更新経路を Reaction だけに制限していません。
+今後、利用例と実装経験が蓄積し、実用上の問題がないと判断できた場合は、
+この理想を検査可能な具体的制約へ昇格させる予定です。
 
 ### Analyzer による設計支援 <a id="analyzer"></a>
 
@@ -683,7 +693,7 @@ namespace、Context 更新と Reaction の意味的な対応、複雑な依存�
 
 | 課題 | 現在の制約 | 検討方向 |
 | --- | --- | --- |
-| Context 更新 | 取得した参照型はどのレイヤーからも変更できる（[Context の実装](#context)） | Reaction だけに更新能力を渡す |
+| Context 更新 | 取得した参照型はどのレイヤーからも変更できる（[Context の実装](#context)） | 利用例を通じて Reaction に更新を限定しても問題がないか検証し、妥当性を確認できた場合は型または Analyzer の制約へ昇格する |
 | Entry の所有権 | Context、Storage、PersistentEntry で破棄責務が統一されていない（[データ保持と永続化](#data-and-persistence)） | 所有・借用と置換時の破棄を型または API で表す |
 | ReactionEnd と Result | 終了結果と局所結果が別の型である（[ReactionEnd と FlowEndToken](#reaction-end-flow-end-token)） | Reaction 固有の生成制約を保ったまま内部表現を共通化する |
 | Function のレイヤー情報 | External の実体も `FunctionPort` として見える場合がある（[Function Port と Function External](#function)） | 契約上の分類と実行時レイヤーを分離する |

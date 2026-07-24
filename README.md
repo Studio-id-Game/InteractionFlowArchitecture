@@ -30,10 +30,8 @@
 - [ビジョン](#vision)
 - [Context Loop & System Flow](#context-loop-system-flow)
 - [はじめに](#getting-started)
+- [Interaction Flow を支える三つの視点](#three-perspectives)
 - [サンプル解説](#examples)
-- [Philosophy](#philosophy)
-- [ライブラリの実装](#implementation)
-- [計算モデルとしての補助線](#computational-model)
 - [ロードマップ](#roadmap)
 - [資料まとめ](#references)
 
@@ -665,64 +663,113 @@ Goodbye.
 
 #### 責務と関心
 
-この例では、それぞれの要素は以下のように分割された責務と関心を持っています。
+この例で、それぞれの要素は以下のように分割された責務と関心を持っています。
 
 | 要素 | 責務 | 関心 |
 | --- | --- | --- |
-| `Entities.DoorState`             | ドアの状態の表現 | ドアはどのような情報を持つか？ |
-| `OperationPorts.IDoorOperation`   | ユーザーによるドアの操作の抽象化 | ユーザーはドアに対して何ができるか？ |
-| `ReactionPorts.IDoorReaction`    | システムによるドアの反応の抽象化 | ドアはユーザーに対して何ができるか？ |
-| `Operations.ConsoleDoorOperation` | Console によるドアの操作の実装 | ドアの操作をどのように実現できるか？ |
-| `Reactions.ConsoleDoorReaction`  | Console によるドアの反応の実装 | ドアの反応をどのように実現できるか？ |
-| `Interactions.OperateDoor`       | ドアとユーザーの相互作用の実装 | ドアはユーザーとどのように相互作用するか？ |
-| `SystemFlows.DoorSystemFlow`                    | ドアにおけるユーザー体験の実装 | ドアはユーザーにどのように体験されるか？ |
+| `DoorState`             | ドアの状態の表現 | ドアはどのような情報を持つか？ |
+| `IDoorOperation`   | ユーザーによるドアの操作の抽象化 | ユーザーはドアに対して何ができるか？ |
+| `IDoorReaction`    | システムによるドアの反応の抽象化 | ドアはユーザーに対して何ができるか？ |
+| `ConsoleDoorOperation` | Console によるドアの操作の実装 | ドアの操作をどのように実現できるか？ |
+| `ConsoleDoorReaction`  | Console によるドアの反応の実装 | ドアの反応をどのように実現できるか？ |
+| `OperateDoor`       | ドアとユーザーの相互作用の実装 | ドアはユーザーとどのように相互作用するか？ |
+| `DoorSystemFlow`                    | ドアにおけるユーザー体験の実装 | ドアはユーザーにどのように体験されるか？ |
 | `Program`                        | システムの実体化<br/>Context の組み立て<br/>システムの実行 | どんなドアと、どんなユーザーを組み合わせるか？ |
 
-このような責務と関心の分離は、コードをクリーンに保つことだけが目的ではありません。
-コードのクリーンさを保ちながら、ユーザー体験と、ユーザー体験の設計をクリーンに保つための分離です。
+このような責務と関心の分離は、コードのクリーンさを保ちながら、ユーザー体験と、ユーザー体験の設計をクリーンに保つことができます。
+
+**Interaction Flow Architecture を用いることで、**<br/>
+**コードとユーザー体験の構造を自然に対応させ、**<br/>
+**開発の品質とユーザー体験の品質を同じ視点で設計できるようなります。**
+
+<details>
+
+<summary>💡 Tips: なぜ Reaction が Context を更新するのか？</summary>
+
+> このサンプルでは、Context を更新しているのは OperateDoor (Interaction) ではなく ConsoleDoorReaction (Reaction) です。
+> Interaction Flow Architecture では、「Reaction は、Context の更新をユーザーから観察可能な形で実行するもの」と考えます。
+> この設計により、すべての Context 更新がユーザーから観察可能な反応と対応し、「状態だけ変わる」「表示だけ変わる」といったユーザー体験の不整合を防ぎやすくなります。
+> また、Reaction の実装漏れも動作エラーや UI の無反応として現れるため、責務の漏れを発見しやすくなります。
+> 現在のライブラリでは、この原則はまだ理想的な推奨事項です。
+> 十分な実装経験により実用上の問題が起きない確証が得られた段階で、型や Analyzer による制約として導入することを検討しています。
+
+</details>
+
+---
+
+# Interaction Flow を支える三つの視点 <a id="three-perspectives"></a>
+
+<p align="center">
+    <img
+        src="./docs/icon/icon_rich.svg"
+        alt="Interaction Flow Architecture icon"
+        width="128"
+    >
+</p>
+
+Interaction Flow とその実装ライブラリについて、三つの異なる視点から説明をしています。
+
+| 視点 | 主に扱う問い | 主な表現 |
+| --- | --- | --- |
+| Philosophy | 相互作用の流れとはなにか | `Context`、`Context Loop`、関係の歴史 |
+| 計算モデル | 相互作用の流れを計算としてどのように考察できるか | `ContextTape`、構成状態、状態遷移 |
+| ライブラリの実装 | 相互作用の流れをどのように実装し、何を保証するか | `IFlowContext`、`Interaction`、`SystemFlow` |
+
+読み順は自由で、興味が無ければ飛ばしてもかまいません。
+目的別のおすすめの読み順は以下の通りです。
+
+| 目的 | 1. | 2. | 3. |
+| --- | :-- | :-- | :-- |
+| 感覚的に知りたい | [Philosophy](#philosophy) | [計算モデル](#computational-model) | [ライブラリの実装](#implementation) |
+| 原理的に知りたい | [計算モデル](#computational-model) | [ライブラリの実装](#implementation) | [Philosophy](#philosophy) |
+| 実践的に知りたい | [ライブラリの実装](#implementation) | [計算モデル](#computational-model) | [Philosophy](#philosophy) |
+
 
 
 <details>
 
-<summary><strong>💡 Tips: なぜ Reaction が Context を更新するのか？</strong></summary>
+<summary>💡 Tips: Context とその派生概念 </summary>
 
-この例では、Context を更新しているのは、`OperateDoor` (Interaction) ではなく、`ConsoleDoorReaction` です。
-
-ここで多くの人は、「Interaction が Context を更新する方が自然な分離ではないか？」という疑問を持つでしょう。
-結論から言うと、これは「ユーザー体験のクリーンさ」を保つための設計です。
-
-まず、「反応（Reaction）とは何か？」という問題について考えます。
-この問題について現実を参考に考えると、
-
-**「反応」とは、「操作に対する状態の変化（あるいは変化しないこと）が、観察可能な形で現れる現象」** です。
-
-アーキテクチャの話に戻ると、「反応」は「Reaction」、「操作」は「Operation」であり、「状態の変化」は「Context の更新」です。ここから、
-
-**「Reaction は、Operation に対する Context の更新を観察可能な形で実行する」** という設計が導かれます。
-
-アーキテクチャの性質としても、このように定義された Reaction はユーザー体験のクリーンさを保つことができます。
-なぜなら、「Context の更新との対応が曖昧な Reaction」や、「Reaction を伴わない Context の更新」は、
-ユーザーとシステムの関係をブラックボックス化し、ユーザー体験のクリーンさを低下させるからです。
-
-このような関係のブラックボックスは、次のような例に代表されます。
-- ボタンを押したのに何も起きていないように見える（内部状態だけ変わっている）
-- 反応はあったが実際には反映されていない（内部状態が変わっていない）
-- 待機中なのか、失敗しているのか分からない（内部状態との対応が曖昧）
-
-この設計はユーザー体験だけでなく、開発者体験にもメリットがあります。
-Reaction が Context を更新することで、Reaction の未実装や適用漏れが Context の未更新やUI上の無反応として自然に現れ、責務の漏れを早い段階で発見できます。
+> それぞれの視点において `Context` とその派生概念が登場します。
+> 
+> `Context` は、起点となった Philosophy における第一の概念です。
+> 
+> `ContextTape` は、`Context` を計算テープとして扱うための計算モデル上の概念です。
+> 
+> `IFlowContext` は、`Context` をプログラムで扱うためのインターフェースです。
+> 
+> `ContextTape` と `IFlowContext` は同じ実体の異なる名前ではありません。
+> 
+> ただし、計算モデルの概念である `ContextTape` から得られる性質は、`IFlowContext` をはじめとするプログラムの API の責務や設計を判断する基準となります。
 
 </details>
 
-## 次のステップ (Next Step)
 
-実践的な学習としての次のステップは、次の順序がおすすめです。
-1. [Context Loop & System Flow](#context-loop-system-flow) をまだ読んでいない場合は、これを読みアーキテクチャとしての視点を学ぶ。
-2. そのまま README を読み進め、[サンプル解説](#examples) を参考にサンプルでの実装例を学ぶ。
-3. 「Hello Door」やその他のサンプルに、機能等を追加してみる。
-  - 鍵付きのドアや、オンラインストレージを使ったNotepadなど
-4. そのまま README を読み進め、[ライブラリの実装](#implementation) を参考に背景であるライブラリの実装を学ぶ。
-5. 興味があれば、[Philosophy](#philosophy) を読み、背景となっている哲学や思想に触れ、理解を深める。
+## Philosophy <a id="philosophy"></a>
+
+Interaction Flow Architecture は、現実の相互作用を観察することから生まれました。
+
+この見方では、Interaction Flow の根底にあるソフトウェアの解釈や、
+なぜ相互作用（Interaction）を第一級の概念に据えるべきなのかを知ることができます。
+
+詳しい背景については、 [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md) をご覧ください。
+
+## 計算モデル <a id="computational-model"></a>
+
+計算モデルとしての Interaction Flow Architecture は、チューリングマシンのようなものとして説明できます。
+
+この見方では、Function である Operation / Reaction / Storage / Silent External の分類の根拠や、
+プログラムにおける Context の実装を相互作用に対して十分な範囲で小さく保てることの根拠を知ることができます。
+
+詳しいモデルについては、 [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md) をご覧ください。
+
+## ライブラリの実装 <a id="implementation"></a>
+
+Interaction Flow Architecture の C# ライブラリでは、アーキテクチャ概念を型によって実装し、Analyzer によって制約を強化しています。
+
+この見方では、どのようにコードの構造とユーザー体験の構造を自然に対応させ、開発品質とサービス品質を同じ視点で設計できるようにしているのかを知ることができます。
+
+詳しい実装については、 [ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) をご覧ください。
 
 ---
 
@@ -795,52 +842,6 @@ Port や Flow の差し替え可能な設計を確認できます。
 
 ---
 
-# Philosophy <a id="philosophy"></a>
-
-<p align="center">
-    <img
-        src="./docs/icon/icon_rich.svg"
-        alt="Interaction Flow Architecture icon"
-        width="128"
-    >
-</p>
-
-Interaction Flow Architecture は、現実の相互作用を観察することから生まれました。
-
-ソフトウェアを機能の集合ではなく、相互作用の流れとして捉え、その流れをコードによって直接設計することを目指しています。
-
-その結果として、コードの構造とユーザー体験の構造が自然に対応し、開発品質とサービス品質を同じ視点で設計できます。
-
-より詳しい思想や背景については、 [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md) を参照してください。
-
----
-
-# ライブラリの実装 <a id="implementation"></a>
-
-このライブラリでは、Context / System Flow / Interaction / Function / System Flow Builder などのアーキテクチャ概念を型によって実装し、Analyzer によって制約を強化しています。
-
-![Interaction Flow Architecture dependency diagram](./docs/img/InteractionFlowArchitecture_DependencyDiagram.svg)
-
-代替テキスト: [Interaction Flow Architecture - Dependency Diagram Context](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
-
-ライブラリ内部の構造、パッケージ間の責務、Builder や Analyzer の位置づけについては、以下の資料を参考にしてください。
-- ⭐ **[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md)**
-- [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
-- [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
-- [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
-
----
-
-# 計算モデルとしての補助線 <a id="computational-model"></a>
-
-計算モデルとしての Interaction Flow Architecture は、チューリングマシンのようなものとして説明できます。
-
-この見方では、Function Port / Function External の子要素である Operation / Reaction / Storage / Silent External が、「読み取り、書き込み、外部への作用」を担うテープ操作に相当します。Interaction と Context の循環を、計算モデルとして理解しやすくするための見方です。
-
-詳しい説明は [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md) を参照してください。
-
----
-
 # ロードマップ <a id="roadmap"></a>
 
 Interaction Flow Architecture は、次の方向で発展させる予定です。
@@ -866,4 +867,4 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 
 ## 目次
 
-[パッケージとインストール](#packages) | [ビジョン](#vision) | [Context Loop & System Flow](#context-loop-system-flow) | [はじめに](#getting-started) | [サンプル解説](#examples) | [Philosophy](#philosophy) | [ライブラリの実装](#implementation) | [計算モデルとしての補助線](#computational-model) | [ロードマップ](#roadmap) | [資料まとめ](#references)
+[パッケージとインストール](#packages) | [ビジョン](#vision) | [Context Loop & System Flow](#context-loop-system-flow) | [はじめに](#getting-started) | [Interaction Flow を支える三つの視点](#three-perspectives) | [サンプル解説](#examples)  | [ロードマップ](#roadmap) | [資料まとめ](#references)

@@ -52,14 +52,19 @@ Interaction Flow Architecture は、ソフトウェアを機能の集合とし�
 
 Context は単なる状態ではありません。
 
-それは、Context Loop の一瞬を切り取ったものであり、
+それは Context Loop の一瞬を切り取ったものであり、
 ユーザーとシステムが共有している「現在」です。
 
 同じ画面でも、
 同じ入力でも、
 そこへ至る過程が違えば、Context Loop は異なります。
 
-Interaction Flow Architecture が重視しているのは、状態そのものではなく、その状態がどのような相互作用によって生まれたのかです。
+ここで異なっているのは、画面や入力の状態ではなく、ユーザーがその瞬間をどのように体験するかです。
+
+現在の Context は、相互作用によって次の Context へ進み続けることで、
+ユーザーとシステムの関係として積み重なっていきます。
+
+Interaction Flow Architecture が重視しているのは、その積み重なりかたです。
 
 Context Loop は、Interaction の流れが育む *「関係の歴史」* なのです。
 

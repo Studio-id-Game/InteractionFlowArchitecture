@@ -17,6 +17,11 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
             {
                 end = await operateDoor.ExecuteAsync(context);
 
+                if (end.HasException)
+                {
+                    break;
+                }
+
                 if (context.TryGet<DoorState>(out var door) &&
                     door.ExitRequested)
                 {

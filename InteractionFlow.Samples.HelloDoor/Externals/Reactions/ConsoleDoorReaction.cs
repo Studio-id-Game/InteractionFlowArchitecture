@@ -17,8 +17,7 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
         {
             if (!context.TryGet<DoorState>(out var door))
             {
-                Console.WriteLine("No door context.");
-                return new(GetEnd());
+                return new(GetEnd(new Exception("No door context.")));
             }
 
             Console.WriteLine(GetMessageAndUpdateState(door, command));

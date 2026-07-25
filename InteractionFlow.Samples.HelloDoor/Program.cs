@@ -8,6 +8,7 @@ using InteractionFlow.Samples.HelloDoor.Interactions;
 using InteractionFlow.Samples.HelloDoor.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Console.Builders;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor
@@ -32,7 +33,12 @@ namespace InteractionFlow.Samples.HelloDoor
             using var context = new ScopedFlowContext(new FlowContext())
                 .With(new DoorState { IsOpen = false });
 
-            await flow.ExecuteAsync(context);
+            var end = await flow.ExecuteAsync(context);
+
+            if (end.HasException)
+            {
+                Console.WriteLine(end.Exception);
+            }
         }
     }
 }

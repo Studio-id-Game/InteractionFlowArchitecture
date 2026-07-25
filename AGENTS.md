@@ -36,6 +36,15 @@
 - `ExternalPort` と `External` の境界を保つ
 - 新しい概念を追加するときは、既存の `Entities` / `Builders` / `Interactions` / `SystemFlows` のどこに属するかを先に決める
 
+## Interaction Flow の用語を確認するとき
+
+- `Context` は、`Context Loop` のある時点における、User と System が共有する「現在」を表す
+- `Context Loop` は、Interaction によって `Context` が移り変わり続ける時間的な過程であり、User と System の関係の歴史を表す
+- `IFlowContext` は、`Context` のうち System 側で扱う文脈を提供する実装上の投影であり、`Context` または `Context Loop` そのものではない
+- 一つの `IFlowContext` インスタンスを継続利用することは、`Context Loop` を実現する代表的な構成であり、両者の同一性を意味しない
+- 文書間の矛盾を判断するときは、対象が概念と実装のどちらか、状態と時間的な過程のどちらかを分けて確認する
+- 表現、包含、実現、寄与の関係を同一性として扱わず、比較する原文の主語と対象が一致していることを確認してから指摘する
+
 ## 図を参照するとき
 
 - 問題解決のために `docs/img` 配下の図を参照する場合は、まず同名の `.context.md` を読む

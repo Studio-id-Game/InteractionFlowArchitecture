@@ -2,11 +2,11 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_Overview.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.6 / 2026.07.14** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System / Application / Service`、およびその内部にある `Layers` と `Blocks` の関係を示している。
+対象図は **Interaction Flow Architecture - Overview**。バージョンは **version 3.7 / 2026.07.25** である。図の主題は、Interaction Flow Architecture の静的な全体構造であり、`User`、`Context`、`System`、およびその内部にある `Layers` と `Blocks` の関係を示している。
 
 ## 全体像
 
-このアーキテクチャでは、相互作用は `User` と `System / Application / Service` の間で継続する体験として扱われる。
+このアーキテクチャでは、相互作用は `User` と `System` の間で継続する体験として扱われる。
 
 `Context` は、現在の `SystemFlow` に関する状態、状況、文脈的情報を表す。最初に与えられた `Context` を元に `SystemFlow` が実行される過程で `Context` は更新される。更新された `Context` を再利用することで、相互作用を含む連続した体験を実現する。
 
@@ -14,7 +14,7 @@
 
 ### User
 
-`User` は `System / Application / Service` と相互作用する主体である。
+`User` は `System` と相互作用する主体である。
 
 図では、人間、ロボット、AI エージェント、その他の自動化されたエージェントや他システムも `User` に含まれることが示されている。つまり、ユーザーは必ずしも人間に限定されない。
 
@@ -24,9 +24,9 @@
 
 単なる入力値ではなく、`SystemFlow` の実行中に参照・更新され、その後の相互作用へ引き継がれる状態として描かれている。`Context` が更新され再利用されることで、連続した Interaction が成立する。
 
-### System / Application / Service
+### System
 
-`System / Application / Service` は、Interaction Flow Architecture の中心的な境界である。
+`System` は、Interaction Flow Architecture の中心的な境界である。
 
 内部には `Layers` と `Blocks` があり、`Layers` は実行責務の積み重ねを、`Blocks` はレイヤーと並列して存在する構成要素や依存領域を表す。
 

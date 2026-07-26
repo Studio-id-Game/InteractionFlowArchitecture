@@ -4,7 +4,7 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 
 ## Overview
 
-対象図は **Interaction Flow Architecture - Dependency Diagram**。バージョンは **version 3.6 / 2026.07.14** である。
+対象図は **Interaction Flow Architecture - Dependency Diagram**。バージョンは **version 3.8 / 2026.07.14** である。
 
 この図は、Interaction Flow Architecture の主要要素間の依存方向を示す依存関係図である。実行順序そのものではなく、`Program`、`SystemFlow Builder Block`、各 Layer、`Domain Block`、`External Block`、Port、外部実体の間で、どの要素がどの抽象・実装・外部資源に依存するかを表している。
 
@@ -16,6 +16,8 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 - 白抜き矢印は Port の実装を表す。
 - 各レイヤー内での横方向の依存関係は規定しない。
 - `Storage` の対象は `DB`、ファイルシステム、環境設定、個人設定などであり、永続・一時を問わない。
+- 概念上の依存図であり、実際のクラスと 1 対 1 には対応しない。
+- アーキテクチャ上重要な意味を持つ依存のみを示す。
 
 ## Main Elements
 
@@ -58,7 +60,7 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 
 各 Layer から `Domain Block` へ依存矢印があり、`SystemFlow Layer`、`Interaction Layer`、`Function Port Layer`、`Function External Layer` がドメイン定義を参照することを表す。
 
-図中には `Entity_A`、`Entity_B` と `概念 A`、`概念 B` があり、`Entity_A` から `Entity_B` への依存に `Domain で閉じた / 内部依存の例` というラベルがある。これは Domain 内部に閉じた依存関係の例である。`Entity_B` から先は `（以下略…）` として省略されている。
+図中には `Entity_A`、`Entity_B`、`Context` と、それぞれの `概念 A`、`概念 B`、`文脈的情報` がある。`Entity_A` から `Entity_B` への依存には `Domain で閉じた / 内部依存の例` というラベルがあり、Domain 内部に閉じた依存関係の例を表す。`Entity_B` から `Context` への破線は `（省略…）` とされ、依存関係がさらに続くことを表す。
 
 ### External Block
 

@@ -2,13 +2,13 @@
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_FlowDiagram.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
 
-対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.6 / 2026.07.14** である。図の主題は、`Program`、`User`、`SystemFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
+対象図は **Interaction Flow Architecture - Flow Diagram**。バージョンは **version 3.8 / 2026.07.26** である。図の主題は、`Program`、`User`、`SystemFlow`、Layer 群、外部機能、そして `Context` 更新ループがどのように連動するかである。
 
 ## 全体像
 
 この図は、`Context` のライフサイクルと `SystemFlow` の実行経路を中心にした Interaction 設計図である。
 
-`Program` は `Context` を作成または再利用し、`SystemFlow` を構築して実行し、更新された `Context` を次回以降へ引き継ぐ。`User` は Operation と Reaction を通じてシステムと相互作用する。`System / Application / Service` は Layer と Block を通じて `SystemFlow` を実行し、外部依存は External 側で扱う。
+`Program` は `Context` を作成または再利用し、`SystemFlow` を構築して実行し、更新された `Context` を次回以降へ引き継ぐ。`User` は Operation と Reaction を通じてシステムと相互作用する。`System` は Layer と Block を通じて `SystemFlow` を実行し、外部依存は External 側で扱う。
 
 この図の中心的な意味は、**相互作用を `SystemFlow` として実行し、その過程で `Context` を更新し、更新後の `Context` を次の相互作用に再利用する** ことである。
 
@@ -26,9 +26,9 @@
 
 図では、人間、ロボット、AI エージェントなどが含まれている。`User` は入力として `Operation` を行い、出力として `Reaction` を受け取り、その相互作用を通じて `Context` 更新ループを進める。
 
-### System / Application / Service
+### System
 
-`System / Application / Service` は、Layer 群と Block 群を含む中心領域である。
+`System` は、Layer 群と Block 群を含む中心領域である。
 
 ここで `SystemFlow` が実行され、ユーザーの目的、システムの目的、機能の目的が段階的に実現される。
 
@@ -74,10 +74,10 @@ Layer 群には次の要素がある。
 
 図では、矢印の色によってフローの意味が分けられている。
 
-- オレンジ: `Context` 更新ループ
-- 青: `SystemFlow` 実行
-- 赤: `User` 相互作用
-- 緑: 外部機能連携
+- オレンジ: `C1` - `C3` の `Context Loop`
+- 青: `P1` - `P6` の `SystemFlow` 実行
+- 赤: `U1` - `U2` の `User` 相互作用
+- 緑: `E1` - `E2` の外部機能連携
 
 また、通常矢印は 1 回の動作フローを表し、縞矢印は 1 回以上の動作フローを表す。
 
@@ -141,8 +141,8 @@ Function または External 側から外部依存や外部リソースへ動作�
 
 赤いフローは `User` との相互作用を表す。
 
-- `入力 (Operation)`: User からシステムへの入力
-- `出力 (Reaction)`: システムから User への出力
+- `U1. 操作 (Operation)`: User からシステムへの入力
+- `U2. 反応 (Reaction)`: システムから User への出力
 
 この相互作用は単なる入出力ではなく、`Context` 更新ループを進める要因として描かれている。
 
@@ -150,8 +150,8 @@ Function または External 側から外部依存や外部リソースへ動作�
 
 緑のフローは外部機能連携を表す。
 
-- `DB / File System` との `永続化 (Storage)`
-- `外部イベント / 外部プロパティ` との `その他状態変化 (Silent External)`
+- `DB / File System` との `E1. 永続化 (Storage)`
+- `外部イベント / 外部プロパティ` との `E2. その他状態変化 (Silent External)`
 
 これらは `External Block` 側の外部依存として扱われ、内部の Domain とは分離される。
 
@@ -164,7 +164,7 @@ Function または External 側から外部依存や外部リソースへ動作�
 - Layer 群が、ユーザーの目的、システムの目的、機能の目的を段階的に実現する
 - `Function Port Layer` が Function のインターフェースとして外部機能への依存を抽象化する
 - `Function External Layer` と `External Block` が外部依存を伴う実際の処理を担う
-- `User` の Operation と Reaction が相互作用を進める
+- `User` の `U1. 操作 (Operation)` と `U2. 反応 (Reaction)` が相互作用を進める
 - `Context` が更新され、次の相互作用へ再利用される
 
 要約すると、この図は **`SystemFlow` の実行を通じて `Context` を更新し続ける Interaction の実行モデル** を表している。

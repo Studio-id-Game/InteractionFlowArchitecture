@@ -474,6 +474,8 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
 
 `DoorCommand` に応じた `DoorState` の更新と、
 Console 標準出力による User への結果表示を担当します。
+`DoorState` を取得できない場合は成功として続行せず、例外を含む `ReactionEnd` を返します。
+これにより、呼び出し側は状態を更新できない異常を終了結果として扱えます。
 
 <details>
 <summary><code>Externals/Reactions/ConsoleDoorReaction.cs</code> のコードを表示</summary>
@@ -498,8 +500,7 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
         {
             if (!context.TryGet<DoorState>(out var door))
             {
-                Console.WriteLine("No door context.");
-                return new(GetEnd());
+                return new(GetEnd(new Exception("No door context.")));
             }
 
             Console.WriteLine(GetMessageAndUpdateState(door, command));
@@ -577,6 +578,7 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
 #### Step 8. ユーザー体験を実装します。
 
 `OperateDoor` を繰り返し、Context に終了要求が出るまで Context Loop を継続します。
+各実行が例外を含む `FlowEndToken` を返した場合も継続せず、その終了結果を `Program` へ返します。
 
 <details>
 <summary><code>SystemFlows/DoorSystemFlow.cs</code> のコードを表示</summary>
@@ -601,6 +603,11 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
             {
                 end = await operateDoor.ExecuteAsync(context);
 
+                if (end.HasException)
+                {
+                    break;
+                }
+
                 if (context.TryGet<DoorState>(out var door) &&
                     door.ExitRequested)
                 {
@@ -618,7 +625,7 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
 
 #### Step 9. エントリーポイントで、実行環境の組み立てと実行を実装します。
 
-`ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。
+`ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。実行後は `FlowEndToken` を確認し、未解決例外が含まれる場合にエントリーポイントで表示します。
 
 <details>
 <summary><code>Program.cs</code> のコードを表示</summary>
@@ -634,6 +641,7 @@ using InteractionFlow.Samples.HelloDoor.Interactions;
 using InteractionFlow.Samples.HelloDoor.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.Console.Builders;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor
@@ -658,7 +666,12 @@ namespace InteractionFlow.Samples.HelloDoor
             using var context = new ScopedFlowContext(new FlowContext())
                 .With(new DoorState { IsOpen = false });
 
-            await flow.ExecuteAsync(context);
+            var end = await flow.ExecuteAsync(context);
+
+            if (end.HasException)
+            {
+                Console.WriteLine(end.Exception);
+            }
         }
     }
 }
@@ -680,6 +693,8 @@ The door is already closed.
 Door command (Open/Close, Enter to exit):
 Goodbye.
 ```
+
+`DoorState` がない Context で実行された場合は、`ConsoleDoorReaction` が例外を含む終了結果を返します。`DoorSystemFlow` はそれ以上の操作を行わず、`Program` が最終例外を表示します。
 
 #### 責務と関心
 

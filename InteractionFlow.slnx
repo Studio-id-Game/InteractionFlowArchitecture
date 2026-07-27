@@ -8,6 +8,7 @@
     <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
   </Folder>
   <Folder Name="/Samples/">
+    <Project Path="InteractionFlow.Samples.HelloDoor.Lock/InteractionFlow.Samples.HelloDoor.Lock.csproj" Id="2bfce6d8-8377-4f8e-921e-4017adee5701" />
     <Project Path="InteractionFlow.Samples.HelloDoor/InteractionFlow.Samples.HelloDoor.csproj" />
     <Project Path="InteractionFlow.Samples.Parrot/InteractionFlow.Samples.Parrot.csproj" />
   </Folder>

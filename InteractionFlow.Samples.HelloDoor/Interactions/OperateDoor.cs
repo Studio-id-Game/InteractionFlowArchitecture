@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.Interactions
 {
-    internal sealed class OperateDoor(
+    public sealed class OperateDoor(
         IDoorOperation operation,
         IDoorReaction reaction,
         IExceptionPort<Exception> exceptionPort,

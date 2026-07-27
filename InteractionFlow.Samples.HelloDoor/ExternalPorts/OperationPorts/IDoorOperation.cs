@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts
 {
-    internal interface IDoorOperation : IOperationPort
+    public interface IDoorOperation : IOperationPort
     {
         ValueTask<DoorCommand> ReadCommandAsync(IFlowContext context);
     }

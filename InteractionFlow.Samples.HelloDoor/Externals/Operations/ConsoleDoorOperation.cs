@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
 {
-    internal sealed class ConsoleDoorOperation : Operation, IDoorOperation
+    public sealed class ConsoleDoorOperation : Operation, IDoorOperation
     {
         public override void ForceResetMemoryState()
         {

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.SystemFlows
 {
-    internal sealed class DoorSystemFlow(OperateDoor operateDoor)
+    public sealed class DoorSystemFlow(OperateDoor operateDoor)
         : SystemFlow<IFlowContext>(operateDoor)
     {
         protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)

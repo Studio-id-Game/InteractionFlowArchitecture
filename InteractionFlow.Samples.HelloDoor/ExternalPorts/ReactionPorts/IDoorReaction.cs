@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts
 {
-    internal interface IDoorReaction : IReactionPort
+    public interface IDoorReaction : IReactionPort
     {
         ValueTask<ReactionEnd> ReactAsync(IFlowContext context, DoorCommand command);
     }

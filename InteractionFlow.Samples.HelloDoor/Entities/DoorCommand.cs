@@ -1,6 +1,6 @@
 namespace InteractionFlow.Samples.HelloDoor.Entities
 {
-    internal enum DoorCommand
+    public enum DoorCommand
     {
         Open,
         Close,

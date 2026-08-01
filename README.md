@@ -91,7 +91,7 @@ interactionflow_enabled = True
   [*.cs]
   interactionflow_enabled = True
   ```
-  
+
 **より強力なアーキテクチャ支援を受けるために導入を推奨します。**<br>
 （ビルドに含まれないように、プロジェクトファイルから `PrivateAssets="all"` を付ける事を推奨）
 
@@ -719,14 +719,13 @@ Goodbye.
 
 <details>
 
-<summary>💡 Tips: なぜ Reaction が Context を更新するのか？</summary>
+<summary>💡 Tips: なぜ ConsoleDoorReaction が Context を更新するのか？</summary>
 
 > このサンプルでは、Context を更新しているのは OperateDoor (Interaction) ではなく ConsoleDoorReaction (Reaction) です。
 > Interaction Flow Architecture では、「Reaction は、Context の更新をユーザーから観察可能な形で実行するもの」と考えます。
 > この設計により、すべての Context 更新がユーザーから観察可能な反応と対応し、「状態だけ変わる」「表示だけ変わる」といったユーザー体験の不整合を防ぎやすくなります。
 > また、Reaction の実装漏れも動作エラーや UI の無反応として現れるため、責務の漏れを発見しやすくなります。
-> 現在のライブラリでは、この原則はまだ理想的な推奨事項です。
-> 十分な実装経験により実用上の問題が起きない確証が得られた段階で、型や Analyzer による制約として導入することを検討しています。
+> 詳細は、[`ライブラリの実装 - Context 更新の原則](./docs/LIBRARY_IMPLEMENTATION.md#context-update-principle) をご覧ください。
 
 </details>
 
@@ -766,15 +765,15 @@ Interaction Flow とその実装ライブラリについて、三つの異なる
 <summary>💡 Tips: Context とその派生概念 </summary>
 
 > それぞれの視点において `Context` とその派生概念が登場します。
-> 
+>
 > `Context` は、起点となった Philosophy における第一の概念です。
-> 
+>
 > `ContextTape` は、`Context` を計算テープとして扱うための計算モデル上の概念です。
-> 
+>
 > `IFlowContext` は、`Context` をプログラムで扱うためのインターフェースです。
-> 
+>
 > `ContextTape` と `IFlowContext` は同じ実体の異なる名前ではありません。
-> 
+>
 > ただし、計算モデルの概念である `ContextTape` から得られる性質は、`IFlowContext` をはじめとするプログラムの API の責務や設計を判断する基準となります。
 
 </details>

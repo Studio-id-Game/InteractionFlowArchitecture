@@ -10,7 +10,7 @@ using System.Linq;
 namespace InteractionFlow.Samples.Notepad.Core.Externals.Storages.Persistences
 {
     public sealed class NotepadDataFilePersistence(INotepadDataSerializerPort serializer)
-        : FilePersistence<NotepadDataKey, NotepadData>((InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts.ISerializerPort<Stream, NotepadData>)serializer), INotepadDataPersistencePort
+        : FilePersistence<NotepadDataKey, NotepadData>(serializer), INotepadDataPersistencePort
     {
         public override string RootPath => Path.Combine(base.RootPath, "NotepadData");
 

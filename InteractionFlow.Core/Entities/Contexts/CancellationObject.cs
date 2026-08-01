@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,7 +102,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             lock (lockObject)
             {
                 if (tokenSource == null || !tokenSource.IsCancellationRequested)
-                    return new(Result.Success);
+                    return new(new InvalidOperationException("Cancellation is not requested."));
 
                 source = tokenSource;
                 tasks = [.. currentTasks];

@@ -21,6 +21,17 @@ namespace InteractionFlow.Core.Entities
         }
 
         /// <summary>
+        /// 値を <see cref="Result{TValue}"/> の非同期の成功結果へ変換します。
+        /// </summary>
+        /// <typeparam name="T">成功結果が保持する値の型。</typeparam>
+        /// <param name="value">成功結果として保持する値。</param>
+        /// <returns>値を保持した成功結果。</returns>
+        public static Task<Result<T>> AsResultAsync<T>(this T value)
+        {
+            return value.AsResult().StartAsync();
+        }
+
+        /// <summary>
         /// 成功・失敗をそれぞれのハンドラで処理し、単一の値に変換します。
         /// </summary>
         /// <typeparam name="T">成功結果が保持する値の型。</typeparam>

@@ -6,14 +6,25 @@
 
 ## まず見るもの
 
-- `README.md`
-- `.editorconfig`
-- `Directory.Build.props`
-- `global.json`
-- `docs/RoleOfMainProjects.md`
-- `docs/SystemFlowBuilder.md`
-- `docs/processes/README.md`
-- 変更対象に近い `*.csproj` と該当ソース
+- 作業の前提
+  - `docs/processes/README.md`
+  - `.editorconfig`
+  - `Directory.Build.props`
+  - `global.json`
+
+- リポジトリの基本情報
+  - `README.md`
+  - `docs/RoleOfMainProjects.md`
+
+- 設計思想に関連するタスクの場合
+  - `docs/PHILOSOPHY.md`
+
+- SystemFlowBuilder に関連するタスクの場合
+  - `docs/SYSTEM_FLOW_BUILDER.md`
+
+- 実装に関連するタスクの場合
+  - `docs/LIBRARY_IMPLEMENTATION.md`
+  - 変更対象に近い `*.csproj` と該当ソース
 
 ## このリポジトリの基本方針
 
@@ -68,27 +79,3 @@
 - まずは `Core` に抽象を追加できるかを考える
 - 実装の差し替えが必要なら `ExternalPort` を追加する
 - サンプル都合の変更なら `Samples` 側に閉じ込める
-
-## 繰り返し同じ問題が発生する時
-
-- リポジトリ固有の問題が再発し、その原因と有効な解決手順を確認できた場合は、`## トラブルシュート` への追記を検討する
-- 一度だけ発生した問題、原因を特定できていない問題、一般的な開発知識で解決できる問題は追記しない
-- 追記する前に、既存の項目と重複していないか確認する
-- トラブルシュートには、症状・確認できた原因・解決手順・確認コマンドを簡潔に残す
-- 推測を含む場合は、確定事項として記述せず、未確認であることを明記する
-- 一時的な回避策の場合は、その旨と恒久対応が必要かどうかを書く
-- 環境依存の問題は、OS・SDK・権限・パスなど、確認できた再発条件を書く
-- AGENTS.md の変更は、本来のタスクと関係のある最小限の差分に留める
-- 解決しない場合や、原因に確信を持てない場合はユーザーに報告する
-
-
-## トラブルシュート
-
-### タイトル
-
-- 症状:
-- 発生条件:
-- 原因:
-- 対応:
-- 確認:
-- 備考:

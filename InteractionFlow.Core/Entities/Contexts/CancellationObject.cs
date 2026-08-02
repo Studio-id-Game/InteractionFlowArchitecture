@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -193,7 +194,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         /// <param name="canceledException">キャンセル要求がある場合に作成された例外。</param>
         /// <returns>キャンセル要求がある場合は <see langword="true"/>。</returns>
-        public bool TryGetCanceledException(out OperationCanceledException? canceledException)
+        public bool TryGetCanceledException([MaybeNullWhen(false)] out OperationCanceledException canceledException)
         {
             lock (lockObject)
             {

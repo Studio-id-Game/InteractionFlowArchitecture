@@ -126,7 +126,7 @@ public static async Task RunSystem(IFlowContext context)
 
 </details>
 
-### 実行時の依存ノードツリー
+### 実行時の依存ノードツリー <a id="runtime-dependency-tree"> </a>
 
 SystemFlow、Interaction、Function Port 実装は `IDependencyNode` として、実行時に解決された具体的な依存インスタンスを `Dependency` に保持します。
 `SystemFlowHandler.Root` は、生成済み SystemFlow の実行時インスタンスを公開します。
@@ -152,9 +152,37 @@ DoorSystemFlow
 >     - InteractionFlow.Samples.HelloDoor.Externals.Operations.ConsoleDoorOperation
 >     - InteractionFlow.Samples.HelloDoor.Externals.Reactions.ConsoleDoorReaction
 
+#### 依存ノードツリーの目的
+
+このツリーは単なる表示機能ではなく、以下のような要素をつなぐ、信頼可能な「実行構成の証跡」として機能します。
+
+- リファクタリング
+- レビュー
+- テスト
+- 環境差分の確認
+- 障害解析
+
+具体的には、以下のような恩恵が得られます。
+
+- DI の設定ミスにより、意図しない永続化実装や外部接続先が選択されていないか確認できる
+- 起動時や障害発生時のログに、実際に解決された実行構成を記録できる
+- テストで、本番用の外部 API やファイル操作ではなく、想定したスタブが使われているか確認できる
+- コードレビューで、変更前後の実行構成を比較し、意図しない依存の追加を確認できる
+- 単純な処理が多数の外部実装を引き込むなど、責務の肥大化や過剰な依存を発見できる
+- 障害発生時に、Operation、Storage、Reaction など、調査対象となる実体と責任範囲を絞り込める
+- 設計文書で想定した依存構造と、実際に組み立てられた構造の差を確認できる
+- 利用者独自の Interaction や Function 実装を含む構成でも、共通の形式で診断情報を取得できる
+
 #### Analyzer による保証
 
-Analyzer は、すべての `IDependencyNode` から `IDependencyNode` へのコンストラクター依存をこのツリーに含むための制約を持ちます。
+上記の目的を達成するためには、ツリーの内容が信頼できることが前提となります。
+
+よって、このライブラリでは、Analyzer を用いてツリーの内容を保証します。
+これにより、上記の目的を支援するとともに、以下のような副次的な恩恵が得られます。
+
+- リファクタリングで追加した依存を `Dependency` へ含め忘れた場合、Analyzer で検出できる
+- 派生クラスが追加した依存を基底クラスへ渡し忘れた場合、Analyzer で検出できる
+
 詳細は、[保証と制約と責務](./LIBRARY_IMPLEMENTATION.md#guarantees) を参照してください。
 
 ## 値と処理結果の意味論 (Result, ReactionEnd, FlowEndToken, Entry) <a id="entry-result"></a>

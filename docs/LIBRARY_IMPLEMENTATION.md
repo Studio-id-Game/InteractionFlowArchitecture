@@ -101,7 +101,7 @@ README で定義している概念と、主に対応するライブラリ要素�
 </details>
 
 
-## 依存関係の全体像
+## 依存関係の全体像 <a id="overview-dependencies"></a>
 
 ![Interaction Flow Architecture dependency diagram](./img/InteractionFlowArchitecture_DependencyDiagram.svg)
 
@@ -124,6 +124,12 @@ Domain、外部環境、および Builder の「概念上の依存構造」を�
 クリーンアーキテクチャとの違いの一つとして、`Domain` を中心、`External (Frameworks & Drivers 相当)` を外周とする同心円状の配置ではなく、両者を `Layers` とは独立した `Block` として扱う点が挙げられます。これにより、主要な依存経路と静的解析規則を単純に表現できます。
 
 また、`System Flow Builder Block` が依存解決とライフタイムを管理するため、Program は個々の依存オブジェクトの生成手順に依存せず、実行環境の選択・構築と SystemFlow の実行に集中できます。
+
+### Analyzer による保証
+
+Analyzer は、このレイヤー間依存関係を維持するための制約を持ちます。
+詳細は、[保証と制約と責務](./LIBRARY_IMPLEMENTATION.md#guarantees) を参照してください。
+
 
 # Context Loop の実行経路 <a id="execution-path"></a>
 
@@ -209,6 +215,44 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
 Interaction Flow Architecture の意味すべてを、C# の型だけで保証することはできません。
 型・基底実装・Analyzer が支援する範囲と、設計・実装・レビューに委ねる範囲を区別します。
 
+> Analyzer は `interactionflow_enabled = True` の場合に有効になります。
+> このリポジトリでは `.editorconfig` により有効化し、診断モードを `Error` に設定しています。
+
+## レイヤー / ブロック間依存の原則
+
+[依存関係の全体像](#overview-dependencies) で触れているように、このアーキテクチャでは、レイヤー / ブロック間の依存関係を制約することで、
+「依存関係逆転の原則」を守ることと、体験ベースの設計の質を維持することを理想とします。
+
+この依存関係の制約は、Analyzer による名前空間ベースの依存先検査によって支援されます。
+
+| 例外ID | 目的 | 既定の重大度 |
+| --- | --- | --- |
+| `InteractionFlowArchitecture001` | Interaction Flow のレイヤー間依存を検査する | Warning |
+
+具体的な依存先のルールは以下の通りです。
+
+| アーキテクチャ概念 | 依存元の名前空間 | Analyzer が許可する依存先 |
+| --- | --- | --- |
+| System Flow Builder | `Builders` | `Entities`、`ExternalPorts`、`Externals`、`Interactions`、`SystemFlows`、任意の外部 namespace |
+| Entity | `Entities` | `Entities`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
+| Function Port | `ExternalPorts` | `Entities`、`ExternalPorts`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
+| Function External | `Externals` | `Entities`、`ExternalPorts`、`Externals`、任意の外部 namespace |
+| Interaction | `Interactions` | `Entities`、`ExternalPorts`、`Interactions`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
+| SystemFlow | `SystemFlows` | `Entities`、`Interactions`、`SystemFlows`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
+| --- | いずれにも該当しない名前空間 | 全ての名前空間 |
+
+ここでの「名前空間」は、`*.Externals` や `*.Externals.*` のように、先頭から調べて最初に名前空間のキーワードと一致する境界を基準とします。
+異なるルート間であっても、ルールには影響しません。以下に代表的な具体例を示します。
+
+| 参照先 | `MyProject.Externals.*` からの参照 | `OtherProject.Externals.*` からの参照 |
+| --- | --- | --- |
+| `MyProject.ExternalPorts.*` | 許可される | 許可される |
+| `OtherProject.ExternalPorts.*` | 許可される | 許可される |
+| `MyProject.Interactions.*` | 許可されない | 許可されない |
+| `OtherProject.Interactions.*` | 許可されない | 許可されない |
+
+ただし、Analyzer による検査は、名前空間のみを判断基準とするものであり、`IFlowNode.Layer` 等のメタデータや `IOperationPort` 等の各種ポートの継承などは検査しません。
+
 ## Context 更新の原則 <a id="context-update-principle"></a>
 
 相互作用としての影響の適用（つまり、次の相互作用に影響する `IFlowContext` の更新）は、`Reaction` または `Operation` 内で実施し、User が観測できる反応と対応させることを理想とします。
@@ -229,78 +273,72 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 実際の `IFlowContext` の更新設計が妥当であるかの判断は、上記の表を原則として、最終的にはライブラリ利用者の責務です。
 この原則は、将来の運用実績から妥当だと判断できた時点で、ライブラリの制約として実装される可能性があります。
 
+## 実行時の依存ノードツリーの保証
+
+[ライブラリ実装の詳細 - 実行時の依存ノードツリー](./LIBRARY_IMPLEMENTATION_DETAIL.md#runtime-dependency-tree) で触れているように、
+このライブラリでは `IDependencyNode` の依存ノードツリー構築に不備がないかを Analyzer が検査します。
+
+| 例外ID | 目的 | 既定の重大度 |
+| --- | --- | --- |
+| `InteractionFlowArchitecture002` | `IDependencyNode` 実装クラスの依存ノード宣言を検査する | Warning |
+
+この支援により、以下のような制約が検査されます。
+
+- `IDependencyNode` 系の依存をコンストラクタで受け取る場合、その依存が `Dependency` プロパティで列挙されること
+- 継承可能なノードでは、派生クラスが依存を追加できるように `params IDependencyNode[] dependency` 引数を受け取ること
+
+この制約は以下のような恩恵を実現します。
+
+- DI の設定ミスにより、意図しない永続化実装や外部接続先が選択されていないか確認できる
+- 起動時や障害発生時のログに、実際に解決された実行構成を記録できる
+- テストで、本番用の外部 API やファイル操作ではなく、想定したスタブが使われているか確認できる
+- コードレビューで、変更前後の実行構成を比較し、意図しない依存の追加を確認できる
+- 単純な処理が多数の外部実装を引き込むなど、責務の肥大化や過剰な依存を発見できる
+- 障害発生時に、Operation、Storage、Reaction など、調査対象となる実体と責任範囲を絞り込める
+- 設計文書で想定した依存構造と、実際に組み立てられた構造の差を確認できる
+- 利用者独自の Interaction や Function 実装を含む構成でも、共通の形式で診断情報を取得できる
+- リファクタリングで追加した依存を `Dependency` へ含め忘れた場合、Analyzer で検出できる
+- 派生クラスが追加した依存を基底クラスへ渡し忘れた場合、Analyzer で検出できる
+
+ただし、Analyzer による検査は、コンストラクタ引数をベースにしたものであり、複雑な初期化や途中での依存追加などは想定されていません。
+
 ## その他の保証と制約と責務
 
-| 内容 | 現在の実装 |
+ここまでの内容、およびその他の保証と制約をまとめると以下の通りです。
+
+| 制約 | ライブラリによる保証 |
 | --- | --- |
-| SystemFlow が受け取る `IFlowContext` 実装型 | ジェネリック型制約と API が規定する |
-| Interaction の正常完了時の戻り値 | `IInteraction` のメソッドシグネチャが `FlowEndToken` を規定する |
-| 例外とキャンセルの Port への委譲 | `Interaction` 基底実装が提供する |
-| `ReactionEnd` の生成経路 | `internal` コンストラクタと Reaction Port の `GetEnd` が制限する |
+| **レイヤー / ブロック間依存の原則** | Analyzer が、namespace 内のキーワードを基準として保証する |
+| **Context 更新の原則** | ライブラリでは保証しない |
+| **実行時の依存ノードツリーの保証** | Analyzer が、コンストラクタ引数を基準として保証する |
+| SystemFlow が受け取る `IFlowContext` 実装型 | `ISystemFlowBuilder<TContext>` や `SystemFlowHandler<TContext>` が、ジェネリック型制約と API によって保証する |
+| `ReactionEnd`/`FlowEndToken` が `反応`/`相互作用` の結果を意味する | 各 `internal` コンストラクタと実行元の `protected` 関数が、生成元のみを保証する |
+| `Interaction` 派生クラスにおける例外とキャンセルの自動キャッチと Port への委譲 | `Interaction` 基底クラスが、基底実装によって保証する |
 | Reaction が User に観測されること | 原理上保証できない |
-| Context 更新が Reaction 内だけで行われること | 現在は保証しない |
-| namespace の依存方向 | Analyzer が有効な場合に検査する |
-| 意味的なレイヤー境界すべて | 現在の Analyzer では保証しない |
 
-> [!要修正] [中]
-> 以下に残る `[意味論]` / `[優先度]` のブロックは、移行中のレビュー課題を示す注記です。
-> 完成版では、未反映の内容を本文へ統合し、既に本文へ反映済みの注記は削除してください。現状では一部の注記が直前の本文と矛盾しています。
+この表において、保証されない（または保証の前提を満たさない）制約は、ライブラリ利用者がコーディングやレビューによって保証する（あるいは部分的に許容する）必要があります。
 
-> [意味論] [優先度：中] `LIBRARY_IMPLEMENTATION_OLD.md` 591–592行
-> 型と Analyzer が保証しないという事実は本文にあるが、型による制約の目的が本文にない。
-> 型による制約は設計判断を不要にするためではなく、README と Philosophy が示す User と System の関係をコード上でも追えるようにする支援である。
 
-`InteractionFlow.Analyzers` は、namespace のレイヤー名から依存方向を検査する
-`InteractionFlowArchitecture001` と、実行時依存グラフからの依存引数の欠落を検査する
-`InteractionFlowArchitecture002` を提供します。Context 更新と Reaction の意味的対応、
-複雑な依存グラフ全体は検査対象外です。
+## 設計課題
 
-> [意味論] [優先度：中] `LIBRARY_IMPLEMENTATION_OLD.md` 605–608行
-> Analyzer の診断内容は本文にあるが、コード編集時にアーキテクチャ境界を確認するための支援であるという導入目的が本文にない。
-> `InteractionFlow.Analyzers` は、アーキテクチャの境界をコード編集中に確認するための Roslyn Analyzer である。
+現在認知している、ライブラリの設計上の課題は以下の通りです。
 
-> [優先度：低] `LIBRARY_IMPLEMENTATION_OLD.md` 605–619行
-> 対象レイヤー名を含まない namespace が検査対象外であること、および Analyzer の README への導線が移行で抜け落ちる。
+- Context 更新経路の制約の検討
+- Entry／Context／Storage の所有権の検討
+- `ReactionEnd` と `Result` の内部表現の統一の検討
+- Function の実行時レイヤー情報の齟齬の解消
+- SystemFlow 内での例外への対応の検討
+- 並行実行への対応
+- 依存グラフの循環検査
 
-| プロジェクト | 役割 |
-| --- | --- |
-| `InteractionFlow.Core` | Context、SystemFlow、Interaction、Port などの概念と基本契約 |
-| `InteractionFlow.Standard` | DI、Console、FileSystem、Serializer などの標準実装 |
-| `InteractionFlow.Samples.*` | Core と Standard を具体的な Context Loop として組み立て、API を検証 |
+これらは、開発を約束するロードマップではなく、利用例を通じて判断する必要がある課題です。
 
-現在の主な検討事項は、Context 更新経路の制約、Entry／Context／Storage の所有権、
-`ReactionEnd` と `Result` の内部表現、Function の実行時レイヤー情報、SystemFlow の終了結果、
-同一スコープの並行実行、依存グラフの循環検査、Analyzer の対象範囲です。
-これらは互換性を約束するロードマップではなく、利用例を通じて判断する設計上の課題です。
-
-<details>
-<summary>💡 Tips: Analyzer の有効化と例外経路</summary>
-
-> Analyzer は `interactionflow_enabled = True` の場合に有効になります。
-> このリポジトリでは `.editorconfig` により有効化し、診断モードを `Error` に設定しています。
->
-> ```editorconfig
-> [*.cs]
-> # Interaction Flow Analyzer
-> interactionflow_enabled = True
-> interactionflow_mode = Error
-> ```
-> Exception Port が例外を再送出する設定の場合、または例外・キャンセル処理そのものが例外を送出した場合、
-> `Interaction.ExecuteAsync` は `FlowEndToken` を返さず、例外が呼び出し側へ伝播します。
->
-> 現在の改善候補には、同一スコープの並行実行時の状態分離・同期、依存グラフの循環検査と再合流表示、
-> 非同期破棄を含む所有権モデル、namespace 外も含む意味的レイヤー判定があります。
-
-</details>
-
-# 目次
+---
 
 [全体像](#overview) |
 [Context Loop の実行経路](#execution-path) |
 [実装の詳細](#implementation-details) |
 [保証と制約と責務](#guarantees)
-
-[Interaction Flow Architecture](../README.md)
 
 ---
 

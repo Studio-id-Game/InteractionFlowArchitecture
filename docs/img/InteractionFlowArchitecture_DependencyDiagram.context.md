@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Interaction Flow Architecture - Dependency Diagram Context
 
 This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_DependencyDiagram.drawio` so the diagram can be used as text context.
@@ -116,3 +125,12 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 この context は draw.io XML の明示 edge、ラベル、親子関係、配置から作成している。Port は矢印形状の swimlane/vertex として描かれており、方向は明示 edge と配置から解釈している。
 
 `Function External Layer` の実装から Port への白抜き矢印は、図の凡例と edge style から Port 実装関係として解釈している。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Interaction Flow Architecture　<a id="top"></a>
 
 <p align="center">
@@ -902,3 +911,12 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 ## 目次
 
 [パッケージとインストール](#packages) | [ビジョン](#vision) | [Context Loop & System Flow](#context-loop-system-flow) | [はじめに](#getting-started) | [Interaction Flow を支える三つの視点](#three-perspectives) | [サンプル解説](#examples)  | [ロードマップ](#roadmap) | [資料まとめ](#references)
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |

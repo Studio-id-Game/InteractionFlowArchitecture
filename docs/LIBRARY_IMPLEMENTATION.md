@@ -1,8 +1,13 @@
-[Interaction Flow Architecture](../README.md)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
 
 # ライブラリの実装
-
-## このページの目的 <a id="purpose"></a>
 
 README では、Interaction Flow Architecture を次のような Context Loop として説明しています。
 
@@ -28,11 +33,8 @@ Context → Interaction → next Context → next Interaction → ...
 
 - [全体像](#overview)
 - [Context Loop の実行経路](#execution-path)
-- [SystemFlow・Interaction・実行環境](#runtime-components)
-- [`IFlowContext` インスタンスと終了結果](#context-and-results)
-- [データ保持と永続化](#data-and-persistence)
-- [設計上の保証とプロジェクト境界](#architecture-boundaries)
-- [現在の制約と改善候補](#future-improvements)
+- [実装の詳細](#implementation-details)
+- [保証と制約と責務](#guarantees)
 
 # 全体像 <a id="overview"></a>
 
@@ -191,11 +193,120 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
 ステップ形式の実装手順とコード全体は、
 [Interaction Flow Architecture - Hello Door 🚪](../README.md#hello-door-) を参照してください。
 
-Reaction による `Context` の更新は設計原則であり、ライブラリが必ず要求・保証するものではありません。
-ライブラリによる保証範囲については [ライブラリが保証することと設計原則](#guarantees-and-principles) を参照してください。
+# 実装の詳細 <a id="implementation-details"></a>
+
+各部の実装の詳細とアーキテクチャとの結び付きは、以下のドキュメントを参照してください。
+
+- [ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md#implementation-details)
+  - [システムの組み立て (System Flow Builder)](./LIBRARY_IMPLEMENTATION_DETAIL.md#system-flow-builder)
+  - [値と処理結果の意味論 (Result, ReactionEnd, FlowEndToken, Entry)](./LIBRARY_IMPLEMENTATION_DETAIL.md#entry-result)
+  - [文脈の構成 (Context)](./LIBRARY_IMPLEMENTATION_DETAIL.md#context)
+  - [機能の分離 (Functions)](./LIBRARY_IMPLEMENTATION_DETAIL.md#functions)
+  - [体験と相互作用のフロー (Interaction, SystemFlow)](./LIBRARY_IMPLEMENTATION_DETAIL.md#interaction-systemflow)
+
+# 保証と制約と責務 <a id="guarantees"></a>
+
+Interaction Flow Architecture の意味すべてを、C# の型だけで保証することはできません。
+型・基底実装・Analyzer が支援する範囲と、設計・実装・レビューに委ねる範囲を区別します。
+
+## Context 更新の原則 <a id="context-update-principle"></a>
+
+相互作用としての影響の適用（つまり、次の相互作用に影響する `IFlowContext` の更新）は、`Reaction` または `Operation` 内で実施し、User が観測できる反応と対応させることを理想とします。
+この理想的な制約は、このアーキテクチャの一番の目的である「ユーザー体験の質」とその設計のクリーンさを向上させます。
+
+具体的な更新パターンの設計と、その理想性の対応は以下の表の通りです。
+
+| 設計 | 設計の理想性 | 理由 |
+| --- | --- | --- |
+| Reaction が IFlowContext を更新し、結果を User に伝える | 理想的 | User と System が共有するべき認識を能動的に一致させるため |
+| Reaction が IFlowContext を更新せずに、反応だけを User に伝える | 理想的 | User と System が共有するべき認識が変わらないため |
+| Operation が操作を受け取って、IFlowContext を更新する | ほとんどの場合理想的 | User が操作を自覚しているなら、System 側の認識だけ更新すれば、共有するべき認識が一致するため |
+| Operation が IFlowContext を更新せずに、受け取った操作を戻り値で返す | ほとんどの場合理想的 | 戻り値は、System 側が認識可能な、概念上の Context であると考えられるため |
+| それ以外の Function、および Interaction 等の Function 以外の要素が IFlowContext を更新する | 可能であれば避けるべき | User の操作も System 側のからの通知も介さずに System 側の認識を更新すれば、共有するべき認識が乖離するため |
+
+現在の所、これらの設計の理想性は、あくまでもアーキテクチャモデルを有効に活用するための原則であり、ライブラリが保証・制約するものではありません。
+これは、単なる妥協としてではなく、実装上やむをえない場合などを想定した自由度のためのプレイスホルダーです。
+実際の `IFlowContext` の更新設計が妥当であるかの判断は、上記の表を原則として、最終的にはライブラリ利用者の責務です。
+この原則は、将来の運用実績から妥当だと判断できた時点で、ライブラリの制約として実装される可能性があります。
+
+## その他の保証と制約と責務
+
+| 内容 | 現在の実装 |
+| --- | --- |
+| SystemFlow が受け取る `IFlowContext` 実装型 | ジェネリック型制約と API が規定する |
+| Interaction の正常完了時の戻り値 | `IInteraction` のメソッドシグネチャが `FlowEndToken` を規定する |
+| 例外とキャンセルの Port への委譲 | `Interaction` 基底実装が提供する |
+| `ReactionEnd` の生成経路 | `internal` コンストラクタと Reaction Port の `GetEnd` が制限する |
+| Reaction が User に観測されること | 原理上保証できない |
+| Context 更新が Reaction 内だけで行われること | 現在は保証しない |
+| namespace の依存方向 | Analyzer が有効な場合に検査する |
+| 意味的なレイヤー境界すべて | 現在の Analyzer では保証しない |
+
+> [!要修正] [中]
+> 以下に残る `[意味論]` / `[優先度]` のブロックは、移行中のレビュー課題を示す注記です。
+> 完成版では、未反映の内容を本文へ統合し、既に本文へ反映済みの注記は削除してください。現状では一部の注記が直前の本文と矛盾しています。
+
+> [意味論] [優先度：中] `LIBRARY_IMPLEMENTATION_OLD.md` 591–592行
+> 型と Analyzer が保証しないという事実は本文にあるが、型による制約の目的が本文にない。
+> 型による制約は設計判断を不要にするためではなく、README と Philosophy が示す User と System の関係をコード上でも追えるようにする支援である。
+
+`InteractionFlow.Analyzers` は、namespace のレイヤー名から依存方向を検査する
+`InteractionFlowArchitecture001` と、実行時依存グラフからの依存引数の欠落を検査する
+`InteractionFlowArchitecture002` を提供します。Context 更新と Reaction の意味的対応、
+複雑な依存グラフ全体は検査対象外です。
+
+> [意味論] [優先度：中] `LIBRARY_IMPLEMENTATION_OLD.md` 605–608行
+> Analyzer の診断内容は本文にあるが、コード編集時にアーキテクチャ境界を確認するための支援であるという導入目的が本文にない。
+> `InteractionFlow.Analyzers` は、アーキテクチャの境界をコード編集中に確認するための Roslyn Analyzer である。
+
+> [優先度：低] `LIBRARY_IMPLEMENTATION_OLD.md` 605–619行
+> 対象レイヤー名を含まない namespace が検査対象外であること、および Analyzer の README への導線が移行で抜け落ちる。
+
+| プロジェクト | 役割 |
+| --- | --- |
+| `InteractionFlow.Core` | Context、SystemFlow、Interaction、Port などの概念と基本契約 |
+| `InteractionFlow.Standard` | DI、Console、FileSystem、Serializer などの標準実装 |
+| `InteractionFlow.Samples.*` | Core と Standard を具体的な Context Loop として組み立て、API を検証 |
+
+現在の主な検討事項は、Context 更新経路の制約、Entry／Context／Storage の所有権、
+`ReactionEnd` と `Result` の内部表現、Function の実行時レイヤー情報、SystemFlow の終了結果、
+同一スコープの並行実行、依存グラフの循環検査、Analyzer の対象範囲です。
+これらは互換性を約束するロードマップではなく、利用例を通じて判断する設計上の課題です。
+
+<details>
+<summary>💡 Tips: Analyzer の有効化と例外経路</summary>
+
+> Analyzer は `interactionflow_enabled = True` の場合に有効になります。
+> このリポジトリでは `.editorconfig` により有効化し、診断モードを `Error` に設定しています。
+>
+> ```editorconfig
+> [*.cs]
+> # Interaction Flow Analyzer
+> interactionflow_enabled = True
+> interactionflow_mode = Error
+> ```
+> Exception Port が例外を再送出する設定の場合、または例外・キャンセル処理そのものが例外を送出した場合、
+> `Interaction.ExecuteAsync` は `FlowEndToken` を返さず、例外が呼び出し側へ伝播します。
+>
+> 現在の改善候補には、同一スコープの並行実行時の状態分離・同期、依存グラフの循環検査と再合流表示、
+> 非同期破棄を含む所有権モデル、namespace 外も含む意味的レイヤー判定があります。
+
+</details>
 
 # 目次
 
-[全体像](#overview) | [Context Loop の実行経路](#execution-path) | [SystemFlow・Interaction・実行環境](#runtime-components) | [`IFlowContext` インスタンスと終了結果](#context-and-results) | [データ保持と永続化](#data-and-persistence) | [設計上の保証とプロジェクト境界](#architecture-boundaries) | [現在の制約と改善候補](#future-improvements)
+[全体像](#overview) |
+[Context Loop の実行経路](#execution-path) |
+[実装の詳細](#implementation-details) |
+[保証と制約と責務](#guarantees)
 
 [Interaction Flow Architecture](../README.md)
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |

@@ -1,4 +1,9 @@
-[Readme](../README.md#computational-model)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |
 
 ---
 
@@ -538,4 +543,9 @@ Domain や Storage から移さないことの根拠になります。
 
 ---
 
-[Readme](../README.md#computational-model) | [PageTop](#computational-model-detail)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |

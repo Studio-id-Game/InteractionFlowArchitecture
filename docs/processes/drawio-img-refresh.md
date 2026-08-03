@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Draw.io Image Refresh Process
 
 このドキュメントは、`docs/img/src` 以下の `.drawio` ファイルを更新したときに、対応する `.context.md` と `.svg` を更新するための作業定義である。
@@ -111,3 +120,12 @@ Codex で作業する場合は、個人スキル `drawio-context` を使う。
 ## 注意
 
 この作業定義はプロジェクト固有の運用である。draw.io 図を Markdown コンテキストへ翻訳する一般的な方法は、個人スキル `drawio-context` 側に置く。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

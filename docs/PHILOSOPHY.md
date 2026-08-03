@@ -1,4 +1,11 @@
-[Interaction Flow Architecture](../README.md)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
 
 # Interaction Flow - Philosophy
 
@@ -152,3 +159,12 @@ Interaction Flow Architecture の真の目的は、新しいデザインパタ�
 
 ---
 [Interaction Flow Architecture](../README.md)
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |

@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # packages-YYYY.MM.DD
 
 InteractionFlow の NuGet パッケージ公開リリースです。
@@ -58,3 +67,12 @@ Analyzer は開発時のみ利用するため、`.csproj` では `PrivateAssets=
 このリリースタグはパッケージ公開バッチを表します。
 各パッケージのバージョンは `Directory.Build.props` の `CoreVersion`、`StandardVersion`、`AnalyzerVersion` で個別に管理します。
 このプロジェクトは現在 0.x 系です。1.0 に到達するまでは公開 API が変更される可能性があります。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./../docs/PHILOSOPHY.md) |
+[計算モデルとして](./../docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # InteractionFlow.Analyzers
 
 Interaction Flow の実装規則を Roslyn Analyzer として検査するプロジェクトです。
@@ -237,3 +246,12 @@ dotnet test InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.cspr
 dotnet build InteractionFlow.slnx
 dotnet test InteractionFlow.slnx
 ```
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./../docs/PHILOSOPHY.md) |
+[計算モデルとして](./../docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |

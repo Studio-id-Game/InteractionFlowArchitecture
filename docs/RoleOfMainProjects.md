@@ -1,6 +1,11 @@
-﻿[Readme](../README.md#implementation)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |
 
- ---
+---
 
 # .Core/.Standard/.Samples それぞれの役割 <a id="main-project-roles"></a>
 
@@ -19,3 +24,12 @@
   - **責務：.Standard の使い方を具体例として示しつつ、APIの過不足や使い方を探索・検証する**
   - バージョン管理しない
   - .Samples で得られた知見をもとに .Standard を実用目線で更新する。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |

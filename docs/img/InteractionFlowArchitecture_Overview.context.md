@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Interaction Flow Architecture - Overview Context
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_Overview.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
@@ -99,3 +108,12 @@
 この draw.io XML には明示的な edge 接続が含まれていない。したがって、要素間の関係は主に包含関係、配置、ラベル、視覚的なグループ構造から読み取っている。
 
 詳細な実行フローや `Context` 更新ループの動きは、`InteractionFlowArchitecture_FlowDiagram.context.md` が表している。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

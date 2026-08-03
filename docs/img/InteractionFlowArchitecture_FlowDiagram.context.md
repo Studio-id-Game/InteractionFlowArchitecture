@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Interaction Flow Architecture - Flow Diagram Context
 
 このドキュメントは、`docs/img/src/InteractionFlowArchitecture_FlowDiagram.drawio` の図が表している意味を、図を直接参照できない状況でも利用できるように言語化したコンテキストである。
@@ -174,3 +183,12 @@ Function または External 側から外部依存や外部リソースへ動作�
 draw.io XML には少数の explicit edge が含まれているが、主要なフローの多くは接続 edge ではなく矢印図形として描かれている。そのため、関係の一部は矢印の向き、座標、ラベル、近接関係から推定している。
 
 特に `P5`、`P6`、外部リソース付近のフローは、明示的な source / target 接続ではなく視覚配置からの推定を含む。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

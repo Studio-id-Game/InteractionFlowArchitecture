@@ -1,4 +1,9 @@
-[Interaction Flow Architecture](./README.md)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |
 
 ---
 
@@ -7,8 +12,8 @@
 このドキュメントでは、Interaction Flow Architecture において、
 なぜ `SystemFlow` の実行環境を Builder、Handler、Scope に分けているのかを説明します。
 
-現在の型、API、組み立て手順については、
-[ライブラリの実装 - システムの組み立て (System Flow Builder)](./docs/LIBRARY_IMPLEMENTATION_RESTRUCTURE_DRAFT.md#system-flow-builder)
+アーキテクチャのモデルとライブラリ実装の関係については、
+[ライブラリ実装の詳細 - システムの組み立て (System Flow Builder)](./LIBRARY_IMPLEMENTATION_DETAIL.md#system-flow-builder)
 を参照してください。
 
 ## System Flow Builder が解決する問題
@@ -197,6 +202,9 @@ Standard は現実の利用に合わせた具体的な DI 実装を提供でき�
 
 ---
 
-[Interaction Flow Architecture](./README.md) |
-[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) |
-[System Flow Builder の実装](./docs/LIBRARY_IMPLEMENTATION_RESTRUCTURE_DRAFT.md#system-flow-builder)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../README.md) |
+[Philosophy](./PHILOSOPHY.md) |
+[計算モデルとして](./COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md) |

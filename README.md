@@ -262,7 +262,8 @@ User は、ドアの Context Loop を次のように体験します。
 4. 操作と反応を組み合わせて、ドアの相互作用（Interaction）を実装する
 5. Interaction を組み合わせて、ドアと User との関係（System Flow）をデザインする
 
-特に、(5.) でデザインする System Flow の実装は、ユーザーが体験する Context Loop そのものになります。
+特に、(5.) でデザインする System Flow の実装は、Context Loop における System 側の実行を構成します。
+その実行が User の行動と組み合わさることで、User が体験する Context Loop が実現されます。
 
 ![Interaction Flow Architecture flow diagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
 
@@ -272,15 +273,16 @@ User は、ドアの Context Loop を次のように体験します。
 
 > <I>Context Loop と System Flow によって、開発者 / System / User が同じ世界を共有する。</I>
 
-開発者によりデザインされた System Flow と、それによって User が体験する Context Loop は、開発者 / System / User が同じ世界を共有するための共通モデルとなります。
+開発者がデザインした System Flow は、System 側の実行として Context Loop の一部を構成します。
+その実行と User の行動が Context を介して組み合わさることで、Context Loop は、開発者 / System / User が同じ世界を共有するための共通モデルとなります。
 
-- 開発者は、System Flow をデザインし、Context Loop として実装する
-- System は、System Flow を実行し、Context Loop を提供する
-- User は、System Flow の中で、Context Loop を体験する
+- 開発者は、System Flow をデザインし、Context Loop における System 側の実行を構成する
+- System は、System Flow を実行し、Context Loop を進める相互作用を提供する
+- User は、その相互作用に応じて行動し、Context Loop を体験する
 
 冒頭で、インタラクティブなシステムの開発において、開発者が本当に設計したいものは「ユーザー体験」であると述べました。
 
-ここで述べた Context Loop こそが、実行モデルとしての「ユーザー体験」であり、System Flow のデザインこそが、「ユーザー体験の設計」となります。**System Flow のデザインによって、開発者がユーザー体験を直接設計できるようになる** ことが、Interaction Flow Architecture の最大の利点です。
+ここで述べた Context Loop こそが、実行モデルとしての「ユーザー体験」であり、その System 側の実行を構成する System Flow のデザインが、「ユーザー体験の設計」となります。**System Flow のデザインによって、開発者がユーザー体験を直接設計できるようになる** ことが、Interaction Flow Architecture の最大の利点です。
 
 ---
 

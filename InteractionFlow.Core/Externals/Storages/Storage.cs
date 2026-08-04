@@ -17,7 +17,7 @@ namespace InteractionFlow.Core.Externals.Storages
     /// </remarks>
     /// <typeparam name="TKey">状態を識別するキーの型。</typeparam>
     /// <typeparam name="TValue">保持する値の型。</typeparam>
-    public abstract class Storage<TKey, TValue> : IStoragePort<TKey, TValue>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>
+    public abstract class Storage<TKey, TValue> : IStoragePort<TKey, TValue>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>, IDisposable
     {
         private readonly IDependencyNode[] dependency;
         private readonly Dictionary<TKey, TValue> items;
@@ -111,6 +111,11 @@ namespace InteractionFlow.Core.Externals.Storages
         /// </remarks>
         /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
         public virtual void ForceResetMemoryState()
+        {
+            ForceResetItems();
+        }
+
+        private void ForceResetItems()
         {
             List<Exception>? exceptions = null;
 
@@ -279,5 +284,35 @@ namespace InteractionFlow.Core.Externals.Storages
         }
 
         #endregion
+
+        /// <summary>
+        /// この Storage が所有するマネージド状態を破棄します。
+        /// </summary>
+        /// <param name="disposing">
+        /// マネージド状態を破棄する場合は <see langword="true"/>。それ以外の場合は <see langword="false"/>。
+        /// </param>
+        /// <remarks>
+        /// <paramref name="disposing"/> が <see langword="true"/> の場合、
+        /// 保持値を破棄して登録状態を強制的に初期化します。
+        /// </remarks>
+        /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ForceResetItems();
+            }
+        }
+
+        /// <summary>
+        /// 保持している値を破棄し、メモリ上の登録状態を強制的に初期化します。
+        /// </summary>
+        /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
     }
 }

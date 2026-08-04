@@ -31,12 +31,20 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
             return await persistencePort.Load(persistenceId, oldValue)
                 .ThenAsync(value =>
                 {
-                    Value = value;
+                    Load(value);
                     return value.AsResult().StartAsync();
                 })
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// 読み込みに成功した値を、この Entry の現在値として設定します。
+        /// </summary>
+        /// <param name="value">設定する読み込み済みの値。</param>
+        internal void Load(TValue value)
+        {
+            Value = value;
+        }
 
         /// <summary>
         /// Entry の永続化 ID に対応する保存データを削除し、削除に成功した場合は保持する値を default にします。

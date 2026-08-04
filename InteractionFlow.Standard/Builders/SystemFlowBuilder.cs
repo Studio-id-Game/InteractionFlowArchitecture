@@ -18,10 +18,7 @@ namespace InteractionFlow.Standard.Builders
             var services = Services ?? throw new InvalidOperationException();
             try
             {
-                var rootProvider = services.BuildServiceProvider();
-                var scope = rootProvider.CreateScope();
-                var scopedProvider = scope.ServiceProvider;
-                return new ScopeHandler(scope, scopedProvider, parents);
+                return ScopeHandlerFactory.Create(services, parents);
             }
             finally
             {
@@ -38,11 +35,10 @@ namespace InteractionFlow.Standard.Builders
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {
-            var scope = BuildScope(parents);
-            var systemFlow = ActivatorUtilities.CreateInstance<TSystemFlow>(scope)
-                ?? throw new InvalidOperationException();
-
-            return new SystemFlowHandler<TContext>(scope, systemFlow);
+            return BuildSystemFlowCore<TSystemFlow>(
+                parents,
+                scope => ActivatorUtilities.CreateInstance<TSystemFlow>(scope)
+                    ?? throw new InvalidOperationException());
         }
 
         /// <summary>
@@ -55,11 +51,37 @@ namespace InteractionFlow.Standard.Builders
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(object[] parameters, params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {
-            var scope = BuildScope(parents);
-            var systemFlow = ActivatorUtilities.CreateInstance<TSystemFlow>(scope, parameters)
-                ?? throw new InvalidOperationException();
+            return BuildSystemFlowCore<TSystemFlow>(
+                parents,
+                scope => ActivatorUtilities.CreateInstance<TSystemFlow>(scope, parameters)
+                    ?? throw new InvalidOperationException());
+        }
 
-            return new SystemFlowHandler<TContext>(scope, systemFlow);
+        private SystemFlowHandler<TContext> BuildSystemFlowCore<TSystemFlow>(
+            ScopeHandler[] parents,
+            Func<ScopeHandler, TSystemFlow> createSystemFlow)
+            where TSystemFlow : ISystemFlow<TContext>
+        {
+            var scope = BuildScope(parents);
+
+            try
+            {
+                var systemFlow = createSystemFlow(scope);
+                return new SystemFlowHandler<TContext>(scope, systemFlow);
+            }
+            catch (Exception creationException)
+            {
+                try
+                {
+                    scope.Dispose();
+                }
+                catch (Exception disposalException)
+                {
+                    throw new AggregateException(creationException, disposalException);
+                }
+
+                throw;
+            }
         }
     }
 }

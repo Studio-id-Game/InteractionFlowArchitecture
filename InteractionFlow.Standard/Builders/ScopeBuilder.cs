@@ -19,10 +19,7 @@ namespace InteractionFlow.Standard.Builders
             var services = Services ?? throw new InvalidOperationException();
             try
             {
-                var rootProvider = services.BuildServiceProvider();
-                var scope = rootProvider.CreateScope();
-                var scopedProvider = scope.ServiceProvider;
-                return new ScopeHandler(scope, scopedProvider, parents);
+                return ScopeHandlerFactory.Create(services, parents);
             }
             finally
             {

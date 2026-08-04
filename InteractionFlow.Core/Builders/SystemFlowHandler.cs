@@ -42,9 +42,12 @@ namespace InteractionFlow.Core.Builders
         /// </summary>
         public void Dispose()
         {
+            var scope = this.scope;
+
+            this.scope = null;
+            this.systemFlow = null;
+
             scope?.Dispose();
-            scope = null;
-            systemFlow = null;
         }
     }
 }

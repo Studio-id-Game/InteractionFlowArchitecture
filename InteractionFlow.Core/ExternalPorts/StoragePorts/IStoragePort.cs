@@ -27,13 +27,20 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts
         /// <summary>
         /// 保持しているすべての値を登録から削除し、破棄可能な値は破棄します。
         /// </summary>
-        /// <returns>削除に成功した場合は成功結果、削除できない値がある場合は失敗結果。</returns>
+        /// <returns>
+        /// 削除に成功した場合は成功結果。
+        /// 削除できない値がある場合は、各失敗を <see cref="System.AggregateException"/> に集約した失敗結果。
+        /// </returns>
+        /// <exception cref="System.AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
         Result ClearAndDispose();
 
         /// <summary>
         /// 保持しているすべての値を、破棄せずに登録から削除します。
         /// </summary>
-        /// <returns>削除に成功した場合は成功結果、削除できない値がある場合は失敗結果。</returns>
+        /// <returns>
+        /// 削除に成功した場合は成功結果。
+        /// 削除できない値がある場合は、各失敗を <see cref="System.AggregateException"/> に集約した失敗結果。
+        /// </returns>
         Result ClearWithoutDispose();
     }
 

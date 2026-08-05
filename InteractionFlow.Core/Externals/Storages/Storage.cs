@@ -50,15 +50,16 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <summary>
         /// 保持しているすべての値を、破棄せずに登録から削除します。
         /// </summary>
-        /// <returns>すべての値を削除できた場合は成功結果。削除できない値がある場合は失敗結果。</returns>
+        /// <returns>
+        /// すべての値を削除できた場合は成功結果。
+        /// 削除できない値がある場合は、各失敗を <see cref="AggregateException"/> に集約した失敗結果。
+        /// </returns>
         public Result ClearWithoutDispose()
         {
-            foreach (var (key, value) in items)
+            var canRemove = CanRemoveAllItems();
+            if (!canRemove.Try(out var e))
             {
-                if (!CanRemoveValue(key, value).Try(out var e))
-                {
-                    return e;
-                }
+                return e;
             }
 
             items.Clear();
@@ -68,27 +69,42 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <summary>
         /// 保持しているすべての値を登録から削除し、破棄可能な値は破棄します。
         /// </summary>
-        /// <returns>すべての値を削除できた場合は成功結果。削除できない値がある場合は失敗結果。</returns>
+        /// <remarks>
+        /// 破棄中に例外が発生した場合も、すべての値について破棄を試み、登録状態を初期化してから例外を送出します。
+        /// </remarks>
+        /// <returns>
+        /// すべての値を削除できた場合は成功結果。
+        /// 削除できない値がある場合は、各失敗を <see cref="AggregateException"/> に集約した失敗結果。
+        /// </returns>
+        /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
         public Result ClearAndDispose()
         {
+            var canRemove = CanRemoveAllItems();
+            if (!canRemove.Try(out var e))
+            {
+                return e;
+            }
+
+            ForceResetItems();
+            return Result.Success;
+        }
+
+        private Result CanRemoveAllItems()
+        {
+            List<Exception>? exceptions = null;
+
             foreach (var (key, value) in items)
             {
                 if (!CanRemoveValue(key, value).Try(out var e))
                 {
-                    return e;
+                    exceptions ??= [];
+                    exceptions.Add(e.InnerException);
                 }
             }
 
-            foreach (var value in items.Values)
-            {
-                if (value is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
-
-            items.Clear();
-            return Result.Success;
+            return exceptions == null
+                ? Result.Success
+                : new AggregateException(exceptions);
         }
 
         /// <summary>

@@ -20,7 +20,7 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
         public TPersistenceId PersistenceId => persistenceId;
 
         /// <summary>
-        /// 指定された Persistence ポートから値を読み込みます。
+        /// 指定された Persistence ポートから値を読み込み、成功した値をこの Entry の現在値として設定します。
         /// </summary>
         /// <param name="persistencePort">読み込みに使用する Persistence ポート。</param>
         /// <returns>読み込まれた値。失敗時は失敗結果。</returns>

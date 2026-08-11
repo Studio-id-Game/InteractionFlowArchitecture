@@ -16,12 +16,12 @@ namespace InteractionFlow.Core.Entities.Architectures
         Operation,
 
         /// <summary>
-        /// ユーザーに観測可能な出力や終了時の反応を担当する Reaction ポートです。
+        /// System から User への観測可能な反応と、その反応に対応する Context への影響を表す Reaction ポートです。
         /// </summary>
         Reaction,
 
         /// <summary>
-        /// ユーザーに直接観測されない、外部実行環境とのやりとりを担当する SilentExternal ポートです。
+        /// User との相互作用や System 内での記録を直接の目的とせず、外部実行環境と連携する SilentExternal ポートです。
         /// </summary>
         SilentExternal,
 

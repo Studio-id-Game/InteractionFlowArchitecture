@@ -22,7 +22,7 @@ namespace InteractionFlow.Standard.Builders
         /// <param name="root">依存ツリーの根となる <see cref="IDependencyNode"/></param>
         /// <returns>依存ツリーを可視化する Markdown ツリー文字列</returns>
         /// <remarks>
-        /// 現在の再帰経路に同じノードが現れた場合は循環マーカーを付け、そのノードから先の再帰を停止します。
+        /// 現在の再帰経路に参照同一のノードインスタンスが現れた場合は循環マーカーを付け、そのノードから先の再帰を停止します。
         /// 別の分岐から参照される共有ノードは、それぞれの分岐で表示します。
         /// </remarks>
         public static string GetDependencyTreeText(IDependencyNode root)
@@ -37,7 +37,7 @@ namespace InteractionFlow.Standard.Builders
         /// <param name="circularReferenceMarker">循環参照ノードの表示名へ付加する接尾文字列。</param>
         /// <returns>依存ツリーを可視化する Markdown ツリー文字列</returns>
         /// <remarks>
-        /// 現在の再帰経路に同じノードが現れた場合は循環マーカーを付け、そのノードから先の再帰を停止します。
+        /// 現在の再帰経路に参照同一のノードインスタンスが現れた場合は循環マーカーを付け、そのノードから先の再帰を停止します。
         /// 別の分岐から参照される共有ノードは、それぞれの分岐で表示します。
         /// </remarks>
         /// <exception cref="ArgumentNullException">

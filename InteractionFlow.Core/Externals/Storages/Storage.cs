@@ -54,6 +54,9 @@ namespace InteractionFlow.Core.Externals.Storages
         /// すべての値を削除できた場合は成功結果。
         /// 削除できない値がある場合は、各失敗を <see cref="AggregateException"/> に集約した失敗結果。
         /// </returns>
+        /// <remarks>
+        /// <see cref="CanRemoveValue(TKey, TValue)"/> 自身が例外を送出した場合、その例外は集約せずに伝播します。
+        /// </remarks>
         public Result ClearWithoutDispose()
         {
             var canRemove = CanRemoveAllItems();
@@ -70,6 +73,7 @@ namespace InteractionFlow.Core.Externals.Storages
         /// 保持しているすべての値を登録から削除し、破棄可能な値は破棄します。
         /// </summary>
         /// <remarks>
+        /// <see cref="CanRemoveValue(TKey, TValue)"/> 自身が例外を送出した場合、その例外は集約せずに伝播します。
         /// 破棄中に例外が発生した場合も、すべての値について破棄を試み、登録状態を初期化してから例外を送出します。
         /// </remarks>
         /// <returns>
@@ -225,6 +229,9 @@ namespace InteractionFlow.Core.Externals.Storages
         /// </summary>
         /// <param name="key">削除する値のキー。</param>
         /// <returns>削除に成功した場合は成功結果。キーが存在しない場合や削除できない場合は失敗結果。</returns>
+        /// <remarks>
+        /// <see cref="CanRemoveValue(TKey, TValue)"/> 自身が例外を送出した場合、その例外は伝播します。
+        /// </remarks>
         public Result RemoveWithoutDispose(TKey key)
         {
             if (items.TryGetValue(key, out var value))
@@ -246,6 +253,11 @@ namespace InteractionFlow.Core.Externals.Storages
         /// </summary>
         /// <param name="key">削除する値のキー。</param>
         /// <returns>削除に成功した場合は成功結果。キーが存在しない場合や削除できない場合は失敗結果。</returns>
+        /// <remarks>
+        /// <see cref="CanRemoveValue(TKey, TValue)"/> 自身が例外を送出した場合、その例外は伝播します。
+        /// 値の破棄で例外が発生した場合、その値は既に Storage の登録から削除されています。
+        /// </remarks>
+        /// <exception cref="Exception">登録解除後、保持値の破棄中に例外が発生した場合。</exception>
         public Result RemoveAndDispose(TKey key)
         {
             if (items.TryGetValue(key, out var value))
@@ -323,6 +335,9 @@ namespace InteractionFlow.Core.Externals.Storages
         /// <summary>
         /// 保持している値を破棄し、メモリ上の登録状態を強制的に初期化します。
         /// </summary>
+        /// <remarks>
+        /// 現在の実装は、破棄後の再利用を明示的には拒否しません。
+        /// </remarks>
         /// <exception cref="AggregateException">保持値の破棄中に 1 つ以上の例外が発生した場合。</exception>
         public void Dispose()
         {

@@ -24,8 +24,11 @@ namespace InteractionFlow.Core.Entities
         /// 値を <see cref="Result{TValue}"/> の非同期の成功結果へ変換します。
         /// </summary>
         /// <typeparam name="T">成功結果が保持する値の型。</typeparam>
-        /// <param name="value">成功結果として保持する値。</param>
+        /// <param name="value">成功結果として保持する値。<see langword="null"/> と <see cref="Exception"/> 派生型の値は指定できません。</param>
         /// <returns>値を保持した成功結果。</returns>
+        /// <exception cref="ResultException">
+        /// <paramref name="value"/> が <see langword="null"/>、または <see cref="Exception"/> 派生型の場合。
+        /// </exception>
         public static Task<Result<T>> AsResultAsync<T>(this T value)
         {
             return value.AsResult().StartAsync();

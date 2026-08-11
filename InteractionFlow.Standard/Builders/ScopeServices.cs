@@ -11,7 +11,7 @@ namespace InteractionFlow.Standard.Builders
     public abstract class ScopeServices : IScopeServices
     {
         /// <summary>
-        /// 自信を初期化して、params IDependencyNode[] の自動解決を登録します
+        /// 自身を初期化し、<c>params IDependencyNode[]</c> を解決するための既定の空配列を登録します。
         /// </summary>
         protected ScopeServices()
         {

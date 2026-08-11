@@ -9,6 +9,10 @@ namespace InteractionFlow.Standard.Builders
     /// <summary>
     /// 登録済みサービスから SystemFlow と専用スコープを生成する標準ビルダーです。
     /// </summary>
+    /// <remarks>
+    /// <c>BuildSystemFlow</c> を一度試みるとサービス登録は消費され、
+    /// Build の成否にかかわらず、このインスタンスを再利用できません。
+    /// </remarks>
     /// <typeparam name="TContext">生成する SystemFlow が扱うコンテキストの型。</typeparam>
     public class SystemFlowBuilder<TContext> : ScopeServices, ISystemFlowBuilder<TContext>
         where TContext : IFlowContext
@@ -31,7 +35,8 @@ namespace InteractionFlow.Standard.Builders
         /// </summary>
         /// <typeparam name="TSystemFlow">生成する SystemFlow の型。</typeparam>
         /// <param name="parents">SystemFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
-        /// <returns>生成された SystemFlow とスコープを管理するハンドラ。</returns>
+        /// <returns>生成された SystemFlow を保持し、専用スコープのライフタイムを管理するハンドラ。</returns>
+        /// <exception cref="InvalidOperationException">このビルダーが Build によって消費済みの場合。</exception>
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {
@@ -47,7 +52,8 @@ namespace InteractionFlow.Standard.Builders
         /// <typeparam name="TSystemFlow">生成する SystemFlow の型。</typeparam>
         /// <param name="parameters">SystemFlow の生成時に DI へ追加で渡すコンストラクタ引数。</param>
         /// <param name="parents">SystemFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
-        /// <returns>生成された SystemFlow とスコープを管理するハンドラ。</returns>
+        /// <returns>生成された SystemFlow を保持し、専用スコープのライフタイムを管理するハンドラ。</returns>
+        /// <exception cref="InvalidOperationException">このビルダーが Build によって消費済みの場合。</exception>
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(object[] parameters, params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {

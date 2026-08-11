@@ -27,6 +27,7 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
         /// <see cref="IPersistencePort{TPersistenceId, TValue}.Load(TPersistenceId, Result{TValue})"/> の
         /// <c>oldValue</c> に渡します。読み込み結果が <see langword="null"/> の要素は更新せず、
         /// 非 <see langword="null"/> の要素だけを対応する Entry に設定します。
+        /// 同じ Entry に対する並行呼び出しは同期せず、後から完了した呼び出しが現在値を上書きする場合があります。
         /// </remarks>
         public static async Task<Result<TValue?[]>> LoadAll<TPersistenceId, TValue>(
             this PersistentEntry<TPersistenceId, TValue>[] entries,

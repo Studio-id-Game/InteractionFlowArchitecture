@@ -8,8 +8,11 @@ namespace InteractionFlow.Core.Entities.Contexts
     public sealed class FlowEndToken
     {
         /// <summary>
-        /// フローの実行に渡されたコンテキストを取得します。
+        /// 現在のフロー実行境界へ渡されたコンテキスト参照を取得します。
         /// </summary>
+        /// <remarks>
+        /// このトークンはコンテキストの所有権を取得せず、破棄しません。
+        /// </remarks>
         public IFlowContext LastContext { get; }
 
         /// <summary>

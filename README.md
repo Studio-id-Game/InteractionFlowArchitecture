@@ -677,6 +677,13 @@ namespace InteractionFlow.Samples.HelloDoor
 
 </details>
 
+この例では、`scope` は自身の DI Scope、`flow` は System Flow 専用の Scope、
+`context` は `ScopedFlowContext` 自身の管理状態をそれぞれ終了します。
+`flow` は親の `scope` や外部から渡された `context` を破棄せず、
+`context` も `.With(...)` で追加した `DoorState` を破棄しません。
+詳細は、[System Flow Builder](./docs/SYSTEM_FLOW_BUILDER.md) と
+[ライブラリ実装の詳細 - Context](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md#context) を参照してください。
+
 #### 実行結果
 
 ```text

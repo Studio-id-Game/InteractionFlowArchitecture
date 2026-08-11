@@ -60,7 +60,7 @@ Program
 ### 実際のプログラム例
 
 以下は、実際に単純な依存関係を構築して SystemFlow を実行する例や、
-依存スコープに親子関係を持たせるコード例です。
+依存スコープに fallback 探索先を指定するコード例です。
 
 <details>
 <summary> 実際に SystemFlow を組み立てて実行するコードの例を表示 </summary>
@@ -1546,6 +1546,12 @@ public static async Task<Result<TextStorageItem?[]>> LoadAllAsync(
 これにより、キーとキャッシュ済み Entry の対応付けを Storage 実装内に保ち、
 利用側には用途固有の Storage Port だけを公開できます。
 汎用契約である `IStoragePort` 自体には、複数値永続化の責務を追加しません。
+
+なお、このカスタム実装は `GetOrCreate` による Storage への登録を先に行うため、
+バッチ全体として原子的ではありません。途中の `GetOrCreate` または後続の読み込みが失敗しても、
+その時点までに新規作成・登録された Entry は Storage に残り、この登録はロールバックされません。
+原子性が必要な場合は、用途固有の Storage 実装で事前検証、一時領域、または明示的なロールバックを設計します。
+この登録副作用は、以下に示す `PersistentEntry[].LoadAll` の値更新契約とは別です。
 
 委譲先の `PersistentEntry[].LoadAll` は、各 Entry の `PersistenceId` と現在値を
 入力順の配列として Persistence へ渡し、読み込み結果を同じ位置の Entry へ対応させます。

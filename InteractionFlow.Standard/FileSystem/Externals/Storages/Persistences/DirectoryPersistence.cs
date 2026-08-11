@@ -139,11 +139,18 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <param name="id">読み込み対象を識別する ID。</param>
         /// <param name="oldValue">読み込み時に参照または再利用する既存値。</param>
         /// <returns>読み込まれた値。失敗時は失敗結果。</returns>
-        public Task<Result<TValue>> Load(TDirectoryId id, Result<TValue> oldValue)
+        public async Task<Result<TValue>> Load(TDirectoryId id, Result<TValue> oldValue)
         {
-            var path = GetDirectoryPath(id);
-            CreateDirectories(RootPath, path);
-            return LoadDirectory(path, id, oldValue);
+            try
+            {
+                var path = GetDirectoryPath(id);
+                CreateDirectories(RootPath, path);
+                return await LoadDirectory(path, id, oldValue).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
 
         /// <summary>
@@ -152,11 +159,18 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <param name="id">保存先を識別する ID。</param>
         /// <param name="value">保存する値。</param>
         /// <returns>保存結果。</returns>
-        public Task<Result> Save(TDirectoryId id, Result<TValue> value)
+        public async Task<Result> Save(TDirectoryId id, Result<TValue> value)
         {
-            var path = GetDirectoryPath(id);
-            CreateDirectories(RootPath, path);
-            return SaveDirectory(path, id, value);
+            try
+            {
+                var path = GetDirectoryPath(id);
+                CreateDirectories(RootPath, path);
+                return await SaveDirectory(path, id, value).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
 
         /// <summary>

@@ -29,21 +29,23 @@ System Flow Builder の設計意図と、Builder、Handler、Scope に分けて�
 [System Flow Builder の設計](./SYSTEM_FLOW_BUILDER.md) を参照してください。
 
 このライブラリでは、複数のSystemFlow間での依存スコープの共有などを想定して、
-親子関係を持てる依存スコープを実装しています。
+自身で解決できない依存を親 Scope から順に探索できる依存スコープを実装しています。
 
 このスコープは、Builder によって解決・構築され、Handler によって寿命が管理されます。
 
 | 型 | 役割 |
 | --- | --- |
 | `ScopeBuilder` | 登録情報から依存解決スコープを一つ構築する |
-| `ScopeHandler` | 構築済みスコープを保持し、親スコープも含めて依存を解決する |
+| `ScopeHandler` | 構築済みスコープを保持し、自身で解決できない場合は親 Scope を順に探索する。破棄時は自身のスコープだけを破棄する |
 | `SystemFlowBuilder<TContext>` | SystemFlow と専用スコープを構築する |
-| `SystemFlowHandler<TContext>` | SystemFlow の実行と専用スコープの寿命を管理する |
+| `SystemFlowHandler<TContext>` | SystemFlow を実行対象として保持し、破棄時は専用 `ScopeHandler` を破棄する |
 
 
 Builder は一度 Build すると再利用できません。子スコープで解決できない依存は親から解決されます。
 Handler を破棄すると自身のスコープは無効になりますが、親スコープと外部から渡された
 `IFlowContext` インスタンスは破棄しません。
+親 Scope を先に破棄した場合、子 Scope がその親を探索した時点で例外になります。
+`SystemFlowHandler` は、保持している SystemFlow 自体へ `Dispose` を直接呼び出しません。
 
 ### 基本的な手続き
 ```text
@@ -51,7 +53,7 @@ Program
   ├─ ScopeBuilder に Port 実装と Interaction を登録する
   ├─ ScopeBuilder から ScopeHandler を構築する
   ├─ SystemFlowBuilder に追加・上書きする Port 実装と Interaction を登録する
-  ├─ SystemFlowBuilder から、ScopeHandler の依存関係を継承する SystemFlowHandler を構築する
+  ├─ SystemFlowBuilder から、ScopeHandler を fallback 探索先とする SystemFlowHandler を構築する
   └─ SystemFlowHandler に IFlowContext を渡して実行する
 ```
 
@@ -104,7 +106,7 @@ public static async Task RunSystem(IFlowContext context)
   localScopeBuilder
       .UseFunction<IMyFunctionA, MyFunctionA_Custom>();
 
-  // sharedScopeHandler の依存関係を継承した ScopeHandler の構築
+  // sharedScopeHandler を fallback 探索先とする ScopeHandler の構築
   using var localScopeHandler = localScopeBuilder.BuildScope(sharedScopeHandler);
 
   // SystemFlow 独自の、誰にも共有されない依存解決の登録
@@ -113,7 +115,7 @@ public static async Task RunSystem(IFlowContext context)
       .UseFunction<IMyFunctionC, MyFunctionC>()
       .UseInteraction<MyInteractionB>();
 
-  // localScopeHandler の依存関係を継承した SystemFlowHandler の構築
+  // localScopeHandler を fallback 探索先とする SystemFlowHandler の構築
   using var flowHandlerB = flowBuilderB.BuildSystemFlow<MySystemFlowB>(localScopeHandler);
 
   // SystemFlowB の実行
@@ -130,6 +132,7 @@ public static async Task RunSystem(IFlowContext context)
 
 SystemFlow、Interaction、Function Port 実装は `IDependencyNode` として、実行時に解決された具体的な依存インスタンスを `Dependency` に保持します。
 `SystemFlowHandler.Root` は、生成済み SystemFlow の実行時インスタンスを公開します。
+各ノードの表示には `IDependencyNode.Name` を使用し、既定では実行時の型名を表示します。
 
 ```text
 DoorSystemFlow
@@ -143,18 +146,22 @@ DoorSystemFlow
 `DependencyTreeView.GetDependencyTreeText` は、この Root から実体を再帰的に表示します。
 これは DI 登録一覧ではなく、実行するフローを根とした観察用の構造です。
 
+現在の再帰経路に同じノードインスタンスが再登場した場合は、表示名へ既定の `@Cycle` を付け、
+その枝の再帰だけを停止します。比較には値等価性ではなく参照同一性を使用します。
+別の枝から参照される共有ノードは循環とは扱わず、それぞれの枝で表示します。
+
 #### Samples.HelloDoor での実際の出力
 
-> - InteractionFlow.Samples.HelloDoor.SystemFlows.DoorSystemFlow
->   - InteractionFlow.Samples.HelloDoor.Interactions.OperateDoor
->     - InteractionFlow.Standard.Console.Externals.Reactions.ConsoleExceptionHandling
->     - InteractionFlow.Standard.Console.Externals.Reactions.ConsoleCancellationHandling
->     - InteractionFlow.Samples.HelloDoor.Externals.Operations.ConsoleDoorOperation
->     - InteractionFlow.Samples.HelloDoor.Externals.Reactions.ConsoleDoorReaction
+> - DoorSystemFlow
+>   - OperateDoor
+>     - ConsoleExceptionHandling
+>     - ConsoleCancellationHandling
+>     - ConsoleDoorOperation
+>     - ConsoleDoorReaction
 
 #### 依存ノードツリーの目的
 
-このツリーは単なる表示機能ではなく、以下のような要素をつなぐ、信頼可能な「実行構成の証跡」として機能します。
+このツリーは、実行時に解決された依存を観察し、以下の作業を支援します。
 
 - リファクタリング
 - レビュー
@@ -175,13 +182,14 @@ DoorSystemFlow
 
 #### Analyzer による保証
 
-上記の目的を達成するためには、ツリーの内容が信頼できることが前提となります。
-
-よって、このライブラリでは、Analyzer を用いてツリーの内容を保証します。
-これにより、上記の目的を支援するとともに、以下のような副次的な恩恵が得られます。
+Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整合性を検査します。
+これにより、以下のような列挙漏れを検出できます。
 
 - リファクタリングで追加した依存を `Dependency` へ含め忘れた場合、Analyzer で検出できる
 - 派生クラスが追加した依存を基底クラスへ渡し忘れた場合、Analyzer で検出できる
+
+この検査は、DI の登録一覧全体、動的なサービス取得、実行途中で追加される依存、
+`IDependencyNode` として表現されない依存まで保証するものではありません。
 
 詳細は、[保証と制約と責務](./LIBRARY_IMPLEMENTATION.md#guarantees) を参照してください。
 
@@ -1124,6 +1132,35 @@ namespace MyApp.Externals
 }
 ```
 
+`IStoragePort` は Storage の操作契約を表しますが、`IDisposable` の実装は要求しません。
+標準基底実装の `Storage<TKey, TValue>` は `IDisposable` を実装し、`GetOrCreate` で登録した値を所有します。
+登録した値が `IDisposable` の場合、次の API によって登録解除と破棄を制御します。
+
+| API | `CanRemoveValue` | 登録解除 | 値の破棄 | 主な用途 |
+| --- | --- | --- | --- | --- |
+| `RemoveAndDispose` | 対象値を検査 | 成功時に行う | 行う | 1件を通常解放する |
+| `RemoveWithoutDispose` | 対象値を検査 | 成功時に行う | 行わない | 呼び出し側が保持済みの参照と破棄責務を引き受ける |
+| `ClearAndDispose` | 全件を先に検査 | 全件検査成功後に行う | 行う | 全件を通常解放する |
+| `ClearWithoutDispose` | 全件を先に検査 | 全件検査成功後に行う | 行わない | 全件の登録だけを解除する |
+| `ForceResetMemoryState` | 行わない | 行う | 行う | 強制リセットする |
+| `Dispose` | 行わない | 行う | 行う | Storage の所有状態を解放する |
+
+`ClearAndDispose` と `ClearWithoutDispose` は、すべての値について `CanRemoveValue` を先に実行します。
+削除できない値がある場合は、その失敗 `Result` が持つ例外だけを `AggregateException` に集約した
+失敗 `Result` を返し、登録状態を変更しません。
+`CanRemoveValue` 自体が予期せず例外を送出した場合、その例外は集約されずに呼び出し側へ伝播します。
+
+`ClearAndDispose`、`ForceResetMemoryState`、`Dispose` は、値の破棄で発生した例外を集約して送出します。
+この場合も、すべての値について破棄を試み、Storage の登録状態を初期化します。
+`RemoveAndDispose` は登録解除後に値を破棄するため、値の破棄で例外が発生しても、
+その値はすでに Storage の登録から外れています。
+
+`Storage<TKey, TValue>` が DI Scope で破棄可能なサービスとして追跡されている場合は、
+Scope の破棄によって `Storage.Dispose()` も実行されます。
+これは、`IDisposable` を実装しない独自の `IStoragePort` 実装にまで適用される契約ではありません。
+また、現在の `Storage.Dispose()` は呼び出し後の再利用を明示的には拒否しないため、
+本文では「破棄後は利用不可」という追加の契約を設けません。
+
 また、`CreateNewValue` や `CanRemoveValue` の失敗を利用して、値の追加・削除の条件を実装する事も出来ます。
 
 ```csharp
@@ -1216,6 +1253,7 @@ namespace MyApp.ExternalPorts
         IPersistencePort<TextStorageKey, TextStorageItem>
     {
     }
+
 }
 ```
 
@@ -1401,64 +1439,125 @@ namespace MyApp.Interactions
 ```
 </details>
 
-<details> <summary> 💡 Tips: パフォーマンス上の理由で複数の値への同時アクセスが必要な場合 </summary>
+<details> <summary> 💡 Tips: パフォーマンス上の理由で複数の値をまとめて読み込む場合 </summary>
 
-> クエリ操作など、パフォーマンス上の理由で複数の値へのアクセスが必要な場合も存在します。
->
-> この場合はまず、複数値操作用の `PersistencePort` を以下のような形で定義します。
-> ```csharp
-> public interface ITextStorageItemArrayPersistencePort :
->     IPersistencePort<TextStorageKey[], TextStorageItem[]>
-> {
-> }
-> ```
->
-> さらに、`StoragePort`（上の例では `IPersistentTextStorage`）に複数値操作のメソッドを定義します。
->
-> ```csharp
-> public interface IPersistentTextStorage :
->     IStoragePort<TextStorageKey, MyEntry>
-> {
->     public Task<Result<TextStorageItem[]>> LoadAll(TextStorageKey[] keys,
->         IPersistencePort<TextStorageKey[], TextStorageItem[]> persistencePort);
->     ...
-> }
-> ```
->
-> そして実装として、以下の実装を行います。
-> - `TextStorageItemArrayPersistencePort` は、永続データの同時操作を実装する
->   - `Task<Result<TextStorageItem[]>> Load(TextStorageKey[] ids, Result<TextStorageItem[]> oldValue)` など
->   - 通常の `PersistencePort` の実装と同様に `ITextStorageItemSerializerPort` も利用可能
-> - `PersistentTextStorage` は、 `TextStorageItemArrayPersistencePort` を利用してキャッシュと永続データを連携させる
->
->   ```csharp
->   public async Task<Result<TextStorageItem[]>> LoadAll(
->           TextStorageKey[] keys,
->           IPersistencePort<TextStorageKey[], TextStorageItem[]> persistencePort)
->   {
->       try
->       {
->           var items = keys.Select(key =>
->               GetOrCreate(key).Try(out var value, out var error) ?
->               value.Value! : throw error
->           );
->           return await persistencePort.Load(keys, items.ToArray())
->               .ThenAsync(async loaded =>
->               {
->                   if (loaded.SequenceEqual(items))
->                       return loaded.AsResult();
->
->                   return new InvalidOperationException(
->                       "Multi-value persistence must return the" +
->                       " cached value instances provided as oldValue.");
->               });
->       }
->       catch (Exception e)
->       {
->           return e;
->       }
->   }
->    ```
+ソースコード: [`PersistentEntryExtensions.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/Entries/PersistentEntryExtensions.cs)
+
+クエリ操作など、複数の永続値を一度に読み込む必要がある場合は、
+配列を扱う `PersistencePort` と `PersistentEntry[].LoadAll` を利用できます。
+この機能は、利用側が Entry 配列を直接組み立てるのではなく、
+用途固有の `IPersistentTextStorage` に定義してアクセスポイントにすることを、
+このライブラリにおけるベストプラクティスとします。
+
+このカスタム例では、上の基本例にある `IPersistentTextStorage` の定義を、
+複数値読み込みのアクセスポイントを持つ次の定義へ置き換えます。
+
+```csharp
+namespace MyApp.ExternalPorts
+{
+    // 省略エイリアス
+    using MyEntry = PersistentEntry<TextStorageKey, TextStorageItem>;
+
+    public interface IPersistentTextStorage :
+        IStoragePort<TextStorageKey, MyEntry>
+    {
+        Task<Result<TextStorageItem?[]>> LoadAll(
+            TextStorageKey[] keys,
+            ITextStorageItemArrayPersistencePort persistencePort);
+    }
+
+    public interface ITextStorageItemArrayPersistencePort :
+        IPersistencePort<TextStorageKey[], TextStorageItem?[]>
+    {
+    }
+}
+```
+
+Storage 実体側では、キーに対応する Entry を解決し、
+`PersistentEntry[].LoadAll` へ処理を委譲します。
+
+```csharp
+namespace MyApp.Externals
+{
+    // 省略エイリアス
+    using MyEntry = PersistentEntry<TextStorageKey, TextStorageItem>;
+
+    public sealed class PersistentTextStorage :
+        Storage<TextStorageKey, MyEntry>,
+        IPersistentTextStorage
+    {
+        protected override Result<MyEntry> CreateNewValue(TextStorageKey key)
+        {
+            var value = new TextStorageItem() { Text = $"Item {key}" };
+            return new MyEntry(key, value);
+        }
+
+        protected override Result CanRemoveValue(TextStorageKey key, MyEntry value)
+            => Result.Success;
+
+        public async Task<Result<TextStorageItem?[]>> LoadAll(
+            TextStorageKey[] keys,
+            ITextStorageItemArrayPersistencePort persistencePort)
+        {
+            try
+            {
+                var entries = new MyEntry[keys.Length];
+
+                for (int i = 0; i < keys.Length; i++)
+                {
+                    if (!GetOrCreate(keys[i]).Try(out var entry, out var error))
+                    {
+                        return error;
+                    }
+
+                    entries[i] = entry;
+                }
+
+                return await entries.LoadAll(persistencePort);
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+        }
+    }
+}
+```
+
+利用側は Entry 配列を扱わず、再定義した Storage Port をアクセスポイントとして利用します。
+
+```csharp
+public static async Task<Result<TextStorageItem?[]>> LoadAllAsync(
+    IPersistentTextStorage storage,
+    ITextStorageItemArrayPersistencePort arrayPersistencePort)
+{
+    TextStorageKey[] keys =
+    [
+        new(1),
+        new(2)
+    ];
+
+    return await storage.LoadAll(keys, arrayPersistencePort);
+}
+```
+
+`IPersistentTextStorage.LoadAll` の実装は、各キーに対応する Entry を `GetOrCreate` で解決し、
+`PersistentEntry[].LoadAll` へ委譲します。
+これにより、キーとキャッシュ済み Entry の対応付けを Storage 実装内に保ち、
+利用側には用途固有の Storage Port だけを公開できます。
+汎用契約である `IStoragePort` 自体には、複数値永続化の責務を追加しません。
+
+委譲先の `PersistentEntry[].LoadAll` は、各 Entry の `PersistenceId` と現在値を
+入力順の配列として Persistence へ渡し、読み込み結果を同じ位置の Entry へ対応させます。
+
+- 読み込み結果が非 `null` の要素は、対応する Entry の現在値を更新する
+- 読み込み結果が `null` の要素は、対応する Entry の現在値を維持する
+- 読み込み結果の要素数が Entry 数と異なる場合は、Entry を更新せず失敗 `Result` を返す
+- Persistence が失敗 `Result` を返した場合は、Entry を更新しない
+
+Persistence が同じ参照を返す必要はありません。
+また、同じ Entry に対する複数の `LoadAll` を並行実行した場合の完了順は制御しないため、
+逐次化、Entry の分離、または呼び出し側での同期が必要です。
 
 </details>
 

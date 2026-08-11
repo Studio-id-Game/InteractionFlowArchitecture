@@ -33,16 +33,20 @@
     ユーザー体験を直接設計するためのアーキテクチャです。
 </p>
 
-## 目次
+## この README の構成
 
 - [パッケージとインストール](#packages)
+  - 提供しているパッケージの役割と、標準的な導入方法を確認します。
 - [ビジョン](#vision)
+  - Interaction Flow Architecture が解決したい課題と、中心となる概念を説明します。
 - [Context Loop & System Flow](#context-loop-system-flow)
+  - 具体例を通して、ユーザーとシステムの相互作用が連続し、ユーザー体験を形作る仕組みを説明します。
 - [はじめに](#getting-started)
+  - 最小サンプルの実装と実行を通して、ライブラリの基本的な使い方を確認します。
 - [Interaction Flow を支える三つの視点](#three-perspectives)
-- [サンプル解説](#examples)
-- [ロードマップ](#roadmap)
-- [資料まとめ](#references)
+  - Philosophy、計算モデル、ライブラリ実装という三つの視点から、設計への理解を深めます。
+
+そのほか、[サンプル解説](#examples)、[ロードマップ](#roadmap)、[資料まとめ](#references) も掲載しています。
 
 ---
 
@@ -115,6 +119,7 @@ interactionflow_enabled = True
 
   # Run InteractionFlow.Samples.*
   dotnet run --project InteractionFlow.Samples.HelloDoor
+  dotnet run --project InteractionFlow.Samples.HelloDoor.Lock
   dotnet run --project InteractionFlow.Samples.Parrot
   dotnet run --project InteractionFlow.Samples.Notepad
   dotnet run --project InteractionFlow.Samples.Notepad.Secure
@@ -296,26 +301,8 @@ NuGet から利用する場合は、標準実装を含む `InteractionFlow.Stand
 dotnet add package InteractionFlow.Standard
 ```
 
-設計ルールの検査も有効にする場合は Analyzer を追加し、`.editorconfig` で有効化します。
-
-```bash
-dotnet add package InteractionFlow.Analyzers
-```
-
-```ini
-# .editorconfig
-[*.cs]
-interactionflow_enabled = True
-```
-
-プロジェクトファイルに直接書く場合は、Analyzer に `PrivateAssets="all"` を付けることを推奨します。
-
-```xml
-<ItemGroup>
-  <PackageReference Include="InteractionFlow.Standard" Version="0.5.0" />
-  <PackageReference Include="InteractionFlow.Analyzers" Version="0.5.0" PrivateAssets="all" />
-</ItemGroup>
-```
+Analyzer の追加、`.editorconfig` の設定、各パッケージの役割は、
+[パッケージとインストール](#packages) を参照してください。
 
 ## Hello Door 🚪
 
@@ -736,7 +723,7 @@ Goodbye.
 > Interaction Flow Architecture では、「Reaction は、Context の更新をユーザーから観察可能な形で実行するもの」と考えます。
 > この設計により、すべての Context 更新がユーザーから観察可能な反応と対応し、「状態だけ変わる」「表示だけ変わる」といったユーザー体験の不整合を防ぎやすくなります。
 > また、Reaction の実装漏れも動作エラーや UI の無反応として現れるため、責務の漏れを発見しやすくなります。
-> 詳細は、[`ライブラリの実装 - Context 更新の原則](./docs/LIBRARY_IMPLEMENTATION.md#context-update-principle) をご覧ください。
+> 詳細は、[ライブラリの実装 - Context 更新の原則](./docs/LIBRARY_IMPLEMENTATION.md#context-update-principle) をご覧ください。
 
 </details>
 
@@ -820,70 +807,18 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 
 # サンプル解説 <a id="examples"></a>
 
-各サンプルは、このリポジトリに実際に存在する `InteractionFlow.Samples.*` プロジェクトに対応しています。
+各サンプルの目的と、主に確認できる設計をまとめます。実装の詳細は、サンプル名から各プロジェクトの README を参照してください。
 
-## InteractionFlow.Samples.HelloDoor
+| サンプル | 目的 | 主に確認できること |
+| --- | --- | --- |
+| [HelloDoor](./InteractionFlow.Samples.HelloDoor/README.md) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
+| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock/README.md) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
+| [Parrot](./InteractionFlow.Samples.Parrot/README.md) | 複数の Interaction と System Flow を選択・合成する | `ScopedFlowContext` による Context の局所化、Storage、Cancellation、ネストした Interaction の組み合わせ |
+| [Notepad.Core](./InteractionFlow.Samples.Notepad.Core/README.md) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
+| [Notepad](./InteractionFlow.Samples.Notepad/README.md) | `Notepad.Core` を通常の Console・ファイル保存で実行する | Port に標準的な Console、Storage、Persistence、Serializer の実装を接続する構成 |
+| [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure/README.md) | 同じ中核設計へ安全なログインと保存処理を統合する | Port 実装と一部の Interaction の差し替え、暗号化、鍵素材のライフサイクル管理 |
 
-`HelloDoor` は、最小構成の Context Loop を確認するためのサンプルです。
-
-- 目的: Context によって同じ Interaction の結果が変わることを確認する
-- Context: ドアが開いているか、閉まっているか、終了要求があるか
-- Operation: `Open` / `Close` のキーワード入力
-- Interaction: `OperateDoor`
-- SystemFlow: `DoorSystemFlow`
-- 見どころ: 独自 Port / Console External / Interaction / SystemFlow / Program の最小分割
-
-最初に読むサンプルとして位置づけています。詳細な実装手順は [Hello Door 🚪](#hello-door-) にあります。
-
-## InteractionFlow.Samples.Parrot
-
-`Parrot` は、Console 標準実装と複数 SystemFlow の組み立てを確認するためのサンプルです。
-
-- 目的: サンプル選択から実行までの会話型フローを確認する
-- Context: 選択状態、キャンセル状態
-- Storage: `ILastSelectMemory` による前回選択の保持
-- SystemFlow: `InitializeApplication`、`SelectAndRunSample`
-- Interaction: `ListSamples`、`SelectSample`、`RunSample`、`ConsoleSetup`
-- 見どころ: `ScopedFlowContext`、Memory Storage、Console Profile、依存ツリー表示
-
-`HelloDoor` の次に読むと、Context Loop が複数 Interaction に広がる様子を追いやすくなります。
-
-## InteractionFlow.Samples.Notepad.Core
-
-`Notepad.Core` は、Notepad サンプルの中核となる Core プロジェクトです。
-
-- 目的: Entity / Port / Interaction / SystemFlow の分割を確認する
-- Context: `NotepadContext`、`NotepadUserObject`
-- Storage: `INotepadDataStoragePort`、`INotepadUserDataStoragePort`
-- Interaction: `Login`、`NoteCreate`、`NoteDelete`、`NoteEdit`、`NoteListView`、`SelectUserAction`
-- SystemFlow: `MainLoop`
-- 見どころ: アプリケーションの中心ルールを実行プロジェクトから分離する構成
-
-実行環境に依存しにくい Interaction Flow を読みたい場合は、このプロジェクトから確認します。
-
-## InteractionFlow.Samples.Notepad
-
-`Notepad` は、`Notepad.Core` を Console アプリとして組み立てる実行サンプルです。
-
-- 目的: Core の Port に標準的な FileSystem / Serialization / Console 実装を接続する
-- Context: `NotepadContext`
-- Storage: ファイル永続化、ユーザーデータ、ノートデータ
-- Program: `ScopeBuilder` で Storage、Serializer、Interaction、`MainLoop` を組み立てる
-- 見どころ: Core の設計を具体的な実行環境へ接続する境界
-
-Storage を含む実用寄りの Context Loop を見たい場合に適しています。
-
-## InteractionFlow.Samples.Notepad.Secure
-
-`Notepad.Secure` は、`Notepad` の実行構成を差し替え、セキュアな保存とログインを追加するサンプルです。
-
-- 目的: Core の Interaction Flow を保ったまま、Storage / Serializer / Login を差し替える
-- Context: `NotepadContext`
-- Storage: `ICurrentUserStoragePort` による現在ユーザーのセキュア情報、ユーザーデータ永続化、暗号化されたノートデータ
-- Interaction: `EnterPassword`、`LoginSecure`
-- 見どころ: Port / External の境界によって、既存 Flow を拡張できること
-
-Port や Flow の差し替え可能な設計を確認できます。
+初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Flow の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
 
 ---
 
@@ -895,17 +830,18 @@ Interaction Flow Architecture は、次の方向で発展させる予定です�
 - Standard API の拡充
 - Analyzer による依存関係ルール検査の強化
 - Unity Engine 向けの Standard.Unity API の開発
-- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 現在の制約と改善候補](./docs/LIBRARY_IMPLEMENTATION.md#future-improvements) を参照
+- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 設計課題](./docs/LIBRARY_IMPLEMENTATION.md#design-issues) を参照
 
 ---
 
 # 資料まとめ <a id="references"></a>
 
 - [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
-- [SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md)
+- [SystemFlow Builder の詳細](./docs/SYSTEM_FLOW_BUILDER.md)
 - [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md)
 - [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md)
 - [ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md)
+- [ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md)
 - [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
 
 ---

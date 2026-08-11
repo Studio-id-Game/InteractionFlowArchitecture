@@ -123,7 +123,8 @@ Domain、外部環境、および Builder の「概念上の依存構造」を�
 
 クリーンアーキテクチャとの違いの一つとして、`Domain` を中心、`External (Frameworks & Drivers 相当)` を外周とする同心円状の配置ではなく、両者を `Layers` とは独立した `Block` として扱う点が挙げられます。これにより、主要な依存経路と静的解析規則を単純に表現できます。
 
-また、`System Flow Builder Block` が依存解決とライフタイムを管理するため、Program は個々の依存オブジェクトの生成手順に依存せず、実行環境の選択・構築と SystemFlow の実行に集中できます。
+また、`System Flow Builder Block` では、Builder が登録情報から Scope と SystemFlow を構築し、Handler が構築済み Scope を保持・破棄します。
+Program は Handler と親 Scope の保持期間・破棄順を決めることで、個々の依存オブジェクトの生成手順に依存せず、実行環境の選択・構築と SystemFlow の実行に集中できます。
 
 ### Analyzer による保証
 
@@ -154,7 +155,7 @@ Context Loop の実行過程をツリー形式で記述すると以下のよう�
 
 ```text
 Program　 :  SystemFlowBuilder で作成した SystemFlowHandler を通じて SystemFlow を実行する
-  └─ SystemFlowHandler  :  SystemFlow の実行、破棄などの寿命を管理する
+  └─ SystemFlowHandler  :  SystemFlow を実行対象として保持し、専用 Scope の寿命を管理する
      └─ SystemFlow  :  IFlowContext や Domain を参照し、Interaction を選択、実行する
         └─ Interaction  :  IFlowContext や Domain を参照し、Function を選択、実行する
            ├─ Operation/Reaction  :  User との相互作用を目的とした内部・外部機能を提供する
@@ -181,7 +182,7 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
   |          SystemFlowBuilder で SystemFlowHandler を作成する
   |          最初の DoorState とそれを保持した IFlowContext を作成する
   |          作成した IFlowContext と SystemFlowHandler を組み合わせて実行する
-  └─ SystemFlowHandler  :  DoorSystemFlow の実行、破棄などの寿命を管理する
+  └─ SystemFlowHandler  :  DoorSystemFlow を実行対象として保持し、専用 Scope の寿命を管理する
      └─ DoorSystemFlow  :  OperateDoor を実行し、例外か終了要求があるまで繰り返す
         └─ OperateDoor  :  IDoorOperation の結果を IDoorReaction へ渡す
            ├─ IDoorOperation  :  User から DoorCommand を受け取る
@@ -276,7 +277,8 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 ## 実行時の依存ノードツリーの保証
 
 [ライブラリ実装の詳細 - 実行時の依存ノードツリー](./LIBRARY_IMPLEMENTATION_DETAIL.md#runtime-dependency-tree) で触れているように、
-このライブラリでは `IDependencyNode` の依存ノードツリー構築に不備がないかを Analyzer が検査します。
+このライブラリでは、`IDependencyNode` のうち Analyzer が認識できる依存ノード宣言について、
+実行時の依存ノードツリーへ列挙するための制約を検査します。
 
 | 例外ID | 目的 | 既定の重大度 |
 | --- | --- | --- |
@@ -287,20 +289,13 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 - `IDependencyNode` 系の依存をコンストラクタで受け取る場合、その依存が `Dependency` プロパティで列挙されること
 - 継承可能なノードでは、派生クラスが依存を追加できるように `params IDependencyNode[] dependency` 引数を受け取ること
 
-この制約は以下のような恩恵を実現します。
+この検査により、リファクタリングで追加した依存の列挙漏れや、
+派生クラスが追加した依存を基底クラスへ渡し忘れた場合などを検出できます。
+実行時に得られるツリーは、観察、テスト、構成比較、障害解析に利用できます。
 
-- DI の設定ミスにより、意図しない永続化実装や外部接続先が選択されていないか確認できる
-- 起動時や障害発生時のログに、実際に解決された実行構成を記録できる
-- テストで、本番用の外部 API やファイル操作ではなく、想定したスタブが使われているか確認できる
-- コードレビューで、変更前後の実行構成を比較し、意図しない依存の追加を確認できる
-- 単純な処理が多数の外部実装を引き込むなど、責務の肥大化や過剰な依存を発見できる
-- 障害発生時に、Operation、Storage、Reaction など、調査対象となる実体と責任範囲を絞り込める
-- 設計文書で想定した依存構造と、実際に組み立てられた構造の差を確認できる
-- 利用者独自の Interaction や Function 実装を含む構成でも、共通の形式で診断情報を取得できる
-- リファクタリングで追加した依存を `Dependency` へ含め忘れた場合、Analyzer で検出できる
-- 派生クラスが追加した依存を基底クラスへ渡し忘れた場合、Analyzer で検出できる
-
-ただし、Analyzer による検査は、コンストラクタ引数をベースにしたものであり、複雑な初期化や途中での依存追加などは想定されていません。
+ただし、Analyzer による検査はコンストラクタ引数をベースにしています。
+DI の登録一覧全体、動的なサービス取得、実行途中で追加される依存、
+`IDependencyNode` として表現されない依存は検査・保証の対象ではありません。
 
 ## その他の保証と制約と責務
 
@@ -310,7 +305,7 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 | --- | --- |
 | **レイヤー / ブロック間依存の原則** | Analyzer が、namespace 内のキーワードを基準として保証する |
 | **Context 更新の原則** | ライブラリでは保証しない |
-| **実行時の依存ノードツリーの保証** | Analyzer が、コンストラクタ引数を基準として保証する |
+| **実行時の依存ノードツリーの保証** | Analyzer が、認識可能なコンストラクタ依存と `Dependency` 列挙の整合性を検査する |
 | SystemFlow が受け取る `IFlowContext` 実装型 | `ISystemFlowBuilder<TContext>` や `SystemFlowHandler<TContext>` が、ジェネリック型制約と API によって保証する |
 | `ReactionEnd`/`FlowEndToken` が `反応`/`相互作用` の結果を意味する | 各 `internal` コンストラクタと実行元の `protected` 関数が、生成元のみを保証する |
 | `Interaction` 派生クラスにおける例外とキャンセルの自動キャッチと Port への委譲 | `Interaction` 基底クラスが、基底実装によって保証する |
@@ -319,17 +314,17 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 この表において、保証されない（または保証の前提を満たさない）制約は、ライブラリ利用者がコーディングやレビューによって保証する（あるいは部分的に許容する）必要があります。
 
 
-## 設計課題
+## 設計課題 <a id="design-issues"></a>
 
 現在認知している、ライブラリの設計上の課題は以下の通りです。
 
 - Context 更新経路の制約の検討
-- Entry／Context／Storage の所有権の検討
+- `RemoveWithoutDispose` 後や外部から渡された値を含む、Storage の所有権移転境界の検討
 - `ReactionEnd` と `Result` の内部表現の統一の検討
 - Function の実行時レイヤー情報の齟齬の解消
 - SystemFlow 内での例外への対応の検討
-- 並行実行への対応
-- 依存グラフの循環検査
+- 同一 Scope や `IFlowContext` を並行利用する場合の逐次化・分離・同期
+- 構築時または Analyzer による依存グラフの循環検査
 
 これらは、開発を約束するロードマップではなく、利用例を通じて判断する必要がある課題です。
 

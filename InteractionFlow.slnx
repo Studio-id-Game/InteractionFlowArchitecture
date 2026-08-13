@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/Main/">
     <Project Path="InteractionFlow.Core/InteractionFlow.Core.csproj" />
+    <Project Path="InteractionFlow.Standard.Old/InteractionFlow.Standard.Old.csproj" Id="3b7aa66f-07ca-4b30-ba94-4e8147562c5e" />
     <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
   </Folder>
   <Folder Name="/Samples/">

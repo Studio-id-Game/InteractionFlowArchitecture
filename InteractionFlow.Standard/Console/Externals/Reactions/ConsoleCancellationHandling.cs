@@ -60,15 +60,15 @@ namespace InteractionFlow.Standard.Console.Externals.Reactions
                 cc.State = State.ColorSet;
                 if (State.WriteLine)
                 {
-                    global::System.Console.WriteLine();
+                    System.Console.WriteLine();
                 }
 
-                global::System.Console.Write($"* Cancel... : {exception.Message} ");
+                System.Console.Write($"* Cancel... : {exception.Message} ");
             }
 
             if (State.WriteLine)
             {
-                global::System.Console.WriteLine();
+                System.Console.WriteLine();
             }
 
             return default;
@@ -88,20 +88,23 @@ namespace InteractionFlow.Standard.Console.Externals.Reactions
                 cc.State = State.ColorSet;
                 if (State.WriteLine)
                 {
-                    global::System.Console.WriteLine();
+                    System.Console.WriteLine();
                 }
 
-                global::System.Console.Write($"> Cancel Completed.");
 
                 if (!waitAndResetResult.Try(out var e))
                 {
-                    global::System.Console.Write($" Wait error: {e.Message}");
+                    System.Console.Write($"> Cancel Error: {e.Message}");
+                }
+                else
+                {
+                    System.Console.Write($"> Cancel Completed.");
                 }
             }
 
             if (State.WriteLine)
             {
-                global::System.Console.WriteLine();
+                System.Console.WriteLine();
             }
 
             return new(GetEnd(exception));

@@ -7,6 +7,10 @@ namespace InteractionFlow.Core.Entities.Contexts
     /// <summary>
     /// 既存のコンテキストに一時的な文脈値を重ねて扱うコンテキストです。
     /// </summary>
+    /// <remarks>
+    /// 元のコンテキストと <see cref="With{T}(T)"/> で追加した値の所有権は取得せず、
+    /// このコンテキストの破棄時にもそれらを破棄しません。
+    /// </remarks>
     /// <param name="parentContext">値の探索先となる元のコンテキスト。</param>
     public sealed class ScopedFlowContext(IFlowContext parentContext) : IFlowContext, IDisposable
     {
@@ -31,6 +35,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <param name="value">追加する値。<see langword="null"/> は指定できません。</param>
         /// <returns>現在のスコープ付きコンテキスト。</returns>
         /// <exception cref="ArgumentNullException"><paramref name="value"/> が <see langword="null"/> の場合。</exception>
+        /// <exception cref="ObjectDisposedException">このコンテキストが破棄済みの場合。</exception>
         public ScopedFlowContext With<T>(T value)
         {
             if (value is null)
@@ -53,6 +58,8 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// 追加された値が Entry の場合は、Entry が保持する値を再帰的に解決します。
         /// Entry が要求型の値を持たない場合は探索を継続し、その他の解決失敗は例外として送出します。
         /// </remarks>
+        /// <exception cref="ObjectDisposedException">このコンテキストが破棄済みの場合。</exception>
+        /// <exception cref="ResultException">Entry の循環など、値の未発見以外の解決失敗が発生した場合。</exception>
         public bool TryGet<T>([MaybeNullWhen(false)] out T value)
         {
             for (int i = Values.Count - 1; i >= 0; i--)
@@ -91,7 +98,12 @@ namespace InteractionFlow.Core.Entities.Contexts
             }
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// このコンテキストが保持する検索状態と参照を解放します。
+        /// </summary>
+        /// <remarks>
+        /// 元のコンテキストと <see cref="With{T}(T)"/> で追加した値は破棄しません。
+        /// </remarks>
         public void Dispose()
         {
             // このコードを変更しないでください。クリーンアップ コードを 'Dispose(bool disposing)' メソッドに記述します

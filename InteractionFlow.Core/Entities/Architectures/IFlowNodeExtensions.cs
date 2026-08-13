@@ -10,12 +10,12 @@ namespace InteractionFlow.Core.Entities.Architectures
     public static class IFlowNodeExtensions
     {
         /// <summary>
-        /// <see cref="IFlowNode.Name"/> として定義されたノードの表示名を取得します。
+        /// <see cref="IDependencyNode.Name"/> として定義されたノードの表示名を取得します。
         /// </summary>
         /// <typeparam name="T">対象ノードの型。</typeparam>
         /// <param name="this">対象ノード。</param>
         /// <returns>ノードの表示名。</returns>
-        public static string GetName<T>(this T @this) where T : IFlowNode => @this.Name;
+        public static string GetName<T>(this T @this) where T : IDependencyNode => @this.Name;
 
         /// <summary>
         /// <see cref="IFlowNode.Layer"/> として定義された、ノードが属するフロー上のレイヤーを取得します。

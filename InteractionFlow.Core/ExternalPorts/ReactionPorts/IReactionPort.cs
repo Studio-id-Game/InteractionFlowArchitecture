@@ -5,7 +5,7 @@ using System;
 namespace InteractionFlow.Core.ExternalPorts.ReactionPorts
 {
     /// <summary>
-    /// ユーザーに観測可能な出力や終了時の反応を担当する Reaction ポートを表します。
+    /// System から User への観測可能な反応と、その反応に対応する Context への影響を表す Reaction ポートです。
     /// </summary>
     public interface IReactionPort : IFlowNodeStateful
     {

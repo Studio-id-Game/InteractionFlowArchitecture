@@ -5,9 +5,9 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<CoreVersion>0.4.1</CoreVersion>
-		<StandardVersion>0.4.1</StandardVersion>
-		<AnalyzerVersion>0.4.2</AnalyzerVersion>
+		<CoreVersion>0.5.0</CoreVersion>
+		<StandardVersion>0.5.0</StandardVersion>
+		<AnalyzerVersion>0.5.0</AnalyzerVersion>
 		<CoreReleaseNotes>Interaction Flow Architecture の基盤 API を更新したリリースです。</CoreReleaseNotes>
 		<StandardReleaseNotes>Interaction Flow Architecture の標準 API と標準実装を更新したリリースです。</StandardReleaseNotes>
 		<AnalyzerReleaseNotes>Interaction Flow Architecture の依存関係ルールを検証する Analyzer を更新したリリースです。</AnalyzerReleaseNotes>

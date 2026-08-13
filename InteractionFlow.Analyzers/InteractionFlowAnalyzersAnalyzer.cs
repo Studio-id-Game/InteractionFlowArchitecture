@@ -12,7 +12,7 @@ using System.Threading;
 namespace InteractionFlow.Analyzers
 {
     /// <summary>
-    /// The Analyzer for InteractionFlow.
+    /// Analyzes InteractionFlow layer dependencies and IDependencyNode dependency declarations.
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
 

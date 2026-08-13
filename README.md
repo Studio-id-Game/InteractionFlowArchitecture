@@ -1,386 +1,877 @@
-# Interaction Flow C# Package
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |
 
-このプロジェクトは、Interaction Flow Architecture を C# で実現するためのベースライブラリです。
-自動編集エージェント向けの補足は [AGENTS.md](./AGENTS.md) を参照してください。
+---
+
+# Interaction Flow Architecture　<a id="top"></a>
+
+<p align="center">
+    <img
+        src="./docs/icon/icon_flat.svg"
+        alt="Interaction Flow Architecture icon"
+        width="128"
+    >
+</p>
+
+<p align="center">
+    <i>
+        Interaction shapes Context, <br>
+        and Context shapes Interaction.
+    </i>
+</p>
+
+<br>
+
+<p align="center">
+    このアーキテクチャは、<br/>
+    開発対象となるシステムを「コードやレイヤーの塊」として見るだけではなく、<br/>
+    <b>「ユーザーとシステムの境界で生まれる相互作用」と「循環する文脈」</b> をコード表現に落とし込み、<br/>
+    ユーザー体験を直接設計するためのアーキテクチャです。
+</p>
+
+## この README の構成
+
+- [パッケージとインストール](#packages)
+  - 提供しているパッケージの役割と、標準的な導入方法を確認します。
+- [ビジョン](#vision)
+  - Interaction Flow Architecture が解決したい課題と、中心となる概念を説明します。
+- [Context Loop & System Flow](#context-loop-system-flow)
+  - 具体例を通して、ユーザーとシステムの相互作用が連続し、ユーザー体験を形作る仕組みを説明します。
+- [はじめに](#getting-started)
+  - 最小サンプルの実装と実行を通して、ライブラリの基本的な使い方を確認します。
+- [Interaction Flow を支える三つの視点](#three-perspectives)
+  - Philosophy、計算モデル、ライブラリ実装という三つの視点から、設計への理解を深めます。
+
+そのほか、[サンプル解説](#examples)、[ロードマップ](#roadmap)、[資料まとめ](#references) も掲載しています。
+
+---
+
+# パッケージとインストール <a id="packages"></a>
+> Interaction Flow for C#
+
+このリポジトリは、Interaction Flow Architecture を C# / .NET で実装するための、
+ベースライブラリやAnalyzerのパッケージ、サンプルプログラム等を提供しています。
+
+まず使い始めたい場合はこの章や [はじめに](#getting-started) から、設計やコンセプトを理解したい場合は [ビジョン](#vision) から読み進めてください。
+
+`Core`、`Standard`、`Samples` の詳細な責務と更新方針は [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
+
+**もっとも標準的なインストール:**
+```xml
+<ItemGroup>
+  <PackageReference Include="InteractionFlow.Standard" Version="0.5.0" />
+  <PackageReference Include="InteractionFlow.Analyzers" Version="0.5.0" PrivateAssets="all" />
+</ItemGroup>
+```
+**アナライザーの有効化:**
+```ini
+# .editorconfig
+[*.cs]
+interactionflow_enabled = True
+```
+
+## Core
+- `InteractionFlow.Core` は、アーキテクチャ概念を定義する最小パッケージです。
+- Target Framework: `netstandard2.1` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Core
+  ```
+
+## Standard
+- `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
+- Target Framework: `netstandard2.1` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Standard
+  ```
+**通常はこのパッケージをインストールするのが最短です。**
+
+## Analyzer
+- `InteractionFlow.Analyzers` は、Interaction Flow Architecture のルールを検査する Roslyn Analyzer です。
+- Target Framework: `netstandard2.0` 以上
+- Installation:
+  ```bash
+  dotnet add package InteractionFlow.Analyzers
+  ```
+- アナライザーの有効化
+  ```ini
+  # .editorconfig
+  [*.cs]
+  interactionflow_enabled = True
+  ```
+
+**より強力なアーキテクチャ支援を受けるために導入を推奨します。**<br>
+（ビルドに含まれないように、プロジェクトファイルから `PrivateAssets="all"` を付ける事を推奨）
+
+
+## Samples
+- `InteractionFlow.Samples.*` は、Architecture の使い方を具体例として確認するためのプロジェクト群です。
+- 個別サンプルの目的と読み方は [サンプル解説](#examples) にまとめています。
+- パッケージとしての公開はありません。ソリューションからビルドして実行してください。
+  ```bash
+  # Build InteractionFlow
+  dotnet build InteractionFlow.slnx
+
+  # Run InteractionFlow.Samples.*
+  dotnet run --project InteractionFlow.Samples.HelloDoor
+  dotnet run --project InteractionFlow.Samples.HelloDoor.Lock
+  dotnet run --project InteractionFlow.Samples.Parrot
+  dotnet run --project InteractionFlow.Samples.Notepad
+  dotnet run --project InteractionFlow.Samples.Notepad.Secure
+  ```
+
+## Others
+
+- `InteractionFlow.PackageInstallCheck` は、リポジトリ運用のための補助プロジェクトです。
+
+---
+
+# ビジョン <a id="vision"></a>
+
+## なぜ、新しいアーキテクチャが必要なのか？
+
+> <I>「ユーザー体験」をクリーンに保つための制約を持ったアーキテクチャ。</I>
+
+レイヤードアーキテクチャやクリーンアーキテクチャは、コードの依存方向や責務分離を整理する強力な考え方です。一方で、これらのアーキテクチャモデルは、モデル上の要素と実際のコードとの対応関係を強くは定めません。
+
+そのため、設計上の境界とコード上の境界の一致を継続的に保証することは難しく、両者の間に乖離が生じる可能性があります。また、同じ名称や図を共有していても、開発者ごとに異なる対応関係を想定できるため、解釈の余地が設計の自由度としてだけでなく、認識の曖昧さとしても現れます。
+
+特に、対話的な UI、ゲームループ、エージェントなど、複雑な入力と出力を持つシステムでは、処理が複数のレイヤーを横断しながら、継続的に状態を更新し、次の振る舞いを形成します。そのため、アーキテクチャモデル上の責務分割だけでは、実際のコードがどのような実行フローを形成するのかを十分に表現できず、コードとモデルの対応関係はさらに曖昧になります。
+
+また、このようなインタラクティブなシステムの開発において、開発者が本当に設計したいものは、「どのクラスをどのレイヤーに置くか」だけではありません。ユーザーが何を行い、システムがそれをどう受け取り、その結果として文脈がどう変化し、次の相互作用がどのように形づくられるかという、相互作用の流れによる「ユーザー体験（UX）」そのものです。
+
+Interaction Flow Architecture は、レイヤー構造による責務分離を維持しながら、相互作用をコード上の基本単位として設計します。これにより、モデルとコードの対応関係を明確に保ちつつ、ユーザーとシステムの間に生まれる相互作用の流れ＝「ユーザー体験」を、そのままコードとして記述できます。
+
+このアーキテクチャでは、コードを実行した結果としてユーザー体験が生まれるのではなく、コードそのものがユーザー体験の設計言語になります。
+
+Interaction Flow Architecture は、単なるコードの整理規則ではありません。**「ユーザー体験」をクリーンに保つための制約を持ったアーキテクチャ** です。
+
+## コアコンセプト
+
+> <I>相互作用が文脈を形作り、文脈が相互作用を形作る。</I>
+
+Interaction Flow Architecture では、
+ユーザーとシステムの相互作用を `Interaction`、
+相互作用の状態を表す文脈を `Context` として捉えます。
+そして、相互作用が文脈を更新し、新しい文脈が次の相互作用に影響する過程の繰り返し、すなわち `Context Loop` としてシステムを表現します。
+
+```text
+Context -> Interaction -> next Context -> next Interaction -> ...
+```
+
+このアーキテクチャでは、次の言葉を共通言語として使います。
+
+### 基本概念:
+
+| <div style="width: 110px;">名称</div> | 対象 |
+| --- | --- |
+| `User` |  System と相互作用する主体。人間だけでなく、ロボット、AI エージェント、動物など、様々な主体を含む。 |
+| `Context` | 現在の相互作用に関する状態や状況に、次の相互作用に影響を与える文脈的な意味を持たせた情報。 |
+| `System` | `User` と相互作用する開発対象。`Context` を介して `User` の行為に反応し、動作する。 |
+| `Context Loop` | `System` と `User` の間にある、 `Context` を介した繰り返しの反応プロセス。 |
+| `System Flow` | `Context Loop` の一環として、一つ以上の相互作用を通じて `System` が `User` との関係を構築するための単位。|
+| `Interaction` | `Context Loop` の一環として、`System` が内部の目的を達成するための相互作用の単位。|
+
+### 実装概念:
+
+| <div style="width: 110px;">名称</div> | 対象 |
+| --- | --- |
+| `Domain` | `System` の前提となる、外部に依存しないデータ構造や動作の定義。 |
+| `External` | UI、DB、ファイルシステム、OS、外部サービスなど、具体的な実行環境。 |
+| `Function` | `Interaction` から呼び出される機能の単位。|
+| `Function Port` | `Interaction` が扱う `Function` の抽象。|
+| `Function External` | `Interaction` が扱う `Function` の実装。`External` に依存出来る。|
+| `Operation` | `Function` の一種。`User` が操作できる入力を受け付ける機能。 |
+| `Reaction` | `Function` の一種。`User` が観測できる反応を提供する機能。 |
+| `Storage` | `Function` の一種。`Context` の文脈的な意味とは独立して、データを保持する機能。 |
+| `Silent External` | `Function` の一種。`User` との相互作用やデータの記録を目的とせず、外部環境と情報をやり取りする機能。 |
+
+#### アーキテクチャの全体図:
+
+![Interaction Flow Architecture overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
+
+代替テキスト: [Interaction Flow Architecture - Overview Context](./docs/img/InteractionFlowArchitecture_Overview.context.md)
+
+---
+<br/>
+
+# Context Loop & System Flow <a id="context-loop-system-flow"></a>
+
+## Context Loop の具体例
+
+> <I>さぁ、ドアを開けて。</I>
+
+最小の Context Loop は、ドアの例で考えると直感的です。
+
+🚪 ドアを開閉する (Open / Close the Door)
+```text
+# ドアの Context Loop
+
+1. Operation : User がドア（System）を操作する（Open / Close）
+2. Reaction : その操作と、ドアの開閉状態（Context）を参照して…
+     case A : ドアが Close で入力が Open なら、ドアを開ける
+     case B : ドアが Open で入力が Open なら、ドアはすでに開いている
+     case C : ドアが Open で入力が Close なら、ドアを閉める
+     case D : ドアが Close で入力が Close なら、ドアはすでに閉まっている
+3. ドアの開閉状態（Context）を引き継いだまま、(1.)に戻る
+```
+
+このドアの Context Loop は、 1つの Operation と 1つの Reaction を組み合わせた、1つの Interaction が繰り返されるループとして記述されています。
+
+この Interaction の結果は、同じ `Open` という操作（Operation）でも、ドアの開閉状態（Context）が「Close」なら開けられ、「Open」ならすでに開いているという反応（Reaction）になります。そして、ここで更新されたドアの開閉状態（Context）は、次の Interaction を変化させます。
+
+このように、
+
+1. Interaction が、
+2. ユーザーとのやり取りを通じて Context を更新し、
+3. 次の Interaction を変化させる。
+
+というループが、Context Loop の基本となります。
+
+また、System Flow は、複数の Interaction をまとめることで、System における1つのユーザー体験として Context Loop を表現します。ドアの Context Loop の例は、1つの Interaction で構成される最小の System Flow であるとも言えます。
+
+[はじめに](#getting-started) では、このモデルを実際のコードとして実装する手順を、ステップに分けて解説しています。
+
+## User から見た Context Loop & System Flow
+
+> <I>User は、System との関係を構築する。</I>
+
+User は、ドアの Context Loop を次のように体験します。
+
+1. ドア（System）を見つける
+2. ドアの操作（Operation）を実行する
+3. 操作の結果を表す反応（Reaction）を受け取る
+4. (2.)と(3.)を繰り返すことで、ドアの状態（Context）を理解しながら操作できるようになる
+
+特に、(4.) で経験する Context Loop によって、User はドア（System）との関係を構築します。
+これこそが、System Flow が「System が User との関係を構築するための単位」である理由と目的です。
+
+また、(2.) Operation と (3.) Reaction は User と System で実行・観測する立場が反転します。
+- User は Operation を実行し、System は User の Operation を受け取る
+- System は Reaction を実行し、User は System の Reaction を受け取る
+
+## 開発者から見た Context Loop & System Flow
+
+> <I>開発者は、User との関係をデザインする。</I>
+
+開発者は、ドアの Context Loop を次のように設計します。
+
+1. ドア（System）の状態（Context）を定義する
+2. ドアの操作（Operation）を定義する
+3. ドアの反応（Reaction）を定義する
+4. 操作と反応を組み合わせて、ドアの相互作用（Interaction）を実装する
+5. Interaction を組み合わせて、ドアと User との関係（System Flow）をデザインする
+
+特に、(5.) でデザインする System Flow の実装は、Context Loop における System 側の実行を構成します。
+その実行が User の行動と組み合わさることで、User が体験する Context Loop が実現されます。
+
+![Interaction Flow Architecture flow diagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
+
+代替テキスト: [Interaction Flow Architecture - Flow Diagram Context](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
+
+## 共有される Context Loop & System Flow
+
+> <I>Context Loop と System Flow によって、開発者 / System / User が同じ世界を共有する。</I>
+
+開発者がデザインした System Flow は、System 側の実行として Context Loop の一部を構成します。
+その実行と User の行動が Context を介して組み合わさることで、Context Loop は、開発者 / System / User が同じ世界を共有するための共通モデルとなります。
+
+- 開発者は、System Flow をデザインし、Context Loop における System 側の実行を構成する
+- System は、System Flow を実行し、Context Loop を進める相互作用を提供する
+- User は、その相互作用に応じて行動し、Context Loop を体験する
+
+冒頭で、インタラクティブなシステムの開発において、開発者が本当に設計したいものは「ユーザー体験」であると述べました。
+
+ここで述べた Context Loop こそが、実行モデルとしての「ユーザー体験」であり、その System 側の実行を構成する System Flow のデザインが、「ユーザー体験の設計」となります。**System Flow のデザインによって、開発者がユーザー体験を直接設計できるようになる** ことが、Interaction Flow Architecture の最大の利点です。
+
+---
+
+# はじめに <a id="getting-started"></a>
+
+## インストール
+
+NuGet から利用する場合は、標準実装を含む `InteractionFlow.Standard` から始めます。
+
+```bash
+dotnet add package InteractionFlow.Standard
+```
+
+Analyzer の追加、`.editorconfig` の設定、各パッケージの役割は、
+[パッケージとインストール](#packages) を参照してください。
+
+## Hello Door 🚪
+
+Hello Door は、最初の Context Loop を理解するための最小例です。単なる Hello World ではなく、User が System へ入る最小の入口 (Entrance) として扱います。
+
+```text
+Context:
+  Door is closed
+
+Interaction:
+  Operate the Door
+
+Operation:
+  User inputs "Open" or "Close"
+
+Reaction:
+  "The door opens."
+
+Updated Context:
+  Door is open
+```
+
+このサンプルでは、Operation と Reaction を Console 外部依存として実装し、`Program` クラスから SystemFlow を実行します。
+実装は `InteractionFlow.Samples.HelloDoor` にあり、README のコードはファイル単位で同じ責務に対応しています。
+
+実行する場合は、次のコマンドを使います。
+
+```bash
+dotnet build InteractionFlow.slnx
+dotnet run --project InteractionFlow.Samples.HelloDoor
+```
+
+### 実装
+
+#### Step 1. User 入力を Interaction が扱うコマンドとして定義します。
+
+<details>
+<summary><code>Entities/DoorCommand.cs</code> のコードを表示</summary>
+
+```csharp
+namespace InteractionFlow.Samples.HelloDoor.Entities
+{
+    internal enum DoorCommand
+    {
+        Open,
+        Close,
+        Exit,
+        Unknown,
+    }
+}
+```
+
+</details>
+
+#### Step 2. Context に載せるドアの状態を定義します。
+
+`IsOpen` は現在の開閉状態、`ExitRequested` は SystemFlow のループ終了要求です。
+
+<details>
+<summary><code>Entities/DoorState.cs</code> のコードを表示</summary>
+
+```csharp
+namespace InteractionFlow.Samples.HelloDoor.Entities
+{
+    internal sealed class DoorState
+    {
+        public bool IsOpen { get; set; }
+
+        public bool ExitRequested { get; set; }
+    }
+}
+```
+
+</details>
+
+#### Step 3. Interaction から扱うユーザー操作を定義します。
+
+ユーザー操作の `DoorCommand` への変換を担当します。
+
+<details>
+<summary><code>ExternalPorts/OperationPorts/IDoorOperation.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.OperationPorts;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts
+{
+    internal interface IDoorOperation : IOperationPort
+    {
+        ValueTask<DoorCommand> ReadCommandAsync(IFlowContext context);
+    }
+}
+```
+
+</details>
+
+#### Step 4. Interaction から扱うシステム反応を定義します。
+
+指定された `DoorCommand` による Context への影響と結果表示を担当します。
+
+<details>
+<summary><code>ExternalPorts/ReactionPorts/IDoorReaction.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts
+{
+    internal interface IDoorReaction : IReactionPort
+    {
+        ValueTask<ReactionEnd> ReactAsync(IFlowContext context, DoorCommand command);
+    }
+}
+```
+
+</details>
+
+#### Step 5. ユーザー操作 を Console で実装します。
+
+Console 標準入力による `DoorCommand` の取得を担当します。
+
+<details>
+<summary><code>Externals/Operations/ConsoleDoorOperation.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Externals.Operations;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
+using System;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
+{
+    internal sealed class ConsoleDoorOperation : Operation, IDoorOperation
+    {
+        public override void ForceResetMemoryState()
+        {
+        }
+
+        public ValueTask<DoorCommand> ReadCommandAsync(IFlowContext context)
+        {
+            Console.Write("Door command (Open/Close, Enter to exit): ");
+            var text = Console.ReadLine()?.Trim();
+
+            return new(text?.ToUpperInvariant() switch
+            {
+                "OPEN" => DoorCommand.Open,
+                "CLOSE" => DoorCommand.Close,
+                "" or null => DoorCommand.Exit,
+                _ => DoorCommand.Unknown,
+            });
+        }
+    }
+}
+```
+
+</details>
+
+#### Step 6. システム反応 を Console で実装します。
+
+`DoorCommand` に応じた `DoorState` の更新と、
+Console 標準出力による User への結果表示を担当します。
+`DoorState` を取得できない場合は成功として続行せず、例外を含む `ReactionEnd` を返します。
+これにより、呼び出し側は状態を更新できない異常を終了結果として扱えます。
+
+<details>
+<summary><code>Externals/Reactions/ConsoleDoorReaction.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Externals.Reactions;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
+using System;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
+{
+    internal sealed class ConsoleDoorReaction : Reaction, IDoorReaction
+    {
+        public override void ForceResetMemoryState()
+        {
+        }
+
+        public ValueTask<ReactionEnd> ReactAsync(IFlowContext context, DoorCommand command)
+        {
+            if (!context.TryGet<DoorState>(out var door))
+            {
+                return new(GetEnd(new Exception("No door context.")));
+            }
+
+            Console.WriteLine(GetMessageAndUpdateState(door, command));
+            return new(GetEnd());
+        }
+
+        private static string GetMessageAndUpdateState(DoorState door, DoorCommand command)
+        {
+            switch (command)
+            {
+                case DoorCommand.Open when !door.IsOpen:
+                    door.IsOpen = true;
+                    return "The door opens.";
+
+                case DoorCommand.Open:
+                    return "The door is already open.";
+
+                case DoorCommand.Close when door.IsOpen:
+                    door.IsOpen = false;
+                    return "The door closes.";
+
+                case DoorCommand.Close:
+                    return "The door is already closed.";
+
+                case DoorCommand.Exit:
+                    door.ExitRequested = true;
+                    return "Goodbye.";
+
+                default:
+                    return "Use Open or Close.";
+            }
+        }
+    }
+}
+```
+
+</details>
+
+#### Step 7. 相互作用を実装します。
+
+ここではユーザー操作（`IDoorOperation`）から `DoorCommand` を取得し、`IDoorReaction` へ渡します。ドア状態の更新と結果表示は Reaction 側で行われています。
+
+<details>
+<summary><code>Interactions/OperateDoor.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
+using System;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.Interactions
+{
+    internal sealed class OperateDoor(
+        IDoorOperation operation,
+        IDoorReaction reaction,
+        IExceptionPort<Exception> exceptionPort,
+        ICancellationPort cancellationPort)
+        : Interaction(exceptionPort, cancellationPort, operation, reaction)
+    {
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        {
+            var command = await operation.ReadCommandAsync(context);
+            return await reaction.ReactAsync(context, command);
+        }
+    }
+}
+```
+
+</details>
+
+#### Step 8. ユーザー体験を実装します。
+
+`OperateDoor` を繰り返し、Context に終了要求が出るまで Context Loop を継続します。
+各実行が例外を含む `FlowEndToken` を返した場合も継続せず、その終了結果を `Program` へ返します。
+
+<details>
+<summary><code>SystemFlows/DoorSystemFlow.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using InteractionFlow.Samples.HelloDoor.Interactions;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor.SystemFlows
+{
+    internal sealed class DoorSystemFlow(OperateDoor operateDoor)
+        : SystemFlow<IFlowContext>(operateDoor)
+    {
+        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        {
+            FlowEndToken end;
+
+            while (true)
+            {
+                end = await operateDoor.ExecuteAsync(context);
+
+                if (end.HasException)
+                {
+                    break;
+                }
+
+                if (context.TryGet<DoorState>(out var door) &&
+                    door.ExitRequested)
+                {
+                    break;
+                }
+            }
+
+            return end;
+        }
+    }
+}
+```
+
+</details>
+
+#### Step 9. エントリーポイントで、実行環境の組み立てと実行を実装します。
+
+`ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。実行後は `FlowEndToken` を確認し、未解決例外が含まれる場合にエントリーポイントで表示します。
+
+<details>
+<summary><code>Program.cs</code> のコードを表示</summary>
+
+```csharp
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Samples.HelloDoor.Entities;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
+using InteractionFlow.Samples.HelloDoor.Externals.Operations;
+using InteractionFlow.Samples.HelloDoor.Externals.Reactions;
+using InteractionFlow.Samples.HelloDoor.Interactions;
+using InteractionFlow.Samples.HelloDoor.SystemFlows;
+using InteractionFlow.Standard.Builders;
+using InteractionFlow.Standard.Console.Builders;
+using System;
+using System.Threading.Tasks;
+
+namespace InteractionFlow.Samples.HelloDoor
+{
+    internal static class Program
+    {
+        private static async Task Main()
+        {
+            var builder = new ScopeBuilder();
+
+            // Port と External 実装、Interaction を DI に登録します。
+            builder
+                // Interaction の基底クラスが利用する例外/キャンセル表示 Port も登録します。
+                .Apply(ConsoleBuilder.Profile)
+                .UseFunction<IDoorOperation, ConsoleDoorOperation>()
+                .UseFunction<IDoorReaction, ConsoleDoorReaction>()
+                .UseInteraction<OperateDoor>();
+
+            using var scope = builder.BuildScope();
+            using var flow = scope.BuildSystemFlow<DoorSystemFlow, IFlowContext>();
+
+            using var context = new ScopedFlowContext(new FlowContext())
+                .With(new DoorState { IsOpen = false });
+
+            var end = await flow.ExecuteAsync(context);
+
+            if (end.HasException)
+            {
+                Console.WriteLine(end.Exception);
+            }
+        }
+    }
+}
+```
+
+</details>
+
+この例では、`scope` は自身の DI Scope、`flow` は System Flow 専用の Scope、
+`context` は `ScopedFlowContext` 自身の管理状態をそれぞれ終了します。
+`flow` は親の `scope` や外部から渡された `context` を破棄せず、
+`context` も `.With(...)` で追加した `DoorState` を破棄しません。
+詳細は、[System Flow Builder](./docs/SYSTEM_FLOW_BUILDER.md) と
+[ライブラリ実装の詳細 - Context](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md#context) を参照してください。
+
+#### 実行結果
+
+```text
+Door command (Open/Close, Enter to exit): Open
+The door opens.
+Door command (Open/Close, Enter to exit): Open
+The door is already open.
+Door command (Open/Close, Enter to exit): Close
+The door closes.
+Door command (Open/Close, Enter to exit): Close
+The door is already closed.
+Door command (Open/Close, Enter to exit):
+Goodbye.
+```
+
+`DoorState` がない Context で実行された場合は、`ConsoleDoorReaction` が例外を含む終了結果を返します。`DoorSystemFlow` はそれ以上の操作を行わず、`Program` が最終例外を表示します。
+
+#### 責務と関心
+
+この例で、それぞれの要素は以下のように分割された責務と関心を持っています。
+
+| 要素 | 責務 | 関心 |
+| --- | --- | --- |
+| `DoorState`             | ドアの状態の表現 | ドアはどのような情報を持つか？ |
+| `IDoorOperation`   | ユーザーによるドアの操作の抽象化 | ユーザーはドアに対して何ができるか？ |
+| `IDoorReaction`    | システムによるドアの反応の抽象化 | ドアはユーザーに対して何ができるか？ |
+| `ConsoleDoorOperation` | Console によるドアの操作の実装 | ドアの操作をどのように実現できるか？ |
+| `ConsoleDoorReaction`  | Console によるドアの反応の実装 | ドアの反応をどのように実現できるか？ |
+| `OperateDoor`       | ドアとユーザーの相互作用の実装 | ドアはユーザーとどのように相互作用するか？ |
+| `DoorSystemFlow`                    | ドアにおけるユーザー体験の実装 | ドアはユーザーにどのように体験されるか？ |
+| `Program`                        | システムの実体化<br/>Context の組み立て<br/>システムの実行 | どんなドアと、どんなユーザーを組み合わせるか？ |
+
+このような責務と関心の分離は、コードのクリーンさを保ちながら、ユーザー体験と、ユーザー体験の設計をクリーンに保つことができます。
+
+**Interaction Flow Architecture を用いることで、**<br/>
+**コードとユーザー体験の構造を自然に対応させ、**<br/>
+**開発の品質とユーザー体験の品質を同じ視点で設計できるようになります。**
+
+<details>
+
+<summary>💡 Tips: なぜ ConsoleDoorReaction が Context を更新するのか？</summary>
+
+> このサンプルでは、Context を更新しているのは OperateDoor (Interaction) ではなく ConsoleDoorReaction (Reaction) です。
+> Interaction Flow Architecture では、「Reaction は、Context の更新をユーザーから観察可能な形で実行するもの」と考えます。
+> この設計により、すべての Context 更新がユーザーから観察可能な反応と対応し、「状態だけ変わる」「表示だけ変わる」といったユーザー体験の不整合を防ぎやすくなります。
+> また、Reaction の実装漏れも動作エラーや UI の無反応として現れるため、責務の漏れを発見しやすくなります。
+> 詳細は、[ライブラリの実装 - Context 更新の原則](./docs/LIBRARY_IMPLEMENTATION.md#context-update-principle) をご覧ください。
+
+</details>
+
+---
+
+# Interaction Flow を支える三つの視点 <a id="three-perspectives"></a>
+
+<p align="center">
+    <img
+        src="./docs/icon/icon_rich.svg"
+        alt="Interaction Flow Architecture icon"
+        width="128"
+    >
+</p>
+
+Interaction Flow とその実装ライブラリについて、三つの異なる視点から説明をしています。
+
+| 視点 | 主に扱う問い | 主な表現 |
+| --- | --- | --- |
+| Philosophy | 相互作用の流れとはなにか | `Context`、`Context Loop`、関係の歴史 |
+| 計算モデル | 相互作用の流れを計算としてどのように考察できるか | `ContextTape`、構成状態、状態遷移 |
+| ライブラリの実装 | 相互作用の流れをどのように実装し、何を保証するか | `IFlowContext`、`Interaction`、`SystemFlow` |
+
+読み順は自由で、興味が無ければ飛ばしてもかまいません。
+目的別のおすすめの読み順は以下の通りです。
+
+| 目的 | 1. | 2. | 3. |
+| --- | :-- | :-- | :-- |
+| 感覚的に知りたい | [Philosophy](#philosophy) | [計算モデル](#computational-model) | [ライブラリの実装](#implementation) |
+| 原理的に知りたい | [計算モデル](#computational-model) | [ライブラリの実装](#implementation) | [Philosophy](#philosophy) |
+| 実践的に知りたい | [ライブラリの実装](#implementation) | [計算モデル](#computational-model) | [Philosophy](#philosophy) |
+
+各自の適切なタイミングで、[サンプル解説](#examples) を参考に実装例を学ぶこともおすすめします。
+
+<details>
+
+<summary>💡 Tips: Context とその派生概念 </summary>
+
+> それぞれの視点において `Context` とその派生概念が登場します。
+>
+> `Context` は、起点となった Philosophy における第一の概念です。
+>
+> `ContextTape` は、`Context` を計算テープとして扱うための計算モデル上の概念です。
+>
+> `IFlowContext` は、`Context` をプログラムで扱うためのインターフェースです。
+>
+> `ContextTape` と `IFlowContext` は同じ実体の異なる名前ではありません。
+>
+> ただし、計算モデルの概念である `ContextTape` から得られる性質は、`IFlowContext` をはじめとするプログラムの API の責務や設計を判断する基準となります。
+
+</details>
+
+
+## Philosophy <a id="philosophy"></a>
+
+Interaction Flow Architecture は、現実の相互作用を観察することから生まれました。
+
+この見方では、Interaction Flow の根底にあるソフトウェアの解釈や、
+なぜ相互作用（Interaction）を第一級の概念に据えるべきなのかを知ることができます。
+
+詳しい背景については、 [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md) をご覧ください。
+
+## 計算モデル <a id="computational-model"></a>
+
+計算モデルとしての Interaction Flow Architecture は、チューリングマシンのようなものとして説明できます。
+
+この見方では、Function である Operation / Reaction / Storage / Silent External の分類の根拠や、
+プログラムにおける Context の実装を相互作用に対して十分な範囲で小さく保てることの根拠を知ることができます。
+
+詳しいモデルについては、 [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md) をご覧ください。
+
+## ライブラリの実装 <a id="implementation"></a>
+
+Interaction Flow Architecture の C# ライブラリでは、アーキテクチャ概念を型によって実装し、Analyzer によって制約を強化しています。
+
+この見方では、どのようにコードの構造とユーザー体験の構造を自然に対応させ、開発品質とサービス品質を同じ視点で設計できるようにしているのかを知ることができます。
+
+詳しい実装については、 [ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) をご覧ください。
+
+---
+
+# サンプル解説 <a id="examples"></a>
+
+各サンプルの目的と、主に確認できる設計をまとめます。実装の詳細は、サンプル名から各プロジェクトの README を参照してください。
+
+| サンプル | 目的 | 主に確認できること |
+| --- | --- | --- |
+| [HelloDoor](./InteractionFlow.Samples.HelloDoor) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
+| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
+| [Parrot](./InteractionFlow.Samples.Parrot) | 複数の Interaction と System Flow を選択・合成する | `ScopedFlowContext` による Context の局所化、Storage、Cancellation、ネストした Interaction の組み合わせ |
+| [Notepad.Core](./InteractionFlow.Samples.Notepad.Core) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
+| [Notepad](./InteractionFlow.Samples.Notepad) | `Notepad.Core` を通常の Console・ファイル保存で実行する | Port に標準的な Console、Storage、Persistence、Serializer の実装を接続する構成 |
+| [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure) | 同じ中核設計へ安全なログインと保存処理を統合する | Port 実装と一部の Interaction の差し替え、暗号化、鍵素材のライフサイクル管理 |
+
+初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Flow の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
+
+---
+
+# ロードマップ <a id="roadmap"></a>
+
+Interaction Flow Architecture は、次の方向で発展させる予定です。
+
+## .Core 0.5.x 運用
+- `.Standard 0.5.x` API の整理（API の分類や単純化など）
+- Unity Engine 向けの `.Standard.Unity` の開発（NuGet ではなく GitHub 経由での UPM インポートで対応予定）
+- 実運用を通して `.Core 0.6` での方針を策定
+
+## .Core 0.6 開発
+- 安全な非同期処理や非同期破棄への対応（完全なコントロールではなく、利用者が安全に実装できる窓口を作る）
+- テストプロジェクトによるライブラリ API 検査
+- 現在のライブラリ設計上の課題を踏まえた改善の検討（[ライブラリの実装 - 設計課題](./docs/LIBRARY_IMPLEMENTATION.md#design-issues) を参照）
+
+## .Core 0.6.x 運用
+- 実運用を通して `.Core 1.0` での安定化を目指す
+
+## .Core 1.0 開発
+- 公開 API を安定化する（SemVer に従い、破壊的変更はメジャーバージョンで行う）
+
+---
+
+# 資料まとめ <a id="references"></a>
+
+- [.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md)
+- [SystemFlow Builder の詳細](./docs/SYSTEM_FLOW_BUILDER.md)
+- [計算モデルとしての Interaction Flow アーキテクチャ](./docs/COMPUTATIONAL_MODEL.md)
+- [Interaction Flow - Philosophy](./docs/PHILOSOPHY.md)
+- [ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md)
+- [ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md)
+- [InteractionFlow.Analyzers](./InteractionFlow.Analyzers/README.md)
+
+---
 
 ## 目次
-[全体構成](#全体構成) 
-| [Layers](#layers)
-| [Blocks](#blocks)
-| [フローと依存関係](#フローと依存関係)
-| [概念モデル](#概念モデル)
-| [振る舞いの違い](#振る舞いの違い)
-| [制約とアンチパターン](#制約とアンチパターン)
-| [設計指針（名前空間）](#設計指針名前空間)
 
-## Interaction Flow Architecture
-
-<p align="center">
-  <img
-    src="./docs/img/illustration/ChatGPT_Header01_s.png"
-    alt="ChatGPTに生成してもらった、本アーキテクチャのイメージイラスト"
-    width="100%"
-  >
-  <br>
-</p>
-<br>
-<p align="center">
-  <em>
-    Interaction shapes Context,<br>
-    and Context shapes Interaction.
-  </em>
-</p>
-<br>
-
-本プロジェクトが提唱する Interaction Flow Architecture は、クリーンアーキテクチャと同様の高いテスト耐性と拡張性を備えています。
-
-さらに、構造の認知しやすさと責任範囲の明確化を徹底することで、実装単位や責務、コードの配置が自然に導かれるよう設計されています。  
-開発者は「どこに何を書くべきか」を意識的に判断する必要がなくなり、設計の迷いを大きく減らすことができます。  
-
-また、この構造に従うことで、UX を損なわないフロー設計を行いやすくなります。
-
-## このアーキテクチャが向いているケース
-
-- 利用側とシステムの相互作用ベースのアプリケーション
-  >（対話的なアプリケーション、フレームループをもったアプリケーション等）
-
-- フローが複雑になりやすいシステム
-  >（ゲームシステム、複雑なコンテキストの更新をともなうシステム等）
-
-- UI / DB / 外部サービスの分離が重要な場合
-  >（複数の外部APIやデータストアを扱い、テストや差し替えが困難になりやすいシステム等）
-
-## ソリューション構成
-
-本リポジトリは、以下のプロジェクトで構成されています。
-- `InteractionFlow.Core`  
-  基礎となるインターフェースや構造を提供するライブラリ
-
-- `InteractionFlow.Standard`  
-  コンソール操作など、汎用的な実装を提供するライブラリ
-
-- `InteractionFlow.Analyzers`  
-  アーキテクチャの依存関係ルールを検証し、設計違反を検出する Roslyn アナライザー
-
-- `InteractionFlow.Samples.Parrot`  
-  コンソールベースのオウム返しアプリケーションによる、基本構成のサンプル実装
-
-- `InteractionFlow.Samples.Notepad.Core`  
-  Notepad サンプルの中核となるプロジェクトです。Entity / Port / Interaction / SystemFlow をまとめ、ノート一覧・作成・編集・削除などの処理を提供します。
-
-- `InteractionFlow.Samples.Notepad`  
-  Notepad サンプルの実行用プロジェクトです。`Core` のフローをコンソールアプリとして組み立て、標準的なストレージ実装を注入して起動します。
-
-- `InteractionFlow.Samples.Notepad.Secure`  
-  Notepad サンプルの拡張版です。`Core` の構成に加えて、パスワードベースの暗号化や安全なユーザーデータ管理を扱う実装を追加します。
-
->.Core/.Standard/.Samples の各役割については、[.Core/.Standard/.Samples それぞれの役割](./docs/RoleOfMainProjects.md) を参照してください。
+[パッケージとインストール](#packages) | [ビジョン](#vision) | [Context Loop & System Flow](#context-loop-system-flow) | [はじめに](#getting-started) | [Interaction Flow を支える三つの視点](#three-perspectives) | [サンプル解説](#examples)  | [ロードマップ](#roadmap) | [資料まとめ](#references)
 
 ---
 
-# 全体構成
-
-本アーキテクチャは、以下の要素で構成されます：
-
-- 4つの Layer（層）
-- 3つの Block（補助構造）
-
-各要素は、それぞれ対応する名前空間（およびディレクトリ）を持ちます。
-
-以下は、本アーキテクチャの構造の全体像です。
-
-![InteractionFlowArchitecture_Overview](./docs/img/InteractionFlowArchitecture_Overview.svg)
-
-代替テキスト：[InteractionFlowArchitecture_Overview.context.md](./docs/img/InteractionFlowArchitecture_Overview.context.md)
-
----
-
-# Layers
-
-## SystemFlow Layer
-
-**namespace**  
-`{ProjectName}.SystemFlows`
-
-**役割**  
-SystemFlow は、システム全体の処理手順ではなく、System 側が User への反応プロセスとして Interaction を束ねるフロー単位です。  
-System と User の間にある関係として、単一の意味を持つ単位として設計されます。
-
-**構成**  
-- 1つのユーザー目的に対して1つのクラス（または構造体）で構成
-
-## Interaction Layer
-
-**namespace**  
-`{ProjectName}.Interactions`
-
-**役割**  
-システム内部の目的を達成するためのフロー単位です。  
-システムにとって「単一の意味」を持つ処理単位として設計されます。
-
-**特徴**
-
-- Port 層を経由して機能を呼び出す
-- ユーザー入力を受け取り、処理に適用する
-- 保存操作やユーザーへの反応を実行する
-
-**構成**  
-- 1つのシステム目的に対して1つのクラス（または構造体）で構成
-
-### Interaction Rules
-
-**namespace**  
-`{ProjectName}.Interactions.Rules`
-
-**役割**  
-複数の Interaction 間で共有されるべきルールを定義します。
-
-**制約**
-- `{ProjectName}.Interactions` 内からのみ参照可能
-
-## Function Port Layer
-
-**namespace**  
-`{ProjectName}.ExternalPorts.{OperationPorts|ReactionPorts|SilentExternalPorts|StoragePorts}`
-
-**役割**  
-依存関係を逆転させるための抽象インターフェース群です。
-
-**特徴**
-- 外部機能を interface として定義
-- 実装の差し替えを可能にする
-
-## Function External Layer
-
-**namespace**  
-`{ProjectName}.Externals.{Operations|Reactions|SilentExternals|Storages}`
-
-**役割**  
-実際の処理を行う、外部依存の実装です。
-
-**分類**
-
-- **Operations**  
-  ユーザー入力や条件の取得を担当（UI / Controller 相当）
-
-- **Storages**  
-  状態の保存・管理を担当（DB / FileSystem / Gateway 相当）
-
-- **Reactions**  
-  ユーザーに観測可能な出力を担当（UI / Presenter 相当）
-
-- **SilentExternals**  
-  ユーザーに観測されない、外部実行環境との結合を担当（Service 相当）
-
----
-
-# Blocks
-
-## Domain Block
-
-**namespace**  
-`{ProjectName}.Entities`
-
-**役割**  
-システムの前提となるデータ構造（エンティティ）を定義します。
-
-### Entity Rules
-
-**namespace**  
-`{ProjectName}.Entities.Rules`
-
-**役割**  
-エンティティに対する制約やルールを定義します。
-
-**制約**
-- `{ProjectName}.Entities` 内からのみ参照可能
-
-## SystemFlow Builder Block
-
-**namespace**  
-`{ProjectName}.Builders`
-
-**役割**  
-DI コンテナのラッパーとして、SystemFlow の構築を担います。
-
-**特徴**
-- Function Port を介して Function External 実装を注入
-- SystemFlow の実行環境を構成する
-
-> 詳細な構築手順や設計意図については、[SystemFlow Builder の詳細](./docs/SystemFlowBuilder.md) を参照してください。
-
-## External Block
-
-**役割**  
-OS、Framework、ライブラリなどの外部要素です。
-
-※本アーキテクチャの管理対象外
-
----
-
-# フローと依存関係
-
-このアーキテクチャでは、依存関係の逆転により実行フローと依存関係が明確に分離されます。
-
-## 実行フローとContext（文脈）
-
-以下は、本アーキテクチャにおけるフローの全体像です。
-
-![InteractionFlowArchitecture_FlowDiagram](./docs/img/InteractionFlowArchitecture_FlowDiagram.svg)
-
-代替テキスト：[InteractionFlowArchitecture_FlowDiagram.context.md](./docs/img/InteractionFlowArchitecture_FlowDiagram.context.md)
-
-ユーザー視点の処理は、以下の順で流れます：
-
-> User(開始) → SystemFlow → Interaction → Function Port → Function External → User(入力/観測/終了)
-
-### Context（文脈）
-SystemFlow は、常に「Context（文脈）」を入力として開始されます。
-
-Context は現在の処理に関する状態や状況を表す文脈的情報で、初期に与えられた情報や、過去の処理によって更新された情報を含みます。  
-ユーザーを識別する値が必要な場合は、アプリケーション側の Entity として定義し、Context の値として扱います。  
-SystemFlow はこの Context をもとに実行され、Interaction を通じて処理が進行します。
-
-`FlowContext` は基本となる文脈を表し、アプリケーション固有の文脈値は継承によって定義します。  
-フロー中に一時的な文脈値を追加する場合は `ScopedFlowContext` を使用します。
-
-更新された Context は、必要に応じて次のフローの入力として再利用されます。  
-これにより、連続したユーザー体験が構成されます。
-
-## 依存関係
-
-以下は、本アーキテクチャにおける依存関係の全体像です。
-
-![InteractionFlowArchitecture_DependencyDiagram](./docs/img/InteractionFlowArchitecture_DependencyDiagram.svg)
-
-代替テキスト：[InteractionFlowArchitecture_DependencyDiagram.context.md](./docs/img/InteractionFlowArchitecture_DependencyDiagram.context.md)
-
-依存関係は次のようになります：
-
-- SystemFlow は Interaction に、Interaction と Function External は Function Port に依存します
-
-> SystemFlow → Interaction → Function Port ← Function External
-
-- Function External のみが外部に依存します
-
-> Function External → External Block
-
-- Builder は  Interaction と External Block を除くすべての要素に依存します
-
-> SystemFlow Builder → SystemFlow / Function Port / Function External
-
-- すべての要素は Domain に依存します
-
-> All Layers & Blocks → Domain
-
----
-
-# 概念モデル
-
-## SystemFlow / Interaction / Function
-
-### SystemFlow
-
-SystemFlow は、システム全体の処理手順ではなく、System 側が User への反応プロセスとして Interaction を束ねるフロー単位です。  
-System と User の間にある関係として単一の意味を持ち、一貫した System 側の振る舞いとして構成します。
-
-### Interaction（作用）
-
-システム内部の意味単位です。  
-Function Port を介して複数の Function（機能）を実行し、それらを組み合わせて SystemFlow の内部状態遷移を構成します。
-
-### Function（機能）
-
-処理の実体です。
-
-- Operation（ユーザーからの入力）
-- Storage（状態管理）
-- Reaction（ユーザーへの出力）
-- SilentExternals（ユーザーに見えない、外部実行環境とのやりとり）
-
-これらは Function Port によって抽象化され、Function External によって実装されます。
-
-## 計算モデルとしての Interaction Flow アーキテクチャ
-
-本アーキテクチャは、状態遷移とテープ操作を持つチューリングマシンのモデルとして解釈することもできます。
-この視点では、Interaction は状態遷移、Function はテープ操作として捉えることができます。
-この事は、計算モデルとしてのアーキテクチャ構造の必要十分性を保証します。
-
-> 詳細な解釈については、[計算モデルとしての Interaction Flow アーキテクチャ](./docs/ComputationalModel.md) を参照してください。
-
-
-# 振る舞いの違い
-
-## 中断
-
-- Function は中断（例外・キャンセル）を持つ
-- SystemFlow / Interaction は中断を持たない
-
-> 正確には、SystemFlow / Interaction は中断を適切に完了し、その結果をユーザーに伝えることで、常に正常終了として扱う
-
-## 状態
-- Function（Operation / Storage / Reaction）のみが、必要に応じて Mutable な状態を持つことができる
-- SystemFlow / Interaction は Immutable
-
-また、SystemFlow / Interaction はフロー中の遷移状態は持てますが、フローのスコープ終了時に必ず破棄されます。
-
----
-
-# 制約とアンチパターン
-
-## SystemFlow の制約
-
-- Function Port および Function External に依存しない
-- System と User の間にある関係として、単一の意味と目的を持つ
-- 必ず「明確な終了」を示す Interaction を持つ
-
-### アンチパターン
-
-- User への反応プロセスとして意味を持たない SystemFlow
-
-> System と User の間にある関係として単一の意味を持つ場合は、単一の Interaction をラップする SystemFlow であってもよい。
-
-## Interaction の制約
-
-- Function Port に依存するが、Function External には依存しない
-- SystemFlow に依存しない
-- システム内で単一の意味と目的を持つ
-- 必ず終了を示す Reaction を持つ（例外やキャンセルも含めて最終的にユーザーに結果を返す）
-
-### アンチパターン
-
-- 過度に巨大な Interaction
-
-> システムの目的と対応する場合は、単一の Reaction をラップする Interaction であってもよい。
-> また、それ以上分解するとシステム内における意味や目的が失われる場合には、複数の Function を組み合わせてある程度大きい Interaction を構築してもよい。
-
-## 補足
-
-SystemFlow / Interaction の粒度はチームで調整可能です。
-ただし、前述したアンチパターンにならないように注意する必要があります。
-
----
-
-# 設計指針（名前空間）
-
-各 Layer / Block は、名前空間およびディレクトリ構造と一致させることを推奨します。
-
-さらに、アルファベット順に並べることで、おおよそ処理フロー順に配置されます。
-
-これにより：
-
-- 構造とコードの対応が明確になる
-- 認知負荷が下がる
-- 保守性が向上する
-
----
-
-[PageTop](#interaction-flow-c-package) 
-| [全体構成](#全体構成) 
-| [Layers](#layers)
-| [Blocks](#blocks)
-| [フローと依存関係](#フローと依存関係)
-| [概念モデル](#概念モデル)
-| [振る舞いの違い](#振る舞いの違い)
-| [制約とアンチパターン](#制約とアンチパターン)
-| [設計指針（名前空間）](#設計指針名前空間)
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |

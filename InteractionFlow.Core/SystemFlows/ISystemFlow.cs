@@ -5,8 +5,13 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Core.SystemFlows
 {
     /// <summary>
-    /// User への反応プロセスとして Interaction を束ねた SystemFlow を表します。
+    /// Context Loop の一環として、一つ以上の Interaction の順序、分岐、反復を構成し、
+    /// System 側から User との関係を構築する実行単位を表します。
     /// </summary>
+    /// <remarks>
+    /// SystemFlow は Context Loop の System 側の実行経路を担いますが、
+    /// Context Loop そのものではありません。
+    /// </remarks>
     public interface ISystemFlow : IFlowNode
     {
         /// <summary>

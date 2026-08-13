@@ -1,10 +1,19 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # Interaction Flow Architecture - Dependency Diagram Context
 
 This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_DependencyDiagram.drawio` so the diagram can be used as text context.
 
 ## Overview
 
-対象図は **Interaction Flow Architecture - Dependency Diagram**。バージョンは **version 3.6 / 2026.07.14** である。
+対象図は **Interaction Flow Architecture - Dependency Diagram**。バージョンは **version 3.8 / 2026.07.14** である。
 
 この図は、Interaction Flow Architecture の主要要素間の依存方向を示す依存関係図である。実行順序そのものではなく、`Program`、`SystemFlow Builder Block`、各 Layer、`Domain Block`、`External Block`、Port、外部実体の間で、どの要素がどの抽象・実装・外部資源に依存するかを表している。
 
@@ -16,6 +25,8 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 - 白抜き矢印は Port の実装を表す。
 - 各レイヤー内での横方向の依存関係は規定しない。
 - `Storage` の対象は `DB`、ファイルシステム、環境設定、個人設定などであり、永続・一時を問わない。
+- 概念上の依存図であり、実際のクラスと 1 対 1 には対応しない。
+- アーキテクチャ上重要な意味を持つ依存のみを示す。
 
 ## Main Elements
 
@@ -42,12 +53,15 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 
 `Layers` は `System / Application / Service` 内の主要な縦方向構造である。図には「各レイヤーは、スコープを持った一時的な `Context` を利用して次の層の動作を変更できる」と示されている。
 
-- `SystemFlow Layer`: `Interaction` のオーケストレーターであり、ユーザーへの反応プロセスを構成する。
+- `SystemFlow Layer`: `Interaction` のオーケストレーターであり、システムとユーザーの関係を構築する。
 - `Interaction Layer`: `Function Port` のオーケストレーターであり、システム内部の目的を達成する。
 - `Function Port Layer`: Function のインターフェース。外部機能への依存を抽象化する。
 - `Function External Layer`: 外部依存の機能実装であり、機能のための実際の処理を行う。
 
 `SystemFlow` は `Interaction` に依存する。`Interaction` は `IOperationPort`、`IReactionPort`、`IStoragePort`、`ISilentExternalPort` に依存する。
+
+`SystemFlow` から `Interaction` への依存には、
+`Interaction を組み合わせてユーザーへの反応プロセスをフロー化` というラベルがある。
 
 ### Domain Block
 
@@ -55,7 +69,7 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 
 各 Layer から `Domain Block` へ依存矢印があり、`SystemFlow Layer`、`Interaction Layer`、`Function Port Layer`、`Function External Layer` がドメイン定義を参照することを表す。
 
-図中には `Entity_A`、`Entity_B` と `概念 A`、`概念 B` があり、`Entity_A` から `Entity_B` への依存に `Domain で閉じた / 内部依存の例` というラベルがある。これは Domain 内部に閉じた依存関係の例である。`Entity_B` から先は `（以下略…）` として省略されている。
+図中には `Entity_A`、`Entity_B`、`Context` と、それぞれの `概念 A`、`概念 B`、`文脈的情報` がある。`Entity_A` から `Entity_B` への依存には `Domain で閉じた / 内部依存の例` というラベルがあり、Domain 内部に閉じた依存関係の例を表す。`Entity_B` から `Context` への破線は `（省略…）` とされ、依存関係がさらに続くことを表す。
 
 ### External Block
 
@@ -111,3 +125,12 @@ This document captures the meaning of `docs/img/src/InteractionFlowArchitecture_
 この context は draw.io XML の明示 edge、ラベル、親子関係、配置から作成している。Port は矢印形状の swimlane/vertex として描かれており、方向は明示 edge と配置から解釈している。
 
 `Function External Layer` の実装から Port への白抜き矢印は、図の凡例と edge style から Port 実装関係として解釈している。
+
+---
+
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./../../README.md) |
+[Philosophy](./../PHILOSOPHY.md) |
+[計算モデルとして](./../COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./../LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./../LIBRARY_IMPLEMENTATION_DETAIL.md) |

@@ -6,11 +6,8 @@
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="InteractionFlow.Standard"
-						  Version="$(StandardVersion)" />
-		<PackageReference Include="InteractionFlow.Analyzers"
-						  Version="$(AnalyzerVersion)"
-						  PrivateAssets="all" />
+		<PackageReference Include="InteractionFlow.Standard" Version="$(StandardVersion)" />
+		<PackageReference Include="InteractionFlow.Analyzers" Version="$(AnalyzerVersion)" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>

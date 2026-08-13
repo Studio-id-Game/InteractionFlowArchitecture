@@ -20,7 +20,7 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
         public TPersistenceId PersistenceId => persistenceId;
 
         /// <summary>
-        /// 指定された Persistence ポートから値を読み込みます。
+        /// 指定された Persistence ポートから値を読み込み、成功した値をこの Entry の現在値として設定します。
         /// </summary>
         /// <param name="persistencePort">読み込みに使用する Persistence ポート。</param>
         /// <returns>読み込まれた値。失敗時は失敗結果。</returns>
@@ -31,12 +31,20 @@ namespace InteractionFlow.Core.ExternalPorts.StoragePorts.Entries
             return await persistencePort.Load(persistenceId, oldValue)
                 .ThenAsync(value =>
                 {
-                    Value = value;
+                    Load(value);
                     return value.AsResult().StartAsync();
                 })
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// 読み込みに成功した値を、この Entry の現在値として設定します。
+        /// </summary>
+        /// <param name="value">設定する読み込み済みの値。</param>
+        internal void Load(TValue value)
+        {
+            Value = value;
+        }
 
         /// <summary>
         /// Entry の永続化 ID に対応する保存データを削除し、削除に成功した場合は保持する値を default にします。

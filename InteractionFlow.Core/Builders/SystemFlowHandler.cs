@@ -7,10 +7,13 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Core.Builders
 {
     /// <summary>
-    /// 生成済みの SystemFlow と、その SystemFlow のために作成されたスコープのライフタイムを管理します。
+    /// SystemFlow を実行対象として保持し、その実行のために作成された専用
+    /// <see cref="ScopeHandler"/> のライフタイムを管理します。
     /// </summary>
     /// <remarks>
-    /// SystemFlow の実行対象と依存解決スコープを一体で保持し、破棄時にスコープも解放します。
+    /// 破棄時は専用 ScopeHandler を破棄して以後の実行を無効にします。
+    /// SystemFlow 自体、探索先の親 ScopeHandler、実行時に渡された <see cref="IFlowContext"/> の
+    /// 所有権は取得せず、これらを直接破棄しません。
     /// </remarks>
     /// <typeparam name="TContext">SystemFlow が扱うコンテキストの型。</typeparam>
     /// <param name="scope">SystemFlow の依存解決に使用されたスコープ。</param>
@@ -38,13 +41,19 @@ namespace InteractionFlow.Core.Builders
         }
 
         /// <summary>
-        /// SystemFlow 用に保持しているスコープを破棄し、以降の実行を無効にします。
+        /// SystemFlow 用に保持している専用スコープを破棄し、以降の実行を無効にします。
         /// </summary>
+        /// <remarks>
+        /// SystemFlow 自体、探索先の親スコープ、実行時に渡されたコンテキストは直接破棄しません。
+        /// </remarks>
         public void Dispose()
         {
+            var scope = this.scope;
+
+            this.scope = null;
+            this.systemFlow = null;
+
             scope?.Dispose();
-            scope = null;
-            systemFlow = null;
         }
     }
 }

@@ -3,7 +3,8 @@ using InteractionFlow.Core.Entities.Architectures;
 namespace InteractionFlow.Core.ExternalPorts.SilentExternalPorts
 {
     /// <summary>
-    /// ユーザーに直接観測されない、外部実行環境とのやりとりを担当する SilentExternal ポートを表します。
+    /// User との相互作用や System 内での記録を直接の目的とせず、
+    /// 外部実行環境と連携する SilentExternal ポートを表します。
     /// </summary>
     public interface ISilentExternalPort : IFlowNodeStateful
     {

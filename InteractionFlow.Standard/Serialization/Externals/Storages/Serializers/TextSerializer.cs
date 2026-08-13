@@ -48,6 +48,9 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
         /// <param name="inputValue">変換する値。</param>
         /// <param name="refData">書き込み先として使用するストリーム。</param>
         /// <returns>書き込み後のストリーム。失敗時は失敗結果。</returns>
+        /// <remarks>
+        /// 書き込み先ストリームの所有権は取得せず、処理後も開いたままにします。
+        /// </remarks>
         public override async Task<Result<Stream>> Serialize(Result<TValue> inputValue, Result<Stream> refData)
         {
             return await Serialize(inputValue, DefaultRefText(refData))
@@ -80,6 +83,9 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
         /// <param name="inputData">読み取り元のストリーム。</param>
         /// <param name="refValue">変換時に参照または再利用する値。</param>
         /// <returns>変換された値。失敗時は失敗結果。</returns>
+        /// <remarks>
+        /// 読み取り元ストリームの所有権は取得せず、処理後も開いたままにします。
+        /// </remarks>
         public override async Task<Result<TValue>> Deserialize(Result<Stream> inputData, Result<TValue> refValue)
         {
             return await inputData.StartAsync()

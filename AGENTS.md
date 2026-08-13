@@ -1,3 +1,12 @@
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリ実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |
+
+---
+
 # InteractionFlow Agent Guide
 
 このファイルは、Codex を含む自動編集エージェント向けの作業指針です。
@@ -6,14 +15,25 @@
 
 ## まず見るもの
 
-- `README.md`
-- `.editorconfig`
-- `Directory.Build.props`
-- `global.json`
-- `docs/RoleOfMainProjects.md`
-- `docs/SystemFlowBuilder.md`
-- `docs/processes/README.md`
-- 変更対象に近い `*.csproj` と該当ソース
+- 作業の前提
+  - `docs/processes/README.md`
+  - `.editorconfig`
+  - `Directory.Build.props`
+  - `global.json`
+
+- リポジトリの基本情報
+  - `README.md`
+  - `docs/RoleOfMainProjects.md`
+
+- 設計思想に関連するタスクの場合
+  - `docs/PHILOSOPHY.md`
+
+- SystemFlowBuilder に関連するタスクの場合
+  - `docs/SYSTEM_FLOW_BUILDER.md`
+
+- 実装に関連するタスクの場合
+  - `docs/LIBRARY_IMPLEMENTATION.md`
+  - 変更対象に近い `*.csproj` と該当ソース
 
 ## このリポジトリの基本方針
 
@@ -35,6 +55,15 @@
 - `SystemFlow` と `Interaction` の責務を混ぜない
 - `ExternalPort` と `External` の境界を保つ
 - 新しい概念を追加するときは、既存の `Entities` / `Builders` / `Interactions` / `SystemFlows` のどこに属するかを先に決める
+
+## Interaction Flow の用語を確認するとき
+
+- `Context` は、`Context Loop` のある時点における、User と System が共有する「現在」を表す
+- `Context Loop` は、Interaction によって `Context` が移り変わり続ける時間的な過程であり、User と System の関係の歴史を表す
+- `IFlowContext` は、`Context` のうち System 側で扱う文脈を提供する実装上の投影であり、`Context` または `Context Loop` そのものではない
+- 一つの `IFlowContext` インスタンスを継続利用することは、`Context Loop` を実現する代表的な構成であり、両者の同一性を意味しない
+- 文書間の矛盾を判断するときは、対象が概念と実装のどちらか、状態と時間的な過程のどちらかを分けて確認する
+- 表現、包含、実現、寄与の関係を同一性として扱わず、比較する原文の主語と対象が一致していることを確認してから指摘する
 
 ## 図を参照するとき
 
@@ -60,26 +89,11 @@
 - 実装の差し替えが必要なら `ExternalPort` を追加する
 - サンプル都合の変更なら `Samples` 側に閉じ込める
 
-## 繰り返し同じ問題が発生する時
+---
 
-- リポジトリ固有の問題が再発し、その原因と有効な解決手順を確認できた場合は、`## トラブルシュート` への追記を検討する
-- 一度だけ発生した問題、原因を特定できていない問題、一般的な開発知識で解決できる問題は追記しない
-- 追記する前に、既存の項目と重複していないか確認する
-- トラブルシュートには、症状・確認できた原因・解決手順・確認コマンドを簡潔に残す
-- 推測を含む場合は、確定事項として記述せず、未確認であることを明記する
-- 一時的な回避策の場合は、その旨と恒久対応が必要かどうかを書く
-- 環境依存の問題は、OS・SDK・権限・パスなど、確認できた再発条件を書く
-- AGENTS.md の変更は、本来のタスクと関係のある最小限の差分に留める
-- 解決しない場合や、原因に確信を持てない場合はユーザーに報告する
-
-
-## トラブルシュート
-
-### タイトル
-
-- 症状:
-- 発生条件:
-- 原因:
-- 対応:
-- 確認:
-- 備考:
+<!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->
+[README](./README.md) |
+[Philosophy](./docs/PHILOSOPHY.md) |
+[計算モデルとして](./docs/COMPUTATIONAL_MODEL.md) |
+[ライブラリの実装](./docs/LIBRARY_IMPLEMENTATION.md) |
+[ライブラリ実装の詳細](./docs/LIBRARY_IMPLEMENTATION_DETAIL.md) |

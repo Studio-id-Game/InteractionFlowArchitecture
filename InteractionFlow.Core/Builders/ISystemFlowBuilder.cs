@@ -21,7 +21,7 @@ namespace InteractionFlow.Core.Builders
         /// <typeparam name="TSystemFlow">生成する SystemFlow の型。</typeparam>
         /// <param name="parameters">SystemFlow の生成時に DI へ追加で渡すコンストラクタ引数。</param>
         /// <param name="parents">SystemFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
-        /// <returns>生成された SystemFlow とスコープを管理するハンドラ。</returns>
+        /// <returns>生成された SystemFlow を保持し、専用スコープのライフタイムを管理するハンドラ。</returns>
         SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(object[] parameters, params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>;
 
@@ -30,7 +30,7 @@ namespace InteractionFlow.Core.Builders
         /// </summary>
         /// <typeparam name="TSystemFlow">生成する SystemFlow の型。</typeparam>
         /// <param name="parents">SystemFlow 用スコープで解決できないサービスを探索する親スコープ。</param>
-        /// <returns>生成された SystemFlow とスコープを管理するハンドラ。</returns>
+        /// <returns>生成された SystemFlow を保持し、専用スコープのライフタイムを管理するハンドラ。</returns>
         SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>;
     }

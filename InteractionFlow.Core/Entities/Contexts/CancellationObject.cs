@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         private readonly List<Task> currentTasks = [];
 
         /// <summary>
-        /// 登録済みのキャンセル対象タスクが存在するかどうかを取得します。
+        /// 未完了の登録済みキャンセル対象タスクが存在するかどうかを取得します。
         /// </summary>
         public bool HasTask
         {
@@ -91,8 +91,10 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         /// <returns>
         /// 待機とリセットの結果。
-        /// キャンセル要求がない場合、登録タスクが正常完了した場合、または登録タスクがキャンセル完了した場合は成功結果を返します。
-        /// 登録タスクが通常例外で失敗した場合は失敗結果を返します。
+        /// キャンセル要求がない場合は、<see cref="InvalidOperationException"/> を持つ失敗結果を返します。
+        /// キャンセル要求後、登録タスクが正常完了またはキャンセル完了した場合は成功結果を返します。
+        /// キャンセル以外の理由で失敗した登録タスクがある場合は、それらの例外を
+        /// <see cref="AggregateException"/> に集約した失敗結果を返します。
         /// </returns>
         public ValueTask<Result> WaitAndResetAsync()
         {
@@ -103,7 +105,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             lock (lockObject)
             {
                 if (tokenSource == null || !tokenSource.IsCancellationRequested)
-                    return new(Result.Success);
+                    return new(new InvalidOperationException("Cancellation is not requested."));
 
                 source = tokenSource;
                 tasks = [.. currentTasks];
@@ -194,7 +196,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         /// <param name="canceledException">キャンセル要求がある場合に作成された例外。</param>
         /// <returns>キャンセル要求がある場合は <see langword="true"/>。</returns>
-        public bool TryGetCanceledException(out OperationCanceledException? canceledException)
+        public bool TryGetCanceledException([MaybeNullWhen(false)] out OperationCanceledException canceledException)
         {
             lock (lockObject)
             {

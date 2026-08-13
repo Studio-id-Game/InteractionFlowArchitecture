@@ -84,7 +84,8 @@ namespace InteractionFlow.Standard.Builders
             {
                 foreach (var dependency in node.Dependency.Span)
                 {
-                    AppendDependencyTreeText(builder, dependency, depth + 1, currentPath, circularReferenceMarker);
+                    if (dependency != null)
+                        AppendDependencyTreeText(builder, dependency, depth + 1, currentPath, circularReferenceMarker);
                 }
             }
             finally

@@ -818,12 +818,12 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 
 | サンプル | 目的 | 主に確認できること |
 | --- | --- | --- |
-| [HelloDoor](./InteractionFlow.Samples.HelloDoor/README.md) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
-| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock/README.md) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
-| [Parrot](./InteractionFlow.Samples.Parrot/README.md) | 複数の Interaction と System Flow を選択・合成する | `ScopedFlowContext` による Context の局所化、Storage、Cancellation、ネストした Interaction の組み合わせ |
-| [Notepad.Core](./InteractionFlow.Samples.Notepad.Core/README.md) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
-| [Notepad](./InteractionFlow.Samples.Notepad/README.md) | `Notepad.Core` を通常の Console・ファイル保存で実行する | Port に標準的な Console、Storage、Persistence、Serializer の実装を接続する構成 |
-| [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure/README.md) | 同じ中核設計へ安全なログインと保存処理を統合する | Port 実装と一部の Interaction の差し替え、暗号化、鍵素材のライフサイクル管理 |
+| [HelloDoor](./InteractionFlow.Samples.HelloDoor) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
+| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
+| [Parrot](./InteractionFlow.Samples.Parrot) | 複数の Interaction と System Flow を選択・合成する | `ScopedFlowContext` による Context の局所化、Storage、Cancellation、ネストした Interaction の組み合わせ |
+| [Notepad.Core](./InteractionFlow.Samples.Notepad.Core) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
+| [Notepad](./InteractionFlow.Samples.Notepad) | `Notepad.Core` を通常の Console・ファイル保存で実行する | Port に標準的な Console、Storage、Persistence、Serializer の実装を接続する構成 |
+| [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure) | 同じ中核設計へ安全なログインと保存処理を統合する | Port 実装と一部の Interaction の差し替え、暗号化、鍵素材のライフサイクル管理 |
 
 初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Flow の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
 
@@ -833,11 +833,21 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 
 Interaction Flow Architecture は、次の方向で発展させる予定です。
 
-- Core API の安定化
-- Standard API の拡充
-- Analyzer による依存関係ルール検査の強化
-- Unity Engine 向けの Standard.Unity API の開発
-- その他ライブラリとしての改善候補の詳細は [ライブラリの実装 - 設計課題](./docs/LIBRARY_IMPLEMENTATION.md#design-issues) を参照
+## .Core 0.5.x 運用
+- `.Standard 0.5.x` API の整理（API の分類や単純化など）
+- Unity Engine 向けの `.Standard.Unity` の開発（NuGet ではなく GitHub 経由での UPM インポートで対応予定）
+- 実運用を通して `.Core 0.6` での方針を策定
+
+## .Core 0.6 開発
+- 安全な非同期処理や非同期破棄への対応（完全なコントロールではなく、利用者が安全に実装できる窓口を作る）
+- テストプロジェクトによるライブラリ API 検査
+- 現在のライブラリ設計上の課題を踏まえた改善の検討（[ライブラリの実装 - 設計課題](./docs/LIBRARY_IMPLEMENTATION.md#design-issues) を参照）
+
+## .Core 0.6.x 運用
+- 実運用を通して `.Core 1.0` での安定化を目指す
+
+## .Core 1.0 開発
+- 公開 API を安定化する（SemVer に従い、破壊的変更はメジャーバージョンで行う）
 
 ---
 

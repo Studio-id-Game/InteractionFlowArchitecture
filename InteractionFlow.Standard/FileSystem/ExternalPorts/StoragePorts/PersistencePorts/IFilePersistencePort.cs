@@ -16,7 +16,7 @@ namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.Persist
         /// <summary>
         /// 保存ファイルの拡張子を取得します。
         /// </summary>
-        string Extention { get; }
+        string Extension { get; }
 
         /// <summary>
         /// 保存先のルートパスを取得します。
@@ -24,9 +24,9 @@ namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.Persist
         string RootPath { get; }
 
         /// <summary>
-        /// ファイル名から ID を取得します。
+        /// ルート相対で拡張子を含まないファイルパスから ID を取得します。
         /// </summary>
-        /// <param name="fileName">拡張子を含まないファイル名。</param>
+        /// <param name="fileName">ルート相対で拡張子を含まないファイルパス。</param>
         /// <returns>ファイル ID。</returns>
         TFileId GetFileId(string fileName);
 
@@ -38,10 +38,10 @@ namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.Persist
         TFileId GetFileIdFromPath(string filePath);
 
         /// <summary>
-        /// ID からファイル名を取得します。
+        /// ID からルート相対で拡張子を含まないファイルパスを取得します。
         /// </summary>
         /// <param name="id">ファイル ID。</param>
-        /// <returns>拡張子を含まないファイル名。</returns>
+        /// <returns>ルート相対で拡張子を含まないファイルパス。</returns>
         string GetFileName(TFileId id);
 
         /// <summary>

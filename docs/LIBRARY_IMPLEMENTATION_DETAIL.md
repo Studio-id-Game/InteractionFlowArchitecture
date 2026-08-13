@@ -1342,7 +1342,7 @@ namespace MyApp.Externals
         : FilePersistence<TextStorageKey, TextStorageItem>(serializer),
         ITextStorageItemPersistencePort
     {
-        public override string Extention => ".txt";
+        public override string Extension => ".txt";
 
         public override TextStorageKey GetFileId(string fileName)
         {

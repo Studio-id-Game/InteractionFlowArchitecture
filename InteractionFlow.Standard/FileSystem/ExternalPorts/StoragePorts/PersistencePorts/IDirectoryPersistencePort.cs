@@ -8,6 +8,7 @@ namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.Persist
     /// <remarks>
     /// Core の <see cref="IPersistencePort{TPersistenceId, TValue}"/> に対して、
     /// ディレクトリパスやディレクトリ名などのファイルシステム固有の変換契約を追加します。
+    /// 各 ID はルートパス直下にある一つのディレクトリへ対応します。
     /// </remarks>
     /// <typeparam name="TDirectoryId">ディレクトリを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
@@ -19,14 +20,14 @@ namespace InteractionFlow.Standard.FileSystem.ExternalPorts.StoragePorts.Persist
         string RootPath { get; }
 
         /// <summary>
-        /// ディレクトリ名から ID を取得します。
+        /// ルートパス直下のディレクトリ名から ID を取得します。
         /// </summary>
         /// <param name="directoryName">ディレクトリ名。</param>
         /// <returns>ディレクトリ ID。</returns>
         TDirectoryId GetDirectoryId(string directoryName);
 
         /// <summary>
-        /// ID からディレクトリ名を取得します。
+        /// ID からルートパス直下のディレクトリ名を取得します。
         /// </summary>
         /// <param name="id">ディレクトリ ID。</param>
         /// <returns>ディレクトリ名。</returns>

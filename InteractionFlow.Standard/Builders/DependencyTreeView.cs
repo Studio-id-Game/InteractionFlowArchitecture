@@ -45,6 +45,11 @@ namespace InteractionFlow.Standard.Builders
         /// </exception>
         public static string GetDependencyTreeText(IDependencyNode root, string circularReferenceMarker)
         {
+            if (root == null)
+            {
+                throw new ArgumentNullException(nameof(root));
+            }
+
             if (circularReferenceMarker == null)
             {
                 throw new ArgumentNullException(nameof(circularReferenceMarker));

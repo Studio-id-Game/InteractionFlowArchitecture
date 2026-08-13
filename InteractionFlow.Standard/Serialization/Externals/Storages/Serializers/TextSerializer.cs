@@ -17,6 +17,11 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
         : StreamSerializer<TValue>(dependency), ISerializerPort<string, TValue>
     {
         /// <summary>
+        /// 文字列とストリームの変換に使用する文字コードを取得します。
+        /// </summary>
+        public virtual Encoding Encoding => Encoding.UTF8;
+
+        /// <summary>
         /// 値を文字列へ変換します。
         /// </summary>
         /// <param name="inputValue">変換する値。</param>
@@ -43,7 +48,7 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
         }
 
         /// <summary>
-        /// 値を文字列へ変換し、UTF-8 でストリームへ書き込みます。
+        /// Encoding で指定された文字コードを用いて、値を文字列へ変換しストリームへ書き込みます。
         /// </summary>
         /// <param name="inputValue">変換する値。</param>
         /// <param name="refData">書き込み先として使用するストリーム。</param>
@@ -56,7 +61,7 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
             return await Serialize(inputValue, DefaultRefText(refData))
                 .ThenAsync(text =>
                 {
-                    return Task.FromResult(refData.Then(stream => (text, stream).AsResult()));
+                    return refData.Then(stream => (text, stream).AsResult()).StartAsync();
                 })
                 .ThenAsync(async value =>
                 {
@@ -64,7 +69,7 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
 
                     try
                     {
-                        await using StreamWriter writer = new(stream, Encoding.UTF8, 1024, true);
+                        await using StreamWriter writer = new(stream, Encoding, 1024, true);
                         await writer.WriteAsync(text).ConfigureAwait(false);
                         await writer.FlushAsync().ConfigureAwait(false);
                         return stream.AsResult();
@@ -78,7 +83,7 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
         }
 
         /// <summary>
-        /// ストリームから UTF-8 文字列を読み取り、値へ変換します。
+        /// Encoding で指定された文字コードを用いて、ストリームから文字列を読み取り値へ変換します。
         /// </summary>
         /// <param name="inputData">読み取り元のストリーム。</param>
         /// <param name="refValue">変換時に参照または再利用する値。</param>
@@ -93,7 +98,7 @@ namespace InteractionFlow.Standard.Serialization.Externals.Storages.Serializers
                 {
                     try
                     {
-                        using StreamReader reader = new(stream, Encoding.UTF8, true, 1024, true);
+                        using StreamReader reader = new(stream, Encoding, true, 1024, true);
                         var text = await reader.ReadToEndAsync().ConfigureAwait(false);
                         return text.AsResult();
                     }

@@ -2,8 +2,8 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
-using InteractionFlow.Standard.Console.Entities;
-using InteractionFlow.Standard.Console.Interactions;
+using InteractionFlow.Standard.ConsoleSystem.Entities;
+using InteractionFlow.Standard.ConsoleSystem.Interactions;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.SystemFlows

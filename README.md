@@ -84,6 +84,7 @@ interactionflow_enabled = True
 
 ## Standard
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
+- 新しい Console API の構成と契約は [Standard Console](./docs/CONSOLE.md) を参照してください。既存サンプルの Console 利用は移行予定です。
 - Target Framework: `netstandard2.1` 以上
 - Installation:
   ```bash
@@ -638,7 +639,7 @@ using InteractionFlow.Samples.HelloDoor.Externals.Reactions;
 using InteractionFlow.Samples.HelloDoor.Interactions;
 using InteractionFlow.Samples.HelloDoor.SystemFlows;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.Console.Builders;
+using InteractionFlow.Standard.ConsoleSystem.Builders;
 using System;
 using System.Threading.Tasks;
 

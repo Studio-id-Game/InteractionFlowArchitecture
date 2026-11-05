@@ -40,7 +40,7 @@ namespace InteractionFlow.Standard.Builders
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {
-            return BuildSystemFlowCore<TSystemFlow>(
+            return BuildSystemFlowCore(
                 parents,
                 scope => ActivatorUtilities.CreateInstance<TSystemFlow>(scope)
                     ?? throw new InvalidOperationException());
@@ -57,7 +57,7 @@ namespace InteractionFlow.Standard.Builders
         public SystemFlowHandler<TContext> BuildSystemFlow<TSystemFlow>(object[] parameters, params ScopeHandler[] parents)
             where TSystemFlow : ISystemFlow<TContext>
         {
-            return BuildSystemFlowCore<TSystemFlow>(
+            return BuildSystemFlowCore(
                 parents,
                 scope => ActivatorUtilities.CreateInstance<TSystemFlow>(scope, parameters)
                     ?? throw new InvalidOperationException());

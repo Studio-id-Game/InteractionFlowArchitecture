@@ -11,8 +11,8 @@ using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
-using InteractionFlow.Standard.Console.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 

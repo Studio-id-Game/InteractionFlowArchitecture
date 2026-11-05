@@ -3,6 +3,10 @@
     <Project Path="InteractionFlow.Analyzers.Tests/InteractionFlow.Analyzers.Tests.csproj" />
     <Project Path="InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="InteractionFlow.Standard.Tests/InteractionFlow.Standard.Tests.csproj" />
+    <Project Path="InteractionFlow.Standard.ConsoleSystem.ManualTests/InteractionFlow.Standard.ConsoleSystem.ManualTests.csproj" />
+  </Folder>
   <Folder Name="/Main/">
     <Project Path="InteractionFlow.Core/InteractionFlow.Core.csproj" />
     <Project Path="InteractionFlow.Standard.Old/InteractionFlow.Standard.Old.csproj" Id="3b7aa66f-07ca-4b30-ba94-4e8147562c5e" />

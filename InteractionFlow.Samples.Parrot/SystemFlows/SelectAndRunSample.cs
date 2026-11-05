@@ -3,8 +3,8 @@ using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.Interactions;
-using InteractionFlow.Standard.Console.Entities;
-using InteractionFlow.Standard.Console.Interactions;
+using InteractionFlow.Standard.ConsoleSystem.Entities;
+using InteractionFlow.Standard.ConsoleSystem.Interactions;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.SystemFlows

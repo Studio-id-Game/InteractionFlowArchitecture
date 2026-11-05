@@ -9,7 +9,7 @@ using InteractionFlow.Samples.HelloDoor.Lock.Externals.Operations;
 using InteractionFlow.Samples.HelloDoor.Lock.Externals.Reactions;
 using InteractionFlow.Samples.HelloDoor.SystemFlows;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.Console.Builders;
+using InteractionFlow.Standard.ConsoleSystem.Builders;
 using System;
 using System.Threading.Tasks;
 

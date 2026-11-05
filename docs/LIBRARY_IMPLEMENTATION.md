@@ -202,6 +202,9 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
 
 # 実装の詳細 <a id="implementation-details"></a>
 
+Console の新しい標準実装の配置と入出力・キャンセルの契約は [Standard Console](./CONSOLE.md) を参照してください。
+既存サンプルを使った説明には、移行前の Console API が含まれます。
+
 各部の実装の詳細とアーキテクチャとの結び付きは、以下のドキュメントを参照してください。
 
 - [ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md#implementation-details)

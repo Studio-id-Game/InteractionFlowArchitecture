@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts.ReactionPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Standard.Console.Entities;
-using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.Console.ExternalPorts.SilentExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.Entities;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.SilentExternalPorts;
 using System;
 using System.Threading.Tasks;
 

@@ -5,9 +5,9 @@ using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
-using InteractionFlow.Standard.Console.Entities;
-using InteractionFlow.Standard.Console.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.Console.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.Entities;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
 using System;
 using System.Threading.Tasks;
 

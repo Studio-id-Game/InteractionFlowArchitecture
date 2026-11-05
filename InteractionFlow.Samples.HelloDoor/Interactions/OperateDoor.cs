@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;

@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Builders;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Standard.Old.Builders;
 using InteractionFlow.Standard.Old.Console.ExternalPorts.OperationPorts;
 using InteractionFlow.Standard.Old.Console.ExternalPorts.ReactionPorts;

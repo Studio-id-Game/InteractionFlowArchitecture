@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities.Architectures;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Standard.Old.Console.Entities;
 
 namespace InteractionFlow.Standard.Old.Console.ExternalPorts.ReactionPorts

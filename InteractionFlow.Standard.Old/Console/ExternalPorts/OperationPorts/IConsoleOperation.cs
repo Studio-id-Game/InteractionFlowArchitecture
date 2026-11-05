@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.OperationPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Standard.Old.Console.Entities;
 using System.Threading.Tasks;
 

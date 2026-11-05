@@ -1,15 +1,14 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.Entities.ParrotContexts;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
 using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 

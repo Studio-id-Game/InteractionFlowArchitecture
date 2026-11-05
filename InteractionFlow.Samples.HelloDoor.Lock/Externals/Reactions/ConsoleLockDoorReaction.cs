@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Externals.Reactions;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.HelloDoor.Entities;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
 using InteractionFlow.Samples.HelloDoor.Lock.Entities;

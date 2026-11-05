@@ -84,6 +84,7 @@ interactionflow_enabled = True
 
 ## Standard
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
+- ファイル・ディレクトリの永続化は [Standard FileSystem](./docs/FILESYSTEM.md) を参照してください。
 - 新しい Console API の構成と契約は [Standard Console](./docs/CONSOLE.md) を参照してください。既存サンプルの Console 利用は移行予定です。
 - Target Framework: `netstandard2.1` 以上
 - Installation:
@@ -388,7 +389,7 @@ namespace InteractionFlow.Samples.HelloDoor.Entities
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.OperationPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.HelloDoor.Entities;
 using System.Threading.Tasks;
 
@@ -412,7 +413,7 @@ namespace InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.HelloDoor.Entities;
 using System.Threading.Tasks;
 
@@ -436,7 +437,7 @@ Console 標準入力による `DoorCommand` の取得を担当します。
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Externals.Operations;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.HelloDoor.Entities;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
 using System;
@@ -481,7 +482,7 @@ Console 標準出力による User への結果表示を担当します。
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Externals.Reactions;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.HelloDoor.Entities;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
 using System;
@@ -547,7 +548,7 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Reactions
 
 ```csharp
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
 using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;

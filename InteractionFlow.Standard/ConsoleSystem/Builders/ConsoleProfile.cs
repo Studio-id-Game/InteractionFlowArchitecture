@@ -1,12 +1,8 @@
 using InteractionFlow.Core.Builders;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.SilentExternalPorts;
-using InteractionFlow.Standard.ConsoleSystem.Externals.Operations;
-using InteractionFlow.Standard.ConsoleSystem.Externals.Reactions;
-using InteractionFlow.Standard.ConsoleSystem.Externals.SilentExternals;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.Externals;
 using System;
 
 namespace InteractionFlow.Standard.ConsoleSystem.Builders

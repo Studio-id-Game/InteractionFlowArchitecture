@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
-using InteractionFlow.Core.ExternalPorts.StoragePorts.SerializerPorts;
+using InteractionFlow.Core.ExternalPorts;
 using System;
 using System.IO;
 using System.Text;

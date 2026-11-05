@@ -10,12 +10,12 @@ Core の変更や旧 Console API の互換レイヤーを必要としません�
 | 配置（ConsoleSystem 以下） | 主な型 | 責務 |
 | --- | --- | --- |
 | Entities | ConsoleTextStyle / ConsolePosition | 不変の表示指定・座標 |
-| ExternalPorts/OperationPorts | IConsoleLineInputPort / IConsoleKeyInputPort | 入力 |
-| ExternalPorts/ReactionPorts | IConsoleOutputPort / IConsoleScreenPort | 表示・画面変更 |
-| ExternalPorts/SilentExternalPorts | IConsoleEnvironmentPort / IConsoleCancellationBindingPort | 環境の観測・キャンセル接続 |
-| Externals/Operations | ConsoleLineInput / ConsoleKeyInput | 入力の実装 |
-| Externals/Reactions | ConsoleOutput / ConsoleScreen / ConsoleExceptionHandling / ConsoleCancellationHandling | 反応の実装 |
-| Externals/SilentExternals | ConsoleEnvironment / ConsoleCancellationBinding | 外部環境連携の実装 |
+| ExternalPorts | IConsoleLineInputPort / IConsoleKeyInputPort | 入力 |
+| ExternalPorts | IConsoleOutputPort / IConsoleScreenPort | 表示・画面変更 |
+| ExternalPorts | IConsoleEnvironmentPort / IConsoleCancellationBindingPort | 環境の観測・キャンセル接続 |
+| Externals | ConsoleLineInput / ConsoleKeyInput | 入力の実装 |
+| Externals | ConsoleOutput / ConsoleScreen / ConsoleExceptionHandling / ConsoleCancellationHandling | 反応の実装 |
+| Externals | ConsoleEnvironment / ConsoleCancellationBinding | 外部環境連携の実装 |
 | Builders | ConsoleProfile | DI 登録 |
 
 公開する機能は Port を通して利用します。標準実装は System.Console を直接使用します。
@@ -24,7 +24,7 @@ Core の変更や旧 Console API の互換レイヤーを必要としません�
 入力の占有・解放は Externals 内の実装基底 ConsoleInputBase が共有します。
 テスト用の派生フックは持たせていません。
 ConsoleOutput と ConsoleScreen は Core の Reaction を直接継承し、成功・失敗の結果変換を各実装に記述します。
-例外・キャンセル通知は Core の専用基底を継承するため、出力手順だけを Externals/Reactions 配下の
+例外・キャンセル通知は Core の専用基底を継承するため、出力手順だけを Externals 配下の
 内部クラス ConsoleOutputWriter で共有します。
 出力と画面操作を同期する ConsoleSynchronization は、プロセス共通のロックだけを保持します。
 

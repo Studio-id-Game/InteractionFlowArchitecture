@@ -1,4 +1,4 @@
-using InteractionFlow.Core.ExternalPorts.StoragePorts;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.Entries;
 

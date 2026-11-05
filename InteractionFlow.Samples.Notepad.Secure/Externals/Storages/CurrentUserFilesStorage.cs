@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.ExternalPorts.StoragePorts.Entries;
-using InteractionFlow.Core.Externals.Storages;
+using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;

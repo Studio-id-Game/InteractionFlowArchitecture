@@ -1,6 +1,9 @@
 # InteractionFlow.Standard.Tests
 
-Console の公開契約と実装上の寿命管理を検証します。
+Standard の公開契約と実装上の寿命管理を検証します。
+
+`FileSystem/` では実ファイルを使い、保存失敗時の既存データ保持、ID と接尾辞の往復変換、
+操作ごとのルート確定、Directory の準備・削除・列挙の拡張点を検証します。
 
 - `ConsoleSystem/ConsolePortTests.cs`: DI で Port に対するテスト用実装を登録し、利用側 Interaction を検証します。
 - `ConsoleSystem/ConsoleIntegrationTests.cs`: 標準実装をそのまま使用する結合テストです。

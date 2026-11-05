@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Externals.Storages;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;

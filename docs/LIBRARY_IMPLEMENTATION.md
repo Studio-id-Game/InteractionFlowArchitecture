@@ -202,6 +202,8 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
 
 # 実装の詳細 <a id="implementation-details"></a>
 
+ファイル・ディレクトリの標準永続化と失敗時の契約は [Standard FileSystem](./FILESYSTEM.md) を参照してください。
+
 Console の新しい標準実装の配置と入出力・キャンセルの契約は [Standard Console](./CONSOLE.md) を参照してください。
 既存サンプルを使った説明には、移行前の Console API が含まれます。
 
@@ -244,6 +246,11 @@ Interaction Flow Architecture の意味すべてを、C# の型だけで保証�
 | Interaction | `Interactions` | `Entities`、`ExternalPorts`、`Interactions`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
 | SystemFlow | `SystemFlows` | `Entities`、`Interactions`、`SystemFlows`、`System` と `interactionflow_allowed_roots` で指定した外部 namespace |
 | --- | いずれにも該当しない名前空間 | 全ての名前空間 |
+
+Core と Standard では、`ExternalPorts` / `Externals` の直下に Port と実装を配置します。
+Operation・Reaction・Storage・Silent External の分類は型で表し、配置用の下位階層は設けません。
+Standard の機能群は `ConsoleSystem`、`FileSystem`、`SerializationSystem` に分けます。
+名前空間とフォルダーを対応させ、この整理によって依存規則は変更しません。
 
 ここでの「名前空間」は、`*.Externals` や `*.Externals.*` のように、先頭から調べて最初に名前空間のキーワードと一致する境界を基準とします。
 異なるルート間であっても、ルールには影響しません。以下に代表的な具体例を示します。

@@ -1,11 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.SilentExternalPorts;
-using InteractionFlow.Standard.ConsoleSystem.Externals.Operations;
-using InteractionFlow.Standard.ConsoleSystem.Externals.Reactions;
-using InteractionFlow.Standard.ConsoleSystem.Externals.SilentExternals;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.Externals;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

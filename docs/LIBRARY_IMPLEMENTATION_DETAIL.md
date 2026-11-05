@@ -298,8 +298,8 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 
 - ライブラリの利用者にとって、`ReactionEnd` は、`Reaction` / `IReactionPort` の `protected` 関数によってのみ生成される
 
-  ソースコード: [`IReactionPort.cs`](../InteractionFlow.Core/ExternalPorts/ReactionPorts/IReactionPort.cs),
-  [`Reaction.cs`](../InteractionFlow.Core/Externals/Reactions/Reaction.cs)
+  ソースコード: [`IReactionPort.cs`](../InteractionFlow.Core/ExternalPorts/IReactionPort.cs),
+  [`Reaction.cs`](../InteractionFlow.Core/Externals/Reaction.cs)
 
   ```csharp
     // ReactionEnd
@@ -535,8 +535,8 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 - `PersistentEntry<TPersistenceId, TValue>` は、値と永続化先 ID の関係に意味を持たせる
 
   ソースコード:
-  [`PersistentEntry.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/Entries/PersistentEntry.cs),
-  [`PersistentEntryExtensions.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/Entries/PersistentEntryExtensions.cs)
+  [`PersistentEntry.cs`](../InteractionFlow.Core/ExternalPorts/PersistentEntry.cs),
+  [`PersistentEntryExtensions.cs`](../InteractionFlow.Core/ExternalPorts/PersistentEntryExtensions.cs)
 
   ```csharp
   // PersistentEntry<TPersistenceId, TValue> : Entry<TValue>
@@ -994,7 +994,7 @@ namespace MyApp.Interactions
 
 ### Operation
 
-ソースコード: [`IOperationPort.cs`](../InteractionFlow.Core/ExternalPorts/OperationPorts/IOperationPort.cs)、[`Operation.cs`](../InteractionFlow.Core/Externals/Operations/Operation.cs)
+ソースコード: [`IOperationPort.cs`](../InteractionFlow.Core/ExternalPorts/IOperationPort.cs)、[`Operation.cs`](../InteractionFlow.Core/Externals/Operation.cs)
 
 Operation は、User の入力・操作を Interaction が扱える値へ変換します。
 入力結果は戻り値だけではなく、`IFlowContext` に蓄積する事も出来ます。
@@ -1046,7 +1046,7 @@ namespace MyApp.Externals
 
 ### Reaction
 
-ソースコード: [`IReactionPort.cs`](../InteractionFlow.Core/ExternalPorts/ReactionPorts/IReactionPort.cs)、[`Reaction.cs`](../InteractionFlow.Core/Externals/Reactions/Reaction.cs)
+ソースコード: [`IReactionPort.cs`](../InteractionFlow.Core/ExternalPorts/IReactionPort.cs)、[`Reaction.cs`](../InteractionFlow.Core/Externals/Reaction.cs)
 
 Reaction は、Interaction の過程や終端における System 側の相互作用として、必要に応じて `IFlowContext` を更新し、その結果を User が観測できる反応を返します。
 
@@ -1095,7 +1095,7 @@ namespace MyApp.Externals
 
 ### Storage
 
-ソースコード: [`IStoragePort.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/IStoragePort.cs)、[`Storage.cs`](../InteractionFlow.Core/Externals/Storages/Storage.cs)
+ソースコード: [`IStoragePort.cs`](../InteractionFlow.Core/ExternalPorts/IStoragePort.cs)、[`Storage.cs`](../InteractionFlow.Core/Externals/Storage.cs)
 
 Storage は、`Context` から独立して、キーに対応するメモリ上の値を所有します。
 
@@ -1188,7 +1188,7 @@ namespace MyApp.Externals
 
 ### Storage を用いた永続化 <a id="storage-persistence"></a>
 
-ソースコード: [`Storage.cs`](../InteractionFlow.Core/Externals/Storages/Storage.cs)、[`PersistentEntry.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/Entries/PersistentEntry.cs)、[`IPersistencePort.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/PersistencePorts/IPersistencePort.cs)、[`ISerializerPort.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/SerializerPorts/ISerializerPort.cs)
+ソースコード: [`Storage.cs`](../InteractionFlow.Core/Externals/Storage.cs)、[`PersistentEntry.cs`](../InteractionFlow.Core/ExternalPorts/PersistentEntry.cs)、[`IPersistencePort.cs`](../InteractionFlow.Core/ExternalPorts/IPersistencePort.cs)、[`ISerializerPort.cs`](../InteractionFlow.Core/ExternalPorts/ISerializerPort.cs)
 
 Storage を用いた永続化では、**値の表現**、**値の所有**、**形式変換**、**実際のI/O** を分けて実現します。
 
@@ -1336,20 +1336,18 @@ namespace MyApp.Externals
     // FilePersistence<TFileId, TValue> は、
     // ISerializerPort<Stream, TValue> をシリアライザーとして、
     // File名 - TFileId 間の相互変換によってローカルファイル永続化を行う。
-    // ファイルパスは、virtual RootPath => Environment.CurrentDirectory を基準とする
+    // GetCurrentRootPath() を各操作で一度だけ取得・絶対パス化して基準とする
     public sealed class TextStorageItemPersistence(
         ITextStorageItemSerializerPort serializer)
-        : FilePersistence<TextStorageKey, TextStorageItem>(serializer),
+        : FilePersistence<TextStorageKey, TextStorageItem>(serializer, ".txt"),
         ITextStorageItemPersistencePort
     {
-        public override string Extension => ".txt";
-
-        public override TextStorageKey GetFileId(string fileName)
+        protected override TextStorageKey GetIdFromRelativePathWithoutExtension(string relativePath)
         {
-            return new TextStorageKey(int.Parse(fileName));
+            return new TextStorageKey(int.Parse(relativePath));
         }
 
-        public override string GetFileName(TextStorageKey fileID)
+        protected override string GetRelativePathWithoutExtension(TextStorageKey fileID)
         {
             return $"{fileID.Value:00000}";
         }
@@ -1360,6 +1358,9 @@ namespace MyApp.Externals
 </details>
 
 この実装によって、要素毎の読み書きは以下のような手順になります。
+
+ファイル保存の失敗時保証、Directory の拡張点、旧 API からの移行は
+[Standard FileSystem](./FILESYSTEM.md) を参照してください。
 
 1. `Storage` は、キーに対応する `Entry` を単純に保持します。
 2. 呼び出し側は、`Entry.Value` を操作します。この時、永続データは変更されません。
@@ -1441,7 +1442,7 @@ namespace MyApp.Interactions
 
 <details> <summary> 💡 Tips: パフォーマンス上の理由で複数の値をまとめて読み込む場合 </summary>
 
-ソースコード: [`PersistentEntryExtensions.cs`](../InteractionFlow.Core/ExternalPorts/StoragePorts/Entries/PersistentEntryExtensions.cs)
+ソースコード: [`PersistentEntryExtensions.cs`](../InteractionFlow.Core/ExternalPorts/PersistentEntryExtensions.cs)
 
 クエリ操作など、複数の永続値を一度に読み込む必要がある場合は、
 配列を扱う `PersistencePort` と `PersistentEntry[].LoadAll` を利用できます。
@@ -1569,7 +1570,7 @@ Persistence が同じ参照を返す必要はありません。
 
 ### Silent External
 
-ソースコード: [`ISilentExternalPort.cs`](../InteractionFlow.Core/ExternalPorts/SilentExternalPorts/ISilentExternalPort.cs)、[`SilentExternal.cs`](../InteractionFlow.Core/Externals/SilentExternals/SilentExternal.cs)
+ソースコード: [`ISilentExternalPort.cs`](../InteractionFlow.Core/ExternalPorts/ISilentExternalPort.cs)、[`SilentExternal.cs`](../InteractionFlow.Core/Externals/SilentExternal.cs)
 
 Silent External は、Operation / Reaction のような「User との相互作用」や、
 Storage のような「System 内での記録」のいずれも目的としないような外部機能を提供します。

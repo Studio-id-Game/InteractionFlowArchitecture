@@ -1,13 +1,11 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
-using InteractionFlow.Core.Externals.Operations;
-using InteractionFlow.Core.Externals.Reactions;
+using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Standard.Builders;
 using InteractionFlow.Standard.ConsoleSystem.Builders;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

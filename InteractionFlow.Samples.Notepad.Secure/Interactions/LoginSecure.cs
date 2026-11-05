@@ -1,7 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts.ReactionPorts;
-using InteractionFlow.Core.ExternalPorts.StoragePorts.Entries;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
@@ -11,8 +10,7 @@ using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.PersistencePorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts.StoragePorts.SecureManagerPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.OperationPorts;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts.ReactionPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 

@@ -43,6 +43,7 @@ dotnet add package InteractionFlow.Core --version 0.5.0
 - `InteractionFlow.Standard`
   - Core API を現実のユースケースで扱いやすくする標準パッケージです。
   - System Flow Builder、Console、ファイルシステム、Serialization などの API と実装を提供します。
+  - ファイルシステムの契約と移行方法は [Standard FileSystem](https://github.com/Studio-id-Game/InteractionFlowArchitecture/blob/main/docs/FILESYSTEM.md) を参照してください。
 - `InteractionFlow.Analyzers`
   - namespace に基づくレイヤー間依存と、依存ノードの宣言規則を検査する Roslyn Analyzer です。
 

@@ -15,6 +15,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
     /// このクラスは保存先ディレクトリの作成、削除、列挙と、
     /// ディレクトリを利用した読み書きの呼び出しを担当します。
     /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// 各 ID はルートパス直下にある一つのディレクトリへ対応します。
     /// </remarks>
     /// <typeparam name="TDirectoryId">ディレクトリを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
@@ -28,13 +29,12 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         public virtual ReadOnlyMemory<IDependencyNode> Dependency => dependency;
 
         /// <summary>
-        /// ルートパス配下の保存先を使用できるように初期化します。
+        /// 依存ノードを保持するインスタンスを作成します。
         /// </summary>
         /// <param name="dependency">この Persistence が依存する補助ノード。</param>
         public DirectoryPersistence(params IDependencyNode[] dependency)
         {
             this.dependency = dependency;
-            CreateDirectories(Environment.CurrentDirectory, RootPath);
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
                 var path = GetDirectoryPath(id);
                 if (Directory.Exists(path))
                 {
-                    Directory.Delete(path);
+                    Directory.Delete(path, recursive: true);
                 }
 
                 return Task.FromResult(Result.Success);
@@ -92,14 +92,14 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         }
 
         /// <summary>
-        /// ディレクトリ名から ID を取得します。
+        /// ルートパス直下のディレクトリ名から ID を取得します。
         /// </summary>
         /// <param name="directoryName">ディレクトリ名。</param>
         /// <returns>ディレクトリ ID。</returns>
         public abstract TDirectoryId GetDirectoryId(string directoryName);
 
         /// <summary>
-        /// ID からディレクトリ名を取得します。
+        /// ID からルートパス直下のディレクトリ名を取得します。
         /// </summary>
         /// <param name="id">ディレクトリ ID。</param>
         /// <returns>ディレクトリ名。</returns>
@@ -130,7 +130,21 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <returns>保存ディレクトリのパス。</returns>
         public string GetDirectoryPath(TDirectoryId id)
         {
-            return Path.Combine(RootPath, GetDirectoryName(id));
+            var directoryName = GetDirectoryName(id);
+
+            if (string.IsNullOrEmpty(directoryName) ||
+                directoryName == "." ||
+                directoryName == ".." ||
+                Path.IsPathRooted(directoryName) ||
+                directoryName.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
+                directoryName.IndexOf(Path.AltDirectorySeparatorChar) >= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Directory name must identify one directory directly below the root: {directoryName}");
+            }
+
+            var path = Path.Combine(RootPath, directoryName);
+            return DirectoryUtility.GetPathInRoot(RootPath, path, allowRoot: false);
         }
 
         /// <summary>
@@ -143,9 +157,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         {
             try
             {
-                var path = GetDirectoryPath(id);
-                CreateDirectories(RootPath, path);
-                return await LoadDirectory(path, id, oldValue).ConfigureAwait(false);
+                return await LoadDirectory(GetDirectoryPath(id), id, oldValue).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -164,7 +176,10 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
             try
             {
                 var path = GetDirectoryPath(id);
-                CreateDirectories(RootPath, path);
+                var rootPath = Path.GetFullPath(RootPath);
+
+                Directory.CreateDirectory(rootPath);
+                CreateDirectories(rootPath, path);
                 return await SaveDirectory(path, id, value).ConfigureAwait(false);
             }
             catch (Exception e)

@@ -16,6 +16,9 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
     /// <remarks>
     /// このクラスは保存先ファイルの読み書きと列挙を担当します。
     /// メモリー上の値の生成、保持、破棄は Core の Storage 側の責務です。
+    /// 読み書き時は、このクラスが生成して所有するストリームを Serializer へ渡し、処理後に破棄します。
+    /// Serializer は渡されたストリームを読み書きし、その所有権を取得しないことを前提とします。
+    /// Serialize の戻り値は処理の成否として使用し、保存先ストリームの差し替えには使用しません。
     /// </remarks>
     /// <typeparam name="TFileId">ファイルを識別する ID の型。</typeparam>
     /// <typeparam name="TValue">保存または読み込みする値の型。</typeparam>
@@ -41,20 +44,20 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <summary>
         /// 保存ファイルの拡張子を取得します。
         /// </summary>
-        public virtual string Extention => ".bin";
+        public virtual string Extension => ".bin";
 
         /// <summary>
-        /// 拡張子を含まないファイル名から ID を取得します。
+        /// ルート相対で拡張子を含まないファイルパスから ID を取得します。
         /// </summary>
-        /// <param name="fileName">拡張子を含まないファイル名。</param>
+        /// <param name="fileName">ルート相対で拡張子を含まないファイルパス。</param>
         /// <returns>ファイル ID。</returns>
         public abstract TFileId GetFileId(string fileName);
 
         /// <summary>
-        /// ID から拡張子を含まないファイル名を取得します。
+        /// ID からルート相対で拡張子を含まないファイルパスを取得します。
         /// </summary>
         /// <param name="fileID">ファイル ID。</param>
-        /// <returns>拡張子を含まないファイル名。</returns>
+        /// <returns>ルート相対で拡張子を含まないファイルパス。</returns>
         public abstract string GetFileName(TFileId fileID);
 
         /// <summary>
@@ -64,7 +67,10 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <returns>ファイル ID。</returns>
         public TFileId GetFileIdFromPath(string filePath)
         {
-            var fileName = Path.ChangeExtension(Path.GetRelativePath(RootPath, filePath), null);
+            var path = DirectoryUtility.GetPathInRoot(RootPath, filePath, allowRoot: false);
+            var fileName = Path.ChangeExtension(
+                Path.GetRelativePath(Path.GetFullPath(RootPath), path),
+                null);
             return GetFileId(fileName);
         }
 
@@ -101,7 +107,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
                     useAsync: true);
 
                 return await serializer.Serialize(value, stream)
-                    .ThenAsync(stream2 =>
+                    .ThenAsync(_ =>
                     {
                         return Task.FromResult(Result.Success);
                     })
@@ -120,7 +126,8 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         /// <returns>保存ファイルのパス。</returns>
         public string GetFilePath(TFileId id)
         {
-            return Path.Combine(RootPath, GetFileName(id)) + Extention;
+            var path = Path.Combine(RootPath, GetFileName(id)) + Extension;
+            return DirectoryUtility.GetPathInRoot(RootPath, path, allowRoot: false);
         }
 
         /// <summary>
@@ -134,8 +141,10 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
             try
             {
                 var path = GetFilePath(id);
+                var rootPath = Path.GetFullPath(RootPath);
 
-                CreateDirectories(RootPath, Path.GetDirectoryName(path));
+                Directory.CreateDirectory(rootPath);
+                CreateDirectories(rootPath, Path.GetDirectoryName(path) ?? rootPath);
                 return SaveFile(path, value);
             }
             catch (Exception e)
@@ -154,10 +163,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         {
             try
             {
-                var path = GetFilePath(id);
-
-                CreateDirectories(RootPath, Path.GetDirectoryName(path));
-                return LoadFile(path, oldValue);
+                return LoadFile(GetFilePath(id), oldValue);
             }
             catch (Exception e)
             {
@@ -222,12 +228,8 @@ namespace InteractionFlow.Standard.FileSystem.Externals.Storages.Persistences
         {
             try
             {
-                var files = Directory.GetFiles(RootPath, $"*{Extention}", SearchOption.AllDirectories);
-                var ids = files
-                    .Select(e => Path.GetRelativePath(RootPath, e))
-                    .Select(e => Path.ChangeExtension(e, null))
-                    .Select(GetFileId)
-                    .ToArray();
+                var files = Directory.GetFiles(RootPath, $"*{Extension}", SearchOption.AllDirectories);
+                var ids = files.Select(GetFileIdFromPath).ToArray();
 
                 return Task.FromResult<Result<TFileId[]>>(ids);
             }

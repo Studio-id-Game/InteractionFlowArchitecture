@@ -1,0 +1,114 @@
+# Ctrl+C 接続とキャンセル予約の寿命管理案
+
+記録日: 2026-11-07
+
+Parrot の新 Core / Standard 移行を振り返った議論の記録です。
+以下は検討案であり、現在の公開 API の契約や実装変更を意味しません。例示する API 名も仮称です。
+現行契約は [Standard Console](../CONSOLE.md) を参照してください。
+
+## 問題の整理
+
+Parrot では、Console Port を保持する DI Scope の寿命より、Ctrl+C の接続期間や
+時間制限付き会話のキャンセル予約の有効期間が短くなります。
+利用側が、それぞれを実行範囲の終了時に閉じる必要があります。
+
+ただし、この二つは同じ種類の問題ではありません。
+Ctrl+C の接続管理は ConsoleSystem API の利用手順に伴う負担です。
+タイマーの破棄は一般的な非同期処理の責任であり、InteractionFlow 固有の欠陥ではありません。
+後者にも、意図を明確にし、正しい実装をまとめる補助 API を提供する余地があります。
+
+## 案1: Bind が接続スコープを返す
+
+現状の利用例は、[SelectSample](../../InteractionFlow.Samples.Parrot/Interactions/SelectSample.cs) と
+[TalkToParrot](../../InteractionFlow.Samples.Parrot/Interactions/TalkToParrot.cs) にあります。
+
+```csharp
+binding.Bind(context);
+try
+{
+    // 入力・表示
+}
+finally
+{
+    binding.Unbind();
+}
+```
+
+Bind の戻り値を IDisposable なスコープにして、次のように書ける案です。
+
+```csharp
+using var bindingScope = binding.Bind(context);
+```
+
+専用の sealed class BindScope を候補とします。
+低頻度の接続操作なので、割り当て削減より実装の明快さを優先します。
+struct の値コピーによる複数 Dispose の問題を避け、同じインスタンスの Dispose は冪等にします。
+
+### 再 Bind の選択肢
+
+| 案 | 同じ対象への再 Bind | 利点と制約 |
+| --- | --- | --- |
+| 所有者だけ解除 | 最初に接続した Scope だけが解除し、後続は解除しない | 現行の再 Bind が何もしない契約に近い。ただし後続 Scope の生存は接続を保証しない |
+| 参照カウント | 取得ごとにカウントし、最後の Dispose で解除 | 部品ごとに接続期間を確保できる。管理状態と契約が増える |
+| 再 Bind 拒否 | 同じ対象でも例外 | 所有者が明快。接続を確保する部品同士のネストには調整が必要 |
+
+Parrot のように Interaction が順次実行される構成なら、再 Bind 拒否はほぼ妨げになりません。
+ただし、単独実行できる親子の Interaction が双方で Bind する構成では衝突します。
+接続を親またはラッパーへ集約するか、同じ対象には参照カウントを許すかを判断する必要があります。
+「再 Bind 拒否を汎用 API の第一候補とする」とまでは、現時点で決めていません。
+
+NestedExecuteAsync は独立した CancellationObject を作ります。
+この場合は異なる対象への接続競合なので、同じ対象の再 Bind を許可するだけでは解決しません。
+Ctrl+C を親へ接続して子へ伝播する構成など、接続対象の選択を別に設計する必要があります。
+
+### 実装時に決めること
+
+- Scope は自分が取得した接続だけを解除する。古い Scope の Dispose が新しい接続を解除しないようにする。
+- 手動 Unbind を残すか、通常の解除を返却 Scope の Dispose へ統一するかを決める。
+- DI Scope 破棄、ForceResetMemoryState、再接続と返却 Scope の関係を決める。
+- 発火中の通知と解除の同期、通知コールバックからの解除について現行契約を確認する。
+
+## 案2: CancellationObject のキャンセル予約をスコープ化する
+
+[TalkToParrot](../../InteractionFlow.Samples.Parrot/Interactions/TalkToParrot.cs) では、
+CancellationTokenSource と Register の戻り値を using で保持し、10秒後の Cancel を予約しています。
+予約が残ると、会話を抜けた後に同じ CancellationObject を使うメニューへ影響します。
+
+この定型処理を、例えば次の API にまとめる案です。
+
+```csharp
+using var scheduledCancellation =
+    context.Cancellation.ScheduleCancellation(TimeSpan.FromSeconds(10));
+```
+
+返却スコープがタイマーと登録を保持し、Dispose で予約を解除します。
+「現在の実行範囲だけ有効なキャンセル予約」という意図を直接表現できます。
+
+### 提供すると価値のある保証
+
+- Dispose を冪等にする。
+- 解除とタイマー発火の競合を扱い、Dispose 完了後にその予約から新たな Cancel 呼び出しが発生しないようにする。
+- すでに実施されたキャンセル要求を Dispose で取り消すものではない。
+- キャンセルコールバック内での Dispose の可否や、待機によるデッドロックを含む再入条件を明示する。
+- 予約の引数検証、発火時の例外の扱い、複数予約の独立性を定義する。
+
+通常の IDisposable API と同じく、利用側は using または Dispose で寿命を示します。
+破棄漏れを静的に防げないことはこの案固有の弱点ではなく、採用を妨げる理由にしません。
+静的な利用規約検査が必要なら Analyzer が別途候補になります。
+コールバック形式で内部が寿命を管理する方式もありますが、今回は書き方を制約する根拠がありません。
+
+### 期間への結び付けは追加検討
+
+予約をキャンセル状態の現在の世代に結び付け、WaitAndResetAsync 後に古い予約を失効させる案もあります。
+ただし正常終了ではリセットされないため、それだけで「会話終了後の予約」をすべて防げません。
+実行範囲の終了まで自動認識するには、Interaction の寿命との新たな契約が必要です。
+最初は返却スコープ付き予約に留め、世代管理は必要性を別に判断するのが妥当と考えます。
+
+CancellationObject 本体のメソッドとするか拡張メソッドとするかは、保証に内部状態へのアクセスが必要かで判断します。
+
+## 現時点の結論
+
+両案とも、責任を曖昧にせず、標準的な using 一つで寿命を表せることが主な価値です。
+Bind の再入方針と予約解除の競合保証は未決定です。実装前に契約として明文化します。
+
+関連: [Context 契約保証と ReactionEnd / Result 統合の検討](./CONTEXT_AND_REACTION_RESULTS.md)

@@ -89,7 +89,7 @@ Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参�
 形式変換の文字コードと Stream の契約は [Standard SerializationSystem](./docs/SERIALIZATION.md) を参照してください。
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
 - ファイル・ディレクトリの永続化は [Standard FileSystem](./docs/FILESYSTEM.md) を参照してください。
-- 新しい Console API の構成と契約は [Standard Console](./docs/CONSOLE.md) を参照してください。既存サンプルの Console 利用は移行予定です。
+- 新しい Console API の構成と契約は [Standard Console](./docs/CONSOLE.md) を参照してください。Parrot は新 API に移行済みです。
 - Target Framework: `netstandard2.1` 以上
 - Installation:
   ```bash
@@ -830,12 +830,12 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 | --- | --- | --- |
 | [HelloDoor](./InteractionFlow.Samples.HelloDoor) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
 | [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
-| [Parrot](./InteractionFlow.Samples.Parrot) | 複数の Interaction と System Flow を選択・合成する | `ScopedFlowContext` による Context の局所化、Storage、Cancellation、ネストした Interaction の組み合わせ |
+| [Parrot](./InteractionFlow.Samples.Parrot) | メニューと会話の Interaction を合成する | `ScopedFlowContext`、Storage、自動入力 Port、出力ごとの色指定、Cancellation |
 | [Notepad.Core](./InteractionFlow.Samples.Notepad.Core) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
 | [Notepad](./InteractionFlow.Samples.Notepad) | `Notepad.Core` を通常の Console・ファイル保存で実行する | Port に標準的な Console、Storage、Persistence、Serializer の実装を接続する構成 |
 | [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure) | 同じ中核設計へ安全なログインと保存処理を統合する | Port 実装と一部の Interaction の差し替え、暗号化、鍵素材のライフサイクル管理 |
 
-初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Flow の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
+初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Interaction の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
 
 ---
 

@@ -148,4 +148,5 @@ Interaction が `IConsoleCancellationBindingPort` を受け取り、`Bind(contex
 
 実端末の色の適用・復元、キー入力、Ctrl+C のイベント配送と解除との競合、IME、貼り付けは
 対象 OS・端末で別途確認してください。内部のイベントハンドラーをリフレクションで呼ぶテストは行いません。
-既存 Samples は旧 Console API からの移行対象であり、この実装では変更していません。
+Parrot は新 Console API に移行済みです。選択・会話・自動入力・色指定・キャンセルの利用例は
+[Parrot](../InteractionFlow.Samples.Parrot/README.md) を参照してください。ほかの旧 Console API 利用サンプルは移行対象です。

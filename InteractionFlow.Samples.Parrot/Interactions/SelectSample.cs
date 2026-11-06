@@ -3,92 +3,74 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities;
-using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
-using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
+using InteractionFlow.Samples.Parrot.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot.Interactions
 {
     internal sealed class SelectSample(
+        IConsoleLineInputPort input,
+        IConsoleOutputPort output,
+        IConsoleCancellationBindingPort binding,
+        ILastSelectMemory memory,
         IExceptionPort<Exception> exception,
-        ICancellationPort cancellation,
-        IConsoleWriter reaction,
-        IConsoleOperation operation,
-        ILastSelectMemory lastSelectMemory)
-        : Interaction(exception, cancellation, reaction, operation, lastSelectMemory)
+        ICancellationPort cancellation)
+        : Interaction(exception, cancellation, input, output, binding, memory)
     {
+        protected override Task OnCancellation(IFlowContext context)
+        {
+            // Successful cancellation handling returns a successful ReactionEnd, so retain the menu exit intent.
+            if (context.TryGet<SampleSelection>(out var selection)) selection.ExitRequested = true;
+            return Task.CompletedTask;
+        }
+
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            reaction.State = ConsoleState.Default;
-            await reaction.Write(context, new ConsoleOutput("## Select Sample"));
+            if (!context.TryGet<SampleSelection>(out var selection))
+                throw new InvalidOperationException("No sample selection context.");
 
-            await reaction.Write(context, new ConsoleOutput("Enter sample name or index : "));
-
-            var input = await operation.WaitUserTextAsync(context);
-            var sampleMode = GetSampleMode(input);
-
-            if (sampleMode == SampleMode.None)
+            binding.Bind(context);
+            try
             {
-                await reaction.Write(context, new ConsoleOutput("* Not found name and index."));
-            }
-            else
-            {
-                var sampleID = new SampleID(sampleMode);
+                var end = await output.WriteLineAsync(context,
+                    "\n# Parrot samples\n[0] Parrot\n[1] ParrotAuto\n[2] ParrotAutoAndKill\n" +
+                    "[3] ParrotColorful\n[4] ParrotCustomContext\n[5] RepeatLast\n" +
+                    "Enter a name or index. Blank, EOF or Ctrl+C exits the menu.");
+                if (end.HasException) return end;
 
-                if (sampleMode != SampleMode.RepeatLast)
+                var text = await input.ReadLineAsync(context);
+                if (string.IsNullOrWhiteSpace(text))
                 {
-                    lastSelectMemory.GetKey(context)
-                        .Then(key =>
-                        {
-                            return lastSelectMemory.GetOrCreate(key);
-                        })
-                        .Then(refEntry =>
-                        {
-                            refEntry.Value = sampleID;
-                            return refEntry.AsResult();
-                        })
-                        .ThrowIfError();
+                    selection.ExitRequested = true;
+                    return await output.WriteLineAsync(context, "The parrot waves goodbye!");
                 }
 
-                var selectedSample = new SampleSelected(sampleID);
-                if (context.TryGet<RefEntity<SampleSelected>>(out var selectedSampleEntry))
+                var mode = ParrotRules.ParseSample(text);
+                if (mode == SampleMode.None)
+                    return await output.WriteLineAsync(context, "That perch doesn't exist. Choose a name or index.");
+
+                var last = memory.GetKey(context).Then(memory.GetOrCreate);
+                if (!last.Try(out var entry, out var error)) throw error;
+                if (mode == SampleMode.RepeatLast)
                 {
-                    selectedSampleEntry.Value = selectedSample;
+                    mode = entry.Value;
+                    if (mode == SampleMode.None)
+                        return await output.WriteLineAsync(context, "No previous sample yet.");
+                }
+                else
+                {
+                    entry.Value = mode;
                 }
 
-                await reaction.Write(context, new ConsoleOutput($"Sample Selected : '{selectedSample}'."));
+                selection.Mode = mode;
+                return await output.WriteLineAsync(context, $"Sample selected: {mode}");
             }
-
-            return await reaction.Write(context, new ConsoleOutput($""));
-        }
-
-        protected override async Task OnCancellation(IFlowContext context)
-        {
-            await Task.Delay(1000);
-        }
-
-        private static SampleMode GetSampleMode(ConsoleInputText input)
-        {
-            var text = input.text;
-
-            var sample = SampleMode.None;
-            if (int.TryParse(text, out int index))
+            finally
             {
-                var samples = Enum.GetValues<SampleMode>().ToList();
-                samples.Remove(SampleMode.None);
-                if (0 <= index && index < samples.Count)
-                {
-                    sample = samples[index];
-                }
+                binding.Unbind();
             }
-            else if (!Enum.TryParse(text, true, out sample))
-            {
-                sample = SampleMode.None;
-            }
-
-            return sample;
         }
     }
 }

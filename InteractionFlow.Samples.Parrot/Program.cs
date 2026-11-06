@@ -1,64 +1,29 @@
-using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Parrot.Entities;
-using InteractionFlow.Samples.Parrot.ExternalPorts.StoragePorts;
-using InteractionFlow.Samples.Parrot.Externals.Storages;
+using InteractionFlow.Samples.Parrot.ExternalPorts;
+using InteractionFlow.Samples.Parrot.Externals;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Samples.Parrot.SystemFlows;
 using InteractionFlow.Standard.Builders;
+using InteractionFlow.Standard.ConsoleSystem.Builders;
 using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Parrot
 {
-    internal class Program
+    internal static class Program
     {
-        private static ScopeHandler BuildScope()
+        private static async Task Main()
         {
-            var globalScopeBuilder = new ScopeBuilder();
-
-            globalScopeBuilder
-            // Console Functions
-                .Apply(ConsoleBuilder.ProfileUseCancellation)
-            // Storages
+            var builder = new ScopeBuilder();
+            builder.Apply(ConsoleProfile.Default)
                 .UseFunction<ILastSelectMemory, LastSelectMemory>()
-            // Interactions
-                .UseInteraction<ConsoleWriting>()
-                .UseInteraction<ListSamples>()
+                .UseFunction<IAutomaticLineInput, AutomaticLineInput>()
                 .UseInteraction<SelectSample>()
-                .UseInteraction<RunSample>()
-                .UseInteraction<ConsoleSetup>();
-
-            return globalScopeBuilder.BuildScope();
-        }
-
-        private static async Task Main(string[] _)
-        {
-            using var globalScope = BuildScope();
-
-            var context = new FlowContext();
-
-            using (var initializeApplication = globalScope.BuildSystemFlow<InitializeApplication, IFlowContext>())
-            {
-                await initializeApplication.ExecuteAsync(context);
-            }
-
-            using var selectAndRunSample = globalScope.BuildSystemFlow<SelectAndRunSample, IFlowContext>();
-
-            var treeText = DependencyTreeView.GetDependencyTreeText(selectAndRunSample.Root);
-            Console.WriteLine(treeText);
-
-            while (true)
-            {
-                var endState = new RefEntity<SelectAndRunSampleEndState>(SelectAndRunSampleEndState.None);
-                using var contextScope = new ScopedFlowContext(context)
-                    .With(endState);
-
-                await selectAndRunSample.ExecuteAsync(contextScope);
-
-                if (endState.Value == SelectAndRunSampleEndState.CancelSelect)
-                    break;
-            }
+                .UseInteraction<TalkToParrot>();
+            using var scope = builder.BuildScope();
+            using var flow = scope.BuildSystemFlow<ParrotApplication, IFlowContext>();
+            var end = await flow.ExecuteAsync(new FlowContext());
+            if (end.HasException) Environment.ExitCode = 1;
         }
     }
 }

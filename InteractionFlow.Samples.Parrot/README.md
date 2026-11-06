@@ -9,13 +9,45 @@
 
 # Parrot
 
-複数の Interaction を選択・合成する Console サンプルです。
+新しい Core / Standard ConsoleSystem を使った、おしゃべりするオウムのサンプルです。
 
-- `InitializeApplication` と `SelectAndRunSample` が、初期化とサンプル選択・実行を別の System Flow として表します。
-- `ScopedFlowContext` と `RefEntity` により、選択中のサンプルや終了状態をその実行範囲に限定します。
-- Console の状態、Cancellation、Storage、ネストした Interaction を組み合わせ、同じ Flow 構造で振る舞いを切り替えます。
+```powershell
+dotnet run --project InteractionFlow.Samples.Parrot
+```
 
-Context の局所化と、System Flow によるユーザー体験の合成を読むためのサンプルです。
+番号（0〜5）または名前でモードを選択します。名前の大文字・小文字は区別しません。
+
+| 番号 | モード | 動作 |
+| --- | --- | --- |
+| 0 | Parrot | 入力を3回繰り返します。`Parrot` を含むと6回、興奮して返します。 |
+| 1 | ParrotAuto | 専用 Operation が自動入力し、Ctrl+C まで話し続けます。 |
+| 2 | ParrotAutoAndKill | 自動入力を10秒でキャンセルし、メニューへ戻ります。 |
+| 3 | ParrotColorful | オウムの出力に Cyan を指定します。出力ごとに元の色へ復元します。 |
+| 4 | ParrotCustomContext | 会話のスコープに専用の挨拶を追加します。 |
+| 5 | RepeatLast | 最後に選んだモードを再実行します。初回は案内して選び直します。 |
+
+会話中の空行・空白行・EOF・Ctrl+C はメニューへ戻り、メニューでの同じ操作はアプリを終了します。
+EOF の場合は、戻ったメニューでも EOF を受け取り終了します。
+標準行入力の契約により、Ctrl+C 後に Enter が必要な場合があります。
+自動入力はコンソールを読み取らないため、空行では終了せず Ctrl+C を使います。
+色は実端末で確認してください。リダイレクト出力では色を操作しません。
+
+## 構成
+
+- `ParrotRules`: 選択文字列の解釈と、オウムの返答を作る純粋なルール。
+- `SelectSample`: メニュー表示・選択・前回選択の保存。キャンセル時には終了意図を保持します。
+- `TalkToParrot`: 挨拶・入力・文字送り表示。標準入力と自動入力を同じ Port 契約で扱います。
+- `ParrotApplication`: 選択と会話の Interaction を順に実行し、継続と終了を判断します。
+- `LastSelectMemory`: アプリの DI Scope に保持する Storage。再実行するモードだけを保存します。
+- `AutomaticLineInput`: Console 入力を消費せず、自動で文字列を返す Operation。
+
+選択状態・モード・専用挨拶は `ScopedFlowContext` の実行範囲へ閉じます。
+表示は `IConsoleOutputPort` に委譲し、各 `ReactionEnd` の失敗で後続の入力や表示を停止します。
+Ctrl+C は各 Interaction の try/finally で接続・解除し、10秒タイマーも会話の終了時に破棄します。
+キャンセルの通知とリセット、未処理例外の通知は Interaction 基底と標準 Port に委譲します。
+旧 Console の可変 State、ダミー入力 API、独自 RefEntity は使用しません。
+
+旧コード一式（bin / obj を除く）は [退避ZIP](../archives/Parrot-before-console-system.zip) に保存しています。
 
 ---
 

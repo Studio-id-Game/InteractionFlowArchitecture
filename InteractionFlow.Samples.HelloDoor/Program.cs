@@ -1,12 +1,11 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.HelloDoor.Entities;
-using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
-using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
-using InteractionFlow.Samples.HelloDoor.Externals.Operations;
-using InteractionFlow.Samples.HelloDoor.Externals.Reactions;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts;
+using InteractionFlow.Samples.HelloDoor.Externals;
 using InteractionFlow.Samples.HelloDoor.Interactions;
 using InteractionFlow.Samples.HelloDoor.SystemFlows;
 using InteractionFlow.Standard.Builders;
+using InteractionFlow.Standard.ConsoleSystem.Builders;
 using System;
 using System.Threading.Tasks;
 
@@ -21,7 +20,7 @@ namespace InteractionFlow.Samples.HelloDoor
             // Port と External 実装、Interaction を DI に登録します。
             builder
                 // Interaction の基底クラスが利用する例外/キャンセル表示 Port も登録します。
-                .Apply(ConsoleBuilder.Profile)
+                .Apply(ConsoleProfile.Default)
                 .UseFunction<IDoorOperation, ConsoleDoorOperation>()
                 .UseFunction<IDoorReaction, ConsoleDoorReaction>()
                 .UseInteraction<OperateDoor>();

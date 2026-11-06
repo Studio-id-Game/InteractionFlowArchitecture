@@ -1,11 +1,11 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.HelloDoor.Entities;
-using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
+namespace InteractionFlow.Samples.HelloDoor.Externals
 {
     public sealed class ConsoleDoorOperation : Operation, IDoorOperation
     {
@@ -13,18 +13,12 @@ namespace InteractionFlow.Samples.HelloDoor.Externals.Operations
         {
         }
 
-        public ValueTask<DoorCommand> ReadCommandAsync(IFlowContext context)
+        public ValueTask<DoorCommand> ReadDoorCommandAsync(IFlowContext context)
         {
             Console.Write("Door command (Open/Close, Enter to exit): ");
             var text = Console.ReadLine()?.Trim();
-
-            return new(text?.ToUpperInvariant() switch
-            {
-                "OPEN" => DoorCommand.Open,
-                "CLOSE" => DoorCommand.Close,
-                "" or null => DoorCommand.Exit,
-                _ => DoorCommand.Unknown,
-            });
+            var command = DoorRules.ParseCommand(text);
+            return ValueTask.FromResult(command);
         }
     }
 }

@@ -1,8 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.HelloDoor.ExternalPorts.OperationPorts;
-using InteractionFlow.Samples.HelloDoor.ExternalPorts.ReactionPorts;
+using InteractionFlow.Samples.HelloDoor.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 
@@ -17,8 +16,8 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            var command = await operation.ReadCommandAsync(context);
-            return await reaction.ReactAsync(context, command);
+            var command = await operation.ReadDoorCommandAsync(context);
+            return await reaction.ReactDoorAsync(context, command);
         }
     }
 }

@@ -13,9 +13,8 @@ Windows Terminal、PowerShell、cmd などの通常の端末で、リポジト�
 .\InteractionFlow.Standard.ConsoleSystem.ManualTests\Run.ps1
 ```
 
-このスクリプトはインストール済みの SDK 9 以上で対象プロジェクトだけをビルドします。
-SDK 9 を優先し、未導入なら新しい SDK とランタイムを使用します。
-global.json は変更しません。実際に使用した OS・ランタイムは起動時に表示します。
+このスクリプトはリポジトリの global.json で指定した .NET 10 SDK で対象プロジェクトだけをビルドします。
+.NET 10 ランタイムで実行し、実際に使用した OS・ランタイムは起動時に表示します。
 
 リポジトリ指定の SDK / ランタイムがある場合は、通常の起動も可能です。
 

@@ -116,6 +116,10 @@ Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参�
 
 
 ## Samples
+
+開発・テスト・サンプル実行には、`global.json` で指定する .NET 10 SDK と Visual Studio 2026 以降を使用します。
+コマンドラインからの開発では Visual Studio は不要です。
+
 - `InteractionFlow.Samples.*` は、Architecture の使い方を具体例として確認するためのプロジェクト群です。
 - 個別サンプルの目的と読み方は [サンプル解説](#examples) にまとめています。
 - パッケージとしての公開はありません。ソリューションからビルドして実行してください。

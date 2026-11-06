@@ -5,6 +5,10 @@ namespace InteractionFlow.Core.Entities
     /// <summary>
     /// 値を持つ <see cref="Result{TValue}"/> を連結・解決するための拡張メソッドを提供します。
     /// </summary>
+    /// <remarks>
+    /// コールバックやタスクが送出する例外・キャンセルを捕捉して Result 化しません。
+    /// Result の失敗は各操作の契約に従って伝播または処理します。
+    /// </remarks>
     public static class ResultTExtensions
     {
         /// <summary>
@@ -19,6 +23,26 @@ namespace InteractionFlow.Core.Entities
         public static Result<T> AsResult<T>(this T value)
         {
             return value;
+        }
+
+        /// <summary>
+        /// 成功値を別の値へ変換し、失敗はそのまま伝播します。
+        /// </summary>
+        /// <typeparam name="T">元の成功値の型。</typeparam>
+        /// <typeparam name="U">変換後の成功値の型。</typeparam>
+        /// <param name="result">変換元の結果。</param>
+        /// <param name="mapper">成功値を変換する関数。失敗時は呼び出しません。</param>
+        /// <returns>変換した値の成功結果、または元の失敗結果。</returns>
+        /// <remarks>
+        /// 変換関数の例外は捕捉しません。戻り値は AsResult と同じ成功値の制約に従います。
+        /// Result を返す変換には Then を使用してください。
+        /// </remarks>
+        public static Result<U> Map<T, U>(this Result<T> result, Func<T, U> mapper)
+        {
+            if (result.Try(out var value, out var error))
+                return mapper(value).AsResult();
+            else
+                return error;
         }
 
         /// <summary>

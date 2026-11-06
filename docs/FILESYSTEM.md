@@ -151,6 +151,12 @@ GetAllIds は非 virtual の共通境界です。ルートが存在するとき�
 
 ## 共通の失敗処理とパス
 
+Result と例外の境界は [Result API](./RESULT.md) に従います。
+Serializer と Result を返す Directory 拡張点の例外は、呼び出し側で Result 化しません。
+既定の Directory 拡張点は、自身が担当する Directory 操作の例外を Result 化します。
+File の保存・読込は Serializer の例外が伝播する場合も Stream を破棄します。
+保存では所有する一時ファイルを清掃し、清掃にも失敗した場合は例外を集約して送出します。
+
 | 操作 | 不存在の場合 | 作成の副作用 |
 | --- | --- | --- |
 | Save | File は親を作成、Directory は準備へ委譲 | 成功入力のみ許可 |

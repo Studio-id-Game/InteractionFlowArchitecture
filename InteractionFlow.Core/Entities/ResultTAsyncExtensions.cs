@@ -7,6 +7,10 @@ namespace InteractionFlow.Core.Entities
     /// <summary>
     /// 非同期の値付き <see cref="Result{TValue}"/> チェーンを構築するための拡張メソッドを提供します。
     /// </summary>
+    /// <remarks>
+    /// コールバックやタスクが送出する例外・キャンセルを捕捉して Result 化しません。
+    /// Result の失敗は各操作の契約に従って伝播または処理します。
+    /// </remarks>
     public static class ResultTAsyncExtensions
     {
         /// <summary>
@@ -32,6 +36,29 @@ namespace InteractionFlow.Core.Entities
         public static Task<Result<T>> AsResultAsync<T>(this T value)
         {
             return value.AsResult().StartAsync();
+        }
+
+        /// <summary>
+        /// 非同期結果を待ち、成功値を別の値へ同期的に変換します。失敗はそのまま伝播します。
+        /// </summary>
+        /// <typeparam name="T">元の成功値の型。</typeparam>
+        /// <typeparam name="U">変換後の成功値の型。</typeparam>
+        /// <param name="task">変換元の非同期結果。</param>
+        /// <param name="mapper">成功値を同期的に変換する関数。失敗時は呼び出しません。</param>
+        /// <returns>変換した値の成功結果、または元の失敗結果。</returns>
+        /// <remarks>
+        /// タスクや変換関数の例外・キャンセルは捕捉しません。
+        /// 戻り値は AsResult と同じ成功値の制約に従います。
+        /// Result を返す非同期変換には ThenAsync を使用してください。
+        /// </remarks>
+        public static async Task<Result<U>> MapAsync<T, U>(
+            this Task<Result<T>> task,
+            Func<T, U> mapper)
+        {
+            if ((await task.ConfigureAwait(false)).Try(out var value, out var error))
+                return mapper(value).AsResult();
+            else
+                return error;
         }
 
         /// <summary>

@@ -5,6 +5,10 @@ namespace InteractionFlow.Core.Entities
     /// <summary>
     /// 値を持たない <see cref="Result"/> を連結・解決するための拡張メソッドを提供します。
     /// </summary>
+    /// <remarks>
+    /// コールバックやタスクが送出する例外・キャンセルを捕捉して Result 化しません。
+    /// Result の失敗は各操作の契約に従って伝播または処理します。
+    /// </remarks>
     public static class ResultExtensions
     {
         /// <summary>

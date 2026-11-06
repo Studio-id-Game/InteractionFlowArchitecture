@@ -6,6 +6,10 @@ namespace InteractionFlow.Core.Entities
     /// <summary>
     /// 非同期の値なし <see cref="Result"/> チェーンを構築するための拡張メソッドを提供します。
     /// </summary>
+    /// <remarks>
+    /// コールバックやタスクが送出する例外・キャンセルを捕捉して Result 化しません。
+    /// Result の失敗は各操作の契約に従って伝播または処理します。
+    /// </remarks>
     public static class ResultAsyncExtensions
     {
         /// <summary>

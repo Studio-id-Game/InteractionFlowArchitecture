@@ -54,9 +54,14 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 ThrowFromEnsure = throwException
             };
 
-            var result = await store.Save("note", "value");
-            Assert.False(result.Try(out var failure));
-            Assert.Contains("preparation failed", failure!.ToString());
+            if (throwException)
+                Assert.Same(store.EnsureFailure, await Assert.ThrowsAsync<IOException>(() => store.Save("note", "value")));
+            else
+            {
+                var result = await store.Save("note", "value");
+                Assert.False(result.Try(out var failure));
+                Assert.Contains("preparation failed", failure!.ToString());
+            }
             Assert.Equal(1, store.EnsureCalls);
             Assert.Equal(0, store.SaveCalls);
             Assert.False(Directory.Exists(directory.Root));
@@ -118,8 +123,13 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 ThrowFromDelete = throwException
             };
 
-            Assert.False((await store.Delete("missing")).Try(out var failure));
-            Assert.Contains("custom cleanup failed", failure!.ToString());
+            if (throwException)
+                Assert.Same(store.DeleteFailure, await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.Delete("missing")));
+            else
+            {
+                Assert.False((await store.Delete("missing")).Try(out var failure));
+                Assert.Contains("custom cleanup failed", failure!.ToString());
+            }
             Assert.Equal(1, store.DeleteCalls);
             Assert.False(Directory.Exists(directory.Root));
         }
@@ -156,8 +166,13 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 ThrowFromList = throwException
             };
 
-            Assert.False((await store.GetAllIds()).Try(out _, out var failure));
-            Assert.Contains("a child disappeared", failure!.ToString());
+            if (throwException)
+                Assert.Same(store.ListFailure, await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.GetAllIds()));
+            else
+            {
+                Assert.False((await store.GetAllIds()).Try(out _, out var failure));
+                Assert.Contains("a child disappeared", failure!.ToString());
+            }
         }
 
         [Fact]
@@ -232,6 +247,16 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Assert.False((await store.Delete("note")).Try(out _));
         }
 
+        [Fact]
+        public async Task SaveAndLoadExceptionsFromDerivedImplementationPropagate()
+        {
+            using var directory = new FileSystemTestDirectory();
+            var failure = new InvalidOperationException("derived content");
+            var store = new Store(() => directory.Root) { ContentException = failure };
+            Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => store.Save("note", "value")));
+            Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => store.Load("note", "")));
+        }
+
         private static void Success(Result result) => Assert.True(result.Try(out var failure), failure?.ToString());
 
         private static T Value<T>(Result<T> result)
@@ -248,6 +273,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             public int LoadCalls { get; private set; }
             public int DeleteCalls { get; private set; }
             public int ListCalls { get; private set; }
+            public Exception? ContentException { get; init; }
             public Exception? EnsureFailure { get; init; }
             public Exception? DeleteFailure { get; init; }
             public Exception? ListFailure { get; init; }
@@ -284,6 +310,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             {
                 Events.Add("save");
                 SaveCalls++;
+                if (ContentException != null) throw ContentException;
                 SavedPath = path;
                 if (!value.Try(out var text, out var failure)) return failure;
                 await File.WriteAllTextAsync(Path.Combine(path, "value.txt"), text, TestContext.Current.CancellationToken);
@@ -295,6 +322,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             {
                 Events.Add("load");
                 LoadCalls++;
+                if (ContentException != null) throw ContentException;
                 return await File.ReadAllTextAsync(Path.Combine(path, "value.txt"), TestContext.Current.CancellationToken);
             }
 

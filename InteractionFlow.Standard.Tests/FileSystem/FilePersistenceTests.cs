@@ -84,7 +84,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 return new IOException("serialization failed");
             };
 
-            Assert.False((await store.Save("note", "replacement")).Try(out _));
+            if (mode == "throw") await Assert.ThrowsAsync<IOException>(() => store.Save("note", "replacement"));
+            else Assert.False((await store.Save("note", "replacement")).Try(out _));
             if (newFile) Assert.False(File.Exists(target));
             else Assert.Equal(original, await File.ReadAllBytesAsync(target, TestContext.Current.CancellationToken));
             Assert.Equal(newFile ? 0 : 1, Directory.EnumerateFiles(directory.Root).Count());
@@ -370,6 +371,42 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Assert.ThrowsAny<ArgumentException>(() => new Store(() => ".", new ProbeSerializer(), extension!));
         }
 
+        [Fact]
+        public async Task LoadPropagatesSerializerExceptionAfterClosingStream()
+        {
+            using var directory = new FileSystemTestDirectory();
+            Directory.CreateDirectory(directory.Root);
+            await File.WriteAllTextAsync(directory.PathFor("note.bin"), "value", TestContext.Current.CancellationToken);
+            var failure = new InvalidOperationException("deserialize");
+            var serializer = new ProbeSerializer { ReadException = failure };
+            var store = new Store(() => directory.Root, serializer);
+            Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => store.Load("note", "")));
+            Assert.False(serializer.LastStream!.CanRead);
+        }
+
+        [Fact]
+        public async Task ThrownSerializerAndCleanupFailuresAreBothPropagated()
+        {
+            using var directory = new FileSystemTestDirectory();
+            var failure = new InvalidOperationException("serializer threw before cleanup");
+            var serializer = new ProbeSerializer
+            {
+                Write = async (_, stream) =>
+                {
+                    var path = ((FileStream)stream).Name;
+                    await stream.DisposeAsync();
+                    File.Delete(path);
+                    Directory.CreateDirectory(path);
+                    throw failure;
+                }
+            };
+            var store = new Store(() => directory.Root, serializer);
+            var aggregate = await Assert.ThrowsAsync<AggregateException>(() => store.Save("note", "value"));
+            Assert.Same(failure, aggregate.InnerExceptions[0]);
+            Assert.Equal(2, aggregate.InnerExceptions.Count);
+            Assert.False(File.Exists(directory.PathFor("note.bin")));
+        }
+
         private static void Success(Result result) => Assert.True(result.Try(out var failure), failure?.ToString());
 
         private static T Value<T>(Result<T> result)
@@ -397,6 +434,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
         private sealed class ProbeSerializer : StreamSerializer<string>
         {
             public Func<Result<string>, Stream, Task<Result<Stream>>>? Write { get; set; }
+            public Exception? ReadException { get; init; }
             public int SerializeCalls { get; private set; }
             public Stream? LastStream { get; private set; }
 
@@ -415,6 +453,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             {
                 if (!inputData.Try(out var stream, out var failure)) return failure;
                 LastStream = stream;
+                if (ReadException != null) throw ReadException;
                 using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
                 return await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
             }

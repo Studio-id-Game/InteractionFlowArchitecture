@@ -33,39 +33,32 @@ namespace InteractionFlow.Core.ExternalPorts
             this PersistentEntry<TPersistenceId, TValue>[] entries,
             IPersistencePort<TPersistenceId[], TValue?[]> persistencePort)
         {
-            try
-            {
-                var keys = entries.Select(e => e.PersistenceId).ToArray();
-                var values = entries.Select(e => e.Value).ToArray();
+            var keys = entries.Select(e => e.PersistenceId).ToArray();
+            var values = entries.Select(e => e.Value).ToArray();
 
-                return await persistencePort.Load(keys, values)
-                    .ThenAsync(loaded =>
+            return await persistencePort.Load(keys, values)
+                .ThenAsync(loaded =>
+                {
+                    if (loaded.Length != entries.Length)
                     {
-                        if (loaded.Length != entries.Length)
-                        {
-                            Result<TValue?[]> error = new InvalidOperationException(
-                                "The number of loaded values must match the number of entries.");
-                            return error.StartAsync();
-                        }
+                        Result<TValue?[]> error = new InvalidOperationException(
+                            "The number of loaded values must match the number of entries.");
+                        return error.StartAsync();
+                    }
 
-                        for (int i = 0; i < entries.Length; i++)
+                    for (int i = 0; i < entries.Length; i++)
+                    {
+                        var value = loaded[i];
+                        if (value is not null)
                         {
-                            var value = loaded[i];
-                            if (value is not null)
-                            {
-                                var entry = entries[i];
-                                entry.Load(value);
-                            }
+                            var entry = entries[i];
+                            entry.Load(value);
                         }
+                    }
 
-                        return loaded.AsResultAsync();
-                    })
-                    .ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
+                    return loaded.AsResultAsync();
+                })
+                .ConfigureAwait(false);
         }
 
         /// <summary>

@@ -16,10 +16,16 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
     public abstract class TextSerializer<TValue>(params IDependencyNode[] dependency)
         : StreamSerializer<TValue>(dependency), ISerializerPort<string, TValue>
     {
+        private static readonly Encoding DefaultEncoding = new UTF8Encoding(
+            encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
         /// <summary>
-        /// 文字列とストリームの変換に使用する文字コードを取得します。
+        /// 文字列とストリームの変換に使用する文字コード。既定は BOM なし・不正データで例外となる UTF-8 です。
         /// </summary>
-        public virtual Encoding Encoding => Encoding.UTF8;
+        public virtual Encoding Encoding => DefaultEncoding;
+
+        /// <summary>BOM に基づく入力文字コードの検出を有効にするかどうか。既定は有効です。</summary>
+        public virtual bool DetectEncodingFromByteOrderMarks => true;
 
         /// <summary>
         /// 値を文字列へ変換します。
@@ -38,45 +44,46 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
         public abstract Task<Result<TValue>> Deserialize(Result<string> inputText, Result<TValue> refValue);
 
         /// <summary>
-        /// ストリーム変換時に使用する既定の参照文字列を取得します。
-        /// </summary>
-        /// <param name="refData">参照元のストリーム結果。</param>
-        /// <returns>既定の参照文字列。</returns>
-        public virtual Result<string> DefaultRefText(Result<Stream> refData)
-        {
-            return "";
-        }
-
-        /// <summary>
         /// Encoding で指定された文字コードを用いて、値を文字列へ変換しストリームへ書き込みます。
         /// </summary>
         /// <param name="inputValue">変換する値。</param>
         /// <param name="refData">書き込み先として使用するストリーム。</param>
         /// <returns>書き込み後のストリーム。失敗時は失敗結果。</returns>
         /// <remarks>
-        /// 書き込み先ストリームの所有権は取得せず、処理後も開いたままにします。
+        /// 現在位置から書き込み、巻き戻し・切り詰めはせず、処理後もストリームを開いたままにします。
+        /// 文字列版には空文字を参照値として渡します。BOM 出力は Encoding のプリアンブルに従います。
+        /// 書き込み先の失敗は文字列変換前に返し、Stream 操作の例外だけを失敗 Result に変換します。
+        /// 文字列版の変換が送出する例外は捕捉しません。
         /// </remarks>
         public override async Task<Result<Stream>> Serialize(Result<TValue> inputValue, Result<Stream> refData)
         {
-            return await Serialize(inputValue, DefaultRefText(refData))
-                .ThenAsync(text =>
+            return await refData.StartAsync()
+                .ThenAsync(async stream =>
                 {
-                    return refData.Then(stream => (text, stream).AsResult()).StartAsync();
+                    return await Serialize(inputValue, "".AsResult())
+                        .MapAsync(text => (stream, text))
+                        .ConfigureAwait(false);
                 })
                 .ThenAsync(async value =>
                 {
-                    var (text, stream) = value;
+                    var (stream, text) = value;
 
                     try
                     {
-                        await using StreamWriter writer = new(stream, Encoding, 1024, true);
+                        await using StreamWriter writer = new(
+                            stream,
+                            Encoding,
+                            bufferSize: 1024,
+                            leaveOpen: true
+                        );
+
                         await writer.WriteAsync(text).ConfigureAwait(false);
                         await writer.FlushAsync().ConfigureAwait(false);
                         return stream.AsResult();
                     }
-                    catch (Exception e)
+                    catch (Exception exception)
                     {
-                        return e;
+                        return exception;
                     }
                 })
                 .ConfigureAwait(false);
@@ -89,7 +96,9 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
         /// <param name="refValue">変換時に参照または再利用する値。</param>
         /// <returns>変換された値。失敗時は失敗結果。</returns>
         /// <remarks>
-        /// 読み取り元ストリームの所有権は取得せず、処理後も開いたままにします。
+        /// 現在位置から末尾まで読み、位置を復元せず、処理後もストリームを開いたままにします。
+        /// refValue の失敗も文字列版へ渡します。Stream 操作の例外だけを失敗 Result に変換します。
+        /// 文字列版の変換が送出する例外は捕捉しません。
         /// </remarks>
         public override async Task<Result<TValue>> Deserialize(Result<Stream> inputData, Result<TValue> refValue)
         {
@@ -98,19 +107,24 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
                 {
                     try
                     {
-                        using StreamReader reader = new(stream, Encoding, true, 1024, true);
+                        using StreamReader reader = new(
+                            stream,
+                            Encoding,
+                            detectEncodingFromByteOrderMarks: DetectEncodingFromByteOrderMarks,
+                            bufferSize: 1024,
+                            leaveOpen: true
+                        );
+
                         var text = await reader.ReadToEndAsync().ConfigureAwait(false);
+
                         return text.AsResult();
                     }
-                    catch (Exception e)
+                    catch (Exception exception)
                     {
-                        return e;
+                        return exception;
                     }
                 })
-                .ThenAsync(async text =>
-                {
-                    return await Deserialize(text, refValue).ConfigureAwait(false);
-                })
+                .ThenAsync(text => Deserialize(text.AsResult(), refValue))
                 .ConfigureAwait(false);
         }
     }

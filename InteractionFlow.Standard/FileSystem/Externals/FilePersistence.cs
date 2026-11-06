@@ -4,6 +4,7 @@ using InteractionFlow.Core.ExternalPorts;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.FileSystem.Externals
@@ -70,66 +71,88 @@ namespace InteractionFlow.Standard.FileSystem.Externals
             if (!value.Try(out _, out var inputFailure)) return inputFailure;
 
             string? temporaryPath = null;
-            var ownsTemporaryFile = false;
-            Exception failure;
+            string? path = null;
+            FileStream? stream = null;
+            Exception? failure = null;
+            var propagate = false;
             try
             {
                 var rootPath = Path.GetFullPath(GetCurrentRootPath());
-                var path = GetFilePath(rootPath, id);
+                path = GetFilePath(rootPath, id);
                 var parentPath = Path.GetDirectoryName(path)!;
                 Directory.CreateDirectory(parentPath);
                 temporaryPath = CreateTemporaryPath(parentPath);
+                stream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write,
+                    FileShare.None, bufferSize: 81920, useAsync: true);
 
-                await using (var stream = new FileStream(
-                    temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                    bufferSize: 81920, useAsync: true))
-                {
-                    ownsTemporaryFile = true;
-                    var serialized = await serializer.Serialize(value, stream).ConfigureAwait(false);
-                    serialized.ThrowIfError();
-                    await stream.FlushAsync().ConfigureAwait(false);
-                }
-
-                // 同じ親の中で置き換える。先に保存先を削除するフォールバックは行わない。
-                Commit(temporaryPath, path);
-                return Result.Success;
+                // Result を返す処理の例外は、清掃後に伝播させる。
+                propagate = true;
+                var serialized = await serializer.Serialize(value, stream).ConfigureAwait(false);
+                propagate = false;
+                if (!serialized.Try(out _, out var serializationFailure)) failure = serializationFailure;
+                else await stream.FlushAsync().ConfigureAwait(false);
             }
             catch (Exception exception)
             {
                 failure = exception;
             }
 
-            if (ownsTemporaryFile)
+            if (stream != null)
+            {
+                try { await stream.DisposeAsync().ConfigureAwait(false); }
+                catch (Exception exception)
+                {
+                    failure = failure == null ? exception : new AggregateException(failure, exception);
+                }
+            }
+
+            if (failure == null)
             {
                 try
                 {
-                    File.Delete(temporaryPath!);
+                    Commit(temporaryPath!, path!);
+                    return Result.Success;
                 }
-                catch (Exception cleanupFailure)
-                {
-                    failure = new AggregateException(failure, cleanupFailure);
-                }
+                catch (Exception exception) { failure = exception; }
             }
 
+            // CreateNew に成功した一時ファイルだけを清掃する。
+            if (stream != null)
+            {
+                try { File.Delete(temporaryPath!); }
+                catch (Exception exception) { failure = new AggregateException(failure, exception); }
+            }
+
+            if (propagate) ExceptionDispatchInfo.Capture(failure).Throw();
             return failure;
         }
 
-        /// <summary>対象から読み込みます。失敗の oldValue も Serializer へ渡し、保存先は作成しません。</summary>
+        /// <summary>対象から読み込みます。Serializer の例外は破棄後に伝播します。</summary>
         public async Task<Result<TValue>> Load(TFileId id, Result<TValue> oldValue)
         {
+            FileStream stream;
             try
             {
                 var rootPath = Path.GetFullPath(GetCurrentRootPath());
-                var path = GetFilePath(rootPath, id);
-                await using var stream = new FileStream(
-                    path, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    bufferSize: 81920, useAsync: true);
-                return await serializer.Deserialize(stream, oldValue).ConfigureAwait(false);
+                stream = new FileStream(GetFilePath(rootPath, id), FileMode.Open, FileAccess.Read,
+                    FileShare.Read, bufferSize: 81920, useAsync: true);
             }
+            catch (Exception exception) { return exception; }
+
+            Result<TValue> result = default;
+            Exception? failure = null;
+            try { result = await serializer.Deserialize(stream, oldValue).ConfigureAwait(false); }
+            catch (Exception exception) { failure = exception; }
+
+            try { await stream.DisposeAsync().ConfigureAwait(false); }
             catch (Exception exception)
             {
-                return exception;
+                if (failure != null) failure = new AggregateException(failure, exception);
+                else return exception;
             }
+
+            if (failure != null) ExceptionDispatchInfo.Capture(failure).Throw();
+            return result;
         }
 
         /// <summary>ファイルを削除します。明確な不存在は成功、それ以外の失敗は保持します。</summary>

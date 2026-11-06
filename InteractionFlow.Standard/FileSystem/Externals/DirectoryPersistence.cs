@@ -35,8 +35,12 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         /// <summary>保存ごとに必要な状態を整えます。既定はディレクトリ作成で、既存でも成功します。</summary>
         protected virtual Task<Result> EnsureDirectory(string path, TDirectoryId id)
         {
-            Directory.CreateDirectory(path);
-            return Task.FromResult(Result.Success);
+            try
+            {
+                Directory.CreateDirectory(path);
+                return Task.FromResult(Result.Success);
+            }
+            catch (Exception exception) { return Task.FromResult<Result>(exception); }
         }
 
         /// <summary>内容を保存します。渡されたパスを使い、失敗時の整合性は派生側で定義します。</summary>
@@ -51,13 +55,11 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         {
             try
             {
-                Directory.Delete(path, recursive: true);
+                try { Directory.Delete(path, recursive: true); }
+                catch (DirectoryNotFoundException) { FileSystemPath.RequireVolumeRoot(path); }
+                return Task.FromResult(Result.Success);
             }
-            catch (DirectoryNotFoundException)
-            {
-                FileSystemPath.RequireVolumeRoot(path);
-            }
-            return Task.FromResult(Result.Success);
+            catch (Exception exception) { return Task.FromResult<Result>(exception); }
         }
 
         /// <summary>確定済みルートから全保存対象の ID を列挙します。未作成ルートには呼ばれません。</summary>
@@ -69,49 +71,46 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         {
             if (!value.Try(out _, out var inputFailure)) return inputFailure;
 
+            string path;
             try
             {
                 var rootPath = Path.GetFullPath(GetCurrentRootPath());
-                var path = GetDirectoryPath(rootPath, id);
-                var ensured = await EnsureDirectory(path, id).ConfigureAwait(false);
-                if (!ensured.Try(out _)) return ensured;
+                path = GetDirectoryPath(rootPath, id);
+            }
+            catch (Exception exception) { return exception; }
 
-                return await SaveDirectory(path, id, value).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                return exception;
-            }
+            var ensured = await EnsureDirectory(path, id).ConfigureAwait(false);
+            if (!ensured.Try(out _)) return ensured;
+            return await SaveDirectory(path, id, value).ConfigureAwait(false);
         }
 
         /// <summary>対象の存在を確認してから読込へ委譲します。準備処理や作成は行いません。</summary>
         public async Task<Result<TValue>> Load(TDirectoryId id, Result<TValue> oldValue)
         {
+            string path;
             try
             {
                 var rootPath = Path.GetFullPath(GetCurrentRootPath());
-                var path = GetDirectoryPath(rootPath, id);
+                path = GetDirectoryPath(rootPath, id);
                 FileSystemPath.RequireDirectory(path);
-                return await LoadDirectory(path, id, oldValue).ConfigureAwait(false);
             }
-            catch (Exception exception)
-            {
-                return exception;
-            }
+            catch (Exception exception) { return exception; }
+
+            return await LoadDirectory(path, id, oldValue).ConfigureAwait(false);
         }
 
         /// <summary>不存在でも拡張点へ委譲します。派生実装の失敗はそのまま保持します。</summary>
         public async Task<Result> Delete(TDirectoryId id)
         {
+            string path;
             try
             {
                 var rootPath = Path.GetFullPath(GetCurrentRootPath());
-                return await DeleteDirectory(GetDirectoryPath(rootPath, id), id).ConfigureAwait(false);
+                path = GetDirectoryPath(rootPath, id);
             }
-            catch (Exception exception)
-            {
-                return exception;
-            }
+            catch (Exception exception) { return exception; }
+
+            return await DeleteDirectory(path, id).ConfigureAwait(false);
         }
 
         /// <summary>対象がディレクトリであることを確認します。保存先の作成は行いません。</summary>
@@ -132,17 +131,15 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         /// <summary>ルートの確定と例外変換を行い、列挙を派生側へ委譲します。未作成なら空配列です。</summary>
         public async Task<Result<TDirectoryId[]>> GetAllIds()
         {
+            string rootPath;
             try
             {
-                var rootPath = Path.GetFullPath(GetCurrentRootPath());
+                rootPath = Path.GetFullPath(GetCurrentRootPath());
                 if (!FileSystemPath.DirectoryIsPresent(rootPath)) return Array.Empty<TDirectoryId>();
+            }
+            catch (Exception exception) { return exception; }
 
-                return await GetDirectoryIds(rootPath).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                return exception;
-            }
+            return await GetDirectoryIds(rootPath).ConfigureAwait(false);
         }
     }
 }

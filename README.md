@@ -83,6 +83,10 @@ interactionflow_enabled = True
   ```
 
 ## Standard
+
+Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参照してください。
+
+形式変換の文字コードと Stream の契約は [Standard SerializationSystem](./docs/SERIALIZATION.md) を参照してください。
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
 - ファイル・ディレクトリの永続化は [Standard FileSystem](./docs/FILESYSTEM.md) を参照してください。
 - 新しい Console API の構成と契約は [Standard Console](./docs/CONSOLE.md) を参照してください。既存サンプルの Console 利用は移行予定です。

@@ -217,6 +217,8 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 
 ### Result
 
+Result の契約、各拡張の使い分け、例外を Result 化する責務は [Result API](./RESULT.md) を基準とします。
+
 ソースコード: [`Result.cs`](../InteractionFlow.Core/Entities/Result.cs)
 
 `Result` / `Result<TValue>` は、Function や補助処理における局所的な成功、成功値、失敗を表します。

@@ -2,6 +2,9 @@
 
 Standard の公開契約と実装上の寿命管理を検証します。
 
+`SerializationSystem/` では文字コード・BOM、失敗の伝播、Stream の位置と所有権を検証します。
+契約と移行方法は [Standard SerializationSystem](../docs/SERIALIZATION.md) を参照してください。
+
 `FileSystem/` では実ファイルを使い、保存失敗時の既存データ保持、ID と接尾辞の往復変換、
 操作ごとのルート確定、Directory の準備・削除・列挙の拡張点を検証します。
 

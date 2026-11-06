@@ -4,8 +4,6 @@ using InteractionFlow.Samples.Notepad.Core.Entities.Datas;
 using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
-using InteractionFlow.Standard.ConsoleSystem.Entities;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

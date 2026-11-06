@@ -8,8 +8,6 @@ using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.SystemFlows;
 using InteractionFlow.Samples.Notepad.Externals.Serializers;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Interactions;
 using System;
 using System.Threading.Tasks;
 

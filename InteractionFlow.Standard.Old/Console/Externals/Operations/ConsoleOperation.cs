@@ -1,7 +1,6 @@
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
-using InteractionFlow.Standard.ConsoleSystem.Externals.Rules;
 using InteractionFlow.Standard.Old.Console.Entities;
 using InteractionFlow.Standard.Old.Console.ExternalPorts.OperationPorts;
 using System;

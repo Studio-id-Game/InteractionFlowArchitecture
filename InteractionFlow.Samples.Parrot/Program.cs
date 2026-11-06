@@ -6,8 +6,6 @@ using InteractionFlow.Samples.Parrot.Externals.Storages;
 using InteractionFlow.Samples.Parrot.Interactions;
 using InteractionFlow.Samples.Parrot.SystemFlows;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Interactions;
 using System;
 using System.Threading.Tasks;
 

@@ -3,7 +3,6 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Standard.Old.Console.Entities;
 using InteractionFlow.Standard.Old.Console.ExternalPorts.SilentExternalPorts;
 using InteractionFlow.Standard.Old.Externals.SilentExternals;
-using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Standard.Old.Console.Externals.SilentExternals

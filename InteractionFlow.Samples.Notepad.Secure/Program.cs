@@ -16,8 +16,6 @@ using InteractionFlow.Samples.Notepad.Secure.Externals.Storages.SecureManagers;
 using InteractionFlow.Samples.Notepad.Secure.Externals.Storages.Serializers;
 using InteractionFlow.Samples.Notepad.Secure.Interactions;
 using InteractionFlow.Standard.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Builders;
-using InteractionFlow.Standard.ConsoleSystem.Interactions;
 using System;
 using System.Threading.Tasks;
 

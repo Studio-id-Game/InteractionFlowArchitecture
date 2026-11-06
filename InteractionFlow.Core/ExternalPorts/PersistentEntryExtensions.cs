@@ -1,5 +1,4 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.ExternalPorts;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

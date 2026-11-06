@@ -2,8 +2,6 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Parrot.Entities.SampleContexts;
-using InteractionFlow.Standard.ConsoleSystem.Entities;
-using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

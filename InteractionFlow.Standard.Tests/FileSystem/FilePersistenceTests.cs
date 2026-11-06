@@ -13,6 +13,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
 {
     public sealed class FilePersistenceTests
     {
+        private static readonly string[] ExpectedConcurrentValues = ["first complete value", "second complete value"];
+
         [Theory]
         [InlineData(".bin")]
         [InlineData(".data.json")]
@@ -175,7 +177,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var results = await Task.WhenAll(first, second);
             Assert.Contains(results, result => result.Try(out _));
             var saved = File.ReadAllText(directory.PathFor("note.bin"));
-            Assert.Contains(saved, new[] { "first complete value", "second complete value" });
+            Assert.Contains(saved, ExpectedConcurrentValues);
             Assert.Single(Directory.EnumerateFiles(directory.Root));
         }
 

@@ -55,13 +55,12 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
         private static async Task<bool> ReadOnceAsync(ProbeOptions options, int number, TraceLog trace)
         {
             var context = new FlowContext();
-            using var bindingLifetime = new ConsoleCancellationBinding();
-            IConsoleCancellationBindingPort binding = bindingLifetime;
+            using var binding = new ConsoleCancellationBinding();
             using var timerLifetime = new CancellationTokenSource();
             using var tokenObserver = context.Cancellation.GetToken().Register(
                 () => trace.Add($"read={number} TOKEN cancellation observed"));
 
-            ConsoleCancelEventHandler eventObserver = (_, args) =>
+            void eventObserver(object? _, ConsoleCancelEventArgs args) =>
                 trace.Add($"read={number} CancelKeyPress observed: {args.SpecialKey}");
 
             Console.CancelKeyPress += eventObserver;
@@ -83,14 +82,14 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
 
                 if (options.CancelBeforeRead) context.Cancellation.Cancel();
                 trace.Add($"read={number} CALL BEGIN");
-                timer = CancelLaterAsync(options.CancelAfterMilliseconds, context, timerLifetime.Token, number, trace);
+                timer = CancelLaterAsync(options.CancelAfterMilliseconds, context, number, trace, timerLifetime.Token);
                 var elapsed = Stopwatch.StartNew();
 
                 try
                 {
                     if (options.Scenario == "line")
                     {
-                        IConsoleLineInputPort input = new ConsoleLineInput(
+                        var input = new ConsoleLineInput(
                             TimeSpan.FromMilliseconds(options.GraceMilliseconds));
                         var line = await input.ReadLineAsync(context);
                         ReportResult(trace, number, $"SUCCESS elapsed={elapsed.Elapsed.TotalMilliseconds:F1}ms, " +
@@ -98,7 +97,7 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
                     }
                     else
                     {
-                        IConsoleKeyInputPort input = new ConsoleKeyInput();
+                        var input = new ConsoleKeyInput();
                         var key = await input.ReadKeyAsync(context);
                         ReportResult(trace, number, $"SUCCESS elapsed={elapsed.Elapsed.TotalMilliseconds:F1}ms, " +
                             $"key={key.Key}, char={JsonSerializer.Serialize(key.KeyChar.ToString())}, " +
@@ -151,7 +150,7 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
         }
 
         private static async Task CancelLaterAsync(
-            int delay, IFlowContext context, CancellationToken stop, int read, TraceLog trace)
+            int delay, FlowContext context, int read, TraceLog trace, CancellationToken stop)
         {
             if (delay < 0) return;
 

@@ -65,7 +65,7 @@ namespace InteractionFlow.Standard.Tests.SerializationSystem
         {
             var failure = new InvalidOperationException("conversion");
             var serializer = new Probe { Failure = failure, ThrowAsynchronously = asynchronous };
-            using var stream = new MemoryStream(new byte[] { 65 });
+            using var stream = new MemoryStream("A"u8.ToArray());
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(
                 () => serializer.Serialize("text".AsResult(), stream)));
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(
@@ -77,7 +77,7 @@ namespace InteractionFlow.Standard.Tests.SerializationSystem
         public async Task InvalidUtf8AndUnpairedSurrogatesFail()
         {
             var serializer = new Probe();
-            using var input = new MemoryStream(new byte[] { 0xff });
+            using var input = new MemoryStream([0xff]);
             Assert.IsType<DecoderFallbackException>(Error(await serializer.Deserialize(input.AsResult<Stream>(), "")));
             Assert.Equal(0, serializer.DeserializeCalls);
             using var output = new MemoryStream();
@@ -93,7 +93,7 @@ namespace InteractionFlow.Standard.Tests.SerializationSystem
         {
             var serializer = new Probe { DetectBom = detect };
             var encoding = new UnicodeEncoding(false, true, true);
-            using var stream = new MemoryStream(encoding.GetPreamble().Concat(encoding.GetBytes("text")).ToArray());
+            using var stream = new MemoryStream([.. encoding.GetPreamble(), .. encoding.GetBytes("text")]);
             var result = await serializer.Deserialize(stream.AsResult<Stream>(), "");
             if (detect) Assert.Equal("text", Value(result));
             else Assert.IsType<DecoderFallbackException>(Error(result));
@@ -110,7 +110,7 @@ namespace InteractionFlow.Standard.Tests.SerializationSystem
             stream.Position = 0;
             Assert.Equal("日本語", Value(await serializer.Deserialize(stream.AsResult<Stream>(), "")));
             var replacing = new Probe { SelectedEncoding = new UTF8Encoding(false, false) };
-            using var invalid = new MemoryStream(new byte[] { 0xff });
+            using var invalid = new MemoryStream([0xff]);
             Assert.Equal("\ufffd", Value(await replacing.Deserialize(invalid.AsResult<Stream>(), "")));
         }
 

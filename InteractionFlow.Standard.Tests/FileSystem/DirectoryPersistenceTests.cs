@@ -11,6 +11,9 @@ namespace InteractionFlow.Standard.Tests.FileSystem
 {
     public sealed class DirectoryPersistenceTests
     {
+        private static readonly string[] ExpectedSaveEvents = ["ensure", "save", "ensure", "save", "load"];
+        private static readonly string[] ExpectedDirectoryIds = ["group", "group/user"];
+
         [Fact]
         public async Task SaveAlwaysEnsuresAndSupportsNestedDirectories()
         {
@@ -25,7 +28,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Assert.Equal("second", Value(await store.Load("group/user", new IOException("no previous value"))));
             Assert.Equal(1, store.LoadCalls);
             Assert.Equal(2, store.EnsureCalls);
-            Assert.Equal(new[] { "ensure", "save", "ensure", "save", "load" }, store.Events);
+            Assert.Equal(ExpectedSaveEvents, store.Events);
         }
 
         [Fact]
@@ -145,7 +148,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Directory.CreateDirectory(directory.PathFor("only-a-container"));
 
             var ids = Value(await store.GetAllIds());
-            Assert.Equal(new[] { "group", "group/user" }, ids.OrderBy(id => id).ToArray());
+            Assert.Equal(ExpectedDirectoryIds, ids.OrderBy(id => id));
             Assert.Equal(1, store.ListCalls);
             Assert.Equal(2, store.EnsureCalls);
             Success(await store.Delete("group"));

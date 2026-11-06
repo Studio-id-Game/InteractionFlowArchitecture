@@ -134,3 +134,10 @@ jobs:
           Get-ChildItem $env:ARTIFACTS_DIR -Filter *.snupkg | ForEach-Object {
             dotnet nuget push $_.FullName --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source $env:NUGET_SOURCE --skip-duplicate
           }
+
+  package-install-check:
+    name: Verify published packages
+    needs: publish
+    uses: ./.github/workflows/package-install-check.yml
+    permissions:
+      contents: read

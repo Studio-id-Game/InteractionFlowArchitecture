@@ -1,6 +1,7 @@
 name: Package Install Check
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -17,6 +18,9 @@ jobs:
   package-install-check:
     name: Restore and Build from NuGet.org
     runs-on: windows-latest
+    timeout-minutes: 75
+    env:
+      NUGET_PACKAGES: ${{ runner.temp }}/interactionflow-package-install-check/packages
 
     steps:
       - name: Checkout
@@ -28,7 +32,7 @@ jobs:
           global-json-file: global.json
 
       - name: Restore from NuGet.org
-        run: dotnet restore $env:CHECK_PROJECT --source $env:NUGET_SOURCE --no-cache --force
+        run: ./.github/scripts/Restore-PublishedPackages.ps1 -Project $env:CHECK_PROJECT -Source $env:NUGET_SOURCE
 
       - name: List resolved packages
         run: dotnet list $env:CHECK_PROJECT package --include-transitive
@@ -84,11 +88,11 @@ jobs:
           }
 
           $text = $output -join "`n"
-          if ($text -notmatch "InteractionFlowArchitecture001") {
+          if ($text -notmatch "error InteractionFlowArchitecture001\b") {
             throw "Expected InteractionFlowArchitecture001 diagnostic was not found in build output."
           }
 
           "## Analyzer Diagnostic Check" >> $env:GITHUB_STEP_SUMMARY
           "" >> $env:GITHUB_STEP_SUMMARY
-          "- `InteractionFlowArchitecture001` was detected as expected." >> $env:GITHUB_STEP_SUMMARY
+          '- `InteractionFlowArchitecture001` was detected as expected.' >> $env:GITHUB_STEP_SUMMARY
           exit 0

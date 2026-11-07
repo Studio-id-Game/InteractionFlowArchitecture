@@ -107,6 +107,9 @@ AggregateException に保持します。リダイレクトされた出力では�
 `ClearAsync` / `SetCursorPositionAsync` は表示を変える Reaction です。
 非対応環境や無効な画面位置は失敗結果になります。環境の観測は SilentExternal が担当します。
 位置は非負の Left / Top を持つ ConsolePosition とし、現在位置の取得は Result を返します。
+`IConsoleEnvironmentPort.GetWindowSize()` は表示ウィンドウの列数・行数を
+`Result<(int Width, int Height)>` で返します。画面操作と同じロックで観測し、
+リダイレクト出力や取得失敗は失敗 Result とします。サイズ変更通知ではなく、呼び出し時点の観測値です。
 
 色の退避から復元までと画面操作はプロセス内で排他します。
 外部コードによる System.Console の直接操作、入力中の通知による行の再描画、TUI の表示整合性は保証しません。
@@ -148,5 +151,7 @@ Interaction が `IConsoleCancellationBindingPort` を受け取り、`Bind(contex
 
 実端末の色の適用・復元、キー入力、Ctrl+C のイベント配送と解除との競合、IME、貼り付けは
 対象 OS・端末で別途確認してください。内部のイベントハンドラーをリフレクションで呼ぶテストは行いません。
-Parrot は新 Console API に移行済みです。選択・会話・自動入力・色指定・キャンセルの利用例は
-[Parrot](../InteractionFlow.Samples.Parrot/README.md) を参照してください。ほかの旧 Console API 利用サンプルは移行対象です。
+Parrot と Notepad は新 Console API に移行済みです。選択・会話・自動入力・色指定・キャンセルの利用例は
+[Parrot](../InteractionFlow.Samples.Parrot/README.md)、カーソル編集・矢印選択とパスワードのキー入力は
+[Notepad Core](../InteractionFlow.Samples.Notepad.Core/README.md) と
+[Notepad Secure](../InteractionFlow.Samples.Notepad.Secure/README.md) を参照してください。

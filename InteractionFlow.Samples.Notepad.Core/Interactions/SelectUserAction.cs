@@ -1,75 +1,38 @@
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
-using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
-using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public sealed class SelectUserAction(
-        IExceptionPort<Exception> exceptionPort,
-        ICancellationPort cancellationPort,
-        IConsoleWriter consoleReaction,
-        IConsoleCursorPositionAccess consoleCursorPositionAccess,
-        IConsoleOperation consoleOperation,
-        INotepadDataStoragePort notepadDataFiles,
-        NoteCreate noteCreate,
-        NoteDelete noteDelete,
-        NoteEdit noteEdit,
-        Login login) :
-        Interaction(exceptionPort, cancellationPort, consoleReaction, consoleCursorPositionAccess, consoleOperation, notepadDataFiles, noteCreate, noteDelete, noteEdit, login)
+        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, IConsoleChoiceOperation choices)
+        : NotepadInteraction(input, output, binding, exceptionPort, cancellationPort, choices)
     {
-        private readonly ConsoleSelectItem<IInteraction> userActions = new(consoleReaction, consoleCursorPositionAccess, consoleOperation, new()
+        protected override Task OnCancellation(IFlowContext context)
         {
-            ["1. Edit Exist Note"] = noteEdit,
-            ["2. Create New Note"] = noteCreate,
-            ["3. Delete Old Note"] = noteDelete,
-            ["4. Login As Other User"] = login,
-        });
-
-        static SelectUserAction()
-        {
-            Console.CursorLeft = 0;
-            Console.CursorTop = 0;
+            if (context.TryGet<NotepadContext>(out var notepad)) notepad.ExitRequested = true;
+            return Task.CompletedTask;
         }
 
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
         {
-            try
+            context.Action = NotepadAction.None;
+            var selected = await choices.SelectAsync(context, "Select your action",
+                new[] { "Edit", "Create", "Delete", "Switch user", "List", "Exit" });
+            if (selected == null || selected == 5) context.ExitRequested = true;
+            else context.Action = selected.Value switch
             {
-                using var scope = consoleReaction.GetStateScope();
-                scope.State.Update(writeLine: true);
-
-                await Write(context, "# Select your action :");
-
-                var (select, action) = await userActions.GetSelectAsync(context);
-
-                await Write(context, $"> UserAction - {select}");
-
-                FlowEndToken end;
-                if (action is Login login)
-                {
-                    end = await login.ExecuteRetryLoopAsync(context);
-                }
-                else
-                {
-                    end = await action.ExecuteAsync(context);
-                }
-
-                return end.End;
-            }
-            finally
-            {
-                notepadDataFiles.ClearWithoutDispose();
-            }
-        }
-
-        private async Task Write(IFlowContext context, string text)
-        {
-            await consoleReaction.Write(context, new ConsoleOutput(text));
+                0 => NotepadAction.Edit, 1 => NotepadAction.Create,
+                2 => NotepadAction.Delete, 3 => NotepadAction.Login,
+                4 => NotepadAction.List, _ => NotepadAction.None
+            };
+            return await Output.WriteLineAsync(context, context.ExitRequested ? "Goodbye!" :
+                context.Action == NotepadAction.None ? "Choose an action from 0 to 5." : $"Action: {context.Action}");
         }
     }
 }

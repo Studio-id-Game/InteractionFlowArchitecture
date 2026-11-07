@@ -1,49 +1,34 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
-using InteractionFlow.Samples.Notepad.Core.Entities.Contexts;
+using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.SystemFlows
 {
-    public sealed class MainLoop(
-        Login login,
-        NoteListView noteListView,
-        SelectUserAction selectUserAction,
-        ConsoleWriting consoleWrite)
-        : SystemFlow<NotepadContext>(login, noteListView, selectUserAction, consoleWrite)
+    public sealed class MainLoop(Login login, NoteListView list, SelectUserAction select,
+        NoteCreate create, NoteEdit edit, NoteDelete delete)
+        : SystemFlow<NotepadContext>(login, list, select, create, edit, delete)
     {
-
         protected override async Task<FlowEndToken> ExecuteCoreAsync(NotepadContext context)
         {
-            FlowEndToken end;
-            end = await login.ExecuteRetryLoopAsync(context);
-
-            if (end.HasCanceled)
+            var end = await login.ExecuteAsync(context);
+            while (!end.HasException && !context.ExitRequested)
             {
-                return end;
-            }
-
-            do
-            {
-                await noteListView.ExecuteAsync(context);
-                await Write("");
-
-                end = await selectUserAction.ExecuteAsync(context);
-                await Write("");
-                if (end.HasCanceled)
+                if (context.User == null) { end = await login.ExecuteAsync(context); continue; }
+                end = await select.ExecuteAsync(context);
+                if (end.HasException || context.ExitRequested) break;
+                end = context.Action switch
                 {
-                    break;
-                }
+                    NotepadAction.Create => await create.ExecuteAsync(context),
+                    NotepadAction.Edit => await edit.ExecuteAsync(context),
+                    NotepadAction.Delete => await delete.ExecuteAsync(context),
+                    NotepadAction.List => await list.ExecuteAsync(context),
+                    NotepadAction.Login => await login.ExecuteAsync(context),
+                    _ => end
+                };
             }
-            while (true);
-
             return end;
-
-            async Task<FlowEndToken> Write(string text)
-            {
-                return await consoleWrite.ExecuteAsync(context, (new ConsoleOutput(text), null));
-            }
         }
     }
 }

@@ -1,88 +1,41 @@
-using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
-using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
-using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
-
     public sealed class NoteListView(
-        IExceptionPort<Exception> exceptionPort,
-        ICancellationPort cancellationPort,
-        IConsoleWriter consoleReaction,
-        INotepadUserDataStoragePort notepadUserDataFiles,
-        INotepadDataStoragePort notepadDataFiles,
-        INotepadUserDataPersistencePort notepadUserDataPersistence,
-        INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(
-            exceptionPort,
-            cancellationPort,
-            consoleReaction,
-            notepadUserDataFiles,
-            notepadDataFiles,
-            notepadUserDataPersistence,
-            notepadDataPersistence)
+        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
+        IConsoleKeyInputPort keys, IConsoleEnvironmentPort environment)
+        : NotepadInteraction(input, output, binding, exceptionPort, cancellationPort, notes, keys, environment)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
         {
-            using var scope = consoleReaction.GetStateScope();
-            scope.State.Update(writeLine: true);
-
-            await Write(context, "# Note List View :");
-
-            await Write(context, "> Loading User data...");
-
-            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
-                    .ThenAsync(async userData =>
-                    {
-                        Result result = Result.Success;
-
-                        foreach (var noteDataKey in userData)
-                        {
-                            var fileName = noteDataKey.NoteId;
-
-                            result = await notepadDataFiles.GetOrCreate(noteDataKey).StartAsync()
-                               .ThenAsync(async notepadEntry =>
-                               {
-                                   return await notepadEntry.Load(notepadDataPersistence);
-                               })
-                               .ThenAsync(async notepadData =>
-                               {
-                                   var title = notepadData.Title;
-                                   await Write(context, $"  - '{fileName}' (title:{title})");
-
-                                   return notepadDataFiles.RemoveWithoutDispose(noteDataKey);
-                               });
-
-                            if (!result.Try(out _))
-                            {
-                                await Write(context, $"  - '{fileName}' (Error)");
-                                break;
-                            }
-
-                        }
-
-                        return result;
-                    }).ResolveAsync(
-                    onSuccess: async () =>
-                    {
-                        return await Write(context, "> End of List.");
-                    },
-                    onFailure: async e =>
-                    {
-                        return await Write(context, $"> List Error : {e.Message}");
-                    });
-        }
-
-        private async Task<ReactionEnd> Write(IFlowContext context, string text)
-        {
-            return await consoleReaction.Write(context, new ConsoleOutput(text));
+            var result = await notes.GetAllIds();
+            if (!result.Try(out var ids, out var error))
+                return await Output.WriteLineAsync(context, $"List failed: {error.Message}");
+            await WriteAsync(context, $"# Notes — {NotepadRules.UserName(context.User!)}");
+            foreach (var id in ids.Where(id => id.User == context.User).OrderBy(id => id.Note, StringComparer.Ordinal))
+            {
+                context.Cancellation.GetToken().ThrowIfCancellationRequested();
+                var loaded = await notes.Load(id, new NotepadData("", ""));
+                var label = loaded.Try(out var note, out var loadError)
+                    ? note.Title : $"[Unreadable: {loadError.Message}]";
+                await WriteAsync(context, $"- {id.Note}: {label}");
+            }
+            await WriteAsync(context, "End of list.");
+            if (!environment.IsInputRedirected && !environment.IsOutputRedirected)
+            {
+                await WriteAsync(context, "Press any key to return to the menu.");
+                await keys.ReadKeyAsync(context);
+            }
+            return await Output.WriteLineAsync(context, "");
         }
     }
 }

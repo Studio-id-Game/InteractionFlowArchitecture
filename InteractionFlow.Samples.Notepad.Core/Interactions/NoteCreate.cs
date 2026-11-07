@@ -1,107 +1,35 @@
-using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
-using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.Entities.Keys;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
-using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public sealed class NoteCreate(
-        IExceptionPort<Exception> exceptionPort,
-        ICancellationPort cancellationPort,
-        IConsoleWriter consoleReaction,
-        IConsoleOperation consoleOperation,
-        INotepadUserDataStoragePort notepadUserDataFiles,
-        INotepadUserDataPersistencePort notepadUserDataPersistence,
-        INotepadDataStoragePort notepadDataFiles,
-        INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(
-            exceptionPort,
-            cancellationPort,
-            consoleReaction,
-            consoleOperation,
-            notepadUserDataFiles,
-            notepadUserDataPersistence,
-            notepadDataFiles,
-            notepadDataPersistence)
+        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
+        INoteEditorOperation editor, IConsoleChoiceOperation choices)
+        : NoteEditor(input, output, binding, exceptionPort, cancellationPort, notes, editor, choices)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
         {
-            using var scope = consoleReaction.GetStateScope();
-            scope.State.Update(writeLine: true);
-
-            await Write(context, "# Note Create");
-            await Write(context, "> Loading User data...");
-
-            var notepadDataKey = NotepadDataKey.Empty;
-
-            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
-                .ThenAsync(async userData =>
-                {
-
-                    do
-                    {
-                        await Write(context, "- Enter new note name:");
-                        var newNoteName = (await consoleOperation.WaitUserTextAsync(context)).text;
-
-                        if (newNoteName == string.Empty)
-                        {
-                            await Write(context, "> Create Cancel");
-                            return new Exception("Create Cancel");
-                        }
-
-                        notepadDataKey = new NotepadDataKey(userData.UserId.Id, newNoteName);
-
-                        if (!notepadDataKey.IsValid)
-                        {
-                            await Write(context, "> The name invalid - Retry enter new note name:");
-                        }
-                        else if (userData.Contains(notepadDataKey))
-                        {
-                            await Write(context, "> The name already exist - Retry enter new note name:");
-                        }
-                        else
-                        {
-                            await Write(context, $"> Create - '{newNoteName}'");
-                            return Result.Success;
-                        }
-
-                    } while (true);
-                })
-                .ThenAsync(() =>
-                {
-                    return Task.FromResult(notepadDataFiles.GetOrCreate(notepadDataKey));
-                })
-                .ThenAsync(async notepadEntity =>
-                {
-                    var notepadData = notepadEntity.NotepadData;
-
-                    await Write(context, "- Enter new note title:");
-                    var newNoteTitle = (await consoleOperation.WaitUserTextAsync(context)).text;
-                    notepadData.Title = newNoteTitle;
-
-                    return await notepadEntity.Save(notepadDataPersistence);
-                })
-                .ResolveAsync(
-                onSuccess: async () =>
-                {
-                    return await Write(context, $"> End of Create : Note Saved as '{notepadDataPersistence.GetViewName(notepadDataKey)}'");
-                },
-                onFailure: async e =>
-                {
-                    return await Write(context, $"> Create Error : {e.Message}");
-                });
-        }
-
-        private async Task<ReactionEnd> Write(IFlowContext context, string text)
-        {
-            return await consoleReaction.Write(context, new ConsoleOutput(text));
+            var key = await ReadKeyAsync(context);
+            if (key == null) return await Output.WriteLineAsync(context, "Create cancelled.");
+            var existing = await Notes.GetAllIds();
+            if (!existing.Try(out var ids, out var listError))
+                return await Output.WriteLineAsync(context, $"Create failed: {listError.Message}");
+            if (ids.Any(id => id.User == key.Value.User && id.Note == key.Value.Note))
+                return await Output.WriteLineAsync(context, "That note already exists. Use Edit instead.");
+            var draft = await ReadDraftAsync(context, null);
+            if (draft == null) return await Output.WriteLineAsync(context, "Create cancelled. Nothing saved.");
+            context.Cancellation.GetToken().ThrowIfCancellationRequested();
+            var saved = await Notes.Save(key.Value, draft);
+            return await Output.WriteLineAsync(context, saved.Try(out var error)
+                ? $"Created: {key.Value.Note}" : $"Save failed: {error.Message}");
         }
     }
 }

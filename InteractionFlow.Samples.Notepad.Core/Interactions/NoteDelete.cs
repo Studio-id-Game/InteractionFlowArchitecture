@@ -1,103 +1,45 @@
-using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
-using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts.StoragePorts.PersistencePorts;
-using InteractionFlow.Samples.Notepad.Core.Interactions.Rules;
+using InteractionFlow.Samples.Notepad.Core.Entities;
+using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
+using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public sealed class NoteDelete(
-        IExceptionPort<Exception> exceptionPort,
-        ICancellationPort cancellationPort,
-        IConsoleWriter consoleReaction,
-        IConsoleCursorPositionAccess consoleCursorPositionAccess,
-        IConsoleOperation consoleOperation,
-        INotepadUserDataStoragePort notepadUserDataFiles,
-        INotepadUserDataPersistencePort notepadUserDataPersistence,
-        INotepadDataStoragePort notepadDataFiles,
-        INotepadDataPersistencePort notepadDataPersistence) :
-        Interaction(
-            exceptionPort,
-            cancellationPort,
-            consoleReaction,
-            consoleCursorPositionAccess,
-            consoleOperation,
-            notepadUserDataFiles,
-            notepadUserDataPersistence,
-            notepadDataFiles,
-            notepadDataPersistence)
+        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
+        IConsoleChoiceOperation choices)
+        : NotepadInteraction(input, output, binding, exceptionPort, cancellationPort, notes, choices)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
         {
-            using var scope = consoleReaction.GetStateScope();
-            scope.State.Update(writeLine: true);
-
-            await Write(context, "# Note Delete");
-
-            await Write(context, "> Loading User data...");
-            return await notepadUserDataFiles.LoadUserDataAsync(notepadUserDataPersistence, context)
-                .ThenAsync(async userData =>
-                {
-
-                    var detaKeySelect = new ConsoleSelectNotepadData(
-                        consoleReaction,
-                        consoleCursorPositionAccess,
-                        consoleOperation,
-                        notepadDataFiles,
-                        notepadDataPersistence);
-
-                    await Write(context, "- Select note to delete:");
-                    var (select, dataKey) = await detaKeySelect.GetSelectAsync(context, userData, true);
-                    if (dataKey.IsEmpty)
-                    {
-                        return new Exception("Cancel");
-                    }
-
-                    await Write(context, $"> Delete.. - '{notepadDataPersistence.GetViewName(dataKey)}'");
-                    return await notepadDataPersistence.Delete(dataKey)
-                        .ThenAsync(() => Task.FromResult((userData, dataKey).AsResult()));
-                })
-                .ThenAsync(async (value) =>
-                {
-                    var (userData, dataKey) = value;
-                    if (notepadDataFiles.ContainsKey(dataKey))
-                    {
-                        await Write(context, $"> Remove from cache.. - '{dataKey.NoteId}'");
-                        notepadDataFiles.RemoveWithoutDispose(dataKey);
-                    }
-
-                    return value.AsResult();
-                })
-                .ThenAsync(async value =>
-                {
-                    var (userData, dataKey) = value;
-                    if (userData.Contains(dataKey))
-                    {
-                        await Write(context, $"> Remove from user data.. - '{dataKey.NoteId}'");
-                        userData.Remove(dataKey);
-                    }
-
-                    return Result.Success;
-                })
-                .ResolveAsync(
-                    onSuccess: async () =>
-                    {
-                        return await Write(context, $"> End of Delete : Note Deleted.");
-                    },
-                    onFailure: async e =>
-                    {
-                        return await Write(context, $"> End of Delete : Note can not Deleted : {e.Message}, {e.StackTrace}");
-                    });
-        }
-
-        private async Task<ReactionEnd> Write(IFlowContext context, string text)
-        {
-            return await consoleReaction.Write(context, new ConsoleOutput(text));
+            var listed = await notes.GetAllIds();
+            if (!listed.Try(out var ids, out var error))
+                return await Output.WriteLineAsync(context, $"List failed: {error.Message}");
+            var available = ids.Where(id => id.User == context.User)
+                .OrderBy(id => id.Note, StringComparer.Ordinal).ToArray();
+            if (available.Length == 0) return await Output.WriteLineAsync(context, "No notes available.");
+            var labels = new string[available.Length];
+            for (var i = 0; i < available.Length; i++)
+            {
+                context.Cancellation.GetToken().ThrowIfCancellationRequested();
+                var loaded = await notes.Load(available[i], new NotepadData("", ""));
+                labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
+            }
+            var selected = await choices.SelectAsync(context, "Select a note to delete",
+                available.Select(id => id.Note).ToArray(), labels);
+            if (selected is not >= 0) return await Output.WriteLineAsync(context, "Delete cancelled.");
+            var id = available[selected.Value];
+            var confirm = await choices.SelectAsync(context, $"Delete '{id.Note}'?", new[] { "No", "Yes" });
+            if (confirm != 1) return await Output.WriteLineAsync(context, "Delete cancelled.");
+            context.Cancellation.GetToken().ThrowIfCancellationRequested();
+            var result = await notes.Delete(id);
+            return await Output.WriteLineAsync(context, result.Try(out var deleteError)
+                ? $"Deleted: {id.Note}" : $"Delete failed: {deleteError.Message}");
         }
     }
 }

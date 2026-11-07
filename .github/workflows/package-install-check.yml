@@ -19,10 +19,13 @@ jobs:
     name: Restore and Build from NuGet.org
     runs-on: windows-latest
     timeout-minutes: 75
-    env:
-      NUGET_PACKAGES: ${{ runner.temp }}/interactionflow-package-install-check/packages
 
     steps:
+      - name: Configure package cache
+        run: |
+          $packagesPath = Join-Path $env:RUNNER_TEMP "interactionflow-package-install-check/packages"
+          "NUGET_PACKAGES=$packagesPath" >> $env:GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v7
 

@@ -13,5 +13,7 @@ namespace InteractionFlow.Standard.ConsoleSystem.ExternalPorts
         bool IsOutputRedirected { get; }
         /// <summary>現在位置、または取得失敗を返します。</summary>
         Result<ConsolePosition> GetCursorPosition();
+        /// <summary>表示ウィンドウの列数・行数、または取得失敗を返します。リダイレクト出力は非対応です。</summary>
+        Result<(int Width, int Height)> GetWindowSize();
     }
 }

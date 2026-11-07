@@ -20,6 +20,23 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
     public sealed class ConsoleIntegrationTests
     {
         [Fact]
+        public void WindowSizeReturnsDimensionsOrRejectsRedirectedOutput()
+        {
+            var result = new ConsoleEnvironment().GetWindowSize();
+            if (Terminal.IsOutputRedirected)
+            {
+                Assert.False(result.Try(out _, out var error));
+                Assert.IsType<NotSupportedException>(error!.InnerException);
+            }
+            else
+            {
+                Assert.True(result.Try(out var size, out _));
+                Assert.True(size.Width > 0);
+                Assert.True(size.Height > 0);
+            }
+        }
+
+        [Fact]
         public async Task LineReadsTextEmptyLineAndEof()
         {
             var original = Terminal.In;

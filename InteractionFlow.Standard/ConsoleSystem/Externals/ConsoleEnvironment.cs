@@ -6,7 +6,7 @@ using System;
 
 namespace InteractionFlow.Standard.ConsoleSystem.Externals
 {
-    /// <summary>コンソールのリダイレクト状態とカーソル位置を取得します。</summary>
+    /// <summary>コンソールのリダイレクト状態、カーソル位置、表示ウィンドウのサイズを取得します。</summary>
     public sealed class ConsoleEnvironment : SilentExternal, IConsoleEnvironmentPort
     {
         /// <inheritdoc/>
@@ -18,6 +18,25 @@ namespace InteractionFlow.Standard.ConsoleSystem.Externals
         /// <inheritdoc/>
         public override void ForceResetMemoryState()
         {
+        }
+
+        /// <inheritdoc/>
+        public Result<(int Width, int Height)> GetWindowSize()
+        {
+            lock (ConsoleSynchronization.OutputGate)
+            {
+                try
+                {
+                    if (Console.IsOutputRedirected)
+                        throw new NotSupportedException("Console screen operations require a terminal.");
+
+                    return (Console.WindowWidth, Console.WindowHeight).AsResult();
+                }
+                catch (Exception e)
+                {
+                    return e;
+                }
+            }
         }
 
         /// <inheritdoc/>

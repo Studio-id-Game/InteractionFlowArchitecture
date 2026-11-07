@@ -23,7 +23,7 @@
 - `INotepadDataPersistencePort` / `INotepadDataSerializerPort`: 永続化と形式変換の差し替え点。
 - `NotepadDataFilePersistence`: Standard の FilePersistence に ID とパスの変換を追加します。
 
-`NotepadInteraction` は Ctrl+C の Bind / Unbind とプロンプトの失敗確認を共通化する小さな基底です。
+`NotepadInteraction` は Ctrl+C の接続スコープとプロンプトの失敗確認を共通化する小さな基底です。
 `NoteEditor` は作成・編集で重複する ID 選択と編集 Operation の呼び出しを共有します。
 `ConsoleChoiceOperation` は矢印キーの選択、`ConsoleNoteEditor` はカーソル編集を担当します。
 `NoteDraft` は文字列とカーソルの更新規則を持ち、ファイルや Console に依存しません。

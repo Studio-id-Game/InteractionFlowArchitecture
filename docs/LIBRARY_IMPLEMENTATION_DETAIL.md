@@ -1691,13 +1691,16 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
 <details>
 <summary>💡 Tips: Interaction.NestedExecuteAsync について</summary>
 
-> 現在の API では、ネストした Interaction を `Interaction.NestedExecuteAsync` で実行することができます。
+> `Interaction.NestedExecuteAsync` の両オーバーロードは、旧 API として Obsolete 属性で非推奨にしています。
+> 相互作用の順序・分岐・反復は SystemFlow で構成してください。既存コードのため実装は維持しています。
+> 共有 Context で子の ExecuteAsync を直接呼ぶ置換は、下記の循環待機を再導入するため代替にはなりません。
 > この実行経路では、`Interaction.NestedFlowContext : IFlowContext` を用いて、親の `IFlowContext` の文脈値を参照しつつ、`CancellationObject` は新しく作成した物を使用します。
 > ただし、親の `IFlowContext` へのキャンセルトリガーは、`CancellationToken.Register()` を利用して `NestedFlowContext` にも伝播されます。
 >
 > 独立したキャンセル制御を使用する主な理由は、キャンセル待機処理の循環待機を避けるためです。
 > 親 Interaction と子 Interaction が同じ CancellationObject を使用すると、両方のキャンセル対象タスクが同じ待機一覧へ登録されます。
 > その状態で子のキャンセル処理が一覧全体の完了を待つと、循環によるデッドロックが発生する可能性があります。
+> SystemFlow 同士の逐次ネストは、自身のタスクをキャンセル待機一覧へ登録しないため、同じ循環を作りません。
 
 </details>
 

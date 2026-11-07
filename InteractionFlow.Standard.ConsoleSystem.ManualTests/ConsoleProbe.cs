@@ -66,9 +66,10 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
             Console.CancelKeyPress += eventObserver;
             Task timer = Task.CompletedTask;
             var success = true;
+            IDisposable? bindingScope = null;
             try
             {
-                if (options.BindControlC) binding.Bind(context);
+                if (options.BindControlC) bindingScope = binding.Bind(context);
                 Console.WriteLine();
                 Console.WriteLine($"Read {number}/{options.ReadCount}: scenario={options.Scenario}, " +
                     $"grace={options.GraceMilliseconds}ms, Ctrl+C binding={options.BindControlC}");
@@ -130,7 +131,7 @@ namespace InteractionFlow.Standard.ConsoleSystem.ManualTests
                 {
                     try
                     {
-                        binding.Unbind();
+                        bindingScope?.Dispose();
                     }
                     finally
                     {

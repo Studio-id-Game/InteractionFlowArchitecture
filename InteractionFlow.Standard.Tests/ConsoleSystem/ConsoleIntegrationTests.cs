@@ -424,21 +424,97 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
         }
 
         [Fact]
-        public void BindingSupportsExclusiveOwnershipResetAndDispose()
+        public void BindingReleasesOnlyAfterTheLastReferenceAndSupportsOutOfOrderDispose()
         {
             using var first = new ConsoleCancellationBinding();
             using var second = new ConsoleCancellationBinding();
             var context = new FlowContext();
-            first.Bind(context);
-            first.Bind(context);
+            using var overlay = new ScopedFlowContext(context);
+            using var outer = first.Bind(context);
+            using var inner = first.Bind(overlay);
+            outer.Dispose();
+            outer.Dispose();
             Assert.Throws<InvalidOperationException>(() => first.Bind(new FlowContext()));
             Assert.Throws<InvalidOperationException>(() => second.Bind(context));
+            inner.Dispose();
+            using var next = second.Bind(context);
+        }
+
+        [Fact]
+        public void ResetInvalidatesOldScopesWithoutReleasingANewBinding()
+        {
+            using var first = new ConsoleCancellationBinding();
+            using var second = new ConsoleCancellationBinding();
+            var context = new FlowContext();
+            using var old = first.Bind(context);
+            using var oldSecond = first.Bind(context);
             first.ForceResetMemoryState();
-            second.Bind(context);
-            second.Dispose();
-            second.Unbind();
-            Assert.Throws<ObjectDisposedException>(() => second.Bind(context));
-            first.Bind(new FlowContext());
+            using var current = first.Bind(context);
+            old.Dispose();
+            oldSecond.Dispose();
+            Assert.Throws<InvalidOperationException>(() => second.Bind(context));
+            current.Dispose();
+            using var next = second.Bind(context);
+        }
+
+        [Fact]
+        public void DisposingTheOwnerInvalidatesScopesAndAllowsAnotherOwner()
+        {
+            using var first = new ConsoleCancellationBinding();
+            using var second = new ConsoleCancellationBinding();
+            var context = new FlowContext();
+            using var old = first.Bind(context);
+            first.Dispose();
+            first.Dispose();
+            Assert.Throws<ObjectDisposedException>(() => first.Bind(context));
+            using var current = second.Bind(context);
+            old.Dispose();
+            Assert.Throws<InvalidOperationException>(() => second.Bind(new FlowContext()));
+        }
+
+        [Fact]
+        public async Task ConcurrentScopeDisposalsCountEachReferenceOnlyOnce()
+        {
+            using var binding = new ConsoleCancellationBinding();
+            using var other = new ConsoleCancellationBinding();
+            var context = new FlowContext();
+            using var retained = binding.Bind(context);
+            using var released = binding.Bind(context);
+            await Task.WhenAll(Enumerable.Range(0, 32).Select(_ => Task.Run(released.Dispose)));
+            Assert.Throws<InvalidOperationException>(() => other.Bind(context));
+            retained.Dispose();
+            using var next = other.Bind(context);
+        }
+
+        [Fact]
+        public async Task ConcurrentBindsRetainOwnershipUntilEveryScopeIsDisposed()
+        {
+            using var binding = new ConsoleCancellationBinding();
+            using var other = new ConsoleCancellationBinding();
+            var context = new FlowContext();
+            var scopes = await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => Task.Run(() => binding.Bind(context))));
+            try
+            {
+                foreach (var scope in scopes.Skip(1)) scope.Dispose();
+                Assert.Throws<InvalidOperationException>(() => other.Bind(context));
+            }
+            finally
+            {
+                foreach (var scope in scopes) scope.Dispose();
+            }
+            using var next = other.Bind(context);
+        }
+
+        [Fact]
+        public void RejectedBindDoesNotConsumeAnExistingReference()
+        {
+            using var binding = new ConsoleCancellationBinding();
+            using var other = new ConsoleCancellationBinding();
+            using var retained = binding.Bind(new FlowContext());
+            Assert.Throws<ArgumentNullException>(() => binding.Bind(null!));
+            Assert.Throws<InvalidOperationException>(() => binding.Bind(new FlowContext()));
+            retained.Dispose();
+            using var next = other.Bind(new FlowContext());
         }
 
         [Fact]
@@ -451,9 +527,10 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
             Assert.Equal(TimeSpan.FromMilliseconds(100), input.CancellationGracePeriod);
             var binding = Assert.IsType<ConsoleCancellationBinding>(
                 scope.GetService(typeof(IConsoleCancellationBindingPort)));
-            using (var other = new ConsoleCancellationBinding()) other.Bind(new FlowContext());
+            using (var other = new ConsoleCancellationBinding())
+            using (other.Bind(new FlowContext())) { }
 
-            binding.Bind(new FlowContext());
+            using var connection = binding.Bind(new FlowContext());
             try
             {
                 scope.Dispose();
@@ -465,7 +542,7 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
             }
 
             using var next = new ConsoleCancellationBinding();
-            next.Bind(new FlowContext());
+            using var nextConnection = next.Bind(new FlowContext());
         }
 
         [Fact]

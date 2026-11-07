@@ -116,6 +116,8 @@ namespace InteractionFlow.Core.Interactions
         /// <param name="context">親 Interaction のフローコンテキスト。</param>
         /// <returns>ネストした Interaction の Reaction が生成した終了結果。</returns>
         /// <exception cref="Exception">ネストした Interaction が未解決の例外で終了した場合にスローされます。</exception>
+        [Obsolete("Compose Interactions in a SystemFlow instead. NestedExecuteAsync is a legacy API; " +
+            "direct nested ExecuteAsync calls with a shared CancellationObject can deadlock.")]
         protected static async Task<ReactionEnd> NestedExecuteAsync(IInteraction nestedInteraction, IFlowContext context)
         {
             var nestedContext = new NestedFlowContext(context);
@@ -140,6 +142,8 @@ namespace InteractionFlow.Core.Interactions
         /// <param name="context">親 Interaction のフローコンテキスト。</param>
         /// <returns>指定された関数が返した Reaction の終了結果。</returns>
         /// <exception cref="Exception">指定された関数が未解決の例外を含む終了結果を返した場合にスローされます。</exception>
+        [Obsolete("Compose Interactions in a SystemFlow instead. NestedExecuteAsync is a legacy API; " +
+            "direct nested ExecuteAsync calls with a shared CancellationObject can deadlock.")]
         protected static async Task<ReactionEnd> NestedExecuteAsync(Func<IFlowContext, Task<ReactionEnd>> nestedInteractionExecuteAsync, IFlowContext context)
         {
             var nestedContext = new NestedFlowContext(context);

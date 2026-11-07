@@ -116,17 +116,28 @@ AggregateException に保持します。リダイレクトされた出力では�
 
 ## Ctrl+C の接続
 
-Interaction が `IConsoleCancellationBindingPort` を受け取り、`Bind(context)` と `Unbind()` を呼びます。
-短い実行範囲なら try/finally で対応させ、複数 Interaction をまたぐ場合は終了経路にも解除を設計します。
-接続した Port インスタンスを保持する DI Scope は、接続を必要とする間生存させてください。
+Interaction が `IConsoleCancellationBindingPort` を受け取り、返却スコープで接続期間を示します。
 
+```csharp
+using var bindingScope = binding.Bind(context);
+```
+
+- Bind は `IDisposable` を返します。実装のスコープクラスは private です。
+- 同じ Port インスタンス・同じ CancellationObject への Bind は参照を追加し、最後の Dispose で解除します。
+  同じ CancellationObject を共有する ScopedFlowContext も同じ対象として扱います。
+- スコープの Dispose は冪等で、取得順に関係なく破棄できます。通常の解除はこの Dispose に統一し、Unbind は廃止しました。
+- 接続中の対象変更と、別 Port インスタンスによる同時接続は InvalidOperationException です。
+  参照カウントは異なるキャンセル対象の合成を提供しません。
 - 接続先の CancellationObject だけを保持し、Context の所有権は取得しません。
 - 接続中の Ctrl+C は既定終了を抑制し、対象へキャンセルを要求します。
-- 同じ対象への Bind は何も増やしません。接続中の対象変更、別インスタンスによる同時接続は拒否します。
-- Unbind / ForceResetMemoryState は購読と接続先を解除し、再接続できます。
-- 実装の IDisposable により、DI Scope 終了時にも解除します。破棄後の Bind は拒否します。
-- 解除は進行中のキャンセル通知と同期します。同期キャンセルコールバックからの解除も可能です。
+- ForceResetMemoryState は全参照を失効させて購読を解除し、再接続を許します。
+  リセット前の古いスコープの Dispose は、新しい接続へ影響しません。
+- 本体の IDisposable は DI Scope 終了時の後始末です。全参照を失効させ、以後の Bind は拒否します。
+  DI から借りた本体を利用側で破棄せず、Bind の返却スコープだけを破棄してください。
+- Port を保持する DI Scope は、接続が必要な間生存させます。DI Scope 破棄後の返却スコープの Dispose は安全です。
+- 解除は進行中のキャンセル通知と同期し、同期キャンセルコールバックからのスコープ破棄も可能です。
   キャンセルコールバックから別スレッド上の解除を同期的に待つことは避けてください。
+- イベント解除が失敗した場合は所有・参照を保持して例外を伝播し、Dispose の再試行を可能にします。
 
 接続は読み取りを強制中断する仕組みではありません。Ctrl+C で ReadLine が戻るかどうかは端末によります。
 

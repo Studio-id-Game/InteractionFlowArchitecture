@@ -43,7 +43,7 @@ EOF の場合は、戻ったメニューでも EOF を受け取り終了しま�
 
 選択状態・モード・専用挨拶は `ScopedFlowContext` の実行範囲へ閉じます。
 表示は `IConsoleOutputPort` に委譲し、各 `ReactionEnd` の失敗で後続の入力や表示を停止します。
-Ctrl+C は各 Interaction の try/finally で接続・解除し、10秒タイマーも会話の終了時に破棄します。
+Ctrl+C は各 Interaction の `using var bindingScope = binding.Bind(context)` で接続期間を示し、10秒タイマーも会話の終了時に破棄します。
 キャンセルの通知とリセット、未処理例外の通知は Interaction 基底と標準 Port に委譲します。
 旧 Console の可変 State、ダミー入力 API、独自 RefEntity は使用しません。
 

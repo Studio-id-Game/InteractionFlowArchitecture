@@ -30,39 +30,32 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             var greeting = context.TryGet<ParrotGreeting>(out var custom)
                 ? custom.Text : ParrotRules.DefaultGreeting;
 
-            binding.Bind(context);
+            using var bindingScope = binding.Bind(context);
             // The timer belongs to this execution and is disposed before cancellation handling resets the context.
             using var timer = new CancellationTokenSource();
             using var registration = timer.Token.Register(context.Cancellation.Cancel);
-            try
+            if (mode == SampleMode.ParrotAutoAndKill) timer.CancelAfter(TimeSpan.FromSeconds(10));
+            var end = await output.WriteLineAsync(context,
+                "# Parrot — Ctrl+C returns to the menu. Blank or EOF ends a conversation.", style);
+            if (end.HasException) return end;
+            end = await SlowTalkAsync(context, "Parrot: " + greeting, style);
+            if (end.HasException) return end;
+
+            while (true)
             {
-                if (mode == SampleMode.ParrotAutoAndKill) timer.CancelAfter(TimeSpan.FromSeconds(10));
-                var end = await output.WriteLineAsync(context,
-                    "# Parrot — Ctrl+C returns to the menu. Blank or EOF ends a conversation.", style);
+                end = await output.WriteAsync(context, "You: ");
                 if (end.HasException) return end;
-                end = await SlowTalkAsync(context, "Parrot: " + greeting, style);
-                if (end.HasException) return end;
+                var text = await (automatic ? automaticInput : input).ReadLineAsync(context);
+                if (string.IsNullOrWhiteSpace(text))
+                    return await output.WriteLineAsync(context, "Parrot: See you on the next perch!", style);
 
-                while (true)
+                if (automatic)
                 {
-                    end = await output.WriteAsync(context, "You: ");
-                    if (end.HasException) return end;
-                    var text = await (automatic ? automaticInput : input).ReadLineAsync(context);
-                    if (string.IsNullOrWhiteSpace(text))
-                        return await output.WriteLineAsync(context, "Parrot: See you on the next perch!", style);
-
-                    if (automatic)
-                    {
-                        end = await output.WriteLineAsync(context, text);
-                        if (end.HasException) return end;
-                    }
-                    end = await SlowTalkAsync(context, "Parrot: " + ParrotRules.Reply(text), style);
+                    end = await output.WriteLineAsync(context, text);
                     if (end.HasException) return end;
                 }
-            }
-            finally
-            {
-                binding.Unbind();
+                end = await SlowTalkAsync(context, "Parrot: " + ParrotRules.Reply(text), style);
+                if (end.HasException) return end;
             }
         }
 

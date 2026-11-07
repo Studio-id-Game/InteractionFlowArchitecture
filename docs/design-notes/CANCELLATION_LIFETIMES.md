@@ -3,8 +3,24 @@
 記録日: 2026-11-07
 
 Parrot の新 Core / Standard 移行を振り返った議論の記録です。
-以下は検討案であり、現在の公開 API の契約や実装変更を意味しません。例示する API 名も仮称です。
+当初の検討案と、その後の採用結果を記録します。未採用の API 名は仮称です。
 現行契約は [Standard Console](../CONSOLE.md) を参照してください。
+
+## 2026-11-08 の決定と実装
+
+案1は採用し、Bind は private なスコープクラスを IDisposable として返す API へ変更しました。
+同じ Port インスタンス・同じ CancellationObject の参照カウントを管理し、最後の Dispose で解除します。
+通常の Unbind は廃止し、強制解除は ForceResetMemoryState または本体の Dispose とします。
+リセット前の古いスコープが再接続後の参照を解放しないよう、接続ごとの識別を持ちます。
+異なる対象・別 Port インスタンスの同時接続は引き続き例外です。
+
+NestedExecuteAsync の両オーバーロードは Obsolete で旧 API としてマークしました。
+SystemFlow で相互作用を合成する方針とし、実装は互換性のため残します。
+同じ CancellationObject を共有した Interaction 同士の直接ネストは循環待機を起こし得るため、
+単純な ExecuteAsync 呼び出しへの置換は推奨しません。
+
+以下は決定前の検討記録です。案2のキャンセル予約 API は未実装です。
+現行の接続契約は [Standard Console](../CONSOLE.md#ctrlc-の接続) を参照してください。
 
 ## 問題の整理
 

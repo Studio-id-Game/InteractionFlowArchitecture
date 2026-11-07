@@ -141,8 +141,23 @@ namespace InteractionFlow.Samples.Notepad.Tests
         {
             public bool Connected { get; private set; }
             public int UnbindCount { get; private set; }
-            public void Bind(IFlowContext context) { Assert.False(Connected); Connected = true; }
-            public void Unbind() { Connected = false; UnbindCount++; }
+            public IDisposable Bind(IFlowContext context)
+            {
+                Assert.False(Connected);
+                Connected = true;
+                return new BindingScope(this);
+            }
+            private sealed class BindingScope(RecordingBinding owner) : IDisposable
+            {
+                private bool disposed;
+                public void Dispose()
+                {
+                    if (disposed) return;
+                    owner.Connected = false;
+                    owner.UnbindCount++;
+                    disposed = true;
+                }
+            }
             public override void ForceResetMemoryState() => Connected = false;
         }
 

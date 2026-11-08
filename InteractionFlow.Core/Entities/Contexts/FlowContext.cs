@@ -45,9 +45,20 @@ namespace InteractionFlow.Core.Entities.Contexts
         {
             var entries = Values;
             if (value is null) throw new ArgumentNullException(nameof(value));
+            ValidateAdditionalValue(value);
             entries.Add(new Box<T>(value));
             return this;
         }
+
+        /// <summary>このコンテキストへ登録する追加値を検証する、派生型向けの拡張箇所です。</summary>
+        /// <typeparam name="T">With に指定された追加値の型。</typeparam>
+        /// <param name="value">登録前の非 null の追加値。</param>
+        /// <remarks>
+        /// 破棄済み・null の確認後、登録前に呼びます。既定では何も拒否しません。
+        /// 例外はそのまま伝播し、With は対象値を登録しません。
+        /// 検証だけを行い、登録状態を変更しないでください。親コンテキストの検証は呼びません。
+        /// </remarks>
+        protected virtual void ValidateAdditionalValue<T>(T value) { }
 
         /// <summary>追加値を新しい順に探索し、その後で派生型の取得処理・親へ委譲します。</summary>
         /// <typeparam name="T">要求する値の型。</typeparam>

@@ -1,10 +1,10 @@
-# Context 型ごとの追加値バリデーターの検討
+# Context 型ごとの追加値バリデーター
 
 記録日: 2026-11-09
 
 この文書は、専用 Context のプロパティ公開と追加値の上書きを検討する中で合意した設計方針を記録します。
-拡張ポイントは未実装であり、名称・シグネチャ・例外型の詳細は実装時に確定します。
-現行の Core 契約を変更する文書ではありません。
+Core の `FlowContext.ValidateAdditionalValue<T>(T value)` として実装済みです。
+現行の呼び出し順序と制約範囲は [文脈値の取得](../CONTEXT_VALUES.md) にも記載しています。
 
 関連: [Interaction の Context 型を引き継ぐ契約の検討](./TYPED_INTERACTION_CONTEXT.md)、
 [文脈値の取得](../CONTEXT_VALUES.md)
@@ -16,7 +16,7 @@ With で同じ契約に解決される値を追加すると、プロパティと
 Raylib サンプルの入力・状態遷移・表示アクセスは、同じ状態と同期管理を共有する一組です。
 個別の差し替えによって、その関係が崩れる構成も作れてしまいます。
 
-このような Context 型固有の不変条件を維持できるよう、追加前の検証を拡張できる仕組みを検討します。
+このような Context 型固有の不変条件を維持できるよう、追加前の検証を拡張する仕組みを設けます。
 
 ## 基本方針
 
@@ -26,7 +26,7 @@ Raylib サンプルの入力・状態遷移・表示アクセスは、同じ状�
 - With 自体は非 virtual の公開入口として維持し、追加前のバリデーターを拡張ポイントにする。
 - Core は検証の呼び出しと登録順序を管理し、汎用的な「上書き禁止」の意味を解釈しない。
 
-例えば、次の形を候補とします。
+採用した拡張ポイントは次の形です。
 
 ```csharp
 protected virtual void ValidateAdditionalValue<T>(T value)
@@ -34,7 +34,7 @@ protected virtual void ValidateAdditionalValue<T>(T value)
 }
 ```
 
-これは案であり、採用済みの API 宣言ではありません。
+既定の実装は空で、派生型が override できます。公開の `With` は非 virtual のままです。
 
 ## With の処理順序
 
@@ -46,6 +46,8 @@ protected virtual void ValidateAdditionalValue<T>(T value)
 検証が例外を送出した場合は、その例外を呼び出し元へそのまま伝播します。
 基底の With は対象値を登録せず、既存の追加値を変更しません。拒否された追加を黙って無視しません。
 バリデーター自身も、検証だけを行い、登録状態を変更しないものとして設計します。
+検証には With に指定されたジェネリック型と元の値を渡します。
+破棄済み・null の場合は検証を呼ばず、両方に該当する場合は破棄済みの確認を先に行います。
 
 ## 制約の範囲
 
@@ -67,10 +69,16 @@ protected virtual void ValidateAdditionalValue<T>(T value)
 追加時の検証と、登録済みオブジェクトの後続の変更を制限することは別です。
 
 CounterFlowContext では、自身が固定的に提供するアクセス契約と競合する追加を拒否する用途が考えられます。
-具体的な拒否条件・診断メッセージ・例外型は、実装時に定義してテストします。
+その具体的な拒否条件・診断メッセージ・例外型は、Core の拡張ポイントとは別に各 Context 型で定義します。
 
 ## 他の検討事項との関係
 
-この案は、専用 Context の型付きプロパティと追加値の整合性を扱います。
+この拡張は、専用 Context の型付きプロパティと追加値の整合性を扱います。
 Interaction の Context 型を引き継ぐ契約や、破棄後のプロパティ取得の可否とは別の検討事項です。
 公開入口の共通処理を維持して派生型の制約を追加する点で、TryGetCore / DisposeCore と同じ方針です。
+
+## 検証
+
+`InteractionFlow.Standard.Tests/Contexts/FlowContextAdditionalValueValidationTests.cs` で、
+既定の追加・探索互換性、検証へ渡す型と値、登録前の検証順序、例外の同一性と拒否時の未登録、
+破棄済み・null の確認順序、通常の子 Context への制約非伝播、型継承による検証の継承と合成を検証します。

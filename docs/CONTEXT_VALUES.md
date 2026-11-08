@@ -50,3 +50,37 @@ DisposeCore は基底の管理状態を解放した後に一度だけ呼び、�
 
 旧 ScopedFlowContext は削除しました。new ScopedFlowContext(parent) は new FlowContext(parent) へ、
 ルートを包んでいた new ScopedFlowContext(new FlowContext()) は new FlowContext() へ変更してください。
+
+## Context 型ごとの追加値の検証
+
+`FlowContext.With<T>(T value)` は、次の順序で追加値を扱います。
+
+1. 破棄済みでないこと、値が null でないことを共通入口で確認する。
+2. そのインスタンスの `ValidateAdditionalValue<T>(T value)` を呼ぶ。
+3. 検証が成功した場合だけ値を登録する。
+
+`With` は非 virtual のままです。派生型は protected virtual の
+`ValidateAdditionalValue` を override し、その Context 型固有の制約を定義できます。
+既定の実装は何も拒否せず、既存の追加・上書き・Entry の探索動作を維持します。
+
+```csharp
+protected override void ValidateAdditionalValue<T>(T value)
+{
+    base.ValidateAdditionalValue(value);
+    if (value is IReservedAccess)
+        throw new ArgumentException("固定されたアクセス契約は上書きできません。", nameof(value));
+}
+```
+
+`T` は `With` に指定された型で、検証には元の値を渡します。
+検証が送出した例外はそのまま伝播し、`With` は対象値を登録せず、既存の追加値も変更しません。
+バリデーター自身は検証だけを行い、Context の登録状態を変更しないでください。
+破棄済み・null の場合はバリデーターを呼びません。両方に該当する場合は破棄済みの確認が先です。
+
+検証は追加先のインスタンスに限ります。`new FlowContext(specializedContext).With(replacement)` は
+通常の子 Context の規則に従い、親 Context の追加制約を呼び出したり継承したりしません。
+子が親の値を上書きできる探索順序も維持します。C# の型継承による override の継承とは別です。
+
+登録時の型・実際の型・interface・Entry をどこまで調べるかは派生型の責任です。
+Core は汎用的な上書き禁止規則や、追加後に変更された RefEntry の値まで保証しません。
+設計の背景は [追加値バリデーター](./design-notes/CONTEXT_ADDITIONAL_VALUE_VALIDATION.md) を参照してください。

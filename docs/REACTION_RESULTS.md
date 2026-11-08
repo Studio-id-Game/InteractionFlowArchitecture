@@ -27,9 +27,11 @@ if (end.HasException) return end; // 失敗した Reaction の結果で終了し
 
 単純な失敗判定には HasException を使い、連結・回復・失敗の取得には Result を使います。
 サンプルの Interaction が直接受け取った Reaction の失敗は、中断のために例外化せず、その結果を返します。
-Notepad のキー取得補助は (Key, End) を返し、End があれば成功・失敗を問わずその Reaction で終了します。
-両方 null は選択中断、Key のみがある場合は選択成功です。
-これにより診断を出力した後に別の中断メッセージを出すことも避けます。
+Notepad のキー取得補助は相互作用の終了境界ではなく、Task<Result<ReadKeyValue>> を返す取得処理です。
+成功値は取得済みキー、または中断・候補なし・不正 ID の状況を表します。
+取得処理の失敗は外側の Result に保持し、プロンプトの失敗 Result も再ラップしません。
+取得側はプロンプトと選択表示を担当し、最終的な診断の出力は呼び出し側の Interaction が担当します。
+取得失敗時は呼び出し側が明示的に ExceptionPort に委譲し、例外を送出せず ReactionEnd を取得します。
 実際に送出された例外は、従来どおり Interaction の処理 Port に委譲します。
 選択・下書き編集 Operation 内の出力失敗の扱いは、既存の契約を維持します。
 それらは ReactionEnd を返す API ではなく、今回の整理では戻り値の契約を変更しません。

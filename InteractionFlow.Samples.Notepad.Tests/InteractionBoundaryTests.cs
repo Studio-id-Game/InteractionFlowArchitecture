@@ -74,7 +74,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task CreatePromptFailureReturnsTheOriginalReactionWithoutHandlingPorts(bool cancelled)
+        public async Task CreateAcquisitionFailureIsExplicitlyHandledBeforeInputOrSaving(bool cancelled)
         {
             Exception failure = cancelled
                 ? new OperationCanceledException("Output cancelled") : new IOException("Output failed");
@@ -89,13 +89,13 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var end = await create.ExecuteAsync(new NotepadContext { User = "alice" });
 
-            Assert.Same(output.LastEnd, end.End);
+            Assert.NotSame(output.LastEnd, end.End);
             Assert.Same(failure, end.Exception);
             Assert.Equal(cancelled, end.HasCanceled);
             Assert.Single(output.Lines);
             Assert.Equal(0, input.ReadCount);
             Assert.Equal(0, notes.SaveCount);
-            Assert.Equal(0, errors.Count);
+            Assert.Equal(1, errors.Count);
             Assert.Equal(0, cancellations.Count);
             Assert.Equal(1, binding.UnbindCount);
         }
@@ -249,6 +249,80 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 => throw new InvalidOperationException("Login must not run without the required context.");
         }
 
+        [Theory]
+        [InlineData("note", true, null)]
+        [InlineData("", false, "Create cancelled.")]
+        [InlineData("../bad", false, "Invalid note ID. Use 1–64 letters, digits, underscores or hyphens.")]
+        public async Task KeyAcquisitionReturnsDataWithoutFinalDiagnostics(
+            string text, bool selected, string? message)
+        {
+            var input = new ScriptedInput(text);
+            var output = new RecordingOutput();
+            var probe = new AcquisitionProbe(input, output, new MemoryNotes());
+            var result = await probe.ReadAsync(new NotepadContext { User = "alice" });
+
+            Assert.True(result.Try(out var value, out _));
+            Assert.Equal(selected, value.Key.HasValue);
+            if (!selected) Assert.Equal(message, value.GetMessage("Create cancelled."));
+            if (value.Key is { } key) Assert.Equal(new NotepadKey("alice", "note"), key);
+            Assert.Single(output.Lines); // Only the prompt belongs to acquisition.
+        }
+
+        [Fact]
+        public async Task KeyAcquisitionPreservesPromptFailureResultWithoutReadingInput()
+        {
+            var input = new ScriptedInput("note");
+            var output = new RecordingOutput { Failure = new IOException("Prompt failed") };
+            var probe = new AcquisitionProbe(input, output, new MemoryNotes());
+
+            var result = await probe.ReadAsync(new NotepadContext { User = "alice" });
+
+            Assert.False(result.Try(out _, out var error));
+            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.Same(original, error);
+            Assert.Equal(0, input.ReadCount);
+            Assert.Single(output.Lines);
+        }
+
+        [Fact]
+        public async Task EmptyKeyCollectionReturnsStatusWithoutOutput()
+        {
+            var output = new RecordingOutput();
+            var probe = new AcquisitionProbe(new ScriptedInput(), output, new MemoryNotes { Empty = true });
+
+            var result = await probe.ReadAsync(new NotepadContext { User = "alice" }, existing: true);
+
+            Assert.True(result.Try(out var value, out _));
+            Assert.Equal("No notes available.", value.GetMessage("Edit cancelled."));
+            Assert.Null(value.Key);
+            Assert.Empty(output.Lines);
+        }
+
+        [Fact]
+        public async Task KeyCollectionFailureIsReturnedWithoutDiagnosticOutput()
+        {
+            var failure = new IOException("List failed");
+            var output = new RecordingOutput();
+            var probe = new AcquisitionProbe(new ScriptedInput(), output,
+                new MemoryNotes { ListFailure = failure });
+
+            var result = await probe.ReadAsync(new NotepadContext { User = "alice" }, existing: true);
+
+            Assert.False(result.Try(out _, out var error));
+            Assert.Same(failure, error.InnerException);
+            Assert.Empty(output.Lines);
+        }
+
+        private sealed class AcquisitionProbe(ScriptedInput input, RecordingOutput output, MemoryNotes notes)
+            : NoteEditor(input, output, new Errors(), new Cancellations(), notes,
+                Editor(input, output), Choices(input, output))
+        {
+            public Task<Result<ReadKeyValue>> ReadAsync(NotepadContext context, bool existing = false)
+                => ReadKeyAsync(context, existing);
+            protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+                => throw new InvalidOperationException("This probe tests acquisition without an Interaction execution.");
+        }
+
         private static ConsoleNoteEditor Editor(IConsoleLineInputPort input, IConsoleOutputPort output)
             => new(input, new ConsoleKeyInput(), output,
                 new ConsoleScreen(), new RedirectedEnvironment());
@@ -362,6 +436,8 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public int SaveCount { get; private set; }
             public int LoadCount { get; private set; }
             public Exception? SaveFailure { get; set; }
+            public Exception? ListFailure { get; set; }
+            public bool Empty { get; set; }
             public Task<Result<NotepadData>> Load(NotepadKey id, Result<NotepadData> oldValue)
             {
                 LoadCount++;
@@ -376,7 +452,11 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public Task<Result> Delete(NotepadKey id) => Result.Success.StartAsync();
             public Task<Result> Exists(NotepadKey id) => Result.Success.StartAsync();
             public Task<Result<NotepadKey[]>> GetAllIds()
-                => new[] { new NotepadKey("alice", "note") }.AsResult().StartAsync();
+            {
+                if (ListFailure != null) return ((Result<NotepadKey[]>)ListFailure).StartAsync();
+                NotepadKey[] keys = Empty ? [] : [new NotepadKey("alice", "note")];
+                return keys.AsResult().StartAsync();
+            }
         }
     }
 }

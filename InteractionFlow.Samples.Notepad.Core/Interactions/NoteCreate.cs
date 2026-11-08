@@ -19,20 +19,22 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
-            var (key, end) = await ReadKeyAsync(context);
-            if (end != null) return end;
-            if (key == null) return await Output.WriteLineAsync(context, "Create cancelled.");
+            var keyResult = await ReadKeyAsync(context);
+            if (!keyResult.Try(out var readKey, out var keyError))
+                return await ExceptionPort.HandleExceptionAsync(context, keyError);
+            if (readKey.Key is not NotepadKey key)
+                return await Output.WriteLineAsync(context, readKey.GetMessage("Create cancelled."));
             var existing = await Notes.GetAllIds();
             if (!existing.Try(out var ids, out var listError))
                 return await Output.WriteLineAsync(context, $"Create failed: {listError.Message}");
-            if (ids.Any(id => id.User == key.Value.User && id.Note == key.Value.Note))
+            if (ids.Any(id => id.User == key.User && id.Note == key.Note))
                 return await Output.WriteLineAsync(context, "That note already exists. Use Edit instead.");
             var draft = await ReadDraftAsync(context, null);
             if (draft == null) return await Output.WriteLineAsync(context, "Create cancelled. Nothing saved.");
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
-            var saved = await Notes.Save(key.Value, draft);
+            var saved = await Notes.Save(key, draft);
             return await Output.WriteLineAsync(context, saved.Try(out var error)
-                ? $"Created: {key.Value.Note}" : $"Save failed: {error.Message}");
+                ? $"Created: {key.Note}" : $"Save failed: {error.Message}");
         }
     }
 }

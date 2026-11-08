@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
@@ -24,8 +24,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         protected Task<NotepadData?> ReadDraftAsync(NotepadContext context, NotepadData? oldNote)
             => editor.EditAsync(context, oldNote);
 
-        // End is an already-completed reaction to return immediately; Key is present only when selection succeeds.
-        protected async Task<(NotepadKey? Key, ReactionEnd? End)> ReadKeyAsync(
+        // Acquisition returns data and status; the caller decides the final reaction.
+        protected async Task<Result<ReadKeyValue>> ReadKeyAsync(
             NotepadContext context, bool existing = false)
         {
             if (existing)
@@ -33,13 +33,13 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 var result = await notes.GetAllIds();
                 if (!result.Try(out var ids, out var error))
                 {
-                    return (null, await output.WriteLineAsync(context, $"List failed: {error.Message}"));
+                    return error;
                 }
                 var available = ids.Where(id => id.User == context.User)
                     .OrderBy(id => id.Note, StringComparer.Ordinal).ToArray();
                 if (available.Length == 0)
                 {
-                    return (null, await output.WriteLineAsync(context, "No notes available."));
+                    return ReadKeyValue.NoNotes;
                 }
                 var labels = new string[available.Length];
                 for (var i = 0; i < available.Length; i++)
@@ -50,20 +50,20 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 }
                 var selected = await choices.SelectAsync(context, "Select a note",
                     [.. available.Select(id => id.Note)], labels);
-                return (selected is >= 0 ? available[selected.Value] : (NotepadKey?)null, null);
+                return selected is >= 0
+                    ? ReadKeyValue.Selected(available[selected.Value]) : ReadKeyValue.Cancelled;
             }
             var prompt = await output.WriteLineAsync(context, "Note ID (blank cancels):");
-            if (prompt.HasException) return (null, prompt);
+            if (!prompt.Result.Try(out var promptError)) return promptError;
             var text = await input.ReadLineAsync(context);
             if (text == null) context.ExitRequested = true;
-            if (string.IsNullOrWhiteSpace(text)) return (null, null);
+            if (string.IsNullOrWhiteSpace(text)) return ReadKeyValue.Cancelled;
             var id = NotepadRules.NormalizeId(text);
             if (!NotepadRules.IsValidId(id))
             {
-                return (null, await output.WriteLineAsync(context,
-                    "Invalid note ID. Use 1–64 letters, digits, underscores or hyphens."));
+                return ReadKeyValue.InvalidId;
             }
-            return (new NotepadKey(context.User!, id), null);
+            return ReadKeyValue.Selected(new NotepadKey(context.User!, id));
         }
     }
 }

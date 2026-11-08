@@ -18,7 +18,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
-            var key = await ReadKeyAsync(context, existing: true);
+            var (key, end) = await ReadKeyAsync(context, existing: true);
+            if (end != null) return end;
             if (key == null) return await Output.WriteLineAsync(context, "Edit cancelled.");
             var loaded = await Notes.Load(key.Value, new NotepadData("", ""));
             if (!loaded.Try(out var oldNote, out var loadError))

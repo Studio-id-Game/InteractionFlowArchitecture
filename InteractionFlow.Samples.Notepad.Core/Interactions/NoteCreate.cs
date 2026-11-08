@@ -19,7 +19,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
-            var key = await ReadKeyAsync(context);
+            var (key, end) = await ReadKeyAsync(context);
+            if (end != null) return end;
             if (key == null) return await Output.WriteLineAsync(context, "Create cancelled.");
             var existing = await Notes.GetAllIds();
             if (!existing.Try(out var ids, out var listError))

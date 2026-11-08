@@ -23,28 +23,27 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             var result = await notes.GetAllIds();
             if (!result.Try(out var ids, out var error))
                 return await output.WriteLineAsync(context, $"List failed: {error.Message}");
-            await WriteAsync(context, $"# Notes — {NotepadRules.UserName(context.User!)}");
+            var end = await output.WriteLineAsync(context, $"# Notes — {NotepadRules.UserName(context.User!)}");
+            if (end.HasException) return end;
             foreach (var id in ids.Where(id => id.User == context.User).OrderBy(id => id.Note, StringComparer.Ordinal))
             {
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
                 var loaded = await notes.Load(id, new NotepadData("", ""));
                 var label = loaded.Try(out var note, out var loadError)
                     ? note.Title : $"[Unreadable: {loadError.Message}]";
-                await WriteAsync(context, $"- {id.Note}: {label}");
+                end = await output.WriteLineAsync(context, $"- {id.Note}: {label}");
+                if (end.HasException) return end;
             }
-            await WriteAsync(context, "End of list.");
+            end = await output.WriteLineAsync(context, "End of list.");
+            if (end.HasException) return end;
             if (!environment.IsInputRedirected && !environment.IsOutputRedirected)
             {
-                await WriteAsync(context, "Press any key to return to the menu.");
+                end = await output.WriteLineAsync(context, "Press any key to return to the menu.");
+                if (end.HasException) return end;
                 await keys.ReadKeyAsync(context);
             }
             return await output.WriteLineAsync(context, "");
         }
 
-        private async Task WriteAsync(NotepadContext context, string text)
-        {
-            var end = await output.WriteLineAsync(context, text);
-            end.Result.ThrowIfError();
-        }
     }
 }

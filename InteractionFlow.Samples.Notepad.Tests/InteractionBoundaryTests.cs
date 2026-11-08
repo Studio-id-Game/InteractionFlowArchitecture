@@ -71,6 +71,102 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.False(binding.Connected);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CreatePromptFailureReturnsTheOriginalReactionWithoutHandlingPorts(bool cancelled)
+        {
+            Exception failure = cancelled
+                ? new OperationCanceledException("Output cancelled") : new IOException("Output failed");
+            var input = new ScriptedInput("note");
+            var output = new RecordingOutput { Failure = failure };
+            var binding = new RecordingBinding();
+            var notes = new MemoryNotes();
+            var errors = new Errors();
+            var cancellations = new Cancellations();
+            var create = new NoteCreate(input, output, binding, errors, cancellations, notes,
+                Editor(input, output), Choices(input, output));
+
+            var end = await create.ExecuteAsync(new NotepadContext { User = "alice" });
+
+            Assert.Same(output.LastEnd, end.End);
+            Assert.Same(failure, end.Exception);
+            Assert.Equal(cancelled, end.HasCanceled);
+            Assert.Single(output.Lines);
+            Assert.Equal(0, input.ReadCount);
+            Assert.Equal(0, notes.SaveCount);
+            Assert.Equal(0, errors.Count);
+            Assert.Equal(0, cancellations.Count);
+            Assert.Equal(1, binding.UnbindCount);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        public async Task ListOutputFailureStopsAtTheFailedReaction(int failureAt)
+        {
+            var output = new RecordingOutput { Failure = new IOException("Output failed"), FailureAt = failureAt };
+            var binding = new RecordingBinding();
+            var notes = new MemoryNotes();
+            var errors = new Errors();
+            var list = new NoteListView(output, binding, errors, new Cancellations(), notes,
+                new ConsoleKeyInput(), new RedirectedEnvironment());
+
+            var end = await list.ExecuteAsync(new NotepadContext { User = "alice" });
+
+            Assert.Same(output.LastEnd, end.End);
+            Assert.Same(output.Failure, end.Exception);
+            Assert.Equal(failureAt, output.Lines.Count);
+            Assert.Equal(failureAt == 1 ? 0 : 1, notes.LoadCount);
+            Assert.Equal(0, errors.Count);
+            Assert.Equal(1, binding.UnbindCount);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InvalidIdReturnsItsDiagnosticWithoutAnotherCancellationMessage(bool outputFails)
+        {
+            var input = new ScriptedInput("../invalid");
+            var output = new RecordingOutput { Failure = outputFails ? new IOException("Diagnostic failed") : null,
+                FailureAt = 2 };
+            var notes = new MemoryNotes();
+            var errors = new Errors();
+            var create = new NoteCreate(input, output, new RecordingBinding(), errors, new Cancellations(), notes,
+                Editor(input, output), Choices(input, output));
+
+            var end = await create.ExecuteAsync(new NotepadContext { User = "alice" });
+
+            Assert.Same(output.LastEnd, end.End);
+            Assert.Equal(outputFails, end.HasException);
+            Assert.Equal(2, output.Lines.Count);
+            Assert.Contains("Invalid note ID", output.Lines[1]);
+            Assert.Equal(0, notes.SaveCount);
+            Assert.Equal(0, errors.Count);
+        }
+
+        [Fact]
+        public async Task ThrownOutputFailureStillReachesTheExceptionPort()
+        {
+            var failure = new IOException("Output threw");
+            var input = new ScriptedInput("note");
+            var output = new RecordingOutput { Failure = failure, ThrowFailure = true };
+            var binding = new RecordingBinding();
+            var errors = new Errors();
+            var notes = new MemoryNotes();
+            var create = new NoteCreate(input, output, binding, errors, new Cancellations(), notes,
+                Editor(input, output), Choices(input, output));
+
+            var end = await create.ExecuteAsync(new NotepadContext { User = "alice" });
+
+            Assert.Same(failure, end.Exception);
+            Assert.Equal(1, errors.Count);
+            Assert.Equal(0, input.ReadCount);
+            Assert.Equal(0, notes.SaveCount);
+            Assert.Equal(1, binding.UnbindCount);
+        }
+
         [Fact]
         public async Task SaveFailureDoesNotReplaceTheLoadedValue()
         {
@@ -192,13 +288,19 @@ namespace InteractionFlow.Samples.Notepad.Tests
         private sealed class RecordingOutput : Reaction, IConsoleOutputPort
         {
             public Exception? Failure { get; set; }
+            public int FailureAt { get; set; } = 1;
+            public bool ThrowFailure { get; set; }
+            public ReactionEnd? LastEnd { get; private set; }
             public List<string> Lines { get; } = [];
             public override void ForceResetMemoryState() { }
             public ValueTask<ReactionEnd> WriteAsync(
                 IFlowContext context, string text, ConsoleTextStyle style = default)
             {
                 Lines.Add(text);
-                return new(GetEnd(Failure));
+                var failure = Lines.Count == FailureAt ? Failure : null;
+                if (ThrowFailure && failure != null) throw failure;
+                LastEnd = GetEnd(failure);
+                return new(LastEnd);
             }
             public ValueTask<ReactionEnd> WriteLineAsync(
                 IFlowContext context, string text, ConsoleTextStyle style = default)
@@ -231,18 +333,26 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
         private sealed class Errors : ExceptionHandling
         {
+            public int Count { get; private set; }
             public override void ForceResetMemoryState() { }
             protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(
                 IFlowContext context, Exception exception)
-                => new(GetEnd(exception));
+            {
+                Count++;
+                return new(GetEnd(exception));
+            }
         }
 
         private sealed class Cancellations : CancellationHandling
         {
+            public int Count { get; private set; }
             public override void ForceResetMemoryState() { }
             protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(
                 IFlowContext context, OperationCanceledException exception, Result waitAndResetResult)
-                => new(GetEnd(waitAndResetResult.Try(out var error) ? null : error));
+            {
+                Count++;
+                return new(GetEnd(waitAndResetResult));
+            }
         }
 
         private sealed class MemoryNotes : INotepadDataPersistencePort
@@ -250,9 +360,13 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
             public NotepadData Note { get; private set; } = new("Original", "Original body");
             public int SaveCount { get; private set; }
+            public int LoadCount { get; private set; }
             public Exception? SaveFailure { get; set; }
             public Task<Result<NotepadData>> Load(NotepadKey id, Result<NotepadData> oldValue)
-                => Note.AsResult().StartAsync();
+            {
+                LoadCount++;
+                return Note.AsResult().StartAsync();
+            }
             public Task<Result> Save(NotepadKey id, Result<NotepadData> value)
             {
                 SaveCount++;

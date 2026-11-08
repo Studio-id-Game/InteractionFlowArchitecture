@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
@@ -20,39 +21,25 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         protected INotepadDataPersistencePort Notes => notes;
         protected IConsoleOutputPort Output => output;
 
-        private async Task WriteAsync(NotepadContext context, string text)
-        {
-            var end = await output.WriteLineAsync(context, text);
-            end.Result.ThrowIfError();
-        }
-
-        private async Task<string?> ReadAsync(NotepadContext context, string prompt)
-        {
-            await WriteAsync(context, prompt);
-            var text = await input.ReadLineAsync(context);
-            if (text == null) context.ExitRequested = true;
-            return text;
-        }
-
         protected Task<NotepadData?> ReadDraftAsync(NotepadContext context, NotepadData? oldNote)
             => editor.EditAsync(context, oldNote);
 
-        protected async Task<NotepadKey?> ReadKeyAsync(NotepadContext context, bool existing = false)
+        // End is an already-completed reaction to return immediately; Key is present only when selection succeeds.
+        protected async Task<(NotepadKey? Key, ReactionEnd? End)> ReadKeyAsync(
+            NotepadContext context, bool existing = false)
         {
             if (existing)
             {
                 var result = await notes.GetAllIds();
                 if (!result.Try(out var ids, out var error))
                 {
-                    await WriteAsync(context, $"List failed: {error.Message}");
-                    return null;
+                    return (null, await output.WriteLineAsync(context, $"List failed: {error.Message}"));
                 }
                 var available = ids.Where(id => id.User == context.User)
                     .OrderBy(id => id.Note, StringComparer.Ordinal).ToArray();
                 if (available.Length == 0)
                 {
-                    await WriteAsync(context, "No notes available.");
-                    return null;
+                    return (null, await output.WriteLineAsync(context, "No notes available."));
                 }
                 var labels = new string[available.Length];
                 for (var i = 0; i < available.Length; i++)
@@ -63,17 +50,20 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 }
                 var selected = await choices.SelectAsync(context, "Select a note",
                     [.. available.Select(id => id.Note)], labels);
-                return selected is >= 0 ? available[selected.Value] : (NotepadKey?)null;
+                return (selected is >= 0 ? available[selected.Value] : (NotepadKey?)null, null);
             }
-            var text = await ReadAsync(context, "Note ID (blank cancels):");
-            if (string.IsNullOrWhiteSpace(text)) return null;
+            var prompt = await output.WriteLineAsync(context, "Note ID (blank cancels):");
+            if (prompt.HasException) return (null, prompt);
+            var text = await input.ReadLineAsync(context);
+            if (text == null) context.ExitRequested = true;
+            if (string.IsNullOrWhiteSpace(text)) return (null, null);
             var id = NotepadRules.NormalizeId(text);
             if (!NotepadRules.IsValidId(id))
             {
-                await WriteAsync(context, "Invalid note ID. Use 1–64 letters, digits, underscores or hyphens.");
-                return null;
+                return (null, await output.WriteLineAsync(context,
+                    "Invalid note ID. Use 1–64 letters, digits, underscores or hyphens."));
             }
-            return new NotepadKey(context.User!, id);
+            return (new NotepadKey(context.User!, id), null);
         }
     }
 }

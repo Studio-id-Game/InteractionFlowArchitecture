@@ -22,8 +22,17 @@ return GetEnd(operationResult);
 
 // Reaction の呼び出し側
 var end = await output.WriteLineAsync(context, text);
-end.Result.ThrowIfError(); // 失敗時に入力・保存へ進ませない明示的な境界
+if (end.HasException) return end; // 失敗した Reaction の結果で終了し、入力・保存へ進まない
 ```
+
+単純な失敗判定には HasException を使い、連結・回復・失敗の取得には Result を使います。
+サンプルの Interaction が直接受け取った Reaction の失敗は、中断のために例外化せず、その結果を返します。
+Notepad のキー取得補助は (Key, End) を返し、End があれば成功・失敗を問わずその Reaction で終了します。
+両方 null は選択中断、Key のみがある場合は選択成功です。
+これにより診断を出力した後に別の中断メッセージを出すことも避けます。
+実際に送出された例外は、従来どおり Interaction の処理 Port に委譲します。
+選択・下書き編集 Operation 内の出力失敗の扱いは、既存の契約を維持します。
+それらは ReactionEnd を返す API ではなく、今回の整理では戻り値の契約を変更しません。
 
 ReactionEnd.Result と FlowEndToken.Result は既存の Result の契約に従います。
 返された失敗、送出例外、キャンセルされた Task を混同しません。

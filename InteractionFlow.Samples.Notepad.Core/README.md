@@ -26,7 +26,9 @@
 各 Interaction の `ExecuteCoreAsync` で `GetRequired<NotepadContext>()` による必須値取得と、
 `using var bindingScope = binding.Bind(...)` による Ctrl+C の接続寿命を明示します。
 `NoteEditor` は作成・編集に共通するノート選択と下書き編集を提供します。
-プロンプトの出力失敗は入力や保存へ進む前に伝播し、EOF は終了意図として記録します。
+プロンプトや一覧の出力失敗は、その ReactionEnd を返して入力や保存へ進む前に終了します。
+キー取得は選択キーと終了用 ReactionEnd を返し、失敗結果を中断のために例外化しません。
+EOF は終了意図として記録します。
 `ConsoleChoiceOperation` は矢印キーの選択、`ConsoleNoteEditor` はカーソル編集を担当します。
 `NoteDraft` は文字列とカーソルの更新規則を持ち、ファイルや Console に依存しません。
 端末サイズは Standard の `IConsoleEnvironmentPort.GetWindowSize()` で取得します。

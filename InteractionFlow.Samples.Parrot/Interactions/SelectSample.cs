@@ -28,8 +28,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
 
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            if (!context.TryGet<SampleSelection>(out var selection))
-                throw new InvalidOperationException("No sample selection context.");
+            var selection = context.GetRequired<SampleSelection>();
 
             using var bindingScope = binding.Bind(context);
             var end = await output.WriteLineAsync(context,

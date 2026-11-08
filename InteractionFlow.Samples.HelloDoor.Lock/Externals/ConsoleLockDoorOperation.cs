@@ -25,10 +25,8 @@ namespace InteractionFlow.Samples.HelloDoor.Lock.Externals
                 DoorLockCommand.Unknown;
 
             // IDoorOperation の契約を保ったまま、context にコマンド値を保持
-            if (context.TryGet<RefEntry<DoorLockCommand>>(out var doorLock))
-            {
-                doorLock.Value = doorLockCommand;
-            }
+            var doorLock = context.GetRequired<RefEntry<DoorLockCommand>>();
+            doorLock.Value = doorLockCommand;
 
             return new(doorCommand);
         }

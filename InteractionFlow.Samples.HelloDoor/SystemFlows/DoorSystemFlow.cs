@@ -22,8 +22,7 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
                     break;
                 }
 
-                if (context.TryGet<DoorState>(out var door) &&
-                    door.ExitRequested)
+                if (context.GetRequired<DoorState>().ExitRequested)
                 {
                     break;
                 }

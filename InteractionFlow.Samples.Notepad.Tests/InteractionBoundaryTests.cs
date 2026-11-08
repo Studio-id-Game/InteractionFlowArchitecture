@@ -84,6 +84,25 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.Contains(output.Lines, text => text.Contains("Save failed"));
         }
 
+        [Fact]
+        public async Task MissingRequiredContextReachesExceptionPortBeforeInputOrBinding()
+        {
+            var input = new ScriptedInput("ignored");
+            var output = new RecordingOutput();
+            var binding = new RecordingBinding();
+            var menu = new SelectUserAction(input, output, binding,
+                new Errors(), new Cancellations(), Choices(input, output));
+
+            var end = await menu.ExecuteAsync(new FlowContext());
+
+            var error = Assert.IsType<RequiredContextValueNotFoundException>(end.Exception);
+            Assert.Equal(typeof(NotepadContext), error.RequiredType);
+            Assert.Equal(0, input.ReadCount);
+            Assert.Empty(output.Lines);
+            Assert.False(binding.Connected);
+            Assert.Equal(0, binding.UnbindCount);
+        }
+
         private static ConsoleNoteEditor Editor(IConsoleLineInputPort input, IConsoleOutputPort output)
             => new(input, new ConsoleKeyInput(), output,
                 new ConsoleScreen(), new RedirectedEnvironment());

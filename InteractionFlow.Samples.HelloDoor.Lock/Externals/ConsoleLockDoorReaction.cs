@@ -17,28 +17,25 @@ namespace InteractionFlow.Samples.HelloDoor.Lock.Externals
 
         public ValueTask<ReactionEnd> ReactDoorAsync(IFlowContext context, DoorCommand command)
         {
-            var exception = ReactDoorValueAsync(context, command);
-            var reactionEnd = GetEnd(exception);
-            return ValueTask.FromResult(reactionEnd);
+            try
+            {
+                var exception = ReactDoorValueAsync(context, command);
+                return ValueTask.FromResult(GetEnd(exception));
+            }
+            catch (RequiredContextValueNotFoundException exception)
+            {
+                return ValueTask.FromResult(GetEnd(exception));
+            }
         }
 
         private static Exception? ReactDoorValueAsync(IFlowContext context, DoorCommand command)
         {
-            if (!context.TryGet<DoorState>(out var door))
-            {
-                return new Exception("No door context.");
-            }
+            var door = context.GetRequired<DoorState>();
 
-            if (!context.TryGet<DoorLockState>(out var doorLock))
-            {
-                return new Exception("No door lock context.");
-            }
+            var doorLock = context.GetRequired<DoorLockState>();
 
             // IDoorReaction の契約を保ったまま、context からコマンド値を取得
-            if (!context.TryGet<RefEntry<DoorLockCommand>>(out var lockCommandRef))
-            {
-                return new Exception("No door lock command context.");
-            }
+            var lockCommandRef = context.GetRequired<RefEntry<DoorLockCommand>>();
 
             var lockCommand = lockCommandRef.Value;
             var message = doorLock.GetMessageAndUpdateState(door, command, lockCommand);

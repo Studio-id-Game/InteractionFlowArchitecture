@@ -21,8 +21,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
         protected sealed override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            if (!context.TryGet<NotepadContext>(out var notepad))
-                throw new InvalidOperationException("No Notepad context.");
+            var notepad = context.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(context);
             return await RunAsync(notepad);
         }

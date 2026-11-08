@@ -22,8 +22,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
     {
         protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            if (!context.TryGet<SampleMode>(out var mode))
-                throw new InvalidOperationException("No sample mode context.");
+            var mode = context.GetRequired<SampleMode>();
 
             var automatic = mode is SampleMode.ParrotAuto or SampleMode.ParrotAutoAndKill;
             var style = mode == SampleMode.ParrotColorful ? new ConsoleTextStyle(ConsoleColor.Cyan) : default;

@@ -1,6 +1,5 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;

@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

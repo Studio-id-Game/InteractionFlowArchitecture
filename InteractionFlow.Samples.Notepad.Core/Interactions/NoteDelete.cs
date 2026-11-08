@@ -5,8 +5,8 @@ using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using System;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {

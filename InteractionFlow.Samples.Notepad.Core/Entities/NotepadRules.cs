@@ -1,5 +1,3 @@
-using System;
-
 namespace InteractionFlow.Samples.Notepad.Core.Entities
 {
     public static class NotepadRules

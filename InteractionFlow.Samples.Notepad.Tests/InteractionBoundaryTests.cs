@@ -129,8 +129,11 @@ namespace InteractionFlow.Samples.Notepad.Tests
         public async Task InvalidIdReturnsItsDiagnosticWithoutAnotherCancellationMessage(bool outputFails)
         {
             var input = new ScriptedInput("../invalid");
-            var output = new RecordingOutput { Failure = outputFails ? new IOException("Diagnostic failed") : null,
-                FailureAt = 2 };
+            var output = new RecordingOutput
+            {
+                Failure = outputFails ? new IOException("Diagnostic failed") : null,
+                FailureAt = 2
+            };
             var notes = new MemoryNotes();
             var errors = new Errors();
             var create = new NoteCreate(input, output, new RecordingBinding(), errors, new Cancellations(), notes,

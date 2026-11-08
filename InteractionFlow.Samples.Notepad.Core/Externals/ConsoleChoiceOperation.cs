@@ -38,9 +38,11 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 var key = await keys.ReadKeyAsync(context);
                 switch (key.Key)
                 {
-                    case ConsoleKey.UpArrow: case ConsoleKey.LeftArrow:
+                    case ConsoleKey.UpArrow:
+                    case ConsoleKey.LeftArrow:
                         selected = Math.Max(0, selected - 1); break;
-                    case ConsoleKey.DownArrow: case ConsoleKey.RightArrow:
+                    case ConsoleKey.DownArrow:
+                    case ConsoleKey.RightArrow:
                         selected = Math.Min(choices.Length - 1, selected + 1); break;
                     case ConsoleKey.Home: selected = 0; break;
                     case ConsoleKey.End: selected = choices.Length - 1; break;

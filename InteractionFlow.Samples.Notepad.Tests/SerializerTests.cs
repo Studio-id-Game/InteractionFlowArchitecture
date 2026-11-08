@@ -3,13 +3,12 @@ using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
 using InteractionFlow.Samples.Notepad.Externals;
-using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.Externals;
-using Xunit;
 using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace InteractionFlow.Samples.Notepad.Tests
 {

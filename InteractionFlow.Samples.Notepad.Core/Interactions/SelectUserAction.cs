@@ -33,9 +33,12 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             if (selected == null || selected == 5) context.ExitRequested = true;
             else context.Action = selected.Value switch
             {
-                0 => NotepadAction.Edit, 1 => NotepadAction.Create,
-                2 => NotepadAction.Delete, 3 => NotepadAction.Login,
-                4 => NotepadAction.List, _ => NotepadAction.None
+                0 => NotepadAction.Edit,
+                1 => NotepadAction.Create,
+                2 => NotepadAction.Delete,
+                3 => NotepadAction.Login,
+                4 => NotepadAction.List,
+                _ => NotepadAction.None
             };
             return await output.WriteLineAsync(context, context.ExitRequested ? "Goodbye!" :
                 context.Action == NotepadAction.None ? "Choose an action from 0 to 5." : $"Action: {context.Action}");

@@ -1,11 +1,10 @@
-using Xunit;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace InteractionFlow.Samples.Notepad.Tests
 {
@@ -163,9 +162,13 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 var assembly = Path.Combine(AppContext.BaseDirectory, name + ".dll");
                 var start = new ProcessStartInfo("dotnet")
                 {
-                    UseShellExecute = false, CreateNoWindow = true,
-                    RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
-                    StandardInputEncoding = new UTF8Encoding(false), StandardOutputEncoding = Encoding.UTF8,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardInputEncoding = new UTF8Encoding(false),
+                    StandardOutputEncoding = Encoding.UTF8,
                     StandardErrorEncoding = Encoding.UTF8
                 };
                 start.ArgumentList.Add(assembly);

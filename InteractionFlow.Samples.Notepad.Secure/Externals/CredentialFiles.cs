@@ -19,8 +19,8 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
         protected override string GetIdFromRelativePathWithoutExtension(string path)
         {
             if (path == "public") return "";
-            if (path.StartsWith("user-", StringComparison.Ordinal) && NotepadRules.IsValidId(path.Substring(5)))
-                return path.Substring(5);
+            if (path.StartsWith("user-", StringComparison.Ordinal) && NotepadRules.IsValidId(path[5..]))
+                return path[5..];
             throw new FormatException("Invalid account path.");
         }
     }

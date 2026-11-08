@@ -81,13 +81,13 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var io = new Terminal(ConsoleKey.DownArrow, ConsoleKey.Enter);
             var operation = new ConsoleChoiceOperation(io, io, io, io, io);
             var context = new NotepadContext();
-            Assert.Equal(1, await operation.SelectAsync(context, "Choose", new[] { "First", "Second" },
-                new[] { "First: first title", "Second: second title" }));
+            Assert.Equal(1, await operation.SelectAsync(context, "Choose", ["First", "Second"],
+                ["First: first title", "Second: second title"]));
             Assert.Equal(0, io.LineReadCount);
             Assert.Contains(io.Frames, text => text.Contains("> [2] Second: second title"));
             Assert.True(io.ClearCount >= 2);
             io.Keys.Enqueue(Key(ConsoleKey.Escape));
-            Assert.Null(await operation.SelectAsync(context, "Choose", new[] { "First" }));
+            Assert.Null(await operation.SelectAsync(context, "Choose", ["First"]));
             Assert.False(context.ExitRequested);
         }
 

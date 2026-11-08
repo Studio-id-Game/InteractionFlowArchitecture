@@ -64,7 +64,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 if (char.IsHighSurrogate(key.KeyChar)) { highSurrogate = key.KeyChar; continue; }
                 if (char.IsLowSurrogate(key.KeyChar))
                 {
-                    if (highSurrogate.HasValue && !draft.Insert(new string(new[] { highSurrogate.Value, key.KeyChar })))
+                    if (highSurrogate.HasValue && !draft.Insert(new string([highSurrogate.Value, key.KeyChar])))
                         status = "Size limit reached.";
                     highSurrogate = null;
                     continue;

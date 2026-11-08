@@ -18,12 +18,12 @@ namespace InteractionFlow.Samples.Notepad.Externals
             {
                 var separator = text.IndexOf('\n');
                 if (separator < 0) return new FormatException("Note has no title separator.");
-                var note = new NotepadData(text.Substring(0, separator).TrimEnd('\r'), text.Substring(separator + 1));
+                var note = new NotepadData(text[..separator].TrimEnd('\r'), text[(separator + 1)..]);
                 return Validate(note).Then(() => note.AsResult());
             }).StartAsync();
 
         private static Result Validate(NotepadData note)
-            => note.Title.Length > NotepadRules.MaxTitleLength || note.Title.IndexOfAny(new[] { '\r', '\n' }) >= 0
+            => note.Title.Length > NotepadRules.MaxTitleLength || note.Title.IndexOfAny(['\r', '\n']) >= 0
                 || note.Text.Length > NotepadRules.MaxTextLength
                 ? new FormatException("Invalid note size or title.") : Result.Success;
     }

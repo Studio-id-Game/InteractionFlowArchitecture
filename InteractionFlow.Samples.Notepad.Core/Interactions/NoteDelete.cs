@@ -31,10 +31,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
             }
             var selected = await choices.SelectAsync(context, "Select a note to delete",
-                available.Select(id => id.Note).ToArray(), labels);
+                [.. available.Select(id => id.Note)], labels);
             if (selected is not >= 0) return await Output.WriteLineAsync(context, "Delete cancelled.");
             var id = available[selected.Value];
-            var confirm = await choices.SelectAsync(context, $"Delete '{id.Note}'?", new[] { "No", "Yes" });
+            var confirm = await choices.SelectAsync(context, $"Delete '{id.Note}'?", ["No", "Yes"]);
             if (confirm != 1) return await Output.WriteLineAsync(context, "Delete cancelled.");
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             var result = await notes.Delete(id);

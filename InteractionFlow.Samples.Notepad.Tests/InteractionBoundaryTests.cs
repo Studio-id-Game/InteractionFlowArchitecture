@@ -1,20 +1,19 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
-using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Externals;
-using InteractionFlow.Standard.ConsoleSystem.Externals;
+using InteractionFlow.Samples.Notepad.Core.Interactions;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
-using Xunit;
+using InteractionFlow.Standard.ConsoleSystem.Externals;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace InteractionFlow.Samples.Notepad.Tests
 {
@@ -85,11 +84,11 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.Contains(output.Lines, text => text.Contains("Save failed"));
         }
 
-        private static INoteEditorOperation Editor(IConsoleLineInputPort input, IConsoleOutputPort output)
-            => new ConsoleNoteEditor(input, new ConsoleKeyInput(), output,
+        private static ConsoleNoteEditor Editor(IConsoleLineInputPort input, IConsoleOutputPort output)
+            => new(input, new ConsoleKeyInput(), output,
                 new ConsoleScreen(), new RedirectedEnvironment());
-        private static IConsoleChoiceOperation Choices(IConsoleLineInputPort input, IConsoleOutputPort output)
-            => new ConsoleChoiceOperation(input, new ConsoleKeyInput(), output,
+        private static ConsoleChoiceOperation Choices(IConsoleLineInputPort input, IConsoleOutputPort output)
+            => new(input, new ConsoleKeyInput(), output,
                 new ConsoleScreen(), new RedirectedEnvironment());
 
         private sealed class RedirectedEnvironment : SilentExternal, IConsoleEnvironmentPort

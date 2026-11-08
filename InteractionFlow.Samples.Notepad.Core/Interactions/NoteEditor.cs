@@ -47,7 +47,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
                 }
                 var selected = await choices.SelectAsync(context, "Select a note",
-                    available.Select(id => id.Note).ToArray(), labels);
+                    [.. available.Select(id => id.Note)], labels);
                 return selected is >= 0 ? available[selected.Value] : (NotepadKey?)null;
             }
             var text = await ReadAsync(context, "Note ID (blank cancels):");

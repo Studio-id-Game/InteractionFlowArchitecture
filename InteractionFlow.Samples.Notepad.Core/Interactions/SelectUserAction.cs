@@ -23,7 +23,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         {
             context.Action = NotepadAction.None;
             var selected = await choices.SelectAsync(context, "Select your action",
-                new[] { "Edit", "Create", "Delete", "Switch user", "List", "Exit" });
+                ["Edit", "Create", "Delete", "Switch user", "List", "Exit"]);
             if (selected == null || selected == 5) context.ExitRequested = true;
             else context.Action = selected.Value switch
             {

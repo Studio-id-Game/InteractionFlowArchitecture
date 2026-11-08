@@ -60,12 +60,12 @@ namespace InteractionFlow.Samples.Notepad.Tests
             using var session = new SecureSession();
             Assert.True(session.CreateCredential("secret").Try(out var credential, out _));
             Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
-            Assert.True(session.Encrypt(new byte[] { 1 }).Try(out _, out _));
+            Assert.True(session.Encrypt([1]).Try(out _, out _));
             Assert.False(session.Authenticate("alice", "wrong", credential!).Try(out _));
-            Assert.False(session.Encrypt(new byte[] { 1 }).Try(out _, out _));
+            Assert.False(session.Encrypt([1]).Try(out _, out _));
             Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
             session.ForceResetMemoryState();
-            Assert.False(session.Encrypt(new byte[] { 1 }).Try(out _, out _));
+            Assert.False(session.Encrypt([1]).Try(out _, out _));
         }
 
         [Fact]
@@ -73,7 +73,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
         {
             using var session = new SecureSession();
             var serializer = new EncryptedNoteSerializer(session);
-            using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+            using var stream = new MemoryStream([1, 2, 3]);
             var result = await serializer.Serialize(new FormatException("Failed input"), stream.AsResult<Stream>());
             Assert.False(result.Try(out _, out _));
             Assert.Equal(new byte[] { 1, 2, 3 }, stream.ToArray());
@@ -93,6 +93,12 @@ namespace InteractionFlow.Samples.Notepad.Tests
         public async Task FailedSerializationKeepsExistingFileAndRemovesTemporaryFile(bool secure)
         {
             var root = Path.Combine(Path.GetTempPath(), "InteractionFlow-NoteFiles-" + Guid.NewGuid());
+            var target = Path.GetFullPath(root);
+            var temporaryRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!target.StartsWith(temporaryRoot, StringComparison.OrdinalIgnoreCase)
+                || !Path.GetFileName(target).StartsWith("InteractionFlow-NoteFiles-", StringComparison.Ordinal))
+                throw new InvalidOperationException("Unexpected cleanup target.");
             using var session = new SecureSession();
             Assert.True(session.CreateCredential("secret").Try(out var credential, out _));
             Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
@@ -112,12 +118,6 @@ namespace InteractionFlow.Samples.Notepad.Tests
             }
             finally
             {
-                var target = Path.GetFullPath(root);
-                var temporaryRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)
-                    + Path.DirectorySeparatorChar;
-                if (!target.StartsWith(temporaryRoot, StringComparison.OrdinalIgnoreCase)
-                    || !Path.GetFileName(target).StartsWith("InteractionFlow-NoteFiles-", StringComparison.Ordinal))
-                    throw new InvalidOperationException("Unexpected cleanup target.");
                 if (Directory.Exists(target)) Directory.Delete(target, recursive: true);
             }
         }

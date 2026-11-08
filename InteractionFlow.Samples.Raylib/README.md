@@ -2,6 +2,9 @@
 
 raylib-cs のフレーム処理と非同期の相互作用を、SystemFlow で合成するサンプルです。
 
+三文書との対応、終了時の文脈更新・画面提示に関する留保は
+[アーキテクチャとの整合性分析](./ARCHITECTURE_ANALYSIS.md) にまとめています。
+
 ```powershell
 dotnet run --project InteractionFlow.Samples.Raylib
 ```

@@ -19,7 +19,20 @@ SystemFlow で相互作用を合成する方針とし、実装は互換性のた
 同じ CancellationObject を共有した Interaction 同士の直接ネストは循環待機を起こし得るため、
 単純な ExecuteAsync 呼び出しへの置換は推奨しません。
 
-以下は決定前の検討記録です。案2のキャンセル予約 API は未実装です。
+案2は後述の再検討により、Task を受け取る CancellationScheduler として実装しました。
+
+### 案2の再検討結果（2026-11-08）
+
+Standard.Entities.Contexts の GetScheduler 拡張メソッドが、IDisposable な CancellationScheduler を返します。
+TimeoutAsync(TimeSpan timeoutTime, Task<Result> task) は処理と期限を競争させ、期限時に Cancel を呼び、
+その後も task の終了を待ちます。通知側と処理側の例外を Result へまとめます。
+先の「Dispose で例外を再送出する」案に代わり、結果の取得を await で明示する形を採用しました。
+
+一件ずつの利用・完了後の再利用を許し、Dispose は予約解除と開始済み通知との同期だけを担当します。
+本体の CancellationObject は変更せず、リセットとの世代同期も追加しません。
+契約と使用例は [CancellationScheduler](../CANCELLATION_SCHEDULER.md) を参照してください。
+
+以下は決定前の検討記録です。
 現行の接続契約は [Standard Console](../CONSOLE.md#ctrlc-の接続) を参照してください。
 
 ## 問題の整理

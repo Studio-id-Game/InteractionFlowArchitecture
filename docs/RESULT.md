@@ -105,6 +105,13 @@ catch (Exception exception)
 元の例外と清掃失敗の両方を保持し、清掃だけのために通常の失敗 Result へ変換しないようにします。
 Interaction が未処理例外を専用 Port に委譲する処理も、明示的なフロー境界として別の責務です。
 
+## Scheduler の明示的な結果変換境界
+
+Standard の `CancellationScheduler.TimeoutAsync` は、期限付き処理を実行する利用側が明示的に選ぶ境界です。
+この API はユーザー指定の契約として、Cancel の例外と対象 Task の送出例外・キャンセル完了を Result 化し、
+処理が返した失敗 Result も含めて集約します。一般の Map / Then や Persistence の委譲とは異なる契約です。
+詳細は [CancellationScheduler](./CANCELLATION_SCHEDULER.md) を参照してください。
+
 ## 実装・検証時の確認
 
 - 失敗時に、後続処理や副作用を実行していないか。

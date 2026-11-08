@@ -293,180 +293,60 @@ Result の契約、各拡張の使い分け、例外を Result 化する責務�
 
 ソースコード: [`ReactionEnd.cs`](../InteractionFlow.Core/Entities/Contexts/ReactionEnd.cs)
 
-`ReactionEnd` は、`Reaction` が User への反応を終えた時点で確定した成功、未解決例外、キャンセルを表します。
+`ReactionEnd` は Reaction が確定した `Result` を保持します。
+相互作用は明示的なリアクションによって動作を終了する、という生成規則を表します。
 
-これは `Result` と同様に結果の意味を表しますが、
-特に `Reaction` の結果に User への反応としての意味を持たせるために、以下のような特徴を持ちます。
+- `Result` プロパティで成功・失敗の検査や既存の連結 API を利用できます。
+- 生成は引き続き `Reaction` / `IReactionPort` の protected `GetEnd` に限定します。
+  任意の Result から公開ファクトリーや暗黙変換で生成することはできません。
+- `GetEnd(Result)` は既存の失敗 Result を再ラップせず保持します。
+  引数なし、および `Exception?` を受ける既存の GetEnd も利用できます。
+- `HasException` は `!Result.Try(out _)` です。
+- `Exception` は ResultException の一段のラッパーを除いた原因です。
+  InnerException を持たない ResultException はそのまま返します。
+- `HasCanceled` はその原因が OperationCanceledException の場合だけ true です。
+  AggregateException の内部は探索しません。
 
-- ライブラリの利用者にとって、`ReactionEnd` は、`Reaction` / `IReactionPort` の `protected` 関数によってのみ生成される
+```csharp
+// Reaction 派生型内
+ReactionEnd Complete(Result result) => GetEnd(result);
 
-  ソースコード: [`IReactionPort.cs`](../InteractionFlow.Core/ExternalPorts/IReactionPort.cs),
-  [`Reaction.cs`](../InteractionFlow.Core/Externals/Reaction.cs)
+// 利用側
+if (!end.Result.Try(out var error))
+{
+    // error は ResultException。元の原因は InnerException に保持されます。
+}
+```
 
-  ```csharp
-    // ReactionEnd
-    internal static ReactionEnd Success { get; } = new(null);
-    internal ReactionEnd(Exception? exception) { Exception = exception; }
-  ```
-
-  ```csharp
-    // IReactionPort
-    protected static ReactionEnd GetEnd(Exception? exception = null) =>
-      exception == null ? ReactionEnd.Success : new(exception);
-  ```
-
-  ```csharp
-    // Reaction : IReactionPort
-    protected static ReactionEnd GetEnd(Exception? exception = null) =>
-      IReactionPort.GetEnd(exception);
-  ```
-
-- `Reaction` / `IReactionPort` の派生クラスは、`GetEnd` 関数を用いて反応結果に意味を持たせる
-
-  ```csharp
-  // `Reaction` 派生型内のコード例
-  ReactionEnd Write(string message)
-  {
-    //  User への反応に失敗した終了結果。例外で詳細な意味を表す。
-    if (string.IsNullOrEmpty(message))
-      return GetEnd(new ArgumentException("message is empty."));
-
-    // User への反応。
-    Console.WriteLine(message);
-
-    // User への反応に成功した終了結果。
-    return GetEnd();
-  }
-  ```
-
-- 例外の種類から、成功、未解決例外、キャンセルを判定できる
-
-  ```csharp
-  // `ReactionEnd` 判定のコード例
-  void HandleReactionEnd(ReactionEnd end)
-  {
-    if (end.HasCanceled) // end.Exception is not null and OperationCanceledException
-    {
-      Console.WriteLine("Reaction Canceled");
-    }
-    else if (end.HasException) // end.Exception is not null
-    {
-      Console.WriteLine($"Reaction Error : {end.Exception!.Message}");
-    }
-    else
-    {
-      Console.WriteLine("Reaction succeeded.");
-    }
-  }
-  ```
-
-- `ReactionEnd` の成功は、`Reaction` が反応を実行したことを表すが、ライブラリとしてそれが保証されるものではない
-- `ReactionEnd` の成功は、User が実際にそれを観測したことまでは保証しない
+成功結果は、User が実際に反応を観測したことまでは保証しません。
+また、途中の Reaction の結果を受け取っただけで、体験全体が終了するわけではありません。
+次の Interaction を実行するか、体験を終了するかは SystemFlow が判断します。
 
 ### FlowEndToken
 
 ソースコード: [`FlowEndToken.cs`](../InteractionFlow.Core/Entities/Contexts/FlowEndToken.cs)
 
-`FlowEndToken` は、`Reaction` が確定した `ReactionEnd` と、
-`Interaction` または `SystemFlow` の実行境界に渡された `IFlowContext` インスタンスを結び付けます。
+`FlowEndToken` は ReactionEnd に基づく Interaction / SystemFlow の完了を表します。
+Context は保持せず、LastContext と境界ごとの Context 結合は廃止しました。
 
-これも `Result` や `ReactionEnd` と同様に結果の意味を表しますが、
-特に実行境界を隔てた終了結果に、User との関係や相互作用としての意味を持たせるために、以下のような特徴を持ちます。
+- `End` は Reaction が生成した ReactionEnd です。
+- `Result` は `End.Result` を公開します。既存の補助プロパティも End に委譲します。
+- Interaction の終了境界で ReactionEnd から生成します。
+  公開コンストラクターや Result からの直接変換は設けません。
+- SystemFlow は子が返したトークンをそのまま返します。再生成や Context の結合は行いません。
+- Context の所有権・寿命は呼び出し側が管理します。
 
-- 終了結果と実行境界を、以下のプロパティで保持する
+```csharp
+// IInteraction 実装内
+return IInteraction.GetEnd(reactionEnd);
 
-  ```csharp
-  ReactionEnd FlowEndToken.End { get; }
-  IFlowContext FlowEndToken.LastContext { get; }
-  ```
+// SystemFlow 実装内
+return await interaction.ExecuteAsync(context);
+```
 
-- ライブラリの利用者にとって、`FlowEndToken` は、`IInteraction` / `Interaction` / `ISystemFlow` / `SystemFlow` の `protected` 関数によってのみ生成される
-
-  ソースコード: [`IInteraction.cs`](../InteractionFlow.Core/Interactions/IInteraction.cs),
-  [`Interaction.cs`](../InteractionFlow.Core/Interactions/Interaction.cs),
-  [`ISystemFlow.cs`](../InteractionFlow.Core/SystemFlows/ISystemFlow.cs),
-  [`SystemFlow.cs`](../InteractionFlow.Core/SystemFlows/SystemFlow.cs)
-
-  ```csharp
-    // FlowEndToken
-    internal FlowEndToken(IFlowContext lastContext, ReactionEnd end)
-    {
-        LastContext = lastContext;
-        End = end;
-    }
-  ```
-
-  ```csharp
-    // IInteraction
-    protected static FlowEndToken GetEnd(IFlowContext context,
-      ReactionEnd reactionEnd) => new(context, reactionEnd);
-
-    // Interaction : IInteraction
-    protected static FlowEndToken GetEnd(IFlowContext context,
-      ReactionEnd reactionEnd) => IInteraction.GetEnd(context, reactionEnd);
-  ```
-
-  ```csharp
-    // ISystemFlow
-    protected static FlowEndToken GetEnd(IFlowContext context,
-      FlowEndToken interactionEnd) => new(context, interactionEnd.End);
-
-    // SystemFlow : ISystemFlow
-    protected static FlowEndToken GetEnd(IFlowContext context,
-      FlowEndToken interactionEnd) => ISystemFlow.GetEnd(context, interactionEnd);
-  ```
-
-- `IInteraction` / `ISystemFlow` の派生クラスは、`GetEnd` 関数を用いて終了結果に意味を持たせる
-
-  `IInteraction` 派生型内のコード例
-  ```csharp
-  async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
-  {
-    ReactionEnd? re = null;
-
-    try
-    {
-      // 相互作用を10回実行
-      for(int i = 0; i < 10; i++)
-      {
-        var op = await operation.Operate();
-        re = await reaction.React(op);
-      }
-
-      // 最後の reaction の結果を、 context と結び付けて終了結果とし、相互作用の境界を閉じる
-      return IInteraction.GetEnd(context, re!);
-    }
-    catch(Exception e)
-    {
-      // 想定外のエラーをハンドリングして反応に変換し、相互作用の境界を保つ
-      re = await errorReaction.React(e);
-      return IInteraction.GetEnd(context, re);
-    }
-  }
-  ```
-
-  `ISystemFlow<in TContext>` 派生型内のコード例
-  ```csharp
-  async Task<FlowEndToken> ExecuteAsync(TContext context)
-  {
-    var end = await interactionA.ExecuteAsync(context);
-
-    // 失敗した interactionA の結果を context に結びなおして終了結果とし、User との関係の境界を閉じる
-    // キャンセルの場合は引き続きフローを実行する
-    if (end.HasException && !end.HasCanceled)
-      return ISystemFlow.GetEnd(context, end);
-
-    end = await interactionB.ExecuteAsync(context);
-
-    // interactionB の結果を context に結びなおして終了結果とし、User との関係の境界を閉じる
-    return ISystemFlow.GetEnd(context, end);
-  }
-  ```
-
-- `ISystemFlow<TContext>` の既定実装である `SystemFlow<TContext>` は、渡された `context` を戻り値の `FlowEndToken` に結びつけることを保証する
-- `IInteraction` の既定実装である `Interaction` は、渡された `context` を戻り値の `FlowEndToken` に結びつけることを保証する
-- `IInteraction` の既定実装である `Interaction` は、実行中に起きた例外をキャッチして `IExceptionPort` や `ICancellationPort` で反応することを保証する
-- `FlowEndToken` は `LastContext` の所有権を取得せず、破棄もしない
+Interaction が未処理例外を専用 Port に委譲する契約は維持します。
+Port 自体の例外は上位へ伝播し、その経路ではトークンを生成しません。
+SystemFlow の送出例外も自動で Result 化しません。
 
 ### Entry
 
@@ -1563,9 +1443,9 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
 - 本体と `OnCancellation` の完了を表す通知 Task をキャンセル待機一覧へ登録
 - 本体 Task のキャンセル例外に対して `OnCancellation` を待ち、完了通知を確定してから `Interaction.CancellationPort` へ委譲
 - `ExecuteCoreAsync` 内でスローされたその他の例外の `Interaction.ExceptionPort` への委譲
-- `ReactionEnd` と実行時の `IFlowContext` からの `FlowEndToken` 作成
+- `ReactionEnd` からの `FlowEndToken` 作成
 
-これにより、Interaction 前のキャンセルを確実に行うこと、例外への反応を自動的に委譲する、`FlowEndToken.LastContext` が現在の Interaction の実行境界を表すことなどを保証します。
+これにより、Interaction 前のキャンセル確認、例外への反応の委譲、Reaction に由来する終了結果の生成を行います。
 ただし、ExceptionPort / CancellationPort 自身が例外を送出する場合は、呼び出し側で捕捉されない限り、そのまま未処理例外として上位へ伝播し、`FlowEndToken` も作成されません。
 
 結果として、派生 Interaction は、例外・キャンセルの反応を直接実装せず、固有の Function の組み合わせへ集中できます。
@@ -1631,8 +1511,8 @@ Task<FlowEndToken> ExecuteAsync(TContext context);
 
 SystemFlow は、Interaction を一つの段階として実行するだけでなく、複数の相互作用を合成し、体験の流れを構築します。
 
-`SystemFlow<TContext>` 基底クラスは、基本動作として、派生型の `ExecuteCoreAsync` が返した終了結果を `ExecuteAsync` に渡された `IFlowContext` インスタンスへ結び直します。
-これにより、`FlowEndToken.LastContext` が、現在の SystemFlow の実行境界を表すことを保証します。
+`SystemFlow<TContext>` 基底クラスは、派生型の `ExecuteCoreAsync` が返した終了トークンをそのまま返します。
+終了トークンに Context は保持しません。
 
 
 ```csharp
@@ -1662,8 +1542,7 @@ protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext contex
 破棄しません。
 文脈値を破棄する責務は、その `IFlowContext` を作成した呼び出し側が保持します。
 これにより、作成した `IFlowContext` インスタンスは、必要に応じて次の SystemFlow などへ再利用することができます。
-同様に、`FlowEndToken.LastContext` も `IFlowContext` の所有権を持たず、単純な参照を意味します。
-`FlowEndToken.LastContext` は、フロー実行関数の引数と同一であることを原則としているため、通常の利用範囲では所有権が曖昧になることはありません。
+`FlowEndToken` は Context の参照を保持しません。
 
 ---
 

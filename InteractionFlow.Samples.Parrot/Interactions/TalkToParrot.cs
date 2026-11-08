@@ -36,14 +36,14 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             if (mode == SampleMode.ParrotAutoAndKill) timer.CancelAfter(TimeSpan.FromSeconds(10));
             var end = await output.WriteLineAsync(context,
                 "# Parrot — Ctrl+C returns to the menu. Blank or EOF ends a conversation.", style);
-            if (end.HasException) return end;
+            if (!end.Result.Try(out _)) return end;
             end = await SlowTalkAsync(context, "Parrot: " + greeting, style);
-            if (end.HasException) return end;
+            if (!end.Result.Try(out _)) return end;
 
             while (true)
             {
                 end = await output.WriteAsync(context, "You: ");
-                if (end.HasException) return end;
+                if (!end.Result.Try(out _)) return end;
                 var text = await (automatic ? automaticInput : input).ReadLineAsync(context);
                 if (string.IsNullOrWhiteSpace(text))
                     return await output.WriteLineAsync(context, "Parrot: See you on the next perch!", style);
@@ -51,10 +51,10 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 if (automatic)
                 {
                     end = await output.WriteLineAsync(context, text);
-                    if (end.HasException) return end;
+                    if (!end.Result.Try(out _)) return end;
                 }
                 end = await SlowTalkAsync(context, "Parrot: " + ParrotRules.Reply(text), style);
-                if (end.HasException) return end;
+                if (!end.Result.Try(out _)) return end;
             }
         }
 
@@ -64,7 +64,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             {
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
                 var end = await output.WriteAsync(context, character.ToString(), style);
-                if (end.HasException) return end;
+                if (!end.Result.Try(out _)) return end;
                 await Task.Delay(25, context.Cancellation.GetToken());
             }
             return await output.WriteLineAsync(context, "", style);

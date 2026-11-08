@@ -3,22 +3,17 @@ using System;
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// フローの終了結果と、実行に渡されたコンテキストを結合したトークンです。
+    /// Reaction の終了結果に基づく Interaction / SystemFlow の完了を表すトークンです。
     /// </summary>
     public sealed class FlowEndToken
     {
         /// <summary>
-        /// 現在のフロー実行境界へ渡されたコンテキスト参照を取得します。
-        /// </summary>
-        /// <remarks>
-        /// このトークンはコンテキストの所有権を取得せず、破棄しません。
-        /// </remarks>
-        public IFlowContext LastContext { get; }
-
-        /// <summary>
         /// Reaction が生成したフロー終了結果を取得します。
         /// </summary>
         public ReactionEnd End { get; }
+
+        /// <summary>フローの成功・失敗を取得します。</summary>
+        public Result Result => End.Result;
 
         /// <summary>
         /// フロー終了時に発生した例外を取得します。
@@ -40,9 +35,8 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         public bool HasCanceled => End.HasCanceled;
 
-        internal FlowEndToken(IFlowContext lastContext, ReactionEnd end)
+        internal FlowEndToken(ReactionEnd end)
         {
-            LastContext = lastContext ?? throw new ArgumentNullException(nameof(lastContext));
             End = end ?? throw new ArgumentNullException(nameof(end));
         }
     }

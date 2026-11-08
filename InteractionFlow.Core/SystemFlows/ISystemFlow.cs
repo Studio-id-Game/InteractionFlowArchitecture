@@ -24,16 +24,7 @@ namespace InteractionFlow.Core.SystemFlows
         /// </summary>
         FunctionPortTypes IFlowNode.FunctionTypes => FunctionPortTypes.None;
 
-        /// <summary>
-        /// Interaction の終了トークンを、SystemFlow に渡されたコンテキストへ結合し直します。
-        /// </summary>
-        /// <param name="context">SystemFlow に渡されたフローコンテキスト。</param>
-        /// <param name="interactionEnd">SystemFlow 内の Interaction が返した終了トークン。</param>
-        /// <returns>SystemFlow の終了トークン。</returns>
-        protected static FlowEndToken GetEnd(IFlowContext context, FlowEndToken interactionEnd)
-        {
-            return new(context, interactionEnd.End);
-        }
+
     }
 
     /// <summary>

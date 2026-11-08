@@ -196,7 +196,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var interaction = new Probe(errors, cancellations);
             var end = await Finish(interaction.ExecuteAsync(context));
             Assert.False(end.HasException);
-            Assert.Same(context, end.LastContext);
+            Assert.True(end.Result.Try(out _));
             Assert.Equal(0, interaction.HookCount);
             Assert.Equal(0, errors.Count);
             Assert.Equal(0, cancellations.BeforeCount);

@@ -23,7 +23,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         private async Task WriteAsync(NotepadContext context, string text)
         {
             var end = await output.WriteLineAsync(context, text);
-            if (end.HasException) throw end.Exception!;
+            end.Result.ThrowIfError();
         }
 
         private async Task<string?> ReadAsync(NotepadContext context, string prompt)

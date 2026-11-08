@@ -96,7 +96,7 @@ namespace InteractionFlow.Core.Interactions
                 if (cleanupFailure != null) _ = completion!.Task.Exception;
                 registration?.Dispose();
             }
-            return GetEnd(context, end);
+            return GetEnd(end);
 
             async Task<ReactionEnd> ExecuteBodyAndSignalCompletionAsync()
             {
@@ -270,14 +270,13 @@ namespace InteractionFlow.Core.Interactions
         }
 
         /// <summary>
-        /// Reaction が生成した終了結果を、Interaction に渡されたコンテキストへ結合します。
+        /// Reaction が生成した終了結果から Interaction の終了トークンを生成します。
         /// </summary>
-        /// <param name="context">Interaction に渡されたフローコンテキスト。</param>
         /// <param name="reactionEnd">Reaction が生成したフロー終了結果。</param>
         /// <returns>Interaction の終了トークン。</returns>
-        private static FlowEndToken GetEnd(IFlowContext context, ReactionEnd reactionEnd)
+        private static FlowEndToken GetEnd(ReactionEnd reactionEnd)
         {
-            return IInteraction.GetEnd(context, reactionEnd);
+            return IInteraction.GetEnd(reactionEnd);
         }
     }
 }

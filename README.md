@@ -88,6 +88,7 @@ Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参�
 キャンセル要求・登録 Task の待機とリセットは [CancellationObject](./docs/CANCELLATION.md) を参照してください。
 期限到達時のキャンセル通知と処理結果の集約は [CancellationScheduler](./docs/CANCELLATION_SCHEDULER.md) を参照してください。
 文脈値の必須・任意の取得については [文脈値の取得](./docs/CONTEXT_VALUES.md) を参照してください。
+ReactionEnd・FlowEndToken と Result の関係は [Reaction とフローの結果](./docs/REACTION_RESULTS.md) を参照してください。
 
 形式変換の文字コードと Stream の契約は [Standard SerializationSystem](./docs/SERIALIZATION.md) を参照してください。
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。

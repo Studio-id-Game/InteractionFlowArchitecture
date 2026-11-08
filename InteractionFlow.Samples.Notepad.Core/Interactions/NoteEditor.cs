@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -10,14 +10,29 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public abstract class NoteEditor(
-        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IConsoleLineInputPort input, IConsoleOutputPort output,
         IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
         INoteEditorOperation editor, IConsoleChoiceOperation choices,
         params InteractionFlow.Core.Entities.Architectures.IDependencyNode[] dependency)
-        : NotepadInteraction(input, output, binding, exceptionPort, cancellationPort,
-            [notes, editor, choices, .. dependency])
+        : Interaction(exceptionPort, cancellationPort,
+            [input, output, notes, editor, choices, .. dependency])
     {
         protected INotepadDataPersistencePort Notes => notes;
+        protected IConsoleOutputPort Output => output;
+
+        private async Task WriteAsync(NotepadContext context, string text)
+        {
+            var end = await output.WriteLineAsync(context, text);
+            if (end.HasException) throw end.Exception!;
+        }
+
+        private async Task<string?> ReadAsync(NotepadContext context, string prompt)
+        {
+            await WriteAsync(context, prompt);
+            var text = await input.ReadLineAsync(context);
+            if (text == null) context.ExitRequested = true;
+            return text;
+        }
 
         protected Task<NotepadData?> ReadDraftAsync(NotepadContext context, NotepadData? oldNote)
             => editor.EditAsync(context, oldNote);

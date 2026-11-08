@@ -1,5 +1,6 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -9,9 +10,9 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public sealed class SelectUserAction(
-        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
+        IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
         IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, IConsoleChoiceOperation choices)
-        : NotepadInteraction(input, output, binding, exceptionPort, cancellationPort, choices)
+        : Interaction(exceptionPort, cancellationPort, output, binding, choices)
     {
         protected override Task OnCancellation(IFlowContext context)
         {
@@ -19,8 +20,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             return Task.CompletedTask;
         }
 
-        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
         {
+            var context = flowContext.GetRequired<NotepadContext>();
+            using var bindingScope = binding.Bind(flowContext);
             context.Action = NotepadAction.None;
             var selected = await choices.SelectAsync(context, "Select your action",
                 ["Edit", "Create", "Delete", "Switch user", "List", "Exit"]);
@@ -31,7 +34,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 2 => NotepadAction.Delete, 3 => NotepadAction.Login,
                 4 => NotepadAction.List, _ => NotepadAction.None
             };
-            return await Output.WriteLineAsync(context, context.ExitRequested ? "Goodbye!" :
+            return await output.WriteLineAsync(context, context.ExitRequested ? "Goodbye!" :
                 context.Action == NotepadAction.None ? "Choose an action from 0 to 5." : $"Action: {context.Action}");
         }
     }

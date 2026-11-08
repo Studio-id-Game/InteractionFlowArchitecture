@@ -170,7 +170,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
         {
             var io = new Terminal(ConsoleKey.Enter);
             using var binding = new ConsoleCancellationBinding();
-            var list = new NoteListView(io, io, binding, new ConsoleExceptionHandling(),
+            var list = new NoteListView(io, binding, new ConsoleExceptionHandling(),
                 new ConsoleCancellationHandling(), new EmptyNoteFiles(), io, io);
             var end = await list.ExecuteAsync(new NotepadContext { User = "alice" });
             Assert.False(end.HasException);

@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
@@ -45,7 +46,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var binding = new RecordingBinding();
             var input = new ScriptedInput("#cancel");
             var output = new RecordingOutput();
-            var menu = new SelectUserAction(input, output, binding,
+            var menu = new SelectUserAction(output, binding,
                 new Errors(), new Cancellations(), Choices(input, output));
             var end = await menu.ExecuteAsync(context);
             Assert.False(end.HasException);
@@ -84,23 +85,72 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.Contains(output.Lines, text => text.Contains("Save failed"));
         }
 
-        [Fact]
-        public async Task MissingRequiredContextReachesExceptionPortBeforeInputOrBinding()
+        [Theory]
+        [InlineData("Login")]
+        [InlineData("SelectUserAction")]
+        [InlineData("NoteCreate")]
+        [InlineData("NoteEdit")]
+        [InlineData("NoteDelete")]
+        [InlineData("NoteListView")]
+        public async Task MissingRequiredContextReachesExceptionPortBeforeInputOrBinding(string name)
         {
             var input = new ScriptedInput("ignored");
             var output = new RecordingOutput();
             var binding = new RecordingBinding();
-            var menu = new SelectUserAction(input, output, binding,
-                new Errors(), new Cancellations(), Choices(input, output));
+            var notes = new MemoryNotes();
+            IInteraction interaction = name switch
+            {
+                "Login" => new Login(output, binding, new Errors(), new Cancellations(), new UnusedLogin()),
+                "SelectUserAction" => new SelectUserAction(output, binding,
+                    new Errors(), new Cancellations(), Choices(input, output)),
+                "NoteCreate" => new NoteCreate(input, output, binding, new Errors(), new Cancellations(), notes,
+                    Editor(input, output), Choices(input, output)),
+                "NoteEdit" => new NoteEdit(input, output, binding, new Errors(), new Cancellations(), notes,
+                    Editor(input, output), Choices(input, output)),
+                "NoteDelete" => new NoteDelete(output, binding,
+                    new Errors(), new Cancellations(), notes, Choices(input, output)),
+                "NoteListView" => new NoteListView(output, binding, new Errors(), new Cancellations(), notes,
+                    new ConsoleKeyInput(), new RedirectedEnvironment()),
+                _ => throw new ArgumentException("Unknown interaction", nameof(name))
+            };
 
-            var end = await menu.ExecuteAsync(new FlowContext());
+            var end = await interaction.ExecuteAsync(new FlowContext());
 
             var error = Assert.IsType<RequiredContextValueNotFoundException>(end.Exception);
             Assert.Equal(typeof(NotepadContext), error.RequiredType);
+            Assert.Equal(name + ".cs", Path.GetFileName(error.FilePath));
+            Assert.Equal("ExecuteCoreAsync", error.MemberName);
             Assert.Equal(0, input.ReadCount);
             Assert.Empty(output.Lines);
             Assert.False(binding.Connected);
             Assert.Equal(0, binding.UnbindCount);
+        }
+
+        [Fact]
+        public async Task EofDuringCreateRequestsExitAndReleasesBindingWithoutSaving()
+        {
+            var input = new ScriptedInput();
+            var output = new RecordingOutput();
+            var binding = new RecordingBinding();
+            var notes = new MemoryNotes();
+            var context = new NotepadContext { User = "alice" };
+            var create = new NoteCreate(input, output, binding, new Errors(), new Cancellations(), notes,
+                Editor(input, output), Choices(input, output));
+
+            var end = await create.ExecuteAsync(context);
+
+            Assert.False(end.HasException);
+            Assert.True(context.ExitRequested);
+            Assert.Equal(0, notes.SaveCount);
+            Assert.False(binding.Connected);
+            Assert.Equal(1, binding.UnbindCount);
+        }
+
+        private sealed class UnusedLogin : Operation, INotepadLoginOperation
+        {
+            public override void ForceResetMemoryState() { }
+            public Task<Result> LoginAsync(NotepadContext context)
+                => throw new InvalidOperationException("Login must not run without the required context.");
         }
 
         private static ConsoleNoteEditor Editor(IConsoleLineInputPort input, IConsoleOutputPort output)

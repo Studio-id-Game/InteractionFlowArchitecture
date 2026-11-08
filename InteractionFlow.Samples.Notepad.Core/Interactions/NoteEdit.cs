@@ -12,10 +12,12 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
         IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
         INoteEditorOperation editor, IConsoleChoiceOperation choices)
-        : NoteEditor(input, output, binding, exceptionPort, cancellationPort, notes, editor, choices)
+        : NoteEditor(input, output, exceptionPort, cancellationPort, notes, editor, choices, binding)
     {
-        protected override async Task<ReactionEnd> RunAsync(NotepadContext context)
+        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
         {
+            var context = flowContext.GetRequired<NotepadContext>();
+            using var bindingScope = binding.Bind(flowContext);
             var key = await ReadKeyAsync(context, existing: true);
             if (key == null) return await Output.WriteLineAsync(context, "Edit cancelled.");
             var loaded = await Notes.Load(key.Value, new NotepadData("", ""));

@@ -12,14 +12,14 @@ namespace InteractionFlow.Standard.Builders
     public static class ScopeServicesUtility
     {
         /// <summary>
-        /// Interaction 実装を scoped サービスとして登録します。
+        /// 汎用または型付きの Interaction 実装を scoped サービスとして登録します。
         /// </summary>
         /// <typeparam name="TImplementation">登録する Interaction 実装型。</typeparam>
         /// <param name="this">登録先のサービス構成。</param>
         /// <returns>続けて登録を行うための現在のサービス構成。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IScopeServices UseInteraction<TImplementation>(this IScopeServices @this)
-            where TImplementation : class, IInteraction
+            where TImplementation : class, IInteractionNode
         {
 
             return @this.Use<TImplementation>();

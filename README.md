@@ -87,6 +87,9 @@ Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参�
 期限到達時のキャンセル通知と処理結果の集約は [CancellationScheduler](./docs/CANCELLATION_SCHEDULER.md) を参照してください。
 文脈値の必須・任意の取得については [文脈値の取得](./docs/CONTEXT_VALUES.md) を参照してください。
 ReactionEnd・InteractionEnd と Result の関係は [Reaction とフローの結果](./docs/REACTION_RESULTS.md) を参照してください。
+専用の Context 型を要求する相互作用には `Interaction<TContext>` を使用できます。
+従来の `Interaction` は、任意の `IFlowContext` を受け取る基底として引き続き利用できます。
+Context 型ごとの追加値の制約は、[Context の値取得と拡張](./docs/CONTEXT_VALUES.md) を参照してください。
 
 ## Standard
 

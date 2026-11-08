@@ -69,3 +69,18 @@ InteractionEnd は Reaction の完了と、単独または SystemFlow で合成�
 SystemFlowEnd は追加しません。SystemFlow 固有の終了契約が必要になった時点で分離を検討します。
 今回の実装で追加された実行識別子や履歴はなく、過去の結果の再利用まで禁止するものではありません。
 トークンが返されたこと自体はアプリ全体の終了指示ではなく、進行は SystemFlow が判断します。
+
+## 型付き Interaction の実行契約
+
+`IInteraction<TContext>` / `Interaction<TContext>` は、実行に必要な Context 型を表します。
+`ExecuteCoreAsync(TContext)` と `OnCancellation(TContext)` に、呼び出し元が渡した型付きの
+Context が届きます。ReactionEnd / InteractionEnd の生成規則と、例外・キャンセル処理は共通です。
+
+従来の `IInteraction` / `Interaction` は、任意の `IFlowContext` で実行する契約として残します。
+専用 Context を要求する型は `IInteraction` を実装せず、共通のメタデータは
+`IInteractionNode` を通じて扱います。メタデータだけから実行可能な Context 型は判断できません。
+
+`UseInteraction<TImplementation>()` は両方を登録できます。
+型付き版も汎用版も、同じ実装で Task 登録・解除、キャンセル時の後始末、処理 Port への委譲を行います。
+Context の所有権や Interaction の直接ネストに関する契約は変えません。
+型の関係と反変の扱いは [型付き Interaction の契約](./design-notes/TYPED_INTERACTION_CONTEXT.md) を参照してください。

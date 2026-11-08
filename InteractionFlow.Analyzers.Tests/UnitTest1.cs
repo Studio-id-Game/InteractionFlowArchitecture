@@ -1354,6 +1354,115 @@ public class InteractionFlowAnalyzersAnalyzerTests
         await VerifyAsync(source, expected);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TypedInteractionBase_RequiresDependencyForwarding(bool forward)
+    {
+        var argument = forward ? "port" : "";
+        var parameter = forward ? "port" : "{|#0:port|}";
+        var source = $$"""
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode { ReadOnlyMemory<IDependencyNode> Dependency { get; } }
+            }
+            namespace InteractionFlow.Core.Entities.Contexts
+            {
+                public interface IFlowContext { }
+                public sealed class Context : IFlowContext { }
+            }
+            namespace InteractionFlow.Core.Interactions
+            {
+                public interface IInteractionNode : IDependencyNode { }
+                public interface IInteraction<in TContext> : IInteractionNode { }
+                public abstract class Interaction<TContext>(params IDependencyNode[] dependency)
+                    : IInteraction<TContext>
+                {
+                    public ReadOnlyMemory<IDependencyNode> Dependency => dependency;
+                }
+            }
+            namespace App.ExternalPorts
+            {
+                public interface IPort : IDependencyNode { }
+            }
+            namespace App.Interactions
+            {
+                public sealed class Counter(App.ExternalPorts.IPort {{parameter}})
+                    : InteractionFlow.Core.Interactions.Interaction<InteractionFlow.Core.Entities.Contexts.Context>({{argument}})
+                { }
+            }
+            """;
+        var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId,
+            DiagnosticSeverity.Hidden).WithLocation(0);
+
+        await VerifyAsync(source, forward ? [] : [expected]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TypedInteractionInterface_RemainsADependencyNode(bool include)
+    {
+        var parameter = include ? "interaction" : "{|#0:interaction|}";
+        var dependencies = include ? "new IDependencyNode[] { interaction }" : "Array.Empty<IDependencyNode>()";
+        var source = $$"""
+            using System;
+            using InteractionFlow.Core.Entities.Architectures;
+            namespace InteractionFlow.Core.Entities.Architectures
+            {
+                public interface IDependencyNode { ReadOnlyMemory<IDependencyNode> Dependency { get; } }
+            }
+            namespace InteractionFlow.Core.Entities.Contexts
+            {
+                public sealed class Context { }
+            }
+            namespace InteractionFlow.Core.Interactions
+            {
+                public interface IInteractionNode : IDependencyNode { }
+                public interface IInteraction<in TContext> : IInteractionNode { }
+            }
+            namespace App.SystemFlows
+            {
+                public sealed class Flow(
+                    InteractionFlow.Core.Interactions.IInteraction<InteractionFlow.Core.Entities.Contexts.Context> {{parameter}})
+                    : IDependencyNode
+                {
+                    public ReadOnlyMemory<IDependencyNode> Dependency => {{dependencies}};
+                }
+            }
+            """;
+        var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DependencyNodeDiagnosticId,
+            DiagnosticSeverity.Hidden).WithLocation(0);
+
+        await VerifyAsync(source, include ? [] : [expected]);
+    }
+
+    [Fact]
+    public async Task TypedInteractionInterface_DoesNotBypassEntityLayerBoundary()
+    {
+        var source = """
+            namespace InteractionFlow.Core.Interactions
+            {
+                public interface IInteraction<in TContext> { }
+            }
+            namespace App.Entities
+            {
+                public sealed class Context { }
+                public sealed class Model
+                {
+                    public InteractionFlow.Core.Interactions.IInteraction<Context> {|#0:Interaction|};
+                }
+            }
+            """;
+        var expected = new DiagnosticResult(InteractionFlowAnalyzersAnalyzer.DiagnosticId, DiagnosticSeverity.Hidden)
+            .WithLocation(0)
+            .WithArguments(ExpectedLayerDependencyDetail("Entities", "Interactions", "IInteraction"));
+
+        await VerifyAsync(source, expected);
+    }
+
     private static string ExpectedLayerDependencyDetail(string sourceLayer, string targetLayer, string typeName)
         => string.Format(Resources.LayerDependencyDisallowedReference, sourceLayer, targetLayer, typeName);
 

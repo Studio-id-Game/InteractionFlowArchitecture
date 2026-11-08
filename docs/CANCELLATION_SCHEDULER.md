@@ -23,6 +23,37 @@ async Task<Result> RunAsync()
 Task を受け取るため、処理は呼び出し側で開始します。非同期処理を Task.Run で包む必要はありません。
 ラムダで同期的に Task を生成する場合、その生成前に投げられた例外はこの API の対象外です。
 
+## 値を返す処理
+
+`TimeoutAsync<T>(TimeSpan timeoutTime, Task<Result<T>> task)` は、通知が成功した場合に対象の Result<T> をそのまま返します。
+
+```csharp
+var result = await scheduler.TimeoutAsync(TimeSpan.FromSeconds(10), LoadValueAsync());
+if (result.Try(out var value, out var error))
+{
+    // 成功値を利用
+}
+```
+
+値なし版と、期限判定・通知・全処理の待機・例外集約・破棄の契約は共通です。
+通知失敗時は、対象が成功していても失敗 Result<T> を返し、成功値は返しません。
+対象の失敗 ResultException は通知失敗がなければ再ラップしません。
+T の内容は解釈しません。例えば成功値に ReactionEnd を入れても、その内部の失敗を自動集約しません。
+Parrot は通知失敗を優先するため、RunAsync は ReactionEnd をそのまま成功値として返します。
+
+```csharp
+async Task<Result<ReactionEnd>> RunAsync()
+{
+    var end = await TalkAsync();
+    return end.AsResult();
+}
+```
+
+この選択では通知失敗がなければ、内部の成功・失敗を問わず元の ReactionEnd を返せます。
+通知失敗時には内側の ReactionEnd は返しません。
+両者の失敗を集約したい利用者は、RunAsync で内側の失敗を外側の Result<T> へ変換する方式も選べます。
+両オーバーロードで同時利用枠と Dispose の状態を共有し、完了後は値の型や値なし版を切り替えて再利用できます。
+
 ## 実行と結果
 
 - 処理が先に完了すれば、期限の予約を解除し、処理の Result を返します。

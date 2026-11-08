@@ -43,7 +43,15 @@ EOF の場合は、戻ったメニューでも EOF を受け取り終了しま�
 
 選択状態・モード・専用挨拶は `ScopedFlowContext` の実行範囲へ閉じます。
 表示は `IConsoleOutputPort` に委譲し、各 `ReactionEnd` の失敗で後続の入力や表示を停止します。
-Ctrl+C は各 Interaction の `using var bindingScope = binding.Bind(context)` で接続期間を示し、10秒タイマーも会話の終了時に破棄します。
+Ctrl+C は各 Interaction の `using var bindingScope = binding.Bind(context)` で接続期間を示します。
+10秒の期限には `context.Cancellation.GetScheduler()` と `TimeoutAsync` を使い、通知後も会話 Task の終了を待ちます。
+Scheduler は会話の実行範囲で破棄し、Interaction 全体の ExecuteAsync を待機対象にはしません。
+`TalkAsync` は `Result<ReactionEnd>` を返し、`TimeoutAsync<T>` へ直接渡します。
+時間制限モード以外は `Timeout.InfiniteTimeSpan` として同じ経路を使います。
+ReactionEnd はそのまま成功値として返し、Reaction 内部の失敗は再処理せず保持します。
+通知失敗は会話の結果より優先する致命的な失敗として扱い、その場合は会話の ReactionEnd を返しません。
+外側の失敗時は ResultException のラッパーを除いた原因を再送出し、Interaction 基底の
+例外・キャンセル処理へ戻します。成功時は会話の ReactionEnd をそのまま返します。
 キャンセルの通知とリセット、未処理例外の通知は Interaction 基底と標準 Port に委譲します。
 旧 Console の可変 State、ダミー入力 API、独自 RefEntity は使用しません。
 

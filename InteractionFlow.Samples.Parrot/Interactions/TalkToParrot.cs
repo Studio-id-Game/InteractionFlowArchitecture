@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
@@ -5,6 +6,7 @@ using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
+using InteractionFlow.Standard.Entities.Contexts;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,10 +32,19 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 ? custom.Text : ParrotRules.DefaultGreeting;
 
             using var bindingScope = binding.Bind(context);
-            // The timer belongs to this execution and is disposed before cancellation handling resets the context.
-            using var timer = new CancellationTokenSource();
-            using var registration = timer.Token.Register(context.Cancellation.Cancel);
-            if (mode == SampleMode.ParrotAutoAndKill) timer.CancelAfter(TimeSpan.FromSeconds(10));
+            using var scheduler = context.Cancellation.GetScheduler();
+            var timeout = mode == SampleMode.ParrotAutoAndKill
+                ? TimeSpan.FromSeconds(10) : Timeout.InfiniteTimeSpan;
+            var result = await scheduler.TimeoutAsync(timeout, TalkAsync(context, automatic, style, greeting));
+            // Restore the exception/cancellation boundary after Scheduler's explicit Result conversion.
+            if (result.Try(out var end, out var error))
+                return end;
+            throw error.InnerException ?? error;
+        }
+
+        private async Task<Result<ReactionEnd>> TalkAsync(
+            IFlowContext context, bool automatic, ConsoleTextStyle style, string greeting)
+        {
             var end = await output.WriteLineAsync(context,
                 "# Parrot — Ctrl+C returns to the menu. Blank or EOF ends a conversation.", style);
             if (end.HasException) return end;

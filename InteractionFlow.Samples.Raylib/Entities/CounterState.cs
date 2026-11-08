@@ -15,14 +15,19 @@ public sealed class CounterState
         Failed
     }
 
+    // 状態と入力通知を同じロックで管理し、受付表示と受理条件を一致させます。
     private readonly object gate = new();
+
     private int count;
     private string message = "Ready";
     private Phase phase;
     private bool exitRequested;
+
+    // 通知は待機中だけ保持し、継続処理をロック内で実行しません。
     private TaskCompletionSource<CounterCommand>? pending;
     private CancellationToken pendingToken;
 
+    // 状態の取得。描画用の値は Snapshot でまとめて取得します。
     public int Count
     {
         get
@@ -51,9 +56,11 @@ public sealed class CounterState
         }
     }
 
+    // 入力待機と受理。終了要求は受付を閉じ、既存待機の解除は所有者のキャンセルに任せます。
     public async ValueTask<CounterCommand> ReadCommandAsync(CancellationToken token)
     {
         TaskCompletionSource<CounterCommand> source;
+
         lock (gate)
         {
             token.ThrowIfCancellationRequested();
@@ -103,6 +110,12 @@ public sealed class CounterState
         }
     }
 
+    // 以下の判定は gate のロック内で呼び出します。
+    private bool CanAcceptInput()
+        => phase == Phase.WaitingForInput && !exitRequested
+            && pending is { Task.IsCompleted: false } && !pendingToken.IsCancellationRequested;
+
+    // 処理の進行。受理済みの操作だけが進み、終了要求後は更新しません。
     public bool BeginIncrement()
     {
         lock (gate)
@@ -131,6 +144,14 @@ public sealed class CounterState
         }
     }
 
+    // phase の検査は gate のロック内で行います。
+    private void RequireProcessing()
+    {
+        if (phase != Phase.Processing)
+            throw new InvalidOperationException("Counter is not processing an accepted command.");
+    }
+
+    // 中断・失敗・終了。キャンセル回復で終了意図や失敗を上書きしません。
     public void Cancel()
     {
         lock (gate)
@@ -168,15 +189,5 @@ public sealed class CounterState
                 message = "Goodbye";
             }
         }
-    }
-
-    private bool CanAcceptInput()
-        => phase == Phase.WaitingForInput && !exitRequested
-            && pending is { Task.IsCompleted: false } && !pendingToken.IsCancellationRequested;
-
-    private void RequireProcessing()
-    {
-        if (phase != Phase.Processing)
-            throw new InvalidOperationException("Counter is not processing an accepted command.");
     }
 }

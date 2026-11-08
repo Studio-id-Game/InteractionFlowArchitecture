@@ -76,24 +76,31 @@ namespace InteractionFlow.Core.Interactions
                 }
 
                 var task = ExecuteCoreAsync(context);
-                context.Cancellation.AddCancelableTask(CancelableTask());
-                end = await task.ConfigureAwait(false);
-
-                async Task CancelableTask()
+                var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                context.Cancellation.AddCancelableTask(completion.Task);
+                try
+                {
+                    end = await task.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
                 {
                     try
                     {
-                        await task.ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
                         await OnCancellation(context).ConfigureAwait(false);
                     }
-                    catch (Exception)
+                    catch (Exception cleanupFailure)
                     {
-                        // ここでの例外は、下の return await task; でハンドリングする事を前提として、握りつぶす。
-                        // これにより、CancelableTask はキャンセル時の追加処理だけを担当できる。
+                        // Preserve cleanup failure for the cancellation port's wait/reset result.
+                        // The original cancellation still determines which port handles this execution.
+                        completion.TrySetException(cleanupFailure);
                     }
+                    throw;
+                }
+                finally
+                {
+                    // Signal before entering either handling port: never wait on our own incomplete notification.
+                    // Ordinary body failures belong to ExceptionPort, not to the cancellation wait list.
+                    completion.TrySetResult(true);
                 }
             }
             catch (OperationCanceledException e)
@@ -169,10 +176,15 @@ namespace InteractionFlow.Core.Interactions
         protected abstract Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context);
 
         /// <summary>
-        /// キャンセル時に、Interaction 固有の追加処理を実行します。
+        /// 本体 Task がキャンセル例外で終了したとき、CancellationPort に委譲する前に追加処理を実行します。
         /// </summary>
         /// <param name="context">現在のフローコンテキスト。</param>
         /// <returns>追加処理の完了を表すタスク。</returns>
+        /// <remarks>
+        /// 開始前キャンセルや、本体が Task を返す前の同期例外では呼びません。
+        /// 失敗はキャンセル完了の待機 Task へ保持し、元のキャンセルと共に扱います。
+        /// この処理内で同じ CancellationObject の WaitAndResetAsync を待ってはいけません。
+        /// </remarks>
         protected virtual Task OnCancellation(IFlowContext context)
         {
             return Task.CompletedTask;

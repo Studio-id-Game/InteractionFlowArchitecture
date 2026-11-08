@@ -1678,8 +1678,8 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
 `Interaction` 基底クラスは、以下の内容を基本動作として実装しています。
 
 - `ExecuteCoreAsync` 実行前のキャンセル確認
-- `ExecuteCoreAsync` / `OnCancellation` をキャンセル時に待機するための登録
-- `ExecuteCoreAsync` 内でスローされた `OperationCanceledException` の `Interaction.CancellationPort` への委譲
+- 本体と `OnCancellation` の完了を表す通知 Task をキャンセル待機一覧へ登録
+- 本体 Task のキャンセル例外に対して `OnCancellation` を待ち、完了通知を確定してから `Interaction.CancellationPort` へ委譲
 - `ExecuteCoreAsync` 内でスローされたその他の例外の `Interaction.ExceptionPort` への委譲
 - `ReactionEnd` と実行時の `IFlowContext` からの `FlowEndToken` 作成
 
@@ -1687,6 +1687,34 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
 ただし、ExceptionPort / CancellationPort 自身が例外を送出する場合は、呼び出し側で捕捉されない限り、そのまま未処理例外として上位へ伝播し、`FlowEndToken` も作成されません。
 
 結果として、派生 Interaction は、例外・キャンセルの反応を直接実装せず、固有の Function の組み合わせへ集中できます。
+
+`OnCancellation` の実行は `ExecuteAsync` の一つの経路で管理します。
+同じ本体 Task を別の補助 Task が監視する構成ではなく、TaskCompletionSource の Task で
+「本体とキャンセル後始末が完了したこと」を待機側へ知らせます。
+
+```text
+本体 Task のキャンセル例外
+  → OnCancellation を待つ
+  → 完了通知を確定する（後始末の失敗は通知 Task に保持）
+  → CancellationPort の前処理
+  → WaitAndResetAsync
+  → キャンセル後の反応
+```
+
+完了通知を確定してから Port へ進むため、WaitAndResetAsync が自分自身の未完了通知を待つことを避けます。
+本体の通常例外では完了通知を成功にし、元の例外は ExceptionPort にだけ委譲します。
+これにより、後のキャンセル待機で本体の例外を重複報告しません。
+
+開始前キャンセルと、ExecuteCoreAsync が Task を返す前に同期的に投げたキャンセル例外では、
+既存動作どおり OnCancellation を呼びません。ReactionEnd として返されたキャンセルも例外経路とは区別します。
+OnCancellation が失敗した場合（その Task のキャンセル完了も含む）は通知 Task を faulted とし、
+元の本体キャンセルは引き続き CancellationPort へ渡します。
+
+従来は OnCancellation と CancellationPort の前処理が並行し得ましたが、現在は上記の順序を明示しています。
+OnCancellation 内から同じ CancellationObject の WaitAndResetAsync を待つと、
+自身の完了通知を待つ循環になるため、このフックでは後始末だけを行います。
+Interaction 同士の共有 Context による直接ネストの循環待機を解消する変更ではありません。
+
 
 <details>
 <summary>💡 Tips: Interaction.NestedExecuteAsync について</summary>

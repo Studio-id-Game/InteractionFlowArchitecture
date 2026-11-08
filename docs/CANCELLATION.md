@@ -95,8 +95,10 @@ Scheduler が無効な世代の通知を省略しても、その対象 Task の�
 ## 移行
 
 - AddCancelableTask の返却スコープを保持し、必ず Dispose してください。
-- WaitAndResetAsync は互換の転送メソッドとして残し、Obsolete を付けています。
+- WaitAndResetAsync は削除しました。
   WaitForTasksAndResetCancellationAsync へ変更してください。
+- NestedExecuteAsync の両オーバーロードは削除しました。Interaction の合成は SystemFlow で行ってください。
+  同じ CancellationObject を共有した直接の ExecuteAsync 呼び出しへの置換は、循環待機を起こし得ます。
 - 従来と異なり、状態のリセットは待機完了後です。待機中の新規登録は拒否します。
 
 関連: [CancellationScheduler](./CANCELLATION_SCHEDULER.md)、[ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md)

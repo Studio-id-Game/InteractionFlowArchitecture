@@ -3,7 +3,6 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Interactions
@@ -20,24 +19,6 @@ namespace InteractionFlow.Core.Interactions
         params IDependencyNode[] dependency)
         : IInteraction
     {
-        private sealed class NestedFlowContext(IFlowContext parent) : IFlowContext
-        {
-            public CancellationObject Cancellation { get; } = new();
-
-            public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-            {
-                if (Cancellation is T t)
-                {
-                    value = t;
-                    return true;
-                }
-                else
-                {
-                    return parent.TryGet(out value);
-                }
-            }
-        }
-
         private readonly IDependencyNode[] dependencies = [exceptionPort, cancellationPort, .. dependency];
 
         /// <summary>
@@ -126,58 +107,6 @@ namespace InteractionFlow.Core.Interactions
                     }
                     throw;
                 }
-            }
-        }
-
-        /// <summary>
-        /// 指定された Interaction を、現在のコンテキスト値を参照できる独立したキャンセルスコープで実行します。
-        /// </summary>
-        /// <param name="nestedInteraction">ネストして実行する Interaction。</param>
-        /// <param name="context">親 Interaction のフローコンテキスト。</param>
-        /// <returns>ネストした Interaction の Reaction が生成した終了結果。</returns>
-        /// <exception cref="Exception">ネストした Interaction が未解決の例外で終了した場合にスローされます。</exception>
-        [Obsolete("Compose Interactions in a SystemFlow instead. NestedExecuteAsync is a legacy API; " +
-            "direct nested ExecuteAsync calls with a shared CancellationObject can deadlock.")]
-        protected static async Task<ReactionEnd> NestedExecuteAsync(IInteraction nestedInteraction, IFlowContext context)
-        {
-            var nestedContext = new NestedFlowContext(context);
-            using var registration = context.Cancellation.GetToken().Register(nestedContext.Cancellation.Cancel);
-
-            var end = await nestedInteraction.ExecuteAsync(nestedContext);
-
-            if (end.HasException)
-            {
-                throw end.Exception!;
-            }
-            else
-            {
-                return end.End;
-            }
-        }
-
-        /// <summary>
-        /// 指定された関数を、現在のコンテキスト値を参照できる独立したキャンセルスコープで実行します。
-        /// </summary>
-        /// <param name="nestedInteractionExecuteAsync">ネストしたキャンセルスコープのフローコンテキストを受け取り、Reaction の終了結果を返す関数。</param>
-        /// <param name="context">親 Interaction のフローコンテキスト。</param>
-        /// <returns>指定された関数が返した Reaction の終了結果。</returns>
-        /// <exception cref="Exception">指定された関数が未解決の例外を含む終了結果を返した場合にスローされます。</exception>
-        [Obsolete("Compose Interactions in a SystemFlow instead. NestedExecuteAsync is a legacy API; " +
-            "direct nested ExecuteAsync calls with a shared CancellationObject can deadlock.")]
-        protected static async Task<ReactionEnd> NestedExecuteAsync(Func<IFlowContext, Task<ReactionEnd>> nestedInteractionExecuteAsync, IFlowContext context)
-        {
-            var nestedContext = new NestedFlowContext(context);
-            using var registration = context.Cancellation.GetToken().Register(nestedContext.Cancellation.Cancel);
-
-            var end = await nestedInteractionExecuteAsync(nestedContext);
-
-            if (end.HasException)
-            {
-                throw end.Exception!;
-            }
-            else
-            {
-                return end;
             }
         }
 

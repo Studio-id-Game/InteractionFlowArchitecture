@@ -213,10 +213,6 @@ namespace InteractionFlow.Core.Entities.Contexts
             }
         }
 
-        /// <summary>登録 Task の終了を待ち、キャンセル状態をリセットします。</summary>
-        [Obsolete("Use WaitForTasksAndResetCancellationAsync instead.")]
-        public ValueTask<Result> WaitAndResetAsync() => WaitForTasksAndResetCancellationAsync();
-
         /// <summary>現在のトークンを取得します。待機・リセット中はキャンセル済みのトークンを返します。</summary>
         public CancellationToken GetToken()
         {

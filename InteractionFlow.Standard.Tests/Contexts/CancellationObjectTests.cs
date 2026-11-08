@@ -247,16 +247,5 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.Throws<ObjectDisposedException>(() => { _ = token.WaitHandle; });
         }
 
-        [Fact]
-        public async Task LegacyResetMethodForwardsToTheNewImplementation()
-        {
-            var cancellation = new CancellationObject();
-            cancellation.Cancel();
-#pragma warning disable CS0618 // Compatibility path is intentionally tested.
-            var result = await cancellation.WaitAndResetAsync();
-#pragma warning restore CS0618
-            Assert.True(result.Try(out _));
-            Assert.False(cancellation.IsCancellationRequested);
-        }
     }
 }

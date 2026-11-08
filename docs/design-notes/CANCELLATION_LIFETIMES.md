@@ -14,8 +14,8 @@ Parrot の新 Core / Standard 移行を振り返った議論の記録です。
 リセット前の古いスコープが再接続後の参照を解放しないよう、接続ごとの識別を持ちます。
 異なる対象・別 Port インスタンスの同時接続は引き続き例外です。
 
-NestedExecuteAsync の両オーバーロードは Obsolete で旧 API としてマークしました。
-SystemFlow で相互作用を合成する方針とし、実装は互換性のため残します。
+NestedExecuteAsync の両オーバーロードは非推奨化を経て削除しました。
+SystemFlow で相互作用を合成する方針です。
 同じ CancellationObject を共有した Interaction 同士の直接ネストは循環待機を起こし得るため、
 単純な ExecuteAsync 呼び出しへの置換は推奨しません。
 
@@ -42,7 +42,7 @@ TimeoutAsync(TimeSpan timeoutTime, Task<Result> task) は処理と期限を競�
 
 Task 登録も IDisposable のスコープへ変更し、正常終了時に登録解除できるようにしました。
 待機中はキャンセル状態を維持し、全対象の終了後にリセットします。待機中の新規登録・重複待機は拒否します。
-旧 WaitAndResetAsync は Obsolete の転送 API とし、WaitForTasksAndResetCancellationAsync を使用します。
+旧 WaitAndResetAsync は非推奨化を経て削除しました。WaitForTasksAndResetCancellationAsync を使用します。
 即時・遅延完了で失敗集約を共通化し、通知中 Source の破棄は通知終了まで遅延します。
 現在の契約は [CancellationObject](../CANCELLATION.md) を参照してください。
 
@@ -97,7 +97,7 @@ Parrot のように Interaction が順次実行される構成なら、再 Bind 
 接続を親またはラッパーへ集約するか、同じ対象には参照カウントを許すかを判断する必要があります。
 「再 Bind 拒否を汎用 API の第一候補とする」とまでは、現時点で決めていません。
 
-NestedExecuteAsync は独立した CancellationObject を作ります。
+削除した旧 NestedExecuteAsync は独立した CancellationObject を作る実装でした。
 この場合は異なる対象への接続競合なので、同じ対象の再 Bind を許可するだけでは解決しません。
 Ctrl+C を親へ接続して子へ伝播する構成など、接続対象の選択を別に設計する必要があります。
 

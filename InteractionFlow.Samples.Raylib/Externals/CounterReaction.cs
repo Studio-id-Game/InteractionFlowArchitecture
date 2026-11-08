@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
@@ -18,7 +19,7 @@ internal sealed class CounterReaction : Reaction, ICounterReaction
 
     public async ValueTask<ReactionEnd> RespondAsync(IFlowContext context, CounterCommand command)
     {
-        var state = context.GetRequired<CounterState>();
+        var state = context.GetRequired<ICounterStateAccess>();
 
         if (command == CounterCommand.Exit)
         {

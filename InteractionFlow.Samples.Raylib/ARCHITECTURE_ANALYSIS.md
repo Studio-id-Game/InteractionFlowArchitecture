@@ -23,7 +23,8 @@
 この流れを State の規則、Operation、Reaction、SystemFlow に分担させる構成は、
 Philosophy の「コードの構造と、ユーザーが経験する構造を近づける」という方針に沿っています。
 
-`CounterState` はシステム側の現在の状態を提供しますが、Context 全体や Context Loop そのものではありません。
+`CounterFlowContext` が提供するアクセス契約はシステム側の状態を読み書きする手段ですが、
+それ自体が Context 全体や Context Loop ではありません。
 画面の変化、ユーザーによる認識と次の操作、システムの反応が続く時間的な過程が Context Loop です。
 過去の相互作用を物理的な追記ログとして保存することは、このサンプルの成立条件ではありません。
 
@@ -42,7 +43,8 @@ Philosophy の「コードの構造と、ユーザーが経験する構造を近
 ゲーム進行のために CounterState へ集約する必要はなく、Reaction 内部に保持できます。
 
 一つの C# オブジェクトと、計算モデル上の分類は一対一対応ではありません。
-`CounterState` にも共有文脈としての値、内部の遷移規則、入力待機の補助状態が含まれます。
+このサンプルでは、ゲームの状態と規則を CounterState、表示を CounterDisplayState、
+入力待機の補助状態を CounterInputWait に分け、CounterAccess が同じ同期境界で扱います。
 Entities 配下にあることや Context から参照されることだけで、全体を ContextTape、DomainState、
 FlowState のいずれか一つと同一視しません。特に `CounterState.Phase` はカウンターの段階であり、
 System Flow の評価位置を表す FlowState そのものではありません。
@@ -62,7 +64,7 @@ Storage と SilentExternal は、このサンプルには導入していませ�
 | Externals | raylib や非同期入力への接続 |
 | Entities | 外部ライブラリに依存しない状態と遷移規則 |
 
-薄い `CounterOperation` も、Context から今回の State を解決し、
+薄い `CounterOperation` も、Context から今回の入力アクセス契約を解決し、
 操作の取得・送信を差し替え可能な Port として提供する役割があります。
 受付規則を Operation 自身に複製する必要はありません。
 
@@ -71,11 +73,29 @@ Reaction が生成した ReactionEnd を Interaction が受け取り、
 SystemFlow は InteractionEnd を継続・終了判断に利用します。
 Interaction の完了を、そのままアプリ全体の終了指示とは扱いません。
 
+## Context によるアクセス管理と State の分割
+
+`CounterFlowContext` は値を取得する入口であり、実行制御やゲームの状態遷移を担当しません。
+`TryGetCore` により用途別のアクセス契約を提供し、通常の追加値・親スコープの仕組みは Core に委ねます。
+`CounterAccess` が複数状態への一貫したアクセス範囲を保護し、State は個別の値と規則に集中します。
+
+この分割は、State ごとに独立したロックを持つ分割ではありません。
+受付条件、通知、処理段階、表示などの関連する更新は同じ gate で行います。
+カウンターの生の可変 State を Context から取得・持ち出しできないため、取得後の直接更新で同期を迂回しません。
+メインスレッドで扱う FrameState / WindowState は、この保護対象とは別にフレーム用 Context から取得できます。
+一方、非同期待機の間はロックを外し、完了反映時に終了意図などを再確認します。
+
+独立 Context 間ではアクセス管理だけを共有し、キャンセル状態と追加値は共有しません。
+Context の破棄は共有状態を破棄せず、Task の停止・待機もしません。
+この仕組みはサンプル固有の実装であり、ライブラリ全体の並行安全性を追加保証するものではありません。
+以下の終了時の文脈更新と描画完了に関する留保も、この構成変更だけでは解消しません。
+
 ## 留保 1：終了処理からの文脈更新
 
 [WindowSystemFlow.StopCounter](./SystemFlows/WindowSystemFlow.cs) は、
-[CounterState.RequestExit](./Entities/CounterState.cs) を直接呼びます。
-これは終了意図だけでなく、失敗状態でなければ段階と表示メッセージも変更します。
+`ICounterStateAccess.RequestExit` を直接呼びます。
+アクセス管理は CounterState の終了意図・段階と CounterDisplayState のメッセージを協調更新します。
+失敗状態でなければ表示も変わるため、アクセス契約を経由してもこの例外は解消していません。
 したがって、単なる内部的な待機制御に限らず、ユーザー向けの文脈更新も含みます。
 
 ライブラリ実装文書の「Context 更新の原則」は、そのような更新を Operation / Reaction 内で行い、
@@ -114,7 +134,7 @@ CounterReaction の完了は状態更新まで、描画 Reaction の完了は En
 計算モデルの「状態遷移演算子としての Interaction」は、論理的に順序付けた一つの実行トレースと、
 実装のスレッド安全性・スケジューリングの再現性を区別しています。
 
-このサンプルでは、共有 State のロック、フレーム用の独立した CancellationObject、
+このサンプルでは、分割 State を扱うアクセス管理の共通ロック、フレーム用の独立した CancellationObject、
 メインスレッドに限定した raylib 呼び出しによって実装上の整合性を保ちます。
 これらは、同じ初期値から同じ実スケジューリングを再現することや、
 並行した Interaction 全体を単純な逐次マクロ遷移として形式的に検証したことを意味しません。
@@ -125,3 +145,11 @@ CounterReaction の完了は状態更新まで、描画 Reaction の完了は En
 
 State の遷移とフローのテストは [関連テスト](../InteractionFlow.Samples.Raylib.Tests/) を参照してください。
 それらの成功と、ユーザーによる反応の認識や三文書への形式的適合の証明は区別します。
+
+## API 検証から見つかった検討事項
+
+専用 Context のアクセス契約をプロパティとして公開し、Port も同じ Context 型を要求する案を検討した際、
+Interaction の引数が IFlowContext に固定され、型付き SystemFlow と自由な Port 契約の間で型情報を
+引き継げない制約が見つかりました。
+未実装の改善案と検討範囲は [Interaction の Context 型を引き継ぐ契約の検討](../docs/design-notes/TYPED_INTERACTION_CONTEXT.md)
+に記録しています。

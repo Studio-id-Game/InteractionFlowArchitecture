@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Raylib.Entities;
@@ -14,7 +15,7 @@ public sealed class CounterSystemFlow(IncrementCounter interaction) : SystemFlow
         {
             var end = await interaction.ExecuteAsync(context);
 
-            if (end.HasException || context.GetRequired<CounterState>().ExitRequested)
+            if (end.HasException || context.GetRequired<ICounterStateAccess>().ExitRequested)
                 return end;
         }
     }

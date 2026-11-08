@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
@@ -21,7 +22,7 @@ internal sealed class CounterCancellationHandling : CancellationHandling
         OperationCanceledException exception,
         Result waitAndResetResult)
     {
-        context.GetRequired<CounterState>().Cancel();
+        context.GetRequired<ICounterStateAccess>().Cancel();
 
         // Close の中断は再入力へ回復せず、先行結果とともに終了失敗として保持します。
         if (context.TryGet<Result>(out var preceding))

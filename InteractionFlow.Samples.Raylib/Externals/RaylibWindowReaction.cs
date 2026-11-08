@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
@@ -102,7 +103,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     public ReactionEnd Draw(IFlowContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        context.GetRequired<CounterState>().Snapshot(
+        context.GetRequired<ICounterDisplayAccess>().Snapshot(
             out var count,
             out var message,
             out var acceptingInput);

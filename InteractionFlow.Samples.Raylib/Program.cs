@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Builders;
 using InteractionFlow.Samples.Raylib.Entities;
@@ -16,9 +17,9 @@ internal static class Program
         builder.Apply(new RaylibCounterProfile());
 
         using var scope = builder.BuildScope();
-        using var flow = scope.BuildSystemFlow<WindowSystemFlow, IFlowContext>();
+        using var flow = scope.BuildSystemFlow<WindowSystemFlow, CounterFlowContext>();
 
-        using var context = new FlowContext().With(new CounterState());
+        using var context = new CounterFlowContext();
 
         Console.WriteLine(DependencyTreeView.GetDependencyTreeText(flow.Root));
 

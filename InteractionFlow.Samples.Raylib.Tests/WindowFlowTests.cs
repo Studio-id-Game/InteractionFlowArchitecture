@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using InteractionFlow.Samples.Raylib.Externals;
 using InteractionFlow.Samples.Raylib.Interactions;
@@ -22,9 +23,9 @@ public sealed class WindowFlowTests
     [Fact]
     public async Task FramesUseOpeningThreadAndIndependentCancellation()
     {
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
         var operation = new CounterOperation();
-        using var context = new FlowContext().With(state);
         var owner = Environment.CurrentManagedThreadId;
         var frames = 0;
         var window = new TestWindow();
@@ -32,10 +33,10 @@ public sealed class WindowFlowTests
         {
             Assert.Equal(owner, Environment.CurrentManagedThreadId);
             Assert.NotSame(context.Cancellation, frame.Cancellation);
-            Assert.Same(state, frame.GetRequired<CounterState>());
+            Assert.Same(state, frame.GetRequired<ICounterStateAccess>());
             frames++;
             frame.GetRequired<FrameState>().CloseRequested = true;
-            frame.GetRequired<CounterState>().RequestExit();
+            frame.GetRequired<ICounterStateAccess>().RequestExit();
         });
 
         var flow = CreateFlow(operation, new CounterReaction(), window, input);
@@ -51,7 +52,8 @@ public sealed class WindowFlowTests
     [Fact]
     public async Task CancelInputWaitResetsWorkerWhileFramesContinueAndExitEndsSession()
     {
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
+        var display = context.GetRequired<ICounterDisplayAccess>();
         var operation = new CounterOperation();
         var phase = 0;
         var timeout = DateTime.UtcNow.AddSeconds(5);
@@ -59,7 +61,7 @@ public sealed class WindowFlowTests
         {
             Assert.True(DateTime.UtcNow < timeout, "Cancel/retry did not complete.");
             Assert.False(frame.Cancellation.IsCancellationRequested);
-            state.Snapshot(out _, out var currentMessage, out var acceptingInput);
+            display.Snapshot(out _, out var currentMessage, out var acceptingInput);
             var cancel = phase == 0 && acceptingInput;
             if (cancel)
                 phase = 1;
@@ -72,14 +74,13 @@ public sealed class WindowFlowTests
             Thread.Sleep(1);
         });
 
-        using var context = new FlowContext().With(state);
         var window = new TestWindow();
         var end = await CreateFlow(operation, new CounterReaction(), window, input)
             .ExecuteAsync(context);
 
         Assert.False(end.HasException);
         Assert.Equal(2, phase);
-        state.Snapshot(out _, out var message, out _);
+        display.Snapshot(out _, out var message, out _);
         Assert.Equal("Goodbye", message);
         Assert.True(window.Events.FindAll(name => name == "draw").Count > 1);
     }
@@ -87,7 +88,7 @@ public sealed class WindowFlowTests
     [Fact]
     public async Task WindowCloseWaitsForCanceledWorkerCleanupBeforeClosing()
     {
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
         var operation = new CounterOperation();
         var worker = new DelayedCounterReaction();
         var window = new TestWindow { OnClose = () => Assert.True(worker.Finished) };
@@ -99,11 +100,10 @@ public sealed class WindowFlowTests
             var close = worker.Started;
             frame.GetRequired<FrameState>().CloseRequested = close;
             if (close)
-                frame.GetRequired<CounterState>().RequestExit();
+                frame.GetRequired<ICounterStateAccess>().RequestExit();
             Thread.Sleep(1);
         });
 
-        using var context = new FlowContext().With(state);
         var end = await CreateFlow(operation, worker, window, input).ExecuteAsync(context);
 
         Assert.False(end.HasException);
@@ -119,7 +119,7 @@ public sealed class WindowFlowTests
     public async Task FailureStillClosesWindowAndPreservesCause(string phase)
     {
         var failure = new InvalidOperationException(phase + " failed");
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
         var operation = new CounterOperation();
         var window = new TestWindow { OpenFailure = phase == "open" ? failure : null };
         var input = new TestFrame(frame =>
@@ -132,7 +132,6 @@ public sealed class WindowFlowTests
         ICounterReaction worker = phase == "worker"
             ? new FailingCounterReaction(failure)
             : new CounterReaction();
-        using var context = new FlowContext().With(state);
         var end = await CreateFlow(operation, worker, window, input).ExecuteAsync(context);
 
         Assert.True(end.HasException);
@@ -158,11 +157,10 @@ public sealed class WindowFlowTests
     {
         var previous = new InvalidOperationException("frame failed");
         var closing = new InvalidOperationException("close failed");
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
         var operation = new CounterOperation();
         var window = new TestWindow { CloseFailure = closing, ThrowCloseFailure = throwFailure };
         var input = new TestFrame(_ => throw previous);
-        using var context = new FlowContext().With(state);
         var end = await CreateFlow(operation, new CounterReaction(), window, input)
             .ExecuteAsync(context);
 
@@ -200,7 +198,7 @@ public sealed class WindowFlowTests
     {
         var previous = new InvalidOperationException("frame failed");
         var canceled = new OperationCanceledException("close canceled");
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
         var operation = new CounterOperation();
         var window = new TestWindow { CloseFailure = canceled, ThrowCloseFailure = true };
         var input = new TestFrame(frame =>
@@ -208,10 +206,9 @@ public sealed class WindowFlowTests
             if (earlierFailure)
                 throw previous;
             frame.GetRequired<FrameState>().CloseRequested = true;
-            frame.GetRequired<CounterState>().RequestExit();
+            frame.GetRequired<ICounterStateAccess>().RequestExit();
         });
 
-        using var context = new FlowContext().With(state);
         var end = await CreateFlow(operation, new CounterReaction(), window, input)
             .ExecuteAsync(context);
 
@@ -227,16 +224,13 @@ public sealed class WindowFlowTests
     public async Task ClosingUnopenedWindowIsSuccessfulAndRepeatable()
     {
         var window = new WindowState();
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
         var reaction = new RaylibWindowReaction();
         var interaction = new CloseWindow(
             reaction,
             new CounterExceptionHandling(),
             new CounterCancellationHandling());
-        using var context = new FlowContext()
-            .With(state)
-            .With(window)
-            .With<Result>(Result.Success);
+        context.With(window).With<Result>(Result.Success);
         var end = await interaction.ExecuteAsync(context);
 
         Assert.False(end.HasException);
@@ -372,7 +366,7 @@ public sealed class WindowFlowTests
 
         public async ValueTask<ReactionEnd> RespondAsync(IFlowContext context, CounterCommand command)
         {
-            Assert.True(context.GetRequired<CounterState>().BeginIncrement());
+            Assert.True(context.GetRequired<ICounterStateAccess>().BeginIncrement());
             Started = true;
 
             try
@@ -397,7 +391,7 @@ public sealed class WindowFlowTests
 
         public ValueTask<ReactionEnd> RespondAsync(IFlowContext context, CounterCommand command)
         {
-            context.GetRequired<CounterState>().Fail(failure);
+            context.GetRequired<ICounterStateAccess>().Fail(failure);
             return new(GetEnd(failure));
         }
     }

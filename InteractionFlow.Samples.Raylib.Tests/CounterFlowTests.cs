@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using InteractionFlow.Samples.Raylib.Externals;
 using InteractionFlow.Samples.Raylib.Interactions;
@@ -27,10 +28,11 @@ public sealed class CounterFlowTests
         using var scope = builder.BuildScope();
         using var flow = scope.BuildSystemFlow<CounterSystemFlow, IFlowContext>();
         var operation = scope.GetRequiredService<ICounterOperation>();
-        var state = new CounterState();
-        using var context = new FlowContext().With(state);
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
+        var display = context.GetRequired<ICounterDisplayAccess>();
 
-        Assert.Same(state, context.GetRequired<CounterState>());
+        Assert.Same(state, context.GetRequired<ICounterStateAccess>());
 
         var execution = flow.ExecuteAsync(context);
         Assert.True(operation.Submit(context, CounterCommand.Exit));
@@ -38,7 +40,7 @@ public sealed class CounterFlowTests
             (await execution.WaitAsync(
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken)).HasException);
-        state.Snapshot(out _, out var message, out _);
+        display.Snapshot(out _, out var message, out _);
         Assert.Equal("Goodbye", message);
     }
 
@@ -46,10 +48,8 @@ public sealed class CounterFlowTests
     public async Task SameOperationKeepsInputWaitsIsolatedByContext()
     {
         var operation = new CounterOperation();
-        var firstState = new CounterState();
-        var secondState = new CounterState();
-        using var firstContext = new FlowContext().With(firstState);
-        using var secondContext = new FlowContext().With(secondState);
+        using var firstContext = new CounterFlowContext();
+        using var secondContext = new CounterFlowContext();
         var first = operation.ReadAsync(firstContext).AsTask();
         var second = operation.ReadAsync(secondContext).AsTask();
 
@@ -69,8 +69,9 @@ public sealed class CounterFlowTests
     public async Task RepeatedInputIsNotQueuedWhileReactionRuns()
     {
         var operation = new CounterOperation();
-        var state = new CounterState();
-        using var context = new FlowContext().With(state);
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
+        var display = context.GetRequired<ICounterDisplayAccess>();
 
         var execution = CreateInteraction(operation).ExecuteAsync(context);
         Assert.True(operation.Submit(context, CounterCommand.Increment));
@@ -81,7 +82,7 @@ public sealed class CounterFlowTests
 
         Assert.False(end.HasException);
         Assert.Equal(1, state.Count);
-        state.Snapshot(out var count, out _, out _);
+        display.Snapshot(out var count, out _, out _);
         Assert.Equal(1, count);
         Assert.False(operation.Submit(context, CounterCommand.Increment));
     }
@@ -90,8 +91,9 @@ public sealed class CounterFlowTests
     public async Task CancelDuringReactionDoesNotIncrementAndNextInteractionAcceptsInput()
     {
         var operation = new CounterOperation();
-        var state = new CounterState();
-        using var context = new FlowContext().With(state);
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
+        var display = context.GetRequired<ICounterDisplayAccess>();
         var interaction = CreateInteraction(operation);
 
         var execution = interaction.ExecuteAsync(context);
@@ -99,7 +101,7 @@ public sealed class CounterFlowTests
         await WaitUntilAsync(
             () =>
             {
-                state.Snapshot(out _, out var currentMessage, out _);
+                display.Snapshot(out _, out var currentMessage, out _);
                 return currentMessage.StartsWith("Working", StringComparison.Ordinal);
             });
         context.Cancellation.Cancel();
@@ -111,7 +113,7 @@ public sealed class CounterFlowTests
         Assert.False(end.HasException);
         Assert.Equal(0, state.Count);
         Assert.False(context.Cancellation.IsCancellationRequested);
-        state.Snapshot(out _, out _, out var acceptingInput);
+        display.Snapshot(out _, out _, out var acceptingInput);
         Assert.False(acceptingInput);
 
         var retry = interaction.ExecuteAsync(context);
@@ -127,15 +129,16 @@ public sealed class CounterFlowTests
     public async Task CancelInputWaitResumesFlowAndExitCommandEndsIt()
     {
         var operation = new CounterOperation();
-        var state = new CounterState();
-        using var context = new FlowContext().With(state);
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
+        var display = context.GetRequired<ICounterDisplayAccess>();
 
         var execution = new CounterSystemFlow(CreateInteraction(operation)).ExecuteAsync(context);
         context.Cancellation.Cancel();
         await WaitUntilAsync(
             () =>
             {
-                state.Snapshot(out _, out var currentMessage, out var currentlyAcceptingInput);
+                display.Snapshot(out _, out var currentMessage, out var currentlyAcceptingInput);
                 return currentlyAcceptingInput && currentMessage == "Canceled; ready again";
             });
         Assert.False(execution.IsCompleted);
@@ -145,7 +148,7 @@ public sealed class CounterFlowTests
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken)).HasException);
         Assert.True(state.ExitRequested);
-        state.Snapshot(out _, out var message, out _);
+        display.Snapshot(out _, out var message, out _);
         Assert.Equal("Goodbye", message);
     }
 
@@ -155,8 +158,9 @@ public sealed class CounterFlowTests
     public async Task WindowCloseIntentSurvivesCancellationReset(bool duringReaction)
     {
         var operation = new CounterOperation();
-        var state = new CounterState();
-        using var context = new FlowContext().With(state);
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
+        var display = context.GetRequired<ICounterDisplayAccess>();
 
         var execution = new CounterSystemFlow(CreateInteraction(operation)).ExecuteAsync(context);
 
@@ -166,7 +170,7 @@ public sealed class CounterFlowTests
             await WaitUntilAsync(
                 () =>
                 {
-                    state.Snapshot(out _, out var currentMessage, out _);
+                    display.Snapshot(out _, out var currentMessage, out _);
                     return currentMessage.StartsWith("Working", StringComparison.Ordinal);
                 });
         }
@@ -178,7 +182,7 @@ public sealed class CounterFlowTests
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken)).HasException);
         Assert.Equal(0, state.Count);
-        state.Snapshot(out _, out _, out var acceptingInput);
+        display.Snapshot(out _, out _, out var acceptingInput);
         Assert.False(acceptingInput);
         Assert.False(context.Cancellation.IsCancellationRequested);
     }

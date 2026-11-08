@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using InteractionFlow.Samples.Raylib.Externals;
 using InteractionFlow.Samples.Raylib.Interactions;
@@ -20,7 +21,7 @@ public sealed class FrameInteractionTests
         var counter = new RecordingCounter();
         var window = new TestWindow(() => Assert.Equal(new[] { CounterCommand.Increment }, counter.Commands));
         var input = new TestInput(frame => frame.Command = CounterCommand.Increment);
-        using var context = new FlowContext().With(new FrameState());
+        using var context = new CounterFlowContext().With(new FrameState());
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -34,7 +35,7 @@ public sealed class FrameInteractionTests
         var counter = new RecordingCounter();
         var window = new TestWindow();
         var input = new TestInput(frame => frame.Command = null);
-        using var context = new FlowContext().With(new FrameState { Command = CounterCommand.Exit });
+        using var context = new CounterFlowContext().With(new FrameState { Command = CounterCommand.Exit });
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -57,7 +58,7 @@ public sealed class FrameInteractionTests
             frame.CloseRequested = close;
             frame.CancelRequested = cancel;
         });
-        using var context = new FlowContext().With(new FrameState());
+        using var context = new CounterFlowContext().With(new FrameState());
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -70,12 +71,11 @@ public sealed class FrameInteractionTests
     public async Task BusyFrameInputIsDroppedInsteadOfQueuedForNextRead()
     {
         var counter = new CounterOperation();
-        var state = new CounterState();
+        using var context = new CounterFlowContext();
+        var state = context.GetRequired<ICounterStateAccess>();
         var window = new TestWindow();
         var input = new TestInput(frame => frame.Command = CounterCommand.Increment);
-        using var context = new FlowContext()
-            .With(new FrameState())
-            .With(state);
+        context.With(new FrameState());
         var interaction = CreateInteraction(input, window, counter);
         var firstRead = counter.ReadAsync(context).AsTask();
 

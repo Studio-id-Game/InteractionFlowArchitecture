@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Raylib.Entities;
@@ -17,8 +18,8 @@ internal sealed class CounterOperation : Operation, ICounterOperation
     }
 
     public bool Submit(IFlowContext context, CounterCommand command)
-        => context.GetRequired<CounterState>().TrySubmit(command);
+        => context.GetRequired<ICounterInputAccess>().TrySubmit(command);
 
     public ValueTask<CounterCommand> ReadAsync(IFlowContext context)
-        => context.GetRequired<CounterState>().ReadCommandAsync(context.Cancellation.GetToken());
+        => context.GetRequired<ICounterInputAccess>().ReadCommandAsync(context.Cancellation.GetToken());
 }

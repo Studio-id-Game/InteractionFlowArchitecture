@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
@@ -14,17 +15,16 @@ public sealed class WindowSystemFlow(
     PresentFrame frame,
     CloseWindow close,
     CounterSystemFlow counter)
-    : SystemFlow<IFlowContext>(open, frame, close, counter)
+    : SystemFlow<CounterFlowContext>(open, frame, close, counter)
 {
     // async/await でスレッドを移さず、Open〜Close を呼び出し元のメインスレッドで実行します。
-    protected override Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
+    protected override Task<InteractionEnd> ExecuteCoreAsync(CounterFlowContext context)
     {
-        var state = context.GetRequired<CounterState>();
+        var state = context.GetRequired<ICounterStateAccess>();
         var frames = new FrameState();
 
         // 親あり Context は Cancellation を共有するため、独立したルートを用います。
-        using var frameContext = new FlowContext()
-            .With(state)
+        using var frameContext = context.CreateIndependentContext()
             .With(frames)
             .With(new WindowState());
 
@@ -40,7 +40,7 @@ public sealed class WindowSystemFlow(
     private void RunSession(
         IFlowContext context,
         IFlowContext frameContext,
-        CounterState state,
+        ICounterStateAccess state,
         FrameState frames,
         List<Exception> failures)
     {
@@ -89,7 +89,7 @@ public sealed class WindowSystemFlow(
 
     private static void StopCounter(
         IFlowContext context,
-        CounterState state,
+        ICounterStateAccess state,
         Task<InteractionEnd>? execution,
         List<Exception> failures)
     {

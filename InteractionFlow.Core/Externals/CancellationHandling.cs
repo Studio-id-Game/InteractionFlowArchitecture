@@ -29,15 +29,16 @@ namespace InteractionFlow.Core.Externals
                 static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask before, IFlowContext context, OperationCanceledException exception)
                 {
                     await before.ConfigureAwait(false);
-                    var waitAndResetResult = await context.Cancellation.WaitAndResetAsync().ConfigureAwait(false);
+                    var waitAndResetResult = await context.Cancellation.WaitForTasksAndResetCancellationAsync()
+                        .ConfigureAwait(false);
                     return await @this.AfterCancellationCoreAsync(context, exception, waitAndResetResult).ConfigureAwait(false);
                 }
             }
 
-            var _WaitAndResetAsync = context.Cancellation.WaitAndResetAsync();
-            if (!_WaitAndResetAsync.IsCompletedSuccessfully)
+            var waitAndReset = context.Cancellation.WaitForTasksAndResetCancellationAsync();
+            if (!waitAndReset.IsCompletedSuccessfully)
             {
-                return SlowPathAsync(this, _WaitAndResetAsync, context, exception);
+                return SlowPathAsync(this, waitAndReset, context, exception);
 
                 static async ValueTask<ReactionEnd> SlowPathAsync(CancellationHandling @this, ValueTask<Result> before, IFlowContext context, OperationCanceledException exception)
                 {
@@ -46,7 +47,7 @@ namespace InteractionFlow.Core.Externals
                 }
             }
 
-            return AfterCancellationCoreAsync(context, exception, _WaitAndResetAsync.Result);
+            return AfterCancellationCoreAsync(context, exception, waitAndReset.Result);
         }
 
         /// <summary>

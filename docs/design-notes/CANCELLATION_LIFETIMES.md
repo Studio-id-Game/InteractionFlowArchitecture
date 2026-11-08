@@ -35,6 +35,14 @@ TimeoutAsync(TimeSpan timeoutTime, Task<Result> task) は処理と期限を競�
 以下は決定前の検討記録です。
 現行の接続契約は [Standard Console](../CONSOLE.md#ctrlc-の接続) を参照してください。
 
+## CancellationObject の登録・待機契約の更新（2026-11-08）
+
+Task 登録も IDisposable のスコープへ変更し、正常終了時に登録解除できるようにしました。
+待機中はキャンセル状態を維持し、全対象の終了後にリセットします。待機中の新規登録・重複待機は拒否します。
+旧 WaitAndResetAsync は Obsolete の転送 API とし、WaitForTasksAndResetCancellationAsync を使用します。
+即時・遅延完了で失敗集約を共通化し、通知中 Source の破棄は通知終了まで遅延します。
+現在の契約は [CancellationObject](../CANCELLATION.md) を参照してください。
+
 ## 問題の整理
 
 Parrot では、Console Port を保持する DI Scope の寿命より、Ctrl+C の接続期間や

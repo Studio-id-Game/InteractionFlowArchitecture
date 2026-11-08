@@ -53,7 +53,7 @@ Task は対象の CancellationObject のトークンを使うなど、通知へ�
   また、Cancel コールバック内で TimeoutAsync の完了を同期的に待つと、循環待機になります。
 
 Dispose のために、本体の CancellationObject を破棄・リセット・キャンセルすることはありません。
-WaitAndResetAsync を呼ばず、対象 Task や自身の Task をキャンセル完了の待機一覧へ登録しません。
+WaitForTasksAndResetCancellationAsync を呼ばず、対象 Task や自身の Task をキャンセル完了の待機一覧へ登録しません。
 Interaction のネストに由来する待機範囲の問題を解決する API ではありません。
 
 予約は CancellationObject の期間へ結び付けません。予約が有効なまま外部でリセットすると、

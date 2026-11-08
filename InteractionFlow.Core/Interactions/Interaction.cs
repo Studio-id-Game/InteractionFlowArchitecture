@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
@@ -67,53 +68,65 @@ namespace InteractionFlow.Core.Interactions
         /// <exception cref="Exception">例外処理またはキャンセル処理を担当するポートから未処理の例外が伝播した場合。</exception>
         public async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
         {
+            IDisposable? registration = null;
+            TaskCompletionSource<bool>? completion = null;
+            Exception? cleanupFailure = null;
             ReactionEnd end;
             try
             {
-                if (context.Cancellation.TryGetCanceledException(out var e))
-                {
-                    throw e!;
-                }
+                if (context.Cancellation.TryGetCanceledException(out var e)) throw e!;
 
-                var task = ExecuteCoreAsync(context);
-                var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                context.Cancellation.AddCancelableTask(completion.Task);
-                try
-                {
-                    end = await task.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    try
-                    {
-                        await OnCancellation(context).ConfigureAwait(false);
-                    }
-                    catch (Exception cleanupFailure)
-                    {
-                        // Preserve cleanup failure for the cancellation port's wait/reset result.
-                        // The original cancellation still determines which port handles this execution.
-                        completion.TrySetException(cleanupFailure);
-                    }
-                    throw;
-                }
-                finally
-                {
-                    // Signal before entering either handling port: never wait on our own incomplete notification.
-                    // Ordinary body failures belong to ExceptionPort, not to the cancellation wait list.
-                    completion.TrySetResult(true);
-                }
+                completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                // Reject registration during reset before starting any untracked work.
+                registration = context.Cancellation.AddCancelableTask(completion.Task);
+                end = await ExecuteBodyAndSignalCompletionAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
                 e = new OperationCanceledException($"{this.GetName()} Interaction was canceled.", e);
-                end = await HandleCancellationAsync(context, e).ConfigureAwait(false);
+                end = await HandleCancellationAsync(context, e, cleanupFailure, registration).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 end = await HandleExceptionAsync(context, e).ConfigureAwait(false);
             }
-
+            finally
+            {
+                // A port may throw or skip reset; still observe the private notification's failure.
+                if (cleanupFailure != null) _ = completion!.Task.Exception;
+                registration?.Dispose();
+            }
             return GetEnd(context, end);
+
+            async Task<ReactionEnd> ExecuteBodyAndSignalCompletionAsync()
+            {
+                try
+                {
+                    // Synchronous startup errors bypass OnCancellation, preserving its existing contract.
+                    var task = ExecuteCoreAsync(context);
+                    return await AwaitBodyAndCleanupAsync(task).ConfigureAwait(false);
+                }
+                finally
+                {
+                    // Complete before either port can wait on this execution's notification.
+                    completion!.TrySetResult(true);
+                }
+            }
+
+            async Task<ReactionEnd> AwaitBodyAndCleanupAsync(Task<ReactionEnd> task)
+            {
+                try { return await task.ConfigureAwait(false); }
+                catch (OperationCanceledException)
+                {
+                    try { await OnCancellation(context).ConfigureAwait(false); }
+                    catch (Exception error)
+                    {
+                        cleanupFailure = error;
+                        completion!.TrySetException(error);
+                    }
+                    throw;
+                }
+            }
         }
 
         /// <summary>
@@ -183,7 +196,7 @@ namespace InteractionFlow.Core.Interactions
         /// <remarks>
         /// 開始前キャンセルや、本体が Task を返す前の同期例外では呼びません。
         /// 失敗はキャンセル完了の待機 Task へ保持し、元のキャンセルと共に扱います。
-        /// この処理内で同じ CancellationObject の WaitAndResetAsync を待ってはいけません。
+        /// この処理内で同じ CancellationObject の WaitForTasksAndResetCancellationAsync を待ってはいけません。
         /// </remarks>
         protected virtual Task OnCancellation(IFlowContext context)
         {
@@ -194,11 +207,55 @@ namespace InteractionFlow.Core.Interactions
         /// 指定されたキャンセル例外をキャンセル処理ポートへ委譲します。
         /// </summary>
         /// <param name="context">キャンセルが発生した時点のフローコンテキスト。</param>
-        /// <param name="e">処理するキャンセル例外。</param>
+        /// <param name="cancellation">処理するキャンセル例外。</param>
+        /// <param name="cleanupFailure">保持が必要な後始末の失敗。</param>
+        /// <param name="registration">後始末の失敗を待機側へ渡す登録。</param>
         /// <returns>キャンセル処理後のフロー終了結果。</returns>
-        private async Task<ReactionEnd> HandleCancellationAsync(IFlowContext context, OperationCanceledException e)
+        private async Task<ReactionEnd> HandleCancellationAsync(
+            IFlowContext context, OperationCanceledException cancellation,
+            Exception? cleanupFailure, IDisposable? registration)
         {
-            return await CancellationPort.HandleCancellationAsync(context, e).ConfigureAwait(false);
+            ReactionEnd end;
+            try
+            {
+                end = await CancellationPort.HandleCancellationAsync(context, cancellation).ConfigureAwait(false);
+            }
+            catch (Exception portFailure) when (cleanupFailure != null)
+            {
+                if (ContainsException(portFailure, cleanupFailure)
+                    && ContainsException(portFailure, cancellation.InnerException ?? cancellation)) throw;
+                throw PreserveCancellationFailures(cancellation, cleanupFailure, portFailure);
+            }
+
+            // Once failure was delivered through reset, respect the port's explicit recovery or translation.
+            var collected = registration != null && context.Cancellation.HasCollectedTaskFailure(registration);
+            if (cleanupFailure != null && !collected && (!ContainsException(end.Exception, cleanupFailure)
+                || !ContainsException(end.Exception, cancellation.InnerException ?? cancellation)))
+                throw PreserveCancellationFailures(cancellation, cleanupFailure, end.Exception);
+            return end;
+        }
+
+        private static Exception PreserveCancellationFailures(
+            OperationCanceledException cancellation, Exception cleanupFailure, Exception? portFailure)
+        {
+            var failures = new List<Exception>();
+            if (portFailure != null) failures.Add(portFailure);
+            if (!ContainsException(portFailure, cancellation.InnerException ?? cancellation))
+                failures.Add(cancellation);
+            if (!failures.Exists(error => ContainsException(error, cleanupFailure))) failures.Add(cleanupFailure);
+            return new AggregateException(failures);
+        }
+
+        private static bool ContainsException(Exception? error, Exception expected)
+        {
+            if (ReferenceEquals(error, expected)) return true;
+            if (error is AggregateException aggregate)
+            {
+                foreach (var inner in aggregate.InnerExceptions)
+                    if (ContainsException(inner, expected)) return true;
+                return false;
+            }
+            return error?.InnerException != null && ContainsException(error.InnerException, expected);
         }
 
         /// <summary>

@@ -289,7 +289,7 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
                 context.Cancellation.Cancel();
                 Assert.True(context.Cancellation.IsCancellationRequested);
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => input.ReadLineAsync(context).AsTask());
-                var reset = await context.Cancellation.WaitAndResetAsync();
+                var reset = await context.Cancellation.WaitForTasksAndResetCancellationAsync();
                 Assert.True(reset.Try(out _));
                 Assert.Equal("next", await input.ReadLineAsync(context));
             }
@@ -388,7 +388,8 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
                     () => handler.HandleExceptionAsync(new FlowContext(), error).AsTask()));
 
                 var context = new FlowContext();
-                context.Cancellation.AddCancelableTask(Task.FromException(new IOException("task failed")));
+                using var registration = context.Cancellation.AddCancelableTask(
+                    Task.FromException(new IOException("task failed")));
                 context.Cancellation.Cancel();
                 end = await new ConsoleCancellationHandling()
                     .HandleCancellationAsync(context, new OperationCanceledException());

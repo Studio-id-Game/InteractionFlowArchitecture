@@ -165,7 +165,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             Assert.Equal(0, interaction.HookCount);
             Assert.Equal(0, cancellations.AfterCount);
             context.Cancellation.Cancel();
-            var reset = await context.Cancellation.WaitAndResetAsync();
+            var reset = await context.Cancellation.WaitForTasksAndResetCancellationAsync();
             Assert.True(reset.Try(out _));
         }
 
@@ -174,7 +174,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
         {
             var context = new FlowContext();
             var other = Signal();
-            context.Cancellation.AddCancelableTask(other.Task);
+            using var registration = context.Cancellation.AddCancelableTask(other.Task);
             var cancellations = new Cancellations();
             var interaction = new Probe(new Errors(), cancellations) { Body = CancelBody };
             var execution = interaction.ExecuteAsync(context);
@@ -267,6 +267,138 @@ namespace InteractionFlow.Standard.Tests.Interactions
             Assert.Equal(1, interaction.HookCount);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CleanupAndPortFailuresArePreservedEvenWhenThePortCannotFinish(bool afterReset)
+        {
+            var context = new FlowContext();
+            var original = new OperationCanceledException("Body cancelled");
+            var cleanup = new FormatException("Cleanup failed");
+            var portFailure = new InvalidOperationException("Port failed");
+            var port = new Cancellations { Failure = portFailure, FailAfterReset = afterReset };
+            var interaction = new Probe(new Errors(), port)
+            {
+                Body = current =>
+                {
+                    current.Cancellation.Cancel();
+                    return Task.FromException<ReactionEnd>(original);
+                },
+                Hook = _ => throw cleanup
+            };
+            var actual = await Assert.ThrowsAsync<AggregateException>(() => Finish(interaction.ExecuteAsync(context)));
+            var leaves = Leaves(actual).ToArray();
+            Assert.Equal(3, leaves.Length);
+            Assert.Contains(original, leaves);
+            Assert.Contains(cleanup, leaves);
+            Assert.Contains(portFailure, leaves);
+            Assert.False(context.Cancellation.HasTask);
+            if (!afterReset)
+            {
+                // The registration is released even though the port never drained it.
+                Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task APortCannotSilentlyDiscardCleanupFailureBySkippingReset(bool returnFailure)
+        {
+            var context = new FlowContext();
+            var cleanup = new FormatException("Cleanup failed");
+            var original = new OperationCanceledException("Body cancelled");
+            var returnedFailure = new InvalidOperationException("Port result failed");
+            var port = new NonResettingPort
+            {
+                Reply = _ => Ends.Create(returnFailure ? returnedFailure : null)
+            };
+            var interaction = new Probe(new Errors(), port)
+            {
+                Body = current =>
+                {
+                    current.Cancellation.Cancel();
+                    return Task.FromException<ReactionEnd>(original);
+                },
+                Hook = _ => throw cleanup
+            };
+            var actual = await Assert.ThrowsAsync<AggregateException>(() => Finish(interaction.ExecuteAsync(context)));
+            var leaves = Leaves(actual).ToArray();
+            Assert.Equal(returnFailure ? 3 : 2, leaves.Length);
+            Assert.Contains(original, leaves);
+            Assert.Contains(cleanup, leaves);
+            if (returnFailure) Assert.Contains(returnedFailure, leaves);
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+        }
+
+        [Fact]
+        public async Task APortResultThatAlreadyContainsBothFailuresIsNotWrappedAgain()
+        {
+            var context = new FlowContext();
+            var cleanup = new FormatException("Cleanup failed");
+            var original = new OperationCanceledException("Body cancelled");
+            var returned = Ends.Create(new AggregateException(original, cleanup));
+            var port = new NonResettingPort { Reply = _ => returned };
+            var interaction = new Probe(new Errors(), port)
+            {
+                Body = current =>
+                {
+                    current.Cancellation.Cancel();
+                    return Task.FromException<ReactionEnd>(original);
+                },
+                Hook = _ => throw cleanup
+            };
+            var end = await Finish(interaction.ExecuteAsync(context));
+            Assert.Same(returned, end.End);
+            Assert.Equal([original, cleanup], Leaves(end.Exception!));
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task APortMayRecoverOrTranslateAfterReceivingCleanupFailureThroughReset(bool translate)
+        {
+            var context = new FlowContext();
+            var cleanup = new FormatException("Cleanup failure is handled by the port");
+            var translated = new InvalidOperationException("Replacement failure from the port");
+            var port = new Cancellations
+            {
+                RecoverCleanupFailure = true,
+                ReplacementFailure = translate ? translated : null
+            };
+            var interaction = new Probe(new Errors(), port)
+            {
+                Body = CancelBody,
+                Hook = _ => throw cleanup
+            };
+            var end = await Finish(interaction.ExecuteAsync(context));
+            Assert.Equal(translate, end.HasException);
+            if (translate) Assert.Same(translated, end.Exception);
+            Assert.False(port.ResetResult.Try(out var error));
+            Assert.Contains(cleanup, Leaves(error!));
+            Assert.False(context.Cancellation.IsCancellationRequested);
+        }
+
+        [Fact]
+        public async Task SharedBodyAndCleanupExceptionIsNotAddedTwiceInFallback()
+        {
+            var context = new FlowContext();
+            var shared = new OperationCanceledException("Same failure instance");
+            var interaction = new Probe(new Errors(), new NonResettingPort())
+            {
+                Body = current =>
+                {
+                    current.Cancellation.Cancel();
+                    return Task.FromException<ReactionEnd>(shared);
+                },
+                Hook = _ => throw shared
+            };
+            var actual = await Assert.ThrowsAsync<AggregateException>(() => Finish(interaction.ExecuteAsync(context)));
+            Assert.Same(shared, Assert.Single(Leaves(actual)));
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+        }
+
         private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
         private static async Task<FlowEndToken> Finish(Task<FlowEndToken> execution)
             => await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
@@ -313,12 +445,15 @@ namespace InteractionFlow.Standard.Tests.Interactions
             public OperationCanceledException? Original { get; private set; }
             public Result ResetResult { get; private set; }
             public Exception? Failure { get; set; }
+            public bool FailAfterReset { get; set; }
+            public bool RecoverCleanupFailure { get; set; }
+            public Exception? ReplacementFailure { get; set; }
             public override void ForceResetMemoryState() { }
             protected override ValueTask BeforeCancellationCoreAsync(IFlowContext context, OperationCanceledException error)
             {
                 BeforeCount++;
                 Original = error;
-                if (Failure != null) throw Failure;
+                if (Failure != null && !FailAfterReset) throw Failure;
                 return default;
             }
             protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(
@@ -326,8 +461,20 @@ namespace InteractionFlow.Standard.Tests.Interactions
             {
                 AfterCount++;
                 ResetResult = result;
+                if (Failure != null && FailAfterReset) throw Failure;
+                if (RecoverCleanupFailure) return new(GetEnd(ReplacementFailure));
                 return new(GetEnd(result.Try(out var failure) ? null : new AggregateException(error, failure)));
             }
+        }
+
+        private sealed class NonResettingPort : ExceptionHandling<OperationCanceledException>, ICancellationPort
+        {
+            public Func<OperationCanceledException, ReactionEnd> Reply { get; set; } = _ => Ends.Create();
+            public override void ForceResetMemoryState() { }
+            public ValueTask<ReactionEnd> HandleCancellationAsync(IFlowContext context, OperationCanceledException error)
+                => new(Reply(error));
+            protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(
+                IFlowContext context, OperationCanceledException error) => HandleCancellationAsync(context, error);
         }
 
         private sealed class Ends : Reaction
@@ -342,7 +489,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             if (error is AggregateException aggregate) return aggregate.InnerExceptions.SelectMany(Leaves);
             if (error is OperationCanceledException cancellation && cancellation.InnerException != null)
                 return Leaves(cancellation.InnerException);
-            return new[] { error };
+            return [error];
         }
     }
 }

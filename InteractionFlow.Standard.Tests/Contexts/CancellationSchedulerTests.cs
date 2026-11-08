@@ -102,7 +102,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 .WaitAsync(TimeSpan.FromSeconds(5), TestCancellation);
             Assert.False(result.Try(out var error));
             Assert.IsType<AggregateException>(error!.InnerException);
-            Assert.Equal(new Exception[] { notificationFailure, workFailure }, Leaves(error));
+            Assert.Equal([notificationFailure, workFailure], Leaves(error));
         }
 
         [Fact]
@@ -116,13 +116,13 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var work = Work();
             using var registration = cancellation.GetToken().Register(() =>
             {
-                work.SetException(new Exception[] { firstFailure, secondFailure });
+                work.SetException([firstFailure, secondFailure]);
                 throw notificationFailure;
             });
             var result = await scheduler.TimeoutAsync(TimeSpan.Zero, work.Task)
                 .WaitAsync(TimeSpan.FromSeconds(5), TestCancellation);
             Assert.False(result.Try(out var error));
-            Assert.Equal(new Exception[] { notificationFailure, firstFailure, secondFailure }, Leaves(error!));
+            Assert.Equal([notificationFailure, firstFailure, secondFailure], Leaves(error!));
         }
 
         [Fact]
@@ -146,7 +146,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var result = await scheduler.TimeoutAsync(TimeSpan.Zero, work.Task)
                 .WaitAsync(TimeSpan.FromSeconds(5), TestCancellation);
             Assert.False(result.Try(out var error));
-            var exception = Assert.IsAssignableFrom<OperationCanceledException>(error!.InnerException);
+            var exception = Assert.IsType<OperationCanceledException>(error!.InnerException, exactMatch: false);
             Assert.Equal(token, exception.CancellationToken);
         }
 
@@ -276,7 +276,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         {
             if (error is ResultException wrapper && wrapper.InnerException != null) return Leaves(wrapper.InnerException);
             if (error is AggregateException aggregate) return aggregate.InnerExceptions.SelectMany(Leaves);
-            return new[] { error };
+            return [error];
         }
     }
 }

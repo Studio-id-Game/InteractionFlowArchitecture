@@ -7,209 +7,224 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
-    /// <summary>
-    /// フロー実行中のキャンセル要求と、キャンセル対象タスクの待機・リセットを管理します。
-    /// </summary>
+    /// <summary>キャンセル要求と、登録 Task の完了待機・キャンセル状態のリセットを管理します。</summary>
     public class CancellationObject
     {
-        // 通常のフローでは登録タスク数は少ないため、毎回走査せず、
-        // 完了済みタスクの保持コストが走査コストを上回り始める目安として 64 件から取り除く。
-        private const int CompactTaskCountThreshold = 64;
+        private sealed class CancellationState
+        {
+            public CancellationTokenSource Source { get; } = new();
+            public int ActiveNotifications { get; set; }
+            public bool Retired { get; set; }
+        }
 
-        private readonly object lockObject = new();
+        private sealed class TaskRegistration(CancellationObject owner, Task task) : IDisposable
+        {
+            private CancellationObject? owner = owner;
+            public Task? Task { get; private set; } = task;
+            public bool FailureCollected { get; set; }
 
-        private CancellationTokenSource? tokenSource;
+            public void Dispose()
+            {
+                var currentOwner = owner;
+                if (currentOwner is null) return;
+                lock (currentOwner.gate)
+                {
+                    if (owner is null) return;
+                    currentOwner.registrations.Remove(this);
+                    Detach();
+                }
+            }
 
-        private readonly List<Task> currentTasks = [];
+            // Called only while holding the owner's gate.
+            public void Detach()
+            {
+                owner = null;
+                Task = null;
+            }
+        }
 
-        /// <summary>
-        /// 未完了の登録済みキャンセル対象タスクが存在するかどうかを取得します。
-        /// </summary>
+        private readonly object gate = new();
+        private readonly List<TaskRegistration> registrations = [];
+        private CancellationState? state;
+        private Task[]? waitingTasks;
+
+        /// <summary>現在の登録、または確定済みの待機対象に未完了 Task があるかを返します。</summary>
         public bool HasTask
         {
             get
             {
-                lock (lockObject)
+                lock (gate)
                 {
-                    return currentTasks.Any(e => !e.IsCompleted);
+                    return waitingTasks != null
+                        ? waitingTasks.Any(task => !task.IsCompleted)
+                        : registrations.Any(registration => !registration.Task!.IsCompleted);
                 }
             }
         }
 
-        /// <summary>
-        /// 現在のキャンセルトークンにキャンセルが要求されているかどうかを取得します。
-        /// </summary>
+        /// <summary>現在のキャンセル要求状態。登録 Task の待機中も true を維持します。</summary>
         public bool IsCancellationRequested
         {
-            get
-            {
-                lock (lockObject)
-                {
-                    return tokenSource?.IsCancellationRequested ?? false;
-                }
-            }
+            get { lock (gate) { return state?.Source.IsCancellationRequested ?? false; } }
         }
 
-        /// <summary>
-        /// キャンセル時に完了を待機する対象タスクを登録します。
-        /// </summary>
-        /// <param name="task">キャンセル後のリセット時に待機するタスク。</param>
-        public void AddCancelableTask(Task task)
+        /// <summary>キャンセル時の待機対象へ登録し、登録解除用のスコープを返します。</summary>
+        /// <remarks>
+        /// 所有者が Task の結果を受け取り、返却スコープを破棄してください。
+        /// Dispose は登録解除だけを行い、Task のキャンセル・待機・破棄は行いません。
+        /// 同じ Task の複数登録は独立しています。待機開始後の登録は拒否します。
+        /// </remarks>
+        public IDisposable AddCancelableTask(Task task)
         {
-            lock (lockObject)
+            if (task is null) throw new ArgumentNullException(nameof(task));
+            lock (gate)
             {
-                tokenSource ??= new();
-
-                if (currentTasks.Count >= CompactTaskCountThreshold)
-                {
-                    currentTasks.RemoveAll(e => e.IsCompleted);
-                }
-
-                currentTasks.Add(task);
+                if (waitingTasks != null)
+                    throw new InvalidOperationException(
+                        "Cannot register tasks while cancellation reset is in progress.");
+                state ??= new CancellationState();
+                var registration = new TaskRegistration(this, task);
+                registrations.Add(registration);
+                return registration;
             }
         }
 
-        /// <summary>
-        /// 現在のキャンセルトークンにキャンセルを要求します。
-        /// </summary>
+        /// <summary>現在のキャンセル元へ同期的に通知します。Task の待機・リセットは行いません。</summary>
+        /// <remarks>通知先の例外は呼び出し元へ伝播します。通知中のキャンセル元はリセット時にも破棄しません。</remarks>
         public void Cancel()
         {
-            CancellationTokenSource source;
-
-            lock (lockObject)
+            CancellationState current;
+            lock (gate)
             {
-                tokenSource ??= new();
-                source = tokenSource;
+                current = state ??= new CancellationState();
+                if (current.Source.IsCancellationRequested) return;
+                current.ActiveNotifications++;
             }
-
-            if (!source.IsCancellationRequested)
-                source.Cancel();
+            try
+            {
+                // User callbacks may re-enter this object; never invoke them while holding gate.
+                current.Source.Cancel();
+            }
+            finally
+            {
+                lock (gate)
+                {
+                    current.ActiveNotifications--;
+                    if (current.Retired && current.ActiveNotifications == 0) current.Source.Dispose();
+                }
+            }
         }
 
-        /// <summary>
-        /// キャンセル要求がある場合、登録済みタスクをすべて待機してキャンセル状態をリセットします。
-        /// </summary>
-        /// <returns>
-        /// 待機とリセットの結果。
-        /// キャンセル要求がない場合は、<see cref="InvalidOperationException"/> を持つ失敗結果を返します。
-        /// キャンセル要求後、登録タスクが正常完了またはキャンセル完了した場合は成功結果を返します。
-        /// キャンセル以外の理由で失敗した登録タスクがある場合は、それらの例外を
-        /// <see cref="AggregateException"/> に集約した失敗結果を返します。
-        /// </returns>
-        public ValueTask<Result> WaitAndResetAsync()
+        /// <summary>登録 Task の終了をすべて待ち、失敗を集約してからキャンセル状態をリセットします。</summary>
+        /// <returns>正常・キャンセル完了は成功。Faulted Task の例外は AggregateException に保持します。</returns>
+        /// <remarks>
+        /// 要求なし・重複リセットは失敗 Result です。待機中の新規登録は拒否します。
+        /// 待機開始後に登録スコープが破棄されても、確定済みの Task は待ちます。
+        /// 通知中の Source の実際の破棄は、最後の Cancel 呼び出しの終了まで遅延します。
+        /// </remarks>
+        public ValueTask<Result> WaitForTasksAndResetCancellationAsync()
         {
-            CancellationTokenSource source;
+            CancellationState current;
             Task[] tasks;
-            bool isCompleted;
-
-            lock (lockObject)
+            TaskRegistration[] snapshot;
+            lock (gate)
             {
-                if (tokenSource == null || !tokenSource.IsCancellationRequested)
+                if (waitingTasks != null)
+                    return new(new InvalidOperationException("Cancellation reset is already in progress."));
+                if (state is null || !state.Source.IsCancellationRequested)
                     return new(new InvalidOperationException("Cancellation is not requested."));
-
-                source = tokenSource;
-                tasks = [.. currentTasks];
-                currentTasks.Clear();
-                tokenSource = null;
-                isCompleted = tasks.Length == 0 || tasks.All(e => e.IsCompleted);
+                current = state;
+                snapshot = [.. registrations];
+                tasks = [.. snapshot.Select(registration => registration.Task!)];
+                waitingTasks = tasks;
             }
 
-            if (isCompleted)
+            if (!tasks.All(task => task.IsCompleted)) return new(WaitAndResetCoreAsync(current, snapshot, tasks));
+            try { return new(CollectFailures(snapshot, tasks)); }
+            finally { FinishReset(current); }
+        }
+
+        private async Task<Result> WaitAndResetCoreAsync(
+            CancellationState current, TaskRegistration[] snapshot, Task[] tasks)
+        {
+            try
             {
-                source.Dispose();
-
-                return new(GetCompletedResult(tasks));
-            }
-
-            return new(WaitAllAsync(source, tasks));
-
-            static Result GetCompletedResult(Task[] tasks)
-            {
-                var exceptions = tasks
-                    .Where(e => e.IsFaulted)
-                    .SelectMany(e => e.Exception?.InnerExceptions ?? Enumerable.Empty<Exception>())
-                    .ToArray();
-
-                if (exceptions.Length == 0)
-                    return Result.Success;
-
-                return new AggregateException(exceptions);
-            }
-
-            static async Task<Result> WaitAllAsync(CancellationTokenSource source, Task[] tasks)
-            {
-                try
+                foreach (var task in tasks)
                 {
-                    List<Exception>? exceptions = null;
-
-                    foreach (var task in tasks)
+                    try { await task.ConfigureAwait(false); }
+                    catch (Exception)
                     {
-                        try
-                        {
-                            await task.ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                        }
-                        catch (Exception e)
-                        {
-                            exceptions ??= [];
-
-                            if (task.Exception == null)
-                            {
-                                exceptions.Add(e);
-                            }
-                            else
-                            {
-                                exceptions.AddRange(task.Exception.InnerExceptions);
-                            }
-                        }
+                        // Inspect final Task states below, including faulted OperationCanceledExceptions.
                     }
-
-                    if (exceptions == null || exceptions.Count == 0)
-                        return Result.Success;
-
-                    return new AggregateException(exceptions);
                 }
-                finally
-                {
-                    source.Dispose();
-                }
+                return CollectFailures(snapshot, tasks);
+            }
+            finally { FinishReset(current); }
+        }
+
+        private Result CollectFailures(TaskRegistration[] snapshot, Task[] tasks)
+        {
+            List<Exception>? failures = null;
+            foreach (var task in tasks)
+            {
+                if (!task.IsFaulted) continue;
+                failures ??= [];
+                failures.AddRange(task.Exception!.InnerExceptions);
+            }
+            Result result = failures is null ? Result.Success : new AggregateException(failures);
+            lock (gate)
+            {
+                // Record transfer to the wait result, not whether a port chose to retain or recover the failure.
+                for (var i = 0; i < tasks.Length; i++)
+                    if (tasks[i].IsFaulted) snapshot[i].FailureCollected = true;
+            }
+            return result;
+        }
+
+        internal bool HasCollectedTaskFailure(IDisposable registration)
+        {
+            lock (gate) { return registration is TaskRegistration task && task.FailureCollected; }
+        }
+
+        private void FinishReset(CancellationState current)
+        {
+            lock (gate)
+            {
+                foreach (var registration in registrations) registration.Detach();
+                registrations.Clear();
+                waitingTasks = null;
+                state = null;
+                current.Retired = true;
+                if (current.ActiveNotifications == 0) current.Source.Dispose();
             }
         }
 
-        /// <summary>
-        /// 現在のキャンセルトークンを取得します。未作成の場合は新しく作成します。
-        /// </summary>
-        /// <returns>キャンセル制御に使用するトークン。</returns>
+        /// <summary>登録 Task の終了を待ち、キャンセル状態をリセットします。</summary>
+        [Obsolete("Use WaitForTasksAndResetCancellationAsync instead.")]
+        public ValueTask<Result> WaitAndResetAsync() => WaitForTasksAndResetCancellationAsync();
+
+        /// <summary>現在のトークンを取得します。待機・リセット中はキャンセル済みのトークンを返します。</summary>
         public CancellationToken GetToken()
         {
-            lock (lockObject)
+            lock (gate)
             {
-                tokenSource ??= new();
-                return tokenSource.Token;
+                state ??= new CancellationState();
+                return state.Source.Token;
             }
         }
 
-        /// <summary>
-        /// キャンセル要求がある場合、そのトークンに紐づく <see cref="OperationCanceledException"/> を作成します。
-        /// </summary>
-        /// <param name="canceledException">キャンセル要求がある場合に作成された例外。</param>
-        /// <returns>キャンセル要求がある場合は <see langword="true"/>。</returns>
+        /// <summary>要求済みの場合、現在のトークンに紐づくキャンセル例外を作成します。</summary>
         public bool TryGetCanceledException([MaybeNullWhen(false)] out OperationCanceledException canceledException)
         {
-            lock (lockObject)
+            lock (gate)
             {
-                if (tokenSource?.IsCancellationRequested ?? false)
+                if (state?.Source.IsCancellationRequested ?? false)
                 {
-                    canceledException = new OperationCanceledException(tokenSource.Token);
+                    canceledException = new OperationCanceledException(state.Source.Token);
                     return true;
                 }
-                else
-                {
-                    canceledException = null;
-                    return false;
-                }
+                canceledException = null;
+                return false;
             }
         }
     }

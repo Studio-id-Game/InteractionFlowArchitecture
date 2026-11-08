@@ -723,148 +723,30 @@ public void RunWithContext(IFlowContext context)
 
 ソースコード: [`CancellationObject.cs`](../InteractionFlow.Core/Entities/Contexts/CancellationObject.cs)
 
-`IFlowContext.Cancellation { get; }` は `CancellationObject` のインスタンスを保持・提供します。
+IFlowContext.Cancellation は、要求の通知と登録 Task の終了待機を管理する CancellationObject を提供します。
 
-`CancellationObject` は、キャンセルトークンソース（`private CancellationTokenSource? tokenSource`）と、キャンセル時に完了を待つタスク（`private readonly List<Task> currentTasks`）を持ち、キャンセル処理の管理を自身のインスタンスによって単位化します。
-
-主要な関数は以下の通りです。
-
-| 関数 | 機能の要約 |
+| 関数 | 役割 |
 | --- | --- |
-| `CancellationToken GetToken()` | タスク実行側として、キャンセル要求を処理するために、トークンを取得する。キャンセル処理のタイミングや内容は呼び出し側が実装する。|
-| `void AddCancelableTask(Task task)` | タスク実行側として、タスク待機側に待機してほしいタスクを登録する。|
-| `ValueTask<Result> WaitAndResetAsync()` | タスク待機側として、タスク実行側が待機してほしいタスクを待機する。|
-| `void Cancel()` | タスク停止要求側で、キャンセルトークンを通じてタスク実行側にキャンセルを要求する。タスクそのものを強制終了するのではなく、要求のみを伝える。|
-
-> 1. タスク停止要求側は、キャンセル要求のみを伝えます。
-> 2. タスク実行側は、待機してほしいタスクを登録しつつ、キャンセル要求を監視・処理します。
-> 3. タスク待機側は、登録されたタスクを待機します。
-
-これにより、安全なキャンセルの要求・処理・待機を実装できます。
-また、`CancellationObject` の状態は必要なタイミングで初期化され、何度でも安全に使いまわすことができます。
-
-<details>
-
-<summary> CancellationObject の実装コードの要約 </summary>
+| `GetToken()` | 現在のトークンを取得する。待機中もキャンセル済み状態を維持する |
+| `AddCancelableTask(Task)` | 待機対象を登録し、登録解除用の IDisposable を返す |
+| `Cancel()` | 現在の対象へ同期的に通知する。Task の終了は待たない |
+| `WaitForTasksAndResetCancellationAsync()` | 確定した全登録 Task を待ち、失敗を集約してからリセットする |
 
 ```csharp
-// CancellationObject
-public class CancellationObject
-{
-  private CancellationTokenSource? tokenSource;
-  private readonly List<Task> currentTasks = [];
-
-  ...
-
-  // トークンの取得
-  public CancellationToken GetToken()
-  {
-      lock (lockObject)
-      {
-          tokenSource ??= new();
-          return tokenSource.Token;
-      }
-  }
-
-  // 待機タスクの追加
-  public void AddCancelableTask(Task task)
-  {
-    lock (lockObject)
-    {
-      ...
-
-      currentTasks.Add(task);
-    }
-  }
-
-  // キャンセルリクエスト
-  public void Cancel()
-  {
-    CancellationTokenSource source;
-
-    lock (lockObject)
-    {
-      tokenSource ??= new();
-      source = tokenSource;
-    }
-
-    if (!source.IsCancellationRequested)
-      source.Cancel();
-  }
-
-  // キャンセル待機
-  public ValueTask<Result> WaitAndResetAsync()
-  {
-    CancellationTokenSource source;
-    Task[] tasks;
-    bool isCompleted;
-
-    lock (lockObject)
-    {
-      // キャンセルがリクエストされていなければ即時失敗で終了
-      if (tokenSource == null || !tokenSource.IsCancellationRequested)
-        return new(new InvalidOperationException("Cancellation is not requested."));
-
-      // source / tasks / isCompleted で状態をスナップショット化
-      source = tokenSource;
-      tasks = [.. currentTasks];
-      tokenSource = null;
-      currentTasks.Clear();
-      isCompleted = tasks.Length == 0 || tasks.All(e => e.IsCompleted);
-    }
-
-    if (isCompleted)
-    {
-      // 全てのタスクが終了していれば即時終了
-      // 例外があれば AggregateException で集約し、Result として返す。
-      source.Dispose();
-      return new(GetCompletedResult(tasks));
-    }
-
-    // すべてのタスクを待機する。
-    // キャンセルは無視、それ以外の例外はすべて集約して Result として返す。
-    // 最後に CancellationTokenSource を必ず破棄する。
-    return new(WaitAllAsync(source, tasks));
-  }
-
-  ...
-}
+var task = DoWorkAsync(cancellation.GetToken());
+using var registration = cancellation.AddCancelableTask(task);
+await task;
 ```
 
-</details>
+処理の所有者が結果を受け取り、登録の寿命を閉じます。登録スコープの Dispose は Task 自体を停止・破棄しません。
+待機開始後の登録は拒否しますが、登録解除によって確定済みの待機対象を取り消すことはありません。
+即時・非同期の完了経路で同じ失敗集約を行い、Faulted Task の例外を保持します。
+通知中の Source は最後の Cancel 呼び出しの終了まで破棄を遅延し、コールバックを内部ロック外で実行します。
 
-#### `Interaction` での利用例
+Interaction は完了通知 Task を登録し、本体と OnCancellation の完了を通知してから Port の処理へ進みます。
+登録スコープは Port の処理後に解除します。SystemFlow はその Interaction の終了結果から次の相互作用を決めます。
 
-主な利用例は `Interaction` 基底実装における `OnCancellation` の自動実行です。
-この処理は以下のような時系列で実行されます。
-
-
-| 時系列 | その他制御 | `Interaction` の内部制御 |
-| :---: | :--- | :--- |
-| T1 | **`SystemFlow`**: `Interaction.ExecuteAsync()` を実行 | **`ExecuteAsync()`**: `ExecuteCoreAsync()` を実行、 `CancelableTask` を作成・実行して `CancellationObject.AddCancelableTask(CancelableTask)` で登録、`ExecuteCoreAsync()` を待機 <br/><br/> **`CancelableTask`**: `ExecuteCoreAsync()` を待機 <br/><br/>**`ExecuteCoreAsync()`**: Interaction としてのメイン処理を実行、`CancellationObject.GetToken()` で `CancellationToken` を取得・監視 |
-| T2 | **`外部トリガー`**: `IFlowContext.Cancellation` を通じて `Cancel()` を呼び、キャンセルを通知（待機はしない）<br/><br/> **`HandleCancellationAsync()`**: `IFlowContext.Cancellation` を通じて `await WaitAndResetAsync()` でキャンセルを待機 |  **`ExecuteCoreAsync()`**: キャンセルの通知に応じて安全に処理をキャンセル扱いで終了 <br/><br/>**`CancelableTask`**: `ExecuteCoreAsync()` がキャンセル扱いで終了したら、`OnCancellation()` を実行・待機 <br/><br/>**`ExecuteAsync()`**: `ExecuteCoreAsync()` がキャンセル扱いで終了したら、`HandleCancellationAsync()` を実行・待機 |
-| T3 | **`SystemFlow`**: `Interaction.ExecuteAsync()` の待機を完了 <br/><br/>**`HandleCancellationAsync()`**: `CancellationObject.WaitAndResetAsync()` を通じて `Interaction.OnCancellation()` の待機が完了、キャンセル後のハンドリングを実行・完了 | **`OnCancellation()`**: Interaction としてのキャンセル処理を実行・完了<br/><br/> **`CancelableTask`**: `OnCancellation()` の完了に伴って終了 <br/><br/> **`ExecuteAsync()`**: `HandleCancellationAsync()` の完了に伴って終了 |
-
-#### この設計の利点
-
-この設計では、`CancellationObject` が **キャンセルのライフサイクル全体** を管理します。
-
-`CancellationObject` は、キャンセル要求の通知、実行中タスクの管理、キャンセル完了の待機、そして内部状態のリセットまでを一貫して担当します。
-
-まず、`CancellationObject.Cancel()` はキャンセルを通知するだけで、処理の完了を待機しません。
-そのため、UI や上位の `SystemFlow` は、キャンセル処理の終了を待つことなく次の制御へ進めます。
-
-一方、キャンセル完了まで待機する必要がある場合は、`CancellationObject.WaitAndResetAsync()` を利用します。
-このメソッドは、呼び出し時点で登録されている全ての待機タスクが **完了**・**キャンセル停止**・**例外停止** のいずれかの状態になるまで、待機を続けます。
-
-特に「`Interaction` での利用例」では、`CancelableTask` を `CancellationObject` の管理対象として登録しています。
-この `CancelableTask` は `ExecuteCoreAsync()` の終了だけでなく、`OnCancellation()` による終了処理まで完了したことを保証しているため、`WaitAndResetAsync()` も同様にこの完了を保証します。
-
-このように、キャンセルの通知と完了待機を分離することで、通知する側は `Cancel()` を呼び出すだけでよく、待機する側は `WaitAndResetAsync()` のみを待機すればよくなります。
-また、`Interaction` は終了処理を `OnCancellation()` に分離でき、`SystemFlow` は `ExecuteAsync()` を一つの待機対象として扱えます。
-
-さらに、`CancellationObject` を `IFlowContext` から提供することで、実行構造に応じて、関連する処理には同じ停止要求を共有できます。
-これにより、キャンセルの伝播を保ちながら、処理の終了待機を安全に管理できます。
+詳細な寿命・失敗・競合・移行の契約は [CancellationObject](./CANCELLATION.md) を参照してください。
 
 ## 機能の分離 (Functions) <a id="functions"></a>
 
@@ -1697,11 +1579,16 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
   → OnCancellation を待つ
   → 完了通知を確定する（後始末の失敗は通知 Task に保持）
   → CancellationPort の前処理
-  → WaitAndResetAsync
+  → WaitForTasksAndResetCancellationAsync
   → キャンセル後の反応
 ```
 
-完了通知を確定してから Port へ進むため、WaitAndResetAsync が自分自身の未完了通知を待つことを避けます。
+完了通知を確定してから Port へ進むため、WaitForTasksAndResetCancellationAsync が自分自身の未完了通知を待つことを避けます。
+登録スコープは Port の処理まで保持し、正常・失敗を問わず最後に解除します。
+Port が待機・集約を完了できず後始末の失敗を保持しない場合は、元のキャンセルと Port の失敗も含めて伝播します。
+待機結果へ失敗を渡した後の Port による回復・変換は尊重します。
+既に結果・例外へ含まれている失敗は重複集約しません。
+
 本体の通常例外では完了通知を成功にし、元の例外は ExceptionPort にだけ委譲します。
 これにより、後のキャンセル待機で本体の例外を重複報告しません。
 
@@ -1711,7 +1598,7 @@ OnCancellation が失敗した場合（その Task のキャンセル完了も�
 元の本体キャンセルは引き続き CancellationPort へ渡します。
 
 従来は OnCancellation と CancellationPort の前処理が並行し得ましたが、現在は上記の順序を明示しています。
-OnCancellation 内から同じ CancellationObject の WaitAndResetAsync を待つと、
+OnCancellation 内から同じ CancellationObject の WaitForTasksAndResetCancellationAsync を待つと、
 自身の完了通知を待つ循環になるため、このフックでは後始末だけを行います。
 Interaction 同士の共有 Context による直接ネストの循環待機を解消する変更ではありません。
 

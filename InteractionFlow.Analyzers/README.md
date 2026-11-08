@@ -12,6 +12,10 @@
 Interaction Flow の実装規則を Roslyn Analyzer として検査するプロジェクトです。
 現在は、レイヤー依存関係規則と `IDependencyNode` 宣言規則の 2 種類の診断を提供します。
 
+追加検査・構成解析・Context 引数生成の計画は
+[Analyzer と Context 引数ジェネレーターの計画](../docs/design-notes/ANALYZER_AND_CONTEXT_GENERATOR_PLAN.md) を参照してください。
+計画中の機能は、現在の診断には含まれません。
+
 ## 診断 ID
 
 | ID | 目的 | 既定の重大度 |

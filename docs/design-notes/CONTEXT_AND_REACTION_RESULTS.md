@@ -4,7 +4,8 @@
 
 Parrot 移行後の振り返りを受けた設計検討の記録です。
 ユーザーの検討方針と、それに対するエージェントの意見を区別して残します。
-コード生成は未実装・未決定です。ReactionEnd の Result 保持と InteractionEnd の Context 保持廃止を試行しました。
+コード生成は未実装です。後続の合意と未決定事項は
+[Analyzer と Context 引数ジェネレーターの計画](./ANALYZER_AND_CONTEXT_GENERATOR_PLAN.md) にまとめています。ReactionEnd の Result 保持と InteractionEnd の Context 保持廃止を試行しました。
 現行仕様は [Reaction とフローの結果](../REACTION_RESULTS.md) を参照してください。
 以下の検討記録は変更前の背景を含みます。
 必須値取得の最小 API として GetRequired<T>() と専用例外を追加しました。

@@ -28,7 +28,7 @@ namespace InteractionFlow.Samples.HelloDoor
             using var scope = builder.BuildScope();
             using var flow = scope.BuildSystemFlow<DoorSystemFlow, IFlowContext>();
 
-            using var context = new ScopedFlowContext(new FlowContext())
+            using var context = new FlowContext()
                 .With(new DoorState { IsOpen = false });
 
             var end = await flow.ExecuteAsync(context);

@@ -534,7 +534,7 @@ Domain や Storage から移さないことの根拠になります。
 
 - `ContextTape` の実現に必要な状態を単一の `IFlowContext` に集約せず、複数の場所へ分散できる
   - Operation と Reaction が、相互作用に伴う入出力を翻訳・加工するための状態を保持できる
-  - `ScopedFlowContext` によって一時的な文脈を重ねられる
+  - `FlowContext` によって一時的な文脈を重ねられる
 - システムの計算能力（チューリング完全性）は `ContextTape` の無限性に依存しない
   - Storage や Domain が、計算能力に必要な計算テープを担う
 - `IFlowContext` が System Flow の制御状態を持つ必要はない

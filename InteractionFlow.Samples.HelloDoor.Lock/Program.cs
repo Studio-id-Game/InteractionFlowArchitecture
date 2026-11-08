@@ -31,7 +31,7 @@ namespace InteractionFlow.Samples.HelloDoor.Lock
             using var scope = builder.BuildScope();
             using var flow = scope.BuildSystemFlow<LockDoorSystemFlow, IFlowContext>();
 
-            using var context = new ScopedFlowContext(new FlowContext())
+            using var context = new FlowContext()
                 .With(new DoorState { IsOpen = false })
                 .With(new DoorLockState { IsLocked = true }); // Lock の状態を追加
 

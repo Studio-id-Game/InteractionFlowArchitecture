@@ -14,12 +14,12 @@ namespace InteractionFlow.Samples.Parrot.SystemFlows
             while (true)
             {
                 var selection = new SampleSelection();
-                using var selectionContext = new ScopedFlowContext(context).With(selection);
+                using var selectionContext = new FlowContext(context).With(selection);
                 var end = await selectSample.ExecuteAsync(selectionContext);
                 if (end.HasException || end.HasCanceled || selection.ExitRequested) return end;
                 if (selection.Mode == SampleMode.None) continue;
 
-                using var sampleContext = new ScopedFlowContext(context).With(selection.Mode);
+                using var sampleContext = new FlowContext(context).With(selection.Mode);
                 if (selection.Mode == SampleMode.ParrotCustomContext)
                     sampleContext.With(new ParrotGreeting("Hello! I'm Parrot with Custom Context, who are you?"));
 

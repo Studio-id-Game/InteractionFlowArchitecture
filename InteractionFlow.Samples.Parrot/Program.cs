@@ -22,7 +22,8 @@ namespace InteractionFlow.Samples.Parrot
                 .UseInteraction<TalkToParrot>();
             using var scope = builder.BuildScope();
             using var flow = scope.BuildSystemFlow<ParrotApplication, IFlowContext>();
-            var end = await flow.ExecuteAsync(new FlowContext());
+            using var context = new FlowContext();
+            var end = await flow.ExecuteAsync(context);
             if (end.HasException) Environment.ExitCode = 1;
         }
     }

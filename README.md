@@ -675,7 +675,7 @@ namespace InteractionFlow.Samples.HelloDoor
             using var scope = builder.BuildScope();
             using var flow = scope.BuildSystemFlow<DoorSystemFlow, IFlowContext>();
 
-            using var context = new ScopedFlowContext(new FlowContext())
+            using var context = new FlowContext()
                 .With(new DoorState { IsOpen = false });
 
             var end = await flow.ExecuteAsync(context);
@@ -692,7 +692,7 @@ namespace InteractionFlow.Samples.HelloDoor
 </details>
 
 この例では、`scope` は自身の DI Scope、`flow` は System Flow 専用の Scope、
-`context` は `ScopedFlowContext` 自身の管理状態をそれぞれ終了します。
+`context` は `FlowContext` 自身の管理状態をそれぞれ終了します。
 `flow` は親の `scope` や外部から渡された `context` を破棄せず、
 `context` も `.With(...)` で追加した `DoorState` を破棄しません。
 詳細は、[System Flow Builder](./docs/SYSTEM_FLOW_BUILDER.md) と
@@ -833,8 +833,8 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 | サンプル | 目的 | 主に確認できること |
 | --- | --- | --- |
 | [HelloDoor](./InteractionFlow.Samples.HelloDoor) | 最小の相互作用の流れを実装する | Context によって同じ操作への反応が変わること、Port / External / Interaction / System Flow の最小構成 |
-| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`ScopedFlowContext` による一時的な文脈の追加 |
-| [Parrot](./InteractionFlow.Samples.Parrot) | メニューと会話の Interaction を合成する | `ScopedFlowContext`、Storage、自動入力 Port、出力ごとの色指定、Cancellation |
+| [HelloDoor.Lock](./InteractionFlow.Samples.HelloDoor.Lock) | `HelloDoor` にロック状態と操作を追加する | 既存の Interaction と System Flow を再利用した Context と操作語彙の拡張、`FlowContext` による一時的な文脈の追加 |
+| [Parrot](./InteractionFlow.Samples.Parrot) | メニューと会話の Interaction を合成する | `FlowContext`、Storage、自動入力 Port、出力ごとの色指定、Cancellation |
 | [Notepad.Core](./InteractionFlow.Samples.Notepad.Core) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
 | [Notepad](./InteractionFlow.Samples.Notepad) | `Notepad.Core` を通常の Console・ファイル保存で実行する | 新 Console Port、FilePersistence、テキスト Serializer を接続する構成 |
 | [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure) | 同じ中核設計へ安全なログインと保存処理を統合する | 共通 Flow を維持したログイン Operation・Serializer の差し替え、暗号化、鍵素材の寿命管理 |

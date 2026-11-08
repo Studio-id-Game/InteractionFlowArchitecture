@@ -8,10 +8,17 @@ namespace InteractionFlow.Samples.Notepad.Core.Entities
         public string? User { get; set; }
         public bool ExitRequested { get; set; }
         public NotepadAction Action { get; set; }
-        public override bool TryGet<T>([MaybeNullWhen(false)] out T value)
+        /// <summary>基底の追加処理を使い、チェーン後も NotepadContext として扱えるようにします。</summary>
+        public new NotepadContext With<T>(T value)
+        {
+            base.With(value);
+            return this;
+        }
+
+        protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
         {
             if (this is T self) { value = self; return true; }
-            return base.TryGet(out value);
+            return base.TryGetCore(out value);
         }
     }
 

@@ -25,6 +25,9 @@
 
 各 Interaction の `ExecuteCoreAsync` で `GetRequired<NotepadContext>()` による必須値取得と、
 `using var bindingScope = binding.Bind(...)` による Ctrl+C の接続寿命を明示します。
+`NotepadContext.With<T>` は基底へ委譲して自身を返す new メソッドの例です。
+チェーン後も NotepadContext の型を維持し、値の追加と破棄チェックは FlowContext に任せます。
+
 `NoteEditor` は作成・編集の実行手順（Context 取得、Bind、キー取得、準備、下書き編集、保存、結果表示）を共有します。
 `NoteCreate` / `NoteEdit` は取得方式とメッセージを指定し、`PrepareAsync` で重複確認または元データの読み込みを行います。
 準備は元データ、または続行しない理由のメッセージを返し、最後の Reaction は共通実行側で生成します。

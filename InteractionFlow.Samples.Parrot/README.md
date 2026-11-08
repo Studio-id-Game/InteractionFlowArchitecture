@@ -41,7 +41,7 @@ EOF の場合は、戻ったメニューでも EOF を受け取り終了しま�
 - `LastSelectMemory`: アプリの DI Scope に保持する Storage。再実行するモードだけを保存します。
 - `AutomaticLineInput`: Console 入力を消費せず、自動で文字列を返す Operation。
 
-選択状態・モード・専用挨拶は `ScopedFlowContext` の実行範囲へ閉じます。
+選択状態・モード・専用挨拶は `FlowContext` の実行範囲へ閉じます。
 表示は `IConsoleOutputPort` に委譲し、各 `ReactionEnd` の失敗で後続の入力や表示を停止します。
 Ctrl+C は各 Interaction の `using var bindingScope = binding.Bind(context)` で接続期間を示します。
 10秒の期限には `context.Cancellation.GetScheduler()` と `TimeoutAsync` を使い、通知後も会話 Task の終了を待ちます。

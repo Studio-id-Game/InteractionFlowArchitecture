@@ -24,7 +24,8 @@ namespace InteractionFlow.Samples.Notepad
                 .Use<INotepadDataPersistencePort, NotepadDataFilePersistence>();
             using var scope = builder.BuildScope();
             using var flow = scope.BuildSystemFlow<MainLoop, NotepadContext>();
-            var end = await flow.ExecuteAsync(new NotepadContext());
+            using var context = new NotepadContext();
+            var end = await flow.ExecuteAsync(context);
             if (end.HasException) Environment.ExitCode = 1;
         }
     }

@@ -1,47 +1,111 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
-    /// <summary>
-    /// キャンセル制御を保持する、基本的なフローコンテキストです。
-    /// </summary>
-    public class FlowContext : IFlowContext
+    /// <summary>文脈値の追加・探索とキャンセル制御を提供するフローコンテキストです。</summary>
+    /// <remarks>
+    /// 親と追加値の所有権は取得しません。変更・探索と破棄の並行実行はサポートしません。
+    /// </remarks>
+    public class FlowContext : IFlowContext, IDisposable
     {
-        /// <summary>
-        /// 新しいコンテキストを作成します。
-        /// </summary>
+        private sealed class Box<T>(T value) : Entry<T>(value) { }
+
+        private IFlowContext? parentContext;
+        private List<IEntry>? values = [];
+        private List<IEntry> Values => values ?? throw new ObjectDisposedException(nameof(FlowContext));
+
+        /// <summary>独自のキャンセル状態を持つルートコンテキストを作成します。</summary>
         public FlowContext()
         {
+            Cancellation = new CancellationObject();
         }
 
-        /// <summary>
-        /// このコンテキストに紐づくキャンセル制御オブジェクトを取得します。
-        /// </summary>
-        public CancellationObject Cancellation { get; } = new();
-
-        /// <summary>
-        /// 基本コンテキストから指定した型の値を取得します。
-        /// </summary>
-        /// <typeparam name="T">取得する値の型。</typeparam>
-        /// <param name="value">取得できた値。取得できない場合は既定値。</param>
-        /// <returns>値を取得できた場合は <see langword="true"/>、取得できない場合は <see langword="false"/>。</returns>
-        /// <remarks>
-        /// 基本実装では、このコンテキストに紐づく <see cref="Cancellation"/> を取得対象にします。
-        /// オーバーライドする場合は、基底クラスが提供する文脈値を保持するために
-        /// <see langword="base"/> の実装を明示的に呼び出してください。
-        /// </remarks>
-        public virtual bool TryGet<T>([MaybeNullWhen(false)] out T value)
+        /// <summary>親の文脈値を探索し、キャンセル状態を共有する子コンテキストを作成します。</summary>
+        /// <param name="parentContext">値の探索先となる親。</param>
+        /// <exception cref="ArgumentNullException">親が null の場合。</exception>
+        public FlowContext(IFlowContext parentContext)
         {
-            if (Cancellation is T _value)
+            this.parentContext = parentContext ?? throw new ArgumentNullException(nameof(parentContext));
+            Cancellation = parentContext.Cancellation;
+        }
+
+        /// <summary>キャンセル状態を取得します。子は親と同じインスタンスを共有します。</summary>
+        /// <remarks>破棄後も参照できます。Context の破棄でキャンセル・リセットは行いません。</remarks>
+        public CancellationObject Cancellation { get; }
+
+        /// <summary>文脈値を追加します。同じ型を後から追加すると探索時に優先されます。</summary>
+        /// <typeparam name="T">追加する値の型。</typeparam>
+        /// <param name="value">追加する非 null の値。</param>
+        /// <returns>現在のコンテキスト。</returns>
+        /// <exception cref="ArgumentNullException">値が null の場合。</exception>
+        /// <exception cref="ObjectDisposedException">破棄済みの場合。</exception>
+        public FlowContext With<T>(T value)
+        {
+            var entries = Values;
+            if (value is null) throw new ArgumentNullException(nameof(value));
+            entries.Add(new Box<T>(value));
+            return this;
+        }
+
+        /// <summary>追加値を新しい順に探索し、その後で派生型の取得処理・親へ委譲します。</summary>
+        /// <typeparam name="T">要求する値の型。</typeparam>
+        /// <param name="value">取得した値。不在の場合は既定値。</param>
+        /// <returns>値を取得できた場合は true。</returns>
+        /// <remarks>Entry の未発見以外の解決失敗は、その例外を伝播します。</remarks>
+        /// <exception cref="ObjectDisposedException">破棄済みの場合。</exception>
+        /// <exception cref="ResultException">Entry の解決に失敗した場合。</exception>
+        public bool TryGet<T>([MaybeNullWhen(false)] out T value)
+        {
+            var entries = Values;
+            for (var i = entries.Count - 1; i >= 0; i--)
             {
-                value = _value;
+                if (entries[i].Parse<T>().Try(out var found, out var error))
+                {
+                    value = found;
+                    return true;
+                }
+                if (error.InnerException is null or not EntryValueNotFoundException) throw error;
+            }
+            return TryGetCore(out value);
+        }
+
+        /// <summary>追加値で見つからなかった値を提供する、派生型向けの拡張箇所です。</summary>
+        /// <typeparam name="T">要求する値の型。</typeparam>
+        /// <param name="value">取得した値。不在の場合は既定値。</param>
+        /// <returns>値を取得できた場合は true。</returns>
+        /// <remarks>
+        /// 既定では親を探索し、ルートでは Cancellation を提供します。
+        /// 派生型は独自値を見つけられなければ base.TryGetCore を呼んでください。
+        /// 公開の TryGet が、追加値の優先と破棄チェックを先に行います。
+        /// </remarks>
+        protected virtual bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
+        {
+            if (parentContext != null) return parentContext.TryGet(out value);
+            if (Cancellation is T cancellation)
+            {
+                value = cancellation;
                 return true;
             }
-            else
-            {
-                value = default;
-                return false;
-            }
+            value = default;
+            return false;
         }
+
+        /// <summary>保持する値・親への探索参照を解放し、追加と探索を禁止します。</summary>
+        /// <remarks>親・追加値・Cancellation は破棄しません。繰り返し呼び出しても何もしません。</remarks>
+        public void Dispose()
+        {
+            var entries = values;
+            if (entries is null) return;
+            values = null;
+            parentContext = null;
+            entries.Clear();
+            DisposeCore();
+        }
+
+        /// <summary>派生型が自身で所有する資源を解放する拡張箇所です。</summary>
+        /// <remarks>Context を破棄済みにした後、一度だけ呼びます。例外は呼び出し側へ伝播します。</remarks>
+        protected virtual void DisposeCore() { }
     }
 }

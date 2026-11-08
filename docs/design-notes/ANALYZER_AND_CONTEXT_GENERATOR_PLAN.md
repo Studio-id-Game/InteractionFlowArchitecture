@@ -94,7 +94,7 @@ private static async Task Main()
 
     using var scope = builder.BuildScope();
     using var flow = scope.BuildSystemFlow<DoorSystemFlow, IFlowContext>();
-    using var context = new ScopedFlowContext(new FlowContext())
+    using var context = new FlowContext()
         .With(new DoorState());
     await flow.ExecuteAsync(context);
 }
@@ -168,7 +168,7 @@ Context 検査に進む前に、ジェネレーターと動的検証だけで十
 
 属性の取得や呼び出し検出の負荷は比較的小さく、主な難所は構成と Context の追跡である。
 構成ごとの登録表・解決情報とメソッドの要求をキャッシュし、呼び出しごとに構築処理を解析し直さない。
-初期対象は明示的な Use、解析可能な Apply、ローカルな ScopedFlowContext.With、直接呼び出しを想定する。
+初期対象は明示的な Use、解析可能な Apply、ローカルな FlowContext.With、直接呼び出しを想定する。
 未知のヘルパー、フィールド、複雑な分岐、再帰を無制限に横断せず、対応範囲を明示して打ち切る。
 
 テストでは正例・誤用に加え、未解析経路を誤って不足または保証済みと判定しないことを検証する。

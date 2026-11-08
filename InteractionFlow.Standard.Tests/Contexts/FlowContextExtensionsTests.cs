@@ -14,14 +14,14 @@ namespace InteractionFlow.Standard.Tests.Contexts
         public void ReturnsTheOriginalReference()
         {
             var value = new object();
-            using var context = new ScopedFlowContext(new FlowContext()).With(value);
+            using var context = new FlowContext().With(value);
             Assert.Same(value, context.GetRequired<object>());
         }
 
         [Fact]
         public void ReturnsDefaultValuedStructWhenPresent()
         {
-            using var context = new ScopedFlowContext(new FlowContext()).With(0);
+            using var context = new FlowContext().With(0);
             Assert.Equal(0, context.GetRequired<int>());
         }
 
@@ -76,8 +76,8 @@ namespace InteractionFlow.Standard.Tests.Contexts
         [Fact]
         public void ScopedOverrideAndParentFallbackArePreserved()
         {
-            using var parent = new ScopedFlowContext(new FlowContext()).With("parent").With(42);
-            using (var child = new ScopedFlowContext(parent).With("first").With("last"))
+            using var parent = new FlowContext().With("parent").With(42);
+            using (var child = new FlowContext(parent).With("first").With("last"))
             {
                 Assert.Equal("last", child.GetRequired<string>());
                 Assert.Equal(42, child.GetRequired<int>());
@@ -90,7 +90,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         public void MutableEntryIsReturnedWithoutCopying()
         {
             var entry = new RefEntry<int>(1);
-            using var context = new ScopedFlowContext(new FlowContext()).With(entry);
+            using var context = new FlowContext().With(entry);
             context.GetRequired<RefEntry<int>>().Value = 2;
             Assert.Equal(2, entry.Value);
         }
@@ -106,7 +106,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         [Fact]
         public void DisposedScopeStillReportsDisposal()
         {
-            var context = new ScopedFlowContext(new FlowContext()).With("value");
+            var context = new FlowContext().With("value");
             context.Dispose();
             Assert.Throws<ObjectDisposedException>(() => context.GetRequired<string>());
         }
@@ -120,7 +120,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
 
         private sealed class FailingContext(Exception failure) : FlowContext
         {
-            public override bool TryGet<T>([MaybeNullWhen(false)] out T value) => throw failure;
+            protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value) => throw failure;
         }
     }
 }

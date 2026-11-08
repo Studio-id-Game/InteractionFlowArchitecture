@@ -124,7 +124,7 @@ using var bindingScope = binding.Bind(context);
 
 - Bind は `IDisposable` を返します。実装のスコープクラスは private です。
 - 同じ Port インスタンス・同じ CancellationObject への Bind は参照を追加し、最後の Dispose で解除します。
-  同じ CancellationObject を共有する ScopedFlowContext も同じ対象として扱います。
+  同じ CancellationObject を共有する FlowContext も同じ対象として扱います。
 - スコープの Dispose は冪等で、取得順に関係なく破棄できます。通常の解除はこの Dispose に統一し、Unbind は廃止しました。
 - 接続中の対象変更と、別 Port インスタンスによる同時接続は InvalidOperationException です。
   参照カウントは異なるキャンセル対象の合成を提供しません。

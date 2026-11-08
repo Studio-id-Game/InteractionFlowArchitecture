@@ -27,3 +27,26 @@ Reaction が終了結果として例外を返す契約なら、その境界で�
 必須値の要求は `GetRequired<T>()` に統一します。
 将来の Analyzer はこのメソッドのシンボルを解析の入口にできますが、今回は解析機能を追加しません。
 動的検証を基本とし、静的に検証しやすい構文への補助を今後検討します。
+
+## FlowContext の構成と寿命
+
+```csharp
+using var root = new FlowContext().With(new SessionState());
+using var child = new FlowContext(root).With(new SampleMode());
+```
+
+親なしはルート、親ありは独立した追加値を持つ子です。子は親の CancellationObject を共有します。
+追加値を新しい順に探索し、その後 TryGetCore へ委譲します。
+既定の TryGetCore は親を探索し、ルートでは Cancellation を提供します。
+親スコープの上書きも維持します。値の追加は Cancellation プロパティの参照先を変更しません。
+
+派生型の public override TryGet は protected override TryGetCore へ移行します。
+独自値がなければ base.TryGetCore を呼びます。追加値は派生型の値にも優先されます。
+
+公開の With / TryGet / Dispose は非 virtual で、破棄後の取得・追加を共通で拒否します。
+DisposeCore は基底の管理状態を解放した後に一度だけ呼び、例外もそのまま伝播します。
+親・追加した値や Entry・Cancellation は破棄せず、Cancellation は破棄後も参照可能です。
+派生型の独自プロパティのアクセスや、並行利用の安全性まで保証するものではありません。
+
+旧 ScopedFlowContext は削除しました。new ScopedFlowContext(parent) は new FlowContext(parent) へ、
+ルートを包んでいた new ScopedFlowContext(new FlowContext()) は new FlowContext() へ変更してください。

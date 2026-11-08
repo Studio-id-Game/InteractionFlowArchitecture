@@ -52,7 +52,7 @@ README で定義している概念と、主に対応するライブラリ要素�
 | `System Flow` | `ISystemFlow<TContext>` / `SystemFlow<TContext>` | 1つ以上の `Interaction` を実行し、`System` の側から `User` との関係を構築する |
 | `Interaction` | `IInteraction` / `Interaction` | 1つ以上の `Function` を実行し、システム内部の目的を一段進める |
 | `Function` | `Function Port` / `Function External` | `Function Port` : 機能を契約として定義する<br/>`Function External` : 機能を実装として実現する |
-| `Context` | `IFlowContext` / `FlowContext` / `ScopedFlowContext` | `System` が実行する `System Flow` および `Interaction` の中で、経路の決定のために参照したり、次に引き継いだりするための文脈値を提供する |
+| `Context` | `IFlowContext` / `FlowContext` | `System` が実行する `System Flow` および `Interaction` の中で、経路の決定のために参照したり、次に引き継いだりするための文脈値を提供する |
 | `Context Loop` | `System` の実行経路と `User` の行動選択 | 代表的に1つの `IFlowContext` インスタンスが、`System` と `User` の関係の中で更新され続けることで、`User` に提供する体験に連続性を与える |
 | `Operation` | `IOperationPort` とその実装 | `User` による操作や入力を受け取る |
 | `Reaction` | `IReactionPort` とその実装 | `System` から `User` への観測可能な反応を提供し、その反応と対応する `Context` への影響を表す |
@@ -191,7 +191,7 @@ Program　 :  ScopeBuilder で、IDoorOperation/Reaction の実装を指定す�
 
 | 部分フロー | 責務 | 主なソース |
 | --- | --- | --- |
-| `Program` | `HelloDoor` を実行する | [`Program.cs`](../InteractionFlow.Samples.HelloDoor/Program.cs)、[`SystemFlowBuilder.cs`](../InteractionFlow.Standard/Builders/SystemFlowBuilder.cs)、[`SystemFlowHandler.cs`](../InteractionFlow.Core/Builders/SystemFlowHandler.cs)、[`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`ScopedFlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)、[`DoorState.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
+| `Program` | `HelloDoor` を実行する | [`Program.cs`](../InteractionFlow.Samples.HelloDoor/Program.cs)、[`SystemFlowBuilder.cs`](../InteractionFlow.Standard/Builders/SystemFlowBuilder.cs)、[`SystemFlowHandler.cs`](../InteractionFlow.Core/Builders/SystemFlowHandler.cs)、[`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)、[`DoorState.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorState.cs) |
 | `DoorSystemFlow` | `User` とドアの関係を構築する | [`DoorSystemFlow.cs`](../InteractionFlow.Samples.HelloDoor/SystemFlows/DoorSystemFlow.cs)、[`SystemFlow.cs`](../InteractionFlow.Core/SystemFlows/SystemFlow.cs) |
 | `OperateDoor` | ドアの開閉操作を適用する | [`OperateDoor.cs`](../InteractionFlow.Samples.HelloDoor/Interactions/OperateDoor.cs)、[`Interaction.cs`](../InteractionFlow.Core/Interactions/Interaction.cs)、[`DoorCommand.cs`](../InteractionFlow.Samples.HelloDoor/Entities/DoorCommand.cs) |
 | `IDoorOperation` | `User` 操作 を `DoorCommand` に変換する | [`IDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/ExternalPorts/OperationPorts/IDoorOperation.cs)、[`ConsoleDoorOperation.cs`](../InteractionFlow.Samples.HelloDoor/Externals/Operations/ConsoleDoorOperation.cs) |

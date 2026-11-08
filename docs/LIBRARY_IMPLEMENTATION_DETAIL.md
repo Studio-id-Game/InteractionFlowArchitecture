@@ -476,128 +476,53 @@ public interface IFlowContext
 
 利用側は、特定の実装へキャストしなくとも、原則として `TryGet<T>` により必要な文脈値を要求できます。
 `TryGet<T>` は値がない場合に `false` を返しますが、実装上のイレギュラーには例外を発生させる場合があります。
-例えば `ScopedFlowContext` が Entry の循環参照を検出した場合や、破棄後に呼ばれた場合は例外になります。
+例えば `FlowContext` が Entry の循環参照を検出した場合や、破棄後に呼ばれた場合は例外になります。
 
 ### `FlowContext`
 
 ソースコード: [`FlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/FlowContext.cs)
 
-`FlowContext`は、`IFlowContext` の最小実装、および拡張実装のためのベースクラスの一つです。
-
-最小限の実装として、`TryGet<T>` から `CancellationObject` を取得するための実装を提供しています。
+FlowContext は文脈値の構成と探索、およびキャンセル制御を提供します。
+従来の ScopedFlowContext は統合・削除しました。
 
 ```csharp
-// FlowContext : IFlowContext
-public virtual bool TryGet<T>([MaybeNullWhen(false)] out T value)
+using var root = new FlowContext().With(new MyText("parent"));
+using var child = new FlowContext(root).With(new MyText("child"));
+```
+
+引数なしでは独自の CancellationObject を持つルートを作成し、親ありでは親と同じ CancellationObject を共有します。
+親の値は変更せず、子インスタンスに追加値を重ねます。
+
+探索順序は次のとおりです。
+
+1. 自分に追加した値を新しい順に探索する。
+2. 見つからなければ派生型の TryGetCore へ委譲する。
+3. 基本の TryGetCore は親があれば親を探索し、ルートなら Cancellation を提供する。
+
+追加値は派生型の独自値や親の同型値を上書きします。
+親で上書きされた値も親の TryGet 経由で引き継ぎます。
+CancellationObject 型の追加値も探索では優先されますが、Cancellation プロパティの共有先は変更しません。
+Entry の解決は従来と同じく再帰的で、不在なら次候補へ進み、それ以外の解決失敗は例外として伝播します。
+
+公開の TryGet / With / Dispose は非 virtual です。
+派生型は TryGetCore / DisposeCore を override し、共通の取得・破棄契約を維持します。
+
+```csharp
+protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
 {
-  if (Cancellation is T _value)
-  {
-    value = _value;
-    return true;
-  }
-  else
-  {
-    value = default;
-    return false;
-  }
+    if (this is T self) { value = self; return true; }
+    return base.TryGetCore(out value);
 }
 ```
 
-### `ScopedFlowContext`
+Dispose は先に破棄済みとして追加値と親への探索参照を解放し、その後 DisposeCore を一度だけ呼びます。
+フックが例外を送出しても破棄済み状態を維持し、その例外は呼び出し側へ伝播します。
+破棄後は With と TryGet が ObjectDisposedException になります。
+Cancellation は破棄後も参照できます。派生型の独自プロパティへのアクセスは禁止しません。
 
-ソースコード: [`ScopedFlowContext.cs`](../InteractionFlow.Core/Entities/Contexts/ScopedFlowContext.cs)
-
-`ScopedFlowContext`は、任意の `IFlowContext` を親として、追加の文脈値を重ねるためのクラスです。
-追加された文脈値は、`TryGet<T>` において親の同型の文脈値よりも優先されます。
-
-内部では `Entry` のリストとして追加の文脈値を保持、提供しています。
-`TryGet<T>` の実装では `Entry.Parse<T>()` を利用しているため、Entry と同等の再帰的解決能力を有します。
-また、`TryGet<T>` 中に Entry の値の未発見以外の例外を検出した場合や、`Dispose()` 後に `TryGet<T>` が呼ばれた場合は例外をスローします。
-
-```csharp
-// ScopedFlowContext : IFlowContext
-
-private List<IEntry> Values => values ??
-  throw new ObjectDisposedException(nameof(ScopedFlowContext));
-
-public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-{
-  // Dispose() 後は Values プロパティが例外をスローする
-  for (int i = Values.Count - 1; i >= 0; i--)
-  {
-    var item = Values[i];
-
-    if (item.Parse<T>().Try(out var v, out var e))
-    {
-      value = v;
-      return true;
-    }
-    else if (e.InnerException is null or not EntryValueNotFoundException)
-    {
-      throw e;
-    }
-  }
-  return parentContext.TryGet(out value);
-}
-```
-
-文脈値の追加には `With<T>(T value)` 関数を利用します。
-
-```csharp
-// ScopedFlowContext : IFlowContext
-public ScopedFlowContext With<T>(T value)
-{
-  if (value is null)
-  {
-    throw new ArgumentNullException(nameof(value));
-  }
-
-  // Box<T> は、内部で定義される専用の Entry
-  Values.Add(new Box<T>(value));
-
-  return this;
-}
-```
-
-<details>
-
-<summary> ScopedFlowContext で一時的な文脈値を利用するコード例 </summary>
-
-```csharp
-public void RunWithCustomContext(IFlowContext context)
-{
-  RunWithContext(context);
-  // Console : "[UNKNOWN NUM] UNKNOWN TEXT" (or Nothing)
-
-  using var customContext = new ScopedFlowContext(context)
-    .With(new MyText("I'm Additional Context"))
-    .With(new RefEntry<MyNumber>(new MyNumber(0)));
-
-  RunWithContext(customContext);
-  // Console : "[0] I'm Additional Context"
-  RunWithContext(customContext);
-  // Console : "[1] I'm Additional Context"
-}
-
-public void RunWithContext(IFlowContext context)
-{
-  if (context.TryGet<MyNumber>(out MyNumber num) &&
-    context.TryGet<MyText>(out MyText text))
-  {
-    Console.WriteLine($"[{num.Value}] {text.Value}");
-  }
-
-  if (context.TryGet<RefEntry<MyNumber>>(out RefEntry<MyNumber> refNum))
-  {
-    refNum.Value = new MyNumber(num.Value + 1);
-  }
-}
-```
-
-なおこの時、`using var customContext` のブロックが終了して `customContext` が破棄されても、`With`で追加した文脈は破棄されません。
-追加した文脈値を破棄する責務は、API 利用者の側にあります。
-
-</details>
+親と With で追加した値・Entry・Cancellation は破棄しません。
+値の所有権と派生型自身の資源の解放は、所有者が管理します。
+変更・探索と Dispose の並行実行はサポートしません。
 
 ### `CancellationObject`
 

@@ -430,7 +430,7 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
             using var first = new ConsoleCancellationBinding();
             using var second = new ConsoleCancellationBinding();
             var context = new FlowContext();
-            using var overlay = new ScopedFlowContext(context);
+            using var overlay = new FlowContext(context);
             using var outer = first.Bind(context);
             using var inner = first.Bind(overlay);
             outer.Dispose();

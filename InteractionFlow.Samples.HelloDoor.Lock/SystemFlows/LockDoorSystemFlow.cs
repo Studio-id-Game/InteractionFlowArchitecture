@@ -12,7 +12,7 @@ namespace InteractionFlow.Samples.HelloDoor.Lock.SystemFlows
     {
         protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            using var lockContext = new ScopedFlowContext(context)
+            using var lockContext = new FlowContext(context)
                 // OperationとReactionの間で契約を変更せずに値を受け渡しするための状態を、このスコープでのみ追加
                 .With(new RefEntry<DoorLockCommand>(DoorLockCommand.Unknown));
 

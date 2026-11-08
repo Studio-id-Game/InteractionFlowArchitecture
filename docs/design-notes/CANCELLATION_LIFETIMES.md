@@ -23,13 +23,16 @@ SystemFlow で相互作用を合成する方針とし、実装は互換性のた
 
 ### 案2の再検討結果（2026-11-08）
 
-Standard.Entities.Contexts の GetScheduler 拡張メソッドが、IDisposable な CancellationScheduler を返します。
+Core.Entities.Contexts の GetScheduler 拡張メソッドが、IDisposable な CancellationScheduler を返します。
 TimeoutAsync(TimeSpan timeoutTime, Task<Result> task) は処理と期限を競争させ、期限時に Cancel を呼び、
 その後も task の終了を待ちます。通知側と処理側の例外を Result へまとめます。
 先の「Dispose で例外を再送出する」案に代わり、結果の取得を await で明示する形を採用しました。
 
 一件ずつの利用・完了後の再利用を許し、Dispose は予約解除と開始済み通知との同期だけを担当します。
-本体の CancellationObject は変更せず、リセットとの世代同期も追加しません。
+当初は Standard に配置し、世代同期を持たせませんでした。
+その後 Core へ移設し、各予約を開始時の状態へ結び付けました。
+リセット後の古い予約は通知を省略し、次の状態へ影響しません。
+世代操作は内部 API のみに閉じています。
 契約と使用例は [CancellationScheduler](../CANCELLATION_SCHEDULER.md) を参照してください。
 
 以下は決定前の検討記録です。

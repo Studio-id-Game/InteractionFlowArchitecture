@@ -91,11 +91,25 @@ namespace InteractionFlow.Core.Entities.Contexts
 
         /// <summary>現在のキャンセル元へ同期的に通知します。Task の待機・リセットは行いません。</summary>
         /// <remarks>通知先の例外は呼び出し元へ伝播します。通知中のキャンセル元はリセット時にも破棄しません。</remarks>
-        public void Cancel()
+        public void Cancel() => Cancel(expectedState: null);
+
+        // Capture the state, not its token/source: a retired state's source may already be disposed at deadline.
+        internal Action CaptureCancellationRequest()
+        {
+            lock (gate)
+            {
+                var captured = state ??= new CancellationState();
+                return () => Cancel(captured);
+            }
+        }
+
+        private void Cancel(CancellationState? expectedState)
         {
             CancellationState current;
             lock (gate)
             {
+                // Check identity and pin the notification in one critical section against FinishReset.
+                if (expectedState != null && !ReferenceEquals(expectedState, state)) return;
                 current = state ??= new CancellationState();
                 if (current.Source.IsCancellationRequested) return;
                 current.ActiveNotifications++;

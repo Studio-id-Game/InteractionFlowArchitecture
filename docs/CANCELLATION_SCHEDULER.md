@@ -1,12 +1,13 @@
 # CancellationScheduler
 
-`InteractionFlow.Standard.Entities.Contexts` の `CancellationScheduler` は、期限までに処理が完了しなければ
+`InteractionFlow.Core.Entities.Contexts` の `CancellationScheduler` は、期限までに処理が完了しなければ
 `CancellationObject.Cancel()` を呼び、通知後も対象 Task の終了を待つ補助 API です。
-CancellationObject 本体は変更せず、拡張メソッド `GetScheduler()` で取得します。
+Core の拡張メソッド `GetScheduler()` で取得します。
+CancellationObject の世代への結び付けは Core 内部で行い、世代操作の公開 API は追加しません。
 
 ```csharp
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Standard.Entities.Contexts;
+using InteractionFlow.Core.Entities.Contexts;
 
 using var scheduler = context.Cancellation.GetScheduler();
 var result = await scheduler.TimeoutAsync(
@@ -87,8 +88,26 @@ Dispose のために、本体の CancellationObject を破棄・リセット・�
 WaitForTasksAndResetCancellationAsync を呼ばず、対象 Task や自身の Task をキャンセル完了の待機一覧へ登録しません。
 Interaction のネストに由来する待機範囲の問題を解決する API ではありません。
 
-予約は CancellationObject の期間へ結び付けません。予約が有効なまま外部でリセットすると、
-期限時点の新しいキャンセル元へ通知する可能性があります。using で予約の有効期間を管理してください。
+## 予約とリセットの世代
+
+各 TimeoutAsync の開始時に現在のキャンセル状態を捕捉します。GetScheduler の取得時ではありません。
+同じ Scheduler を再利用する場合も、その時点の状態に予約を結び付けます。
+リセットが完了した後に古い予約の期限が来ても、新しい状態には通知しません。
+古い予約が無効になっても対象 Task は終了まで待ち、その結果は通常どおり返します。
+リセットを自動実行したり、対象 Task を完了させたりする機能ではありません。
+
+状態の同一性確認と通知中の参照確保は CancellationObject の同じロック内で行います。
+先にリセットが完了すれば通知を省略し、先に通知対象を確保すればその古い状態だけへ通知します。
+通知中にリセットされても、古い Source の破棄は通知終了まで延期します。
+待機・リセット中（完了前）はまだ同じ状態であり、キャンセル要求も維持されています。
+
+この保証は予約の寿命管理を不要にはしません。using で Scheduler の有効期間を管理してください。
+
+## Core への移行
+
+配置と名前空間を InteractionFlow.Standard.Entities.Contexts から InteractionFlow.Core.Entities.Contexts へ移しました。
+旧名前空間の using を削除し、Core の名前空間を使用してください。
+GetScheduler / TimeoutAsync / TimeoutAsync<T> の呼び出し形式は同じです。
 
 ## 引数
 
@@ -100,5 +119,6 @@ Interaction のネストに由来する待機範囲の問題を解決する API 
 
 `InteractionFlow.Standard.Tests/Contexts/CancellationSchedulerTests.cs` で、完了優先、通知後の待機、
 失敗 Result・例外・キャンセル完了の保持、複数例外、予約解除、並行破棄、コールバック内の破棄を検証します。
+CancellationSchedulerGenerationTests.cs では古い予約、新世代への再利用、通知中・別スレッドからのリセットを検証します。
 
 関連: [Result API](./RESULT.md)、[寿命管理の検討記録](./design-notes/CANCELLATION_LIFETIMES.md)

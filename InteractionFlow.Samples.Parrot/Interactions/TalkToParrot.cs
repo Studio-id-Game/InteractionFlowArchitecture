@@ -6,7 +6,6 @@ using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
-using InteractionFlow.Standard.Entities.Contexts;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

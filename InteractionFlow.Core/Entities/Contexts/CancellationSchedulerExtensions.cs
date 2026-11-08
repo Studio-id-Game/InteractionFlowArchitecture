@@ -1,7 +1,6 @@
-using InteractionFlow.Core.Entities.Contexts;
 using System;
 
-namespace InteractionFlow.Standard.Entities.Contexts
+namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>CancellationObject にスコープ付きの時間制限を追加します。</summary>
     public static class CancellationSchedulerExtensions

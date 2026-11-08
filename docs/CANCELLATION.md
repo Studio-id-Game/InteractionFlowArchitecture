@@ -85,6 +85,13 @@ OnCancellation 内で同じ対象の待機・リセットを待つことや、�
 循環待機を作り得ます。この改修は Interaction ネストを可能にするものではありません。
 体験を継続するか終了するかは、引き続き SystemFlow が決めます。
 
+## Scheduler の世代への結び付け
+
+Core の CancellationScheduler は各予約開始時の状態に限定して Cancel を通知します。
+内部で状態の同一性確認と通知対象の確保を一体化し、リセット後の新しい状態へ古い予約が通知することを防ぎます。
+通常の Cancel() は従来どおり現在の状態を対象とします。
+Scheduler が無効な世代の通知を省略しても、その対象 Task の待機は続きます。
+
 ## 移行
 
 - AddCancelableTask の返却スコープを保持し、必ず Dispose してください。

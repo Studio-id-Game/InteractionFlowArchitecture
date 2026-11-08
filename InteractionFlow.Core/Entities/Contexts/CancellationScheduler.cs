@@ -1,20 +1,20 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace InteractionFlow.Standard.Entities.Contexts
+namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>期限到達時にキャンセルを通知し、対象 Task の終了結果と通知失敗をまとめます。</summary>
     /// <remarks>
     /// 同時に一件の時間制限を扱います。完了後は再利用できます。
-    /// CancellationObject の待機・リセットや期間分離は行いません。
+    /// 各予約は開始時のキャンセル状態に限定して通知します。待機・リセットは行いません。
     /// </remarks>
     public sealed class CancellationScheduler : IDisposable
     {
-        private sealed class TimeoutOperation
+        private sealed class TimeoutOperation(Action cancel)
         {
+            public Action Cancel { get; } = cancel;
             public CancellationTokenSource TimerCancellation { get; } = new();
             public bool Notifying { get; set; }
             public int NotificationThreadId { get; set; }
@@ -68,7 +68,7 @@ namespace InteractionFlow.Standard.Entities.Contexts
             {
                 if (disposed) throw new ObjectDisposedException(nameof(CancellationScheduler));
                 if (current != null) throw new InvalidOperationException("A timeout operation is already active.");
-                operation = new TimeoutOperation();
+                operation = new TimeoutOperation(cancellation.CaptureCancellationRequest());
                 try { delay = Task.Delay(timeoutTime, operation.TimerCancellation.Token); }
                 catch
                 {
@@ -101,7 +101,7 @@ namespace InteractionFlow.Standard.Entities.Contexts
                 }
                 if (notify)
                 {
-                    try { cancellation.Cancel(); }
+                    try { operation.Cancel(); }
                     catch (Exception error) { notificationFailure = error; }
                     finally
                     {

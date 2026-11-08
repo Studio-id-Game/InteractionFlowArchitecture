@@ -21,9 +21,7 @@ internal sealed class CounterCancellationHandling : CancellationHandling
         OperationCanceledException exception,
         Result waitAndResetResult)
     {
-        context.GetRequired<CounterDisplayState>().Show(
-            context.GetRequired<CounterState>().Count,
-            "Canceled; ready again");
+        context.GetRequired<CounterState>().Cancel();
 
         // Close の中断は再入力へ回復せず、先行結果とともに終了失敗として保持します。
         if (context.TryGet<Result>(out var preceding))

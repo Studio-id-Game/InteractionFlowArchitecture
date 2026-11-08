@@ -21,13 +21,11 @@ public sealed class WindowSystemFlow(
     {
         var state = context.GetRequired<CounterState>();
         var frames = new FrameState();
-        var display = context.GetRequired<CounterDisplayState>();
 
         // 親あり Context は Cancellation を共有するため、独立したルートを用います。
         using var frameContext = new FlowContext()
             .With(state)
             .With(frames)
-            .With(display)
             .With(new WindowState());
 
         var failures = new List<Exception>();
@@ -96,7 +94,7 @@ public sealed class WindowSystemFlow(
         List<Exception> failures)
     {
         // 異常終了も含む寿命の終了意図。キャンセルのリセットとは独立して保持します。
-        state.ExitRequested = true;
+        state.RequestExit();
 
         if (execution is null)
             return;

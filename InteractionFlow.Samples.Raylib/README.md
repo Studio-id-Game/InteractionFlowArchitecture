@@ -46,7 +46,7 @@ Open・各フレーム・Close・全体結果の通知も、明示 Reaction の�
 | Reaction | `ICounterReaction` / `CounterReaction` | 処理中・完了の表示更新、カウント・終了意図の更新 |
 | Reaction | `IWindowReaction` / `RaylibWindowReaction` | ウィンドウの提示・描画・終了、結果の通知と確定 |
 
-表示状態は `Entities/CounterDisplayState.cs` に置きます。配置定数の `RaylibLayout` は
+カウント・表示・入力受付・終了意図は `Entities/CounterState.cs` に集約します。配置定数の `RaylibLayout` は
 raylib 実装内部の補助で、入力判定と描画が同じ座標を利用するために共有します。
 ウィンドウの生成・解放は、画面の提示・消失という Reaction の一部として `RaylibWindowReaction` が直接行います。
 `Entities/WindowState` はフレーム用 Context に置く開閉状態・所有スレッドです。
@@ -54,8 +54,24 @@ raylib 実装内部の補助で、入力判定と描画が同じ座標を利用�
 ネイティブ API やリソース管理を別 Function に切り出さず、SilentExternal の分類は使っていません。
 各 Function は依存する Port をコンストラクターで受け取り、Dependency にも列挙します。
 Context に画面実装や接続オブジェクトを格納しません。カウンターとフレームの Context へ同じ
-`CounterDisplayState` を直接登録します。独立した記録・キャッシュはないため Storage は使いません。
+`CounterState` を直接登録します。独立した記録・キャッシュはないため Storage は使いません。
 
+## カウンターの状態遷移
+
+| 操作 | 遷移・役割 |
+| --- | --- |
+| `ReadCommandAsync` | Ready → WaitingForInput。終了要求済みなら新規待機を作らず Exit を返す |
+| `TrySubmit` | 待機が有効な場合だけ受理し、WaitingForInput → Processing。連打や待機外の入力は破棄 |
+| `BeginIncrement` | 受理済みの処理開始を確認し、処理中の表示へ更新 |
+| `CompleteIncrement` | カウント更新と Processing → Ready を同時に行う。終了要求後は更新しない |
+| `Cancel` | 入力待機の後始末後に Ready へ回復。終了・失敗状態を上書きしない |
+| `Fail` | Failed へ遷移し、失敗を表示 |
+| `RequestExit` | 終了意図を保持して受付を閉じる。既存の失敗表示は保持 |
+
+キャンセルされた入力待機は、同じ待機元であることを確認して通知参照を解除します。
+待機中の終了要求だけでは Task を完了させず、SystemFlow のキャンセル通知で待機を解除します。
+終了・中断・処理完了が競合しても、終了意図を入力受付へ戻す遷移はありません。
+Count と ExitRequested は取得専用で、外部から個別に書き換えません。
 ## スレッド・Context・終了契約
 
 - `WindowSystemFlow` は同期的にフレームを進め、Open から Close まで呼び出しスレッドを維持します。
@@ -64,13 +80,12 @@ Context に画面実装や接続オブジェクトを格納しません。カウ
   フレームの描画完了も待たないため、終了時にメインスレッドがカウンターを同期的に待てます。
 - フレーム用 Context は独立したルートです。親ありの `FlowContext` はキャンセルを共有するため、
   この並行処理の分離には使いません。終了用の子 Context はフレームが終わった後に作ります。
-- `CounterState` は両フローで共有します。Count はカウンターだけが扱い、UI は共有する表示状態の
-  スナップショットを描画します。終了意図だけは volatile フラグで共有します。
-- 入力待機の TCS と表示状態はそれぞれ同期します。`CounterDisplayState` が private なロックで
-  `Show` / `SetAcceptingInput` / `Snapshot` を同期します。`Snapshot` は3つの値を同じロック内で
-  out 引数へ取得します。描画側は取得済みの値を使うため、その後の更新で描画中の値は変わりません。
-  更新・取得のための専用レコードは生成しません。
-  入力継続は非同期に実行し、クリック処理からカウンターの継続を直接実行しません。
+- `CounterState` は両フローで共有し、カウント・表示・進行段階・入力待機を一つの private ロックで管理します。
+  入力受付表示と実際の受理条件は同じ判定から導出し、独立した bool の更新は行いません。
+- `Snapshot` は count / message / acceptingInput を同じロック内で out 引数へ取得します。
+  描画側は取得済みの値を使い、その後の更新で描画中の値が変わることはありません。
+- 入力の非同期待機は State 内の TCS で維持します。ロック内では await せず、継続は非同期実行します。
+  Operation は Context から State を取得して待機・操作要求を委譲するだけで、待機状態を保持しません。
 - Context / Scope 一般の並行安全性を仮定していません。同じ Function が並行利用される部分では、
   入力・表示の共有状態を明示的に同期し、実行中に登録の変更や状態リセットを行いません。
   共有する表示状態は両フロー開始前に登録します。状態を差し替えないため RefEntry は使いません。

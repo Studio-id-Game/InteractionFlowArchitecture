@@ -70,11 +70,12 @@ public sealed class FrameInteractionTests
     public async Task BusyFrameInputIsDroppedInsteadOfQueuedForNextRead()
     {
         var counter = new CounterOperation();
+        var state = new CounterState();
         var window = new TestWindow();
         var input = new TestInput(frame => frame.Command = CounterCommand.Increment);
         using var context = new FlowContext()
             .With(new FrameState())
-            .With(new CounterDisplayState());
+            .With(state);
         var interaction = CreateInteraction(input, window, counter);
         var firstRead = counter.ReadAsync(context).AsTask();
 
@@ -82,13 +83,15 @@ public sealed class FrameInteractionTests
         Assert.Equal(CounterCommand.Increment, await firstRead.WaitAsync(
             TimeSpan.FromSeconds(5),
             TestContext.Current.CancellationToken));
+        Assert.True(state.BeginIncrement());
 
         // 現在の入力待機がないフレームでのコマンドは次回へ持ち越しません。
         Assert.False((await interaction.ExecuteAsync(context)).HasException);
+        Assert.True(state.CompleteIncrement());
         var nextRead = counter.ReadAsync(context).AsTask();
         Assert.False(nextRead.IsCompleted);
 
-        Assert.True(counter.Submit(CounterCommand.Exit));
+        Assert.True(counter.Submit(context, CounterCommand.Exit));
         Assert.Equal(CounterCommand.Exit, await nextRead.WaitAsync(
             TimeSpan.FromSeconds(5),
             TestContext.Current.CancellationToken));
@@ -123,7 +126,7 @@ public sealed class FrameInteractionTests
         {
         }
 
-        public bool Submit(CounterCommand command)
+        public bool Submit(IFlowContext context, CounterCommand command)
         {
             Commands.Add(command);
             return true;

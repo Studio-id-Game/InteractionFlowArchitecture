@@ -9,5 +9,5 @@ public interface ICounterOperation : IOperationPort
 {
     ValueTask<CounterCommand> ReadAsync(IFlowContext context);
 
-    bool Submit(CounterCommand command);
+    bool Submit(IFlowContext context, CounterCommand command);
 }

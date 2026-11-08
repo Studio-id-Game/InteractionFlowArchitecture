@@ -22,16 +22,16 @@ internal sealed class CounterReaction : Reaction, ICounterReaction
 
         if (command == CounterCommand.Exit)
         {
-            state.ExitRequested = true;
-            context.GetRequired<CounterDisplayState>().Show(state.Count, "Goodbye");
+            state.RequestExit();
         }
         else
         {
-            context.GetRequired<CounterDisplayState>().Show(state.Count, "Working... (Cancel is available)");
+            if (!state.BeginIncrement())
+                return GetEnd();
+
             await Task.Delay(1000, context.Cancellation.GetToken());
 
-            state.Count++;
-            context.GetRequired<CounterDisplayState>().Show(state.Count, "Completed");
+            state.CompleteIncrement();
         }
 
         return GetEnd();

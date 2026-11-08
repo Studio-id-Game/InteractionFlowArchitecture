@@ -23,7 +23,7 @@ public sealed class PresentFrame(
         var input = context.GetRequired<FrameState>();
 
         if (!input.CloseRequested && !input.CancelRequested && input.Command is CounterCommand command)
-            counter.Submit(command);
+            counter.Submit(context, command);
 
         return Task.FromResult(reaction.Draw(context));
     }

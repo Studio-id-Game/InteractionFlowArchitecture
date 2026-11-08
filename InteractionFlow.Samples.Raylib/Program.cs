@@ -18,8 +18,7 @@ internal static class Program
         using var scope = builder.BuildScope();
         using var flow = scope.BuildSystemFlow<WindowSystemFlow, IFlowContext>();
 
-        var display = new CounterDisplayState();
-        using var context = new FlowContext().With(new CounterState()).With(display);
+        using var context = new FlowContext().With(new CounterState());
 
         Console.WriteLine(DependencyTreeView.GetDependencyTreeText(flow.Root));
 

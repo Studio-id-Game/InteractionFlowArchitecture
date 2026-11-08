@@ -22,9 +22,7 @@ internal sealed class CounterExceptionHandling : ExceptionHandling
         // Close から送出された例外も、既に集約したフローの失敗を上書きしません。
         if (context.TryGet<Result>(out var preceding) && !preceding.Try(out var previous))
             result = new AggregateException(previous, exception);
-        context.GetRequired<CounterDisplayState>().Show(
-            context.GetRequired<CounterState>().Count,
-            "Error: " + exception.Message);
+        context.GetRequired<CounterState>().Fail(exception);
 
         return new(GetEnd(result));
     }

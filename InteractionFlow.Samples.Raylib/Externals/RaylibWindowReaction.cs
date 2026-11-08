@@ -76,7 +76,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     public ReactionEnd Draw(IFlowContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        context.GetRequired<CounterDisplayState>().Snapshot(
+        context.GetRequired<CounterState>().Snapshot(
             out var count,
             out var message,
             out var acceptingInput);

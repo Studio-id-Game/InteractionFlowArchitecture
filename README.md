@@ -137,7 +137,10 @@ ReactionEnd・InteractionEnd と Result の関係は [Reaction とフローの�
   dotnet run --project InteractionFlow.Samples.Parrot
   dotnet run --project InteractionFlow.Samples.Notepad
   dotnet run --project InteractionFlow.Samples.Notepad.Secure
+  dotnet run --project InteractionFlow.Samples.Raylib
   ```
+
+入力・描画ループと非同期処理の接続例は [Raylib counter](./InteractionFlow.Samples.Raylib/README.md) を参照してください。
 
 ## Others
 

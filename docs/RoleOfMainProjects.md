@@ -26,6 +26,14 @@
   - バージョン管理しない
   - .Samples で得られた知見をもとに .Standard を実用目線で更新する。
 
+`InteractionFlow.Samples.Raylib` は、フレーム単位の入力・描画と非同期フローの接続例です。
+`Program` は構成と実行開始に絞り、`WindowSystemFlow` が画面の起動・フレーム進行・終了を調整します。
+入力は Operation、ウィンドウの生成・描画・終了と結果通知は Reaction に分けます。
+表示は内部で同期する可変な `CounterDisplayState`、ウィンドウ状態は `WindowState` として Context に渡します。
+フレームとカウンターは別の CancellationObject で並行実行し、
+raylib の呼び出しはメインスレッドに保ちます。
+構成と実行方法は [Raylib counter](../InteractionFlow.Samples.Raylib/README.md) を参照してください。
+
 ---
 
 <!--- ヘッダ・フッタのリンク表示文字列は、例外的な省略記法を維持する --->

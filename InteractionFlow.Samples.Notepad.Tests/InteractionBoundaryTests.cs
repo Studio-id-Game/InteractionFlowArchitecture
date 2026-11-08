@@ -214,7 +214,8 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var error = Assert.IsType<RequiredContextValueNotFoundException>(end.Exception);
             Assert.Equal(typeof(NotepadContext), error.RequiredType);
-            Assert.Equal(name + ".cs", Path.GetFileName(error.FilePath));
+            Assert.Equal(name is "NoteCreate" or "NoteEdit" ? "NoteEditor.cs" : name + ".cs",
+                Path.GetFileName(error.FilePath));
             Assert.Equal("ExecuteCoreAsync", error.MemberName);
             Assert.Equal(0, input.ReadCount);
             Assert.Empty(output.Lines);
@@ -314,13 +315,16 @@ namespace InteractionFlow.Samples.Notepad.Tests
         }
 
         private sealed class AcquisitionProbe(ScriptedInput input, RecordingOutput output, MemoryNotes notes)
-            : NoteEditor(input, output, new Errors(), new Cancellations(), notes,
+            : NoteEditor(input, output, new RecordingBinding(), new Errors(), new Cancellations(), notes,
                 Editor(input, output), Choices(input, output))
         {
             public Task<Result<ReadKeyValue>> ReadAsync(NotepadContext context, bool existing = false)
                 => ReadKeyAsync(context, existing);
-            protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
-                => throw new InvalidOperationException("This probe tests acquisition without an Interaction execution.");
+            protected override bool SelectExisting => false;
+            protected override string ActionName => "Create";
+            protected override string DraftCancelledMessage => "Create cancelled.";
+            protected override string SavedVerb => "Created";
+            protected override Task<Preparation> PrepareAsync(NotepadKey key) => Task.FromResult(new Preparation());
         }
 
         private static ConsoleNoteEditor Editor(IConsoleLineInputPort input, IConsoleOutputPort output)

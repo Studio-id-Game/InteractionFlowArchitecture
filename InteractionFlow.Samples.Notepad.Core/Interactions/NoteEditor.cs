@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.Notepad.Core.Entities;
@@ -11,18 +12,49 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.Notepad.Core.Interactions
 {
     public abstract class NoteEditor(
-        IConsoleLineInputPort input, IConsoleOutputPort output,
+        IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
         IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
         INoteEditorOperation editor, IConsoleChoiceOperation choices,
         params InteractionFlow.Core.Entities.Architectures.IDependencyNode[] dependency)
         : Interaction(exceptionPort, cancellationPort,
-            [input, output, notes, editor, choices, .. dependency])
+            [input, output, binding, notes, editor, choices, .. dependency])
     {
         protected INotepadDataPersistencePort Notes => notes;
-        protected IConsoleOutputPort Output => output;
+        protected abstract bool SelectExisting { get; }
+        protected abstract string ActionName { get; }
+        protected abstract string DraftCancelledMessage { get; }
+        protected abstract string SavedVerb { get; }
 
-        protected Task<NotepadData?> ReadDraftAsync(NotepadContext context, NotepadData? oldNote)
-            => editor.EditAsync(context, oldNote);
+        // Preparation returns data or a diagnostic; only the shared execution emits the final reaction.
+        protected sealed class Preparation(NotepadData? original = null, string? stopMessage = null)
+        {
+            public NotepadData? Original { get; } = original;
+            public string? StopMessage { get; } = stopMessage;
+        }
+
+        protected abstract Task<Preparation> PrepareAsync(NotepadKey key);
+
+        protected sealed override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
+        {
+            var context = flowContext.GetRequired<NotepadContext>();
+            using var bindingScope = binding.Bind(flowContext);
+            var keyResult = await ReadKeyAsync(context, SelectExisting);
+            if (!keyResult.Try(out var readKey, out var keyError))
+                return await ExceptionPort.HandleExceptionAsync(context, keyError);
+            if (readKey.Key is not NotepadKey key)
+                return await output.WriteLineAsync(context, readKey.GetMessage($"{ActionName} cancelled."));
+
+            var preparation = await PrepareAsync(key);
+            if (preparation.StopMessage != null)
+                return await output.WriteLineAsync(context, preparation.StopMessage);
+
+            var draft = await editor.EditAsync(context, preparation.Original);
+            if (draft == null) return await output.WriteLineAsync(context, DraftCancelledMessage);
+            context.Cancellation.GetToken().ThrowIfCancellationRequested();
+            var saved = await notes.Save(key, draft);
+            return await output.WriteLineAsync(context, saved.Try(out var error)
+                ? $"{SavedVerb}: {key.Note}" : $"Save failed: {error.Message}");
+        }
 
         // Acquisition returns data and status; the caller decides the final reaction.
         protected async Task<Result<ReadKeyValue>> ReadKeyAsync(

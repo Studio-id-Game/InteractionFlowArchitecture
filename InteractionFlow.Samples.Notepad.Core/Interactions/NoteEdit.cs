@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
@@ -12,26 +11,18 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleLineInputPort input, IConsoleOutputPort output, IConsoleCancellationBindingPort binding,
         IExceptionPort<Exception> exceptionPort, ICancellationPort cancellationPort, INotepadDataPersistencePort notes,
         INoteEditorOperation editor, IConsoleChoiceOperation choices)
-        : NoteEditor(input, output, exceptionPort, cancellationPort, notes, editor, choices, binding)
+        : NoteEditor(input, output, binding, exceptionPort, cancellationPort, notes, editor, choices)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
+        protected override bool SelectExisting => true;
+        protected override string ActionName => "Edit";
+        protected override string DraftCancelledMessage => "Edit cancelled. Original note kept.";
+        protected override string SavedVerb => "Saved";
+
+        protected override async Task<Preparation> PrepareAsync(NotepadKey key)
         {
-            var context = flowContext.GetRequired<NotepadContext>();
-            using var bindingScope = binding.Bind(flowContext);
-            var keyResult = await ReadKeyAsync(context, existing: true);
-            if (!keyResult.Try(out var readKey, out var keyError))
-                return await ExceptionPort.HandleExceptionAsync(context, keyError);
-            if (readKey.Key is not NotepadKey key)
-                return await Output.WriteLineAsync(context, readKey.GetMessage("Edit cancelled."));
             var loaded = await Notes.Load(key, new NotepadData("", ""));
-            if (!loaded.Try(out var oldNote, out var loadError))
-                return await Output.WriteLineAsync(context, $"Load failed: {loadError.Message}");
-            var draft = await ReadDraftAsync(context, oldNote);
-            if (draft == null) return await Output.WriteLineAsync(context, "Edit cancelled. Original note kept.");
-            context.Cancellation.GetToken().ThrowIfCancellationRequested();
-            var saved = await Notes.Save(key, draft);
-            return await Output.WriteLineAsync(context, saved.Try(out var error)
-                ? $"Saved: {key.Note}" : $"Save failed: {error.Message}");
+            return loaded.Try(out var note, out var error)
+                ? new(original: note) : new(stopMessage: $"Load failed: {error.Message}");
         }
     }
 }

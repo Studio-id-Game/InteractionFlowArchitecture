@@ -25,7 +25,9 @@
 
 各 Interaction の `ExecuteCoreAsync` で `GetRequired<NotepadContext>()` による必須値取得と、
 `using var bindingScope = binding.Bind(...)` による Ctrl+C の接続寿命を明示します。
-`NoteEditor` は作成・編集に共通するノート選択と下書き編集を提供します。
+`NoteEditor` は作成・編集の実行手順（Context 取得、Bind、キー取得、準備、下書き編集、保存、結果表示）を共有します。
+`NoteCreate` / `NoteEdit` は取得方式とメッセージを指定し、`PrepareAsync` で重複確認または元データの読み込みを行います。
+準備は元データ、または続行しない理由のメッセージを返し、最後の Reaction は共通実行側で生成します。
 一覧の出力失敗は、その ReactionEnd を返して後続処理へ進む前に終了します。
 キー入力プロンプトの失敗は Result に保持し、入力や保存へ進みません。
 キー取得は Result<ReadKeyValue> でキーと取得状況を返し、診断と最後の Reaction は呼び出し側が担当します。

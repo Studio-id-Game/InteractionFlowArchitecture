@@ -33,8 +33,16 @@ Notepad のキー取得補助は相互作用の終了境界ではなく、Task<R
 取得側はプロンプトと選択表示を担当し、最終的な診断の出力は呼び出し側の Interaction が担当します。
 取得失敗時は呼び出し側が明示的に ExceptionPort に委譲し、例外を送出せず ReactionEnd を取得します。
 実際に送出された例外は、従来どおり Interaction の処理 Port に委譲します。
-選択・下書き編集 Operation 内の出力失敗の扱いは、既存の契約を維持します。
-それらは ReactionEnd を返す API ではなく、今回の整理では戻り値の契約を変更しません。
+Notepad の選択・下書き編集 Operation も Result を返します。
+SelectAsync は Result<ChoiceValue>、EditAsync は Result<NoteEditValue> です。
+選択中断は ChoiceValue.Index が null、編集破棄は NoteEditValue.Note が null の成功結果で表します。
+不正な選択入力は従来どおり Index = -1 で区別します。
+表示・画面クリア・カーソル移動・端末サイズ取得が返した失敗は Result のまま伝播し、
+呼び出し側の Interaction が明示的に ExceptionPort へ委譲します。
+画面クリアに失敗した場合は選択確定・編集完了の成功値を返しません。
+Operation や委譲先の送出例外を包括的に捕捉する処理は追加しません。
+Task のキャンセルは失敗 Result へ変換せず伝播し、Interaction のキャンセル処理につながります。
+失敗 Result に格納された OperationCanceledException は Task のキャンセルとは区別します。
 
 ReactionEnd.Result と InteractionEnd.Result は既存の Result の契約に従います。
 返された失敗、送出例外、キャンセルされた Task を混同しません。

@@ -314,6 +314,39 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.Empty(output.Lines);
         }
 
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        public async Task RedirectedEditorPreservesDisplayFailureAndStopsReading(int failureAt)
+        {
+            var input = new ScriptedInput("New title", "Body", ".");
+            var output = new RecordingOutput { Failure = new IOException("Display failed"), FailureAt = failureAt };
+            var operation = Editor(input, output);
+
+            var result = await operation.EditAsync(new NotepadContext(), new NotepadData("Old title", "Old body"));
+
+            Assert.False(result.Try(out _, out var error));
+            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.Same(original, error);
+            Assert.Equal(failureAt <= 2 ? 0 : 1, input.ReadCount);
+            Assert.Equal(failureAt, output.Lines.Count);
+        }
+
+        [Fact]
+        public async Task RedirectedChoicePreservesDisplayFailureWithoutReading()
+        {
+            var input = new ScriptedInput("1");
+            var output = new RecordingOutput { Failure = new IOException("Display failed") };
+
+            var result = await Choices(input, output).SelectAsync(new NotepadContext(), "Choose", ["One"]);
+
+            Assert.False(result.Try(out _, out var error));
+            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.Same(original, error);
+            Assert.Equal(0, input.ReadCount);
+        }
+
         private sealed class AcquisitionProbe(ScriptedInput input, RecordingOutput output, MemoryNotes notes)
             : NoteEditor(input, output, new RecordingBinding(), new Errors(), new Cancellations(), notes,
                 Editor(input, output), Choices(input, output))

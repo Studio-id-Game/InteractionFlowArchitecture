@@ -34,6 +34,9 @@
 取得失敗は呼び出し側が明示的に ExceptionPort に委譲し、中断のために例外を送出しません。
 EOF は終了意図として記録します。
 `ConsoleChoiceOperation` は矢印キーの選択、`ConsoleNoteEditor` はカーソル編集を担当します。
+両者は `Result<ChoiceValue>` / `Result<NoteEditValue>` を返し、中断・破棄は成功値の中で表します。
+出力や画面操作が返した失敗は Result のまま保持し、入力再開・削除・保存へ進みません。
+送出例外と Task のキャンセルは捕捉せず、Interaction の既存の処理境界へ伝播します。
 `NoteDraft` は文字列とカーソルの更新規則を持ち、ファイルや Console に依存しません。
 端末サイズは Standard の `IConsoleEnvironmentPort.GetWindowSize()` で取得します。
 共通登録は `IScopeProfile` を実装した `NotepadProfile.Default` を `Apply` して利用します。

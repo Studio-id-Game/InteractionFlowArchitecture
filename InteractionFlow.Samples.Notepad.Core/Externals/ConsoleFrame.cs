@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Entities;
@@ -18,31 +19,31 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
         public int Width => width;
         public int Height => height;
 
-        public async Task ResizeAsync(IFlowContext context)
+        public async Task<Result> ResizeAsync(IFlowContext context)
         {
             var size = terminal.GetWindowSize();
-            if (!size.Try(out var dimensions, out var error)) throw error;
+            if (!size.Try(out var dimensions, out var error)) return error;
             var (newWidth, newHeight) = dimensions;
             if (newWidth < 24 || newHeight < 8)
-                throw new InvalidOperationException("Resize the terminal to at least 24 columns and 8 rows.");
+                return new InvalidOperationException("Resize the terminal to at least 24 columns and 8 rows.");
             newWidth--; // Do not trigger wrapping at the right edge.
             newHeight--; // Do not trigger scrolling at the bottom edge.
-            if (newWidth == width && newHeight == height) return;
+            if (newWidth == width && newHeight == height) return Result.Success;
             width = newWidth;
             height = newHeight;
-            await ClearAsync(context);
+            return await ClearAsync(context);
         }
 
-        public async Task ClearAsync(IFlowContext context)
+        public async Task<Result> ClearAsync(IFlowContext context)
         {
             var end = await screen.ClearAsync(context);
-            if (end.HasException) throw end.Exception!;
+            return end.Result;
         }
 
-        public async Task RenderAsync(IFlowContext context, IReadOnlyList<string> rows, int left, int top)
+        public async Task<Result> RenderAsync(IFlowContext context, IReadOnlyList<string> rows, int left, int top)
         {
             var moved = await screen.SetCursorPositionAsync(context, new ConsolePosition(0, 0));
-            if (moved.HasException) throw moved.Exception!;
+            if (!moved.Result.Try(out var moveError)) return moveError;
             var frame = new StringBuilder();
             for (var row = 0; row < height; row++)
             {
@@ -50,10 +51,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 frame.Append(ConsoleCells.Slice(row < rows.Count ? rows[row] : "", 0, width));
             }
             var written = await output.WriteAsync(context, frame.ToString());
-            if (written.HasException) throw written.Exception!;
+            if (!written.Result.Try(out var writeError)) return writeError;
             moved = await screen.SetCursorPositionAsync(context,
                 new ConsolePosition(Math.Max(0, Math.Min(width - 1, left)), Math.Max(0, Math.Min(height - 1, top))));
-            if (moved.HasException) throw moved.Exception!;
+            return moved.Result;
         }
     }
 }

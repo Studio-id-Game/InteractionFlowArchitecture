@@ -48,7 +48,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             if (preparation.StopMessage != null)
                 return await output.WriteLineAsync(context, preparation.StopMessage);
 
-            var draft = await editor.EditAsync(context, preparation.Original);
+            var edited = await editor.EditAsync(context, preparation.Original);
+            if (!edited.Try(out var editValue, out var editError))
+                return await ExceptionPort.HandleExceptionAsync(context, editError);
+            var draft = editValue.Note;
             if (draft == null) return await output.WriteLineAsync(context, DraftCancelledMessage);
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             var saved = await notes.Save(key, draft);
@@ -80,8 +83,10 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     var loaded = await notes.Load(available[i], new NotepadData("", ""));
                     labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
                 }
-                var selected = await choices.SelectAsync(context, "Select a note",
+                var selection = await choices.SelectAsync(context, "Select a note",
                     [.. available.Select(id => id.Note)], labels);
+                if (!selection.Try(out var choice, out var choiceError)) return choiceError;
+                var selected = choice.Index;
                 return selected is >= 0
                     ? ReadKeyValue.Selected(available[selected.Value]) : ReadKeyValue.Cancelled;
             }

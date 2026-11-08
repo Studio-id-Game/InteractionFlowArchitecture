@@ -81,13 +81,17 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var io = new Terminal(ConsoleKey.DownArrow, ConsoleKey.Enter);
             var operation = new ConsoleChoiceOperation(io, io, io, io, io);
             var context = new NotepadContext();
-            Assert.Equal(1, await operation.SelectAsync(context, "Choose", ["First", "Second"],
-                ["First: first title", "Second: second title"]));
+            var selected = await operation.SelectAsync(context, "Choose", ["First", "Second"],
+                ["First: first title", "Second: second title"]);
+            Assert.True(selected.Try(out var choice, out _));
+            Assert.Equal(1, choice.Index);
             Assert.Equal(0, io.LineReadCount);
             Assert.Contains(io.Frames, text => text.Contains("> [2] Second: second title"));
             Assert.True(io.ClearCount >= 2);
             io.Keys.Enqueue(Key(ConsoleKey.Escape));
-            Assert.Null(await operation.SelectAsync(context, "Choose", ["First"]));
+            var cancelled = await operation.SelectAsync(context, "Choose", ["First"]);
+            Assert.True(cancelled.Try(out var cancelledChoice, out _));
+            Assert.Null(cancelledChoice.Index);
             Assert.False(context.ExitRequested);
         }
 
@@ -102,7 +106,9 @@ namespace InteractionFlow.Samples.Notepad.Tests
             io.Keys.Enqueue(Key(ConsoleKey.Enter));
             io.Keys.Enqueue(Key(ConsoleKey.F2));
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
-            var note = await editor.EditAsync(new NotepadContext(), new NotepadData("Title", "Body"));
+            var edited = await editor.EditAsync(new NotepadContext(), new NotepadData("Title", "Body"));
+            Assert.True(edited.Try(out var edit, out _));
+            var note = edit.Note;
             Assert.NotNull(note);
             Assert.Equal("Titl!", note.Title);
             Assert.Equal("\nody", note.Text);
@@ -118,7 +124,9 @@ namespace InteractionFlow.Samples.Notepad.Tests
             io.Keys.Enqueue(Key(ConsoleKey.Escape));
             var original = new NotepadData("Original", "Body");
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
-            Assert.Null(await editor.EditAsync(new NotepadContext(), original));
+            var cancelled = await editor.EditAsync(new NotepadContext(), original);
+            Assert.True(cancelled.Try(out var edit, out _));
+            Assert.Null(edit.Note);
             Assert.Equal("Original", original.Title);
         }
 
@@ -130,7 +138,9 @@ namespace InteractionFlow.Samples.Notepad.Tests
             io.Keys.Enqueue(new ConsoleKeyInfo('\udc26', ConsoleKey.NoName, false, false, false));
             io.Keys.Enqueue(Key(ConsoleKey.F2));
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
-            var note = await editor.EditAsync(new NotepadContext(), new NotepadData("日", ""));
+            var edited = await editor.EditAsync(new NotepadContext(), new NotepadData("日", ""));
+            Assert.True(edited.Try(out var edit, out _));
+            var note = edit.Note;
             Assert.Equal("日🐦", note!.Title);
             Assert.Contains(io.Positions, position => position.Left == 8 && position.Top == 2);
         }
@@ -146,7 +156,8 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var original = new NotepadData("Title",
                 string.Join("\n", Enumerable.Range(0, 100).Select(_ => new string('x', 200))));
             var result = await editor.EditAsync(new NotepadContext(), original);
-            Assert.Equal(original.Text, result!.Text);
+            Assert.True(result.Try(out var edit, out _));
+            Assert.Equal(original.Text, edit.Note!.Text);
             Assert.All(io.Positions, position =>
             {
                 Assert.InRange(position.Left, 0, 78);
@@ -160,9 +171,78 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var failure = new IOException("Screen unavailable");
             var io = new Terminal { ScreenFailure = failure };
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
-            var actual = await Assert.ThrowsAsync<IOException>(() => editor.EditAsync(new NotepadContext(), null));
-            Assert.Same(failure, actual);
+            var result = await editor.EditAsync(new NotepadContext(), null);
+            Assert.False(result.Try(out _, out var error));
+            Assert.Same(failure, error.InnerException);
             Assert.Equal(0, io.KeyReadCount);
+        }
+
+        [Theory]
+        [InlineData(false, "size")]
+        [InlineData(false, "clear")]
+        [InlineData(false, "move")]
+        [InlineData(false, "write")]
+        [InlineData(false, "finish")]
+        [InlineData(true, "size")]
+        [InlineData(true, "clear")]
+        [InlineData(true, "move")]
+        [InlineData(true, "write")]
+        [InlineData(true, "finish")]
+        public async Task InteractiveOperationsReturnDisplayFailures(bool editing, string stage)
+        {
+            var failure = new IOException("Display failed");
+            var io = new Terminal(editing ? ConsoleKey.F2 : ConsoleKey.Enter)
+            {
+                SizeFailure = stage == "size" ? failure : null,
+                ScreenFailure = stage is "clear" or "finish" ? failure : null,
+                ClearFailureAt = stage == "finish" ? 2 : 1,
+                MoveFailure = stage == "move" ? failure : null,
+                WriteFailure = stage == "write" ? failure : null
+            };
+            var context = new NotepadContext();
+            var result = editing
+                ? (await new ConsoleNoteEditor(io, io, io, io, io).EditAsync(context, null)).WithoutValue
+                : (await new ConsoleChoiceOperation(io, io, io, io, io).SelectAsync(context, "Choose", ["One"]))
+                    .WithoutValue;
+
+            Assert.False(result.Try(out var error));
+            Assert.Same(failure, error.InnerException);
+            Assert.Equal(stage == "finish" ? 1 : 0, io.KeyReadCount);
+            Assert.Equal(0, io.LineReadCount);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InteractiveOperationsDoNotConvertThrownInputExceptions(bool editing)
+        {
+            var failure = new FormatException("Input threw");
+            var io = new Terminal { ReadFailure = failure };
+            var context = new NotepadContext();
+            async Task Run()
+            {
+                if (editing) await new ConsoleNoteEditor(io, io, io, io, io).EditAsync(context, null);
+                else await new ConsoleChoiceOperation(io, io, io, io, io).SelectAsync(context, "Choose", ["One"]);
+            }
+            Assert.Same(failure, await Assert.ThrowsAsync<FormatException>(Run));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InteractiveOperationsKeepTaskCancellation(bool editing)
+        {
+            var context = new NotepadContext();
+            context.Cancellation.Cancel();
+            var token = context.Cancellation.GetToken();
+            var io = new Terminal { ReadFailure = new OperationCanceledException(token) };
+            Task execution = editing
+                ? new ConsoleNoteEditor(io, io, io, io, io).EditAsync(context, null)
+                : new ConsoleChoiceOperation(io, io, io, io, io).SelectAsync(context, "Choose", ["One"]);
+
+            var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => execution);
+            Assert.Equal(token, error.CancellationToken);
+            Assert.True(execution.IsCanceled);
         }
 
         [Fact]
@@ -196,7 +276,13 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public int KeyReadCount { get; private set; }
             public int ClearCount { get; private set; }
             public Exception? ScreenFailure { get; set; }
-            public Result<(int Width, int Height)> GetWindowSize() => (80, 24);
+            public int ClearFailureAt { get; set; } = 1;
+            public Exception? MoveFailure { get; set; }
+            public Exception? WriteFailure { get; set; }
+            public Exception? SizeFailure { get; set; }
+            public Exception? ReadFailure { get; set; }
+            public Result<(int Width, int Height)> GetWindowSize()
+                => SizeFailure is null ? (80, 24) : SizeFailure;
             public bool IsInputRedirected => false;
             public bool IsOutputRedirected => false;
             public Result<ConsolePosition> GetCursorPosition() => new ConsolePosition(0, 0);
@@ -209,6 +295,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public ValueTask<ConsoleKeyInfo> ReadKeyAsync(IFlowContext context)
             {
                 KeyReadCount++;
+                if (ReadFailure != null) throw ReadFailure;
                 if (Keys.Count == 0) throw new InvalidOperationException("No scripted key remains.");
                 return new(Keys.Dequeue());
             }
@@ -216,7 +303,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 IFlowContext context, string text, ConsoleTextStyle style = default)
             {
                 Frames.Add(text);
-                return new(GetEnd());
+                return new(GetEnd(WriteFailure));
             }
             public ValueTask<ReactionEnd> WriteLineAsync(
                 IFlowContext context, string text, ConsoleTextStyle style = default)
@@ -224,12 +311,12 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public ValueTask<ReactionEnd> ClearAsync(IFlowContext context)
             {
                 ClearCount++;
-                return new(GetEnd(ScreenFailure));
+                return new(GetEnd(ClearCount == ClearFailureAt ? ScreenFailure : null));
             }
             public ValueTask<ReactionEnd> SetCursorPositionAsync(IFlowContext context, ConsolePosition position)
             {
                 Positions.Add(position);
-                return new(GetEnd(ScreenFailure));
+                return new(GetEnd(MoveFailure));
             }
         }
     }

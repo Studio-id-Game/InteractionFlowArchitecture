@@ -25,8 +25,11 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
             context.Action = NotepadAction.None;
-            var selected = await choices.SelectAsync(context, "Select your action",
+            var selection = await choices.SelectAsync(context, "Select your action",
                 ["Edit", "Create", "Delete", "Switch user", "List", "Exit"]);
+            if (!selection.Try(out var choice, out var error))
+                return await ExceptionPort.HandleExceptionAsync(context, error);
+            var selected = choice.Index;
             if (selected == null || selected == 5) context.ExitRequested = true;
             else context.Action = selected.Value switch
             {

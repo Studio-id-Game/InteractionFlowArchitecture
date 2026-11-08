@@ -61,20 +61,25 @@ raylib 実装内部の補助で、入力判定と描画が同じ座標を利用�
 
 ## Context と状態へのアクセス
 
-`CounterFlowContext` は `FlowContext.TryGetCore` で次の値を提供します。
+`CounterFlowContext` は次の型付きプロパティを提供し、`FlowContext.TryGetCore` からも同じアクセス契約を取得できます。
 Context 自身はゲームの進行、Task の実行、待機を行いません。
 
 | Context から取得する値 | 利用箇所と役割 |
 | --- | --- |
-| `ICounterInputAccess` | Operation が入力待機と受理を要求する |
-| `ICounterStateAccess` | Reaction がゲーム状態の遷移を要求し、SystemFlow が終了意図を読む |
-| `ICounterDisplayAccess` | WindowReaction が表示する値をまとめて取得する |
+| `Input` / `ICounterInputAccess` | Operation が入力待機と受理を要求する |
+| `State` / `ICounterStateAccess` | Reaction がゲーム状態の遷移を要求し、SystemFlow が終了意図を読む |
+| `Display` / `ICounterDisplayAccess` | WindowReaction が表示する値をまとめて取得する |
 
 ```csharp
-var input = context.GetRequired<ICounterInputAccess>();
-var state = context.GetRequired<ICounterStateAccess>();
-var display = context.GetRequired<ICounterDisplayAccess>();
+using var context = new CounterFlowContext();
+var input = context.Input;
+var state = context.State;
+var display = context.Display;
 ```
+
+Operation / Reaction Port の引数、各 Interaction、両 SystemFlow は `CounterFlowContext` を使用します。
+Interaction は `Interaction<CounterFlowContext>` を継承し、専用 Context の型を実行入口から処理本体まで保ちます。
+共通の例外・キャンセル Handler は `IFlowContext` の契約を維持し、必要なアクセス値を `GetRequired` で取得します。
 
 内部の `CounterAccess` は一つの gate を持ち、`CounterState`（ゲームの規則）、
 `CounterDisplayState`（表示内容）、`CounterInputWait`（入力通知の仕組み）を調整します。
@@ -88,11 +93,31 @@ var display = context.GetRequired<ICounterDisplayAccess>();
 
 `CreateIndependentContext()` はアクセス管理だけを共有する別ルートを作ります。
 CancellationObject と With で追加した値は継承しません。フレーム固有の FrameState / WindowState は
-この別ルートに追加します。通常の `new FlowContext(parent)` は、従来どおり親を探索しキャンセルも共有します。
+この別ルートに追加します。終了用には `new CounterFlowContext(parent)` を使い、型を保ったまま
+アクセス管理・キャンセルを共有し、追加値は親を探索します。通常の `new FlowContext(parent)` も、
+従来どおり親を探索しキャンセルを共有します。
+
+`With` は `FlowContext` を返す共通 API のため、専用型を必要とする変数宣言と値の追加は分けます。
+
+```csharp
+using var frame = context.CreateIndependentContext();
+frame.With(new FrameState()).With(new WindowState());
+using var shutdown = new CounterFlowContext(frame);
+shutdown.With<Result>(Result.Success);
+```
+
+固定プロパティと `GetRequired` の結果を一致させるため、この専用 Context は
+`ValidateAdditionalValue` で3種類のアクセス契約を実装する値を拒否します。`With<object>(value)` も
+実際の値で検査します。さらに、後日値が変わって契約を隠蔽する経路を避けるため、
+アクセス契約を現在含むかどうかにかかわらず、すべての `Entry<T>` 派生値を追加不可としています。
+FrameState / WindowState / Result などの通常値は追加できます。
+この制約は CounterFlowContext 型固有です。通常の `FlowContext` の子では親の制約を引き継がず、
+追加値や Entry を通じて親のアクセス契約を隠蔽できます。
 
 Context の Dispose は自分の参照を解放するだけで、共有アクセス管理を無効化しません。
-片方を破棄しても他方や取得済みのアクセス契約は利用できます。Task のキャンセル・待機も行わないため、
-実行所有者が全処理の終了を待つ責務は維持されます。Core / Standard の API は変更していません。
+片方を破棄しても他方や取得済みのアクセス契約は利用できます。ただし破棄済み Context の
+Input / State / Display と、新たな Context を作るメソッドは `ObjectDisposedException` になります。
+Task のキャンセル・待機も行わないため、実行所有者が全処理の終了を待つ責務は維持されます。
 
 ## カウンターの状態遷移
 
@@ -119,7 +144,7 @@ Count と ExitRequested は状態アクセス契約で取得専用として提�
   フレームの描画完了も待たないため、終了時にメインスレッドがカウンターを同期的に待てます。
 - フレーム用 Context は `CounterFlowContext.CreateIndependentContext()` で作る独立したルートです。
   親ありの FlowContext はキャンセルを共有するため、この分離には使いません。
-  終了用の子 Context はフレームが終わった後に作ります。
+  終了用の型付き子 Context はフレームが終わった後に作ります。
 - 両 Context が同じアクセス管理を共有します。ゲーム状態・表示・入力通知は分割されていますが、
   更新は同じ gate で管理し、入力受付表示と実際の受理条件は同じ判定から導出します。
 - `ICounterDisplayAccess.Snapshot` は count / message / acceptingInput を同じロック内で out 引数へ取得します。

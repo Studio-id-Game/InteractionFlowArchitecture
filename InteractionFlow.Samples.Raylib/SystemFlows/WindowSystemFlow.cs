@@ -1,8 +1,8 @@
-using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Interactions;
 using System;
 using System.Collections.Generic;
@@ -20,26 +20,26 @@ public sealed class WindowSystemFlow(
     // async/await でスレッドを移さず、Open〜Close を呼び出し元のメインスレッドで実行します。
     protected override Task<InteractionEnd> ExecuteCoreAsync(CounterFlowContext context)
     {
-        var state = context.GetRequired<ICounterStateAccess>();
+        var state = context.State;
         var frames = new FrameState();
 
         // 親あり Context は Cancellation を共有するため、独立したルートを用います。
-        using var frameContext = context.CreateIndependentContext()
-            .With(frames)
+        using var frameContext = context.CreateIndependentContext();
+        frameContext.With(frames)
             .With(new WindowState());
 
         var failures = new List<Exception>();
 
         RunSession(context, frameContext, state, frames, failures);
 
-        using var shutdown = new FlowContext(frameContext);
+        using var shutdown = new CounterFlowContext(frameContext);
 
         return Task.FromResult(CloseWindow(shutdown, failures));
     }
 
     private void RunSession(
-        IFlowContext context,
-        IFlowContext frameContext,
+        CounterFlowContext context,
+        CounterFlowContext frameContext,
         ICounterStateAccess state,
         FrameState frames,
         List<Exception> failures)
@@ -68,8 +68,8 @@ public sealed class WindowSystemFlow(
     }
 
     private void PresentFrames(
-        IFlowContext context,
-        IFlowContext frameContext,
+        CounterFlowContext context,
+        CounterFlowContext frameContext,
         FrameState frames,
         Task<InteractionEnd> execution,
         List<Exception> failures)
@@ -88,7 +88,7 @@ public sealed class WindowSystemFlow(
     }
 
     private static void StopCounter(
-        IFlowContext context,
+        CounterFlowContext context,
         ICounterStateAccess state,
         Task<InteractionEnd>? execution,
         List<Exception> failures)
@@ -120,7 +120,7 @@ public sealed class WindowSystemFlow(
         }
     }
 
-    private InteractionEnd CloseWindow(FlowContext context, List<Exception> failures)
+    private InteractionEnd CloseWindow(CounterFlowContext context, List<Exception> failures)
     {
         Result outcome = failures.Count switch
         {

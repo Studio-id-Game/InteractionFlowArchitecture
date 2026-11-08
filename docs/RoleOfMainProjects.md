@@ -30,6 +30,8 @@
 `Program` は構成と実行開始に絞り、`WindowSystemFlow` が画面の起動・フレーム進行・終了を調整します。
 入力は Operation、ウィンドウの生成・描画・終了と結果通知は Reaction に分けます。
 `CounterFlowContext` が用途別のアクセス契約を提供し、分割したゲーム状態・表示・入力通知を共通の同期管理で扱います。
+型付きの SystemFlow・Interaction・Port が同じ Context 型を引き継ぎ、確認付きプロパティからアクセスします。
+Context 固有の追加値検証によって、固定されたアクセス契約の隠蔽を拒否します。
 カウンターの生の可変状態は提供せず、ウィンドウ状態の `WindowState` はフレーム用 Context に置きます。
 フレームとカウンターは別の CancellationObject で並行実行し、
 raylib の呼び出しはメインスレッドに保ちます。

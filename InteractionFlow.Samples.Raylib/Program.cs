@@ -1,7 +1,5 @@
-using InteractionFlow.Samples.Raylib.Entities.Contexts;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Builders;
-using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using System;

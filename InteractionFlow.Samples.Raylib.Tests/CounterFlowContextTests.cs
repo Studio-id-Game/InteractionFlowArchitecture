@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
@@ -10,6 +11,135 @@ namespace InteractionFlow.Samples.Raylib.Tests;
 
 public sealed class CounterFlowContextTests
 {
+    [Fact]
+    public void FixedPropertiesMatchLookupOnTypedParentChildAndIndependentContexts()
+    {
+        using var parent = new CounterFlowContext();
+        parent.With(new LocalValue("parent"));
+        using var child = new CounterFlowContext(parent);
+        child.With(new LocalValue("child"));
+        using var independent = parent.CreateIndependentContext();
+
+        Assert.Same(parent.Input, parent.GetRequired<ICounterInputAccess>());
+        Assert.Same(parent.State, parent.GetRequired<ICounterStateAccess>());
+        Assert.Same(parent.Display, parent.GetRequired<ICounterDisplayAccess>());
+        Assert.Same(parent.Input, child.Input);
+        Assert.Same(parent.State, child.State);
+        Assert.Same(parent.Display, child.Display);
+        Assert.Same(child.Input, child.GetRequired<ICounterInputAccess>());
+        Assert.Same(child.State, child.GetRequired<ICounterStateAccess>());
+        Assert.Same(child.Display, child.GetRequired<ICounterDisplayAccess>());
+        Assert.Same(parent.Cancellation, child.Cancellation);
+        Assert.Equal("child", child.GetRequired<LocalValue>().Name);
+        Assert.Equal("parent", parent.GetRequired<LocalValue>().Name);
+        Assert.Same(parent.Input, independent.Input);
+        Assert.NotSame(parent.Cancellation, independent.Cancellation);
+        Assert.False(independent.TryGet<LocalValue>(out _));
+    }
+
+    [Theory]
+    [InlineData("input")]
+    [InlineData("state")]
+    [InlineData("display")]
+    public void RuntimeAccessValuesCannotOverrideFixedPropertiesThroughObjectRegistration(string contract)
+    {
+        using var context = new CounterFlowContext();
+        using var replacement = new CounterFlowContext();
+        var originalInput = context.Input;
+        var originalState = context.State;
+        var originalDisplay = context.Display;
+        object value = contract switch
+        {
+            "input" => replacement.Input,
+            "state" => replacement.State,
+            _ => replacement.Display
+        };
+
+        Assert.Throws<ArgumentException>(() => context.With<object>(value));
+
+        Assert.Same(originalInput, context.Input);
+        Assert.Same(originalState, context.State);
+        Assert.Same(originalDisplay, context.Display);
+        Assert.Same(context.Input, context.GetRequired<ICounterInputAccess>());
+        Assert.Same(context.State, context.GetRequired<ICounterStateAccess>());
+        Assert.Same(context.Display, context.GetRequired<ICounterDisplayAccess>());
+    }
+
+    [Fact]
+    public void TypedChildRejectsFixedAccessAndAllEntriesWhileOrdinaryValuesRemainAllowed()
+    {
+        using var parent = new CounterFlowContext();
+        using var child = new CounterFlowContext(parent);
+        using var textEntry = new RefEntry<string>("ordinary text");
+        using var mutableEntry = new RefEntry<object>(null);
+        using var customEntry = new CustomEntry("custom");
+        using var derivedEntry = new DerivedEntry();
+
+        Assert.Throws<ArgumentException>(() => child.With<ICounterInputAccess>(parent.Input));
+        Assert.Throws<ArgumentException>(() => child.With(textEntry));
+        Assert.Throws<ArgumentException>(() => child.With<object>(mutableEntry));
+        Assert.Throws<ArgumentException>(() => child.With<object>(customEntry));
+        Assert.Throws<ArgumentException>(() => child.With<object>(derivedEntry));
+        var frames = new FrameState();
+        var window = new WindowState();
+        child.With(frames).With(window).With<Result>(Result.Success);
+
+        Assert.Same(frames, child.GetRequired<FrameState>());
+        Assert.Same(window, child.GetRequired<WindowState>());
+        Assert.True(child.GetRequired<Result>().Try(out _));
+        Assert.False(child.TryGet<RefEntry<string>>(out _));
+        Assert.False(child.TryGet<RefEntry<object>>(out _));
+    }
+
+    [Fact]
+    public void OrdinaryChildMayOverrideParentAccessIncludingThroughMutableEntry()
+    {
+        using var root = new CounterFlowContext();
+        using var replacement = new CounterFlowContext();
+        using var entry = new RefEntry<object>(null);
+        using var child = new FlowContext(root).With(entry);
+
+        Assert.Same(root.Input, child.GetRequired<ICounterInputAccess>());
+        entry.Value = replacement.Input;
+
+        Assert.Same(replacement.Input, child.GetRequired<ICounterInputAccess>());
+        Assert.Same(root.Input, root.GetRequired<ICounterInputAccess>());
+        Assert.NotSame(root.Input, child.GetRequired<ICounterInputAccess>());
+    }
+
+    [Fact]
+    public void PropertiesRejectDisposedContextAndTypedChildRetainsSharedAccess()
+    {
+        using var root = new CounterFlowContext();
+        using var child = new CounterFlowContext(root);
+        var input = root.Input;
+        var state = root.State;
+        var display = root.Display;
+
+        root.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => root.Input);
+        Assert.Throws<ObjectDisposedException>(() => root.State);
+        Assert.Throws<ObjectDisposedException>(() => root.Display);
+        Assert.Throws<ObjectDisposedException>(() => root.CreateIndependentContext());
+        Assert.Same(input, child.Input);
+        Assert.Same(state, child.State);
+        Assert.Same(display, child.Display);
+        Assert.Same(input, child.GetRequired<ICounterInputAccess>());
+        state.RequestExit();
+        Assert.True(child.State.ExitRequested);
+    }
+
+    [Fact]
+    public void TypedChildConstructorRejectsNullAndDisposedParent()
+    {
+        Assert.Throws<ArgumentNullException>(() => new CounterFlowContext((CounterFlowContext)null!));
+        using var parent = new CounterFlowContext();
+        parent.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => new CounterFlowContext(parent));
+    }
+
     [Fact]
     public void RawStateIsUnavailableWhileAccessContractsAreProvided()
     {
@@ -140,4 +270,8 @@ public sealed class CounterFlowContextTests
     }
 
     private sealed record LocalValue(string Name);
+
+    private sealed class CustomEntry(string value) : Entry<string>(value) { }
+
+    private sealed class DerivedEntry() : RefEntry<object>(null) { }
 }

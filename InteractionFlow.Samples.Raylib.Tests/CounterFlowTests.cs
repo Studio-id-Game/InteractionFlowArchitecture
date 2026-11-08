@@ -26,7 +26,7 @@ public sealed class CounterFlowTests
             .UseFunction<ICancellationPort, CounterCancellationHandling>()
             .UseInteraction<IncrementCounter>();
         using var scope = builder.BuildScope();
-        using var flow = scope.BuildSystemFlow<CounterSystemFlow, IFlowContext>();
+        using var flow = scope.BuildSystemFlow<CounterSystemFlow, CounterFlowContext>();
         var operation = scope.GetRequiredService<ICounterOperation>();
         using var context = new CounterFlowContext();
         var state = context.GetRequired<ICounterStateAccess>();

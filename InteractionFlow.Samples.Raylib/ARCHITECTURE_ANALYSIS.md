@@ -64,7 +64,7 @@ Storage と SilentExternal は、このサンプルには導入していませ�
 | Externals | raylib や非同期入力への接続 |
 | Entities | 外部ライブラリに依存しない状態と遷移規則 |
 
-薄い `CounterOperation` も、Context から今回の入力アクセス契約を解決し、
+薄い `CounterOperation` も、専用 Context の Input プロパティから入力アクセス契約を取得し、
 操作の取得・送信を差し替え可能な Port として提供する役割があります。
 受付規則を Operation 自身に複製する必要はありません。
 
@@ -76,8 +76,17 @@ Interaction の完了を、そのままアプリ全体の終了指示とは扱�
 ## Context によるアクセス管理と State の分割
 
 `CounterFlowContext` は値を取得する入口であり、実行制御やゲームの状態遷移を担当しません。
-`TryGetCore` により用途別のアクセス契約を提供し、通常の追加値・親スコープの仕組みは Core に委ねます。
+Input / State / Display の型付きプロパティを提供し、`TryGetCore` も同じプロパティへ委譲します。
+各プロパティは Context 自身の破棄を確認し、取得済みアクセス契約の共有寿命とは区別します。
+専用の Port・Interaction・SystemFlow は CounterFlowContext 型を維持し、例外・キャンセル Handler は
+共通の IFlowContext 契約からアクセス値を取得します。
 `CounterAccess` が複数状態への一貫したアクセス範囲を保護し、State は個別の値と規則に集中します。
+
+固定プロパティと追加値の整合性は `ValidateAdditionalValue` で保ちます。
+3種類のアクセス契約を実装する値と、すべての Entry<T> 派生値を追加時に拒否します。
+Entry を現在の解決結果だけで許可すると、後日の値変更で固定契約を隠蔽できるため、
+Entry 全体を禁止するのがこのサンプルの明示的な方針です。Core 共通の上書き禁止規則ではありません。
+通常の FlowContext を子にした場合はその型の規則に従い、親のアクセス契約を隠蔽できます。
 
 この分割は、State ごとに独立したロックを持つ分割ではありません。
 受付条件、通知、処理段階、表示などの関連する更新は同じ gate で行います。
@@ -86,6 +95,8 @@ Interaction の完了を、そのままアプリ全体の終了指示とは扱�
 一方、非同期待機の間はロックを外し、完了反映時に終了意図などを再確認します。
 
 独立 Context 間ではアクセス管理だけを共有し、キャンセル状態と追加値は共有しません。
+型付きの親あり CounterFlowContext はアクセス管理とキャンセルを共有し、通常の親探索を維持します。
+With が返す型は FlowContext のままなので、専用 Context の宣言と追加値の登録は分けます。
 Context の破棄は共有状態を破棄せず、Task の停止・待機もしません。
 この仕組みはサンプル固有の実装であり、ライブラリ全体の並行安全性を追加保証するものではありません。
 以下の終了時の文脈更新と描画完了に関する留保も、この構成変更だけでは解消しません。
@@ -148,8 +159,10 @@ State の遷移とフローのテストは [関連テスト](../InteractionFlow.
 
 ## API 検証から見つかった検討事項
 
-専用 Context のアクセス契約をプロパティとして公開し、Port も同じ Context 型を要求する案を検討した際、
-Interaction の引数が IFlowContext に固定され、型付き SystemFlow と自由な Port 契約の間で型情報を
-引き継げない制約が見つかりました。
-未実装の改善案と検討範囲は [Interaction の Context 型を引き継ぐ契約の検討](../docs/design-notes/TYPED_INTERACTION_CONTEXT.md)
-に記録しています。
+専用 Context のアクセス契約をプロパティとして公開し、Port も同じ Context 型を要求する検証から、
+Core に `Interaction<TContext>` と、Context 型ごとの追加値検証フックが追加されました。
+現在のサンプルは `Interaction<CounterFlowContext>` と型付き Port を使い、
+専用 Context の型を SystemFlow から Operation / Reaction まで保っています。
+追加値の検証は CounterFlowContext 自身が定義し、通常の子 Context へ制約を伝播させません。
+背景と適用範囲は [Interaction の Context 型を引き継ぐ契約](../docs/design-notes/TYPED_INTERACTION_CONTEXT.md)、
+[追加値バリデーター](../docs/design-notes/CONTEXT_ADDITIONAL_VALUE_VALIDATION.md) に記録しています。

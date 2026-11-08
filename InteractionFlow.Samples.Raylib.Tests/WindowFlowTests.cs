@@ -145,7 +145,8 @@ public sealed class WindowFlowTests
     {
         var previous = new InvalidOperationException("frame failed");
         var reaction = new RaylibWindowReaction();
-        using var context = new FlowContext().With(new WindowState());
+        using var context = new CounterFlowContext();
+        context.With(new WindowState());
         var end = reaction.Close(context, previous);
         Assert.True(Contains(end.Exception, previous));
     }
@@ -175,7 +176,8 @@ public sealed class WindowFlowTests
         var previous = new InvalidOperationException("frame failed");
         var reporting = new InvalidOperationException("notification failed");
         var reaction = new RaylibWindowReaction();
-        using var context = new FlowContext().With(new WindowState());
+        using var context = new CounterFlowContext();
+        context.With(new WindowState());
         var original = Console.Error;
         using var output = new ThrowingWriter(reporting);
         try
@@ -287,13 +289,13 @@ public sealed class WindowFlowTests
         return actual?.InnerException is not null && Contains(actual.InnerException, expected);
     }
 
-    private sealed class TestFrame(Action<IFlowContext> poll) : Operation, IWindowOperation
+    private sealed class TestFrame(Action<CounterFlowContext> poll) : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState()
         {
         }
 
-        public void Poll(IFlowContext context)
+        public void Poll(CounterFlowContext context)
         {
             context.GetRequired<FrameState>().Command = null;
             poll(context);
@@ -313,19 +315,19 @@ public sealed class WindowFlowTests
         {
         }
 
-        public ReactionEnd Open(IFlowContext context)
+        public ReactionEnd Open(CounterFlowContext context)
         {
             Record("open");
             return GetEnd(OpenFailure);
         }
 
-        public ReactionEnd Draw(IFlowContext context)
+        public ReactionEnd Draw(CounterFlowContext context)
         {
             Record("draw");
             return GetEnd();
         }
 
-        public ReactionEnd Close(IFlowContext context, Result result)
+        public ReactionEnd Close(CounterFlowContext context, Result result)
         {
             Record("close");
             OnClose?.Invoke();
@@ -364,7 +366,7 @@ public sealed class WindowFlowTests
         {
         }
 
-        public async ValueTask<ReactionEnd> RespondAsync(IFlowContext context, CounterCommand command)
+        public async ValueTask<ReactionEnd> RespondAsync(CounterFlowContext context, CounterCommand command)
         {
             Assert.True(context.GetRequired<ICounterStateAccess>().BeginIncrement());
             Started = true;
@@ -389,7 +391,7 @@ public sealed class WindowFlowTests
         {
         }
 
-        public ValueTask<ReactionEnd> RespondAsync(IFlowContext context, CounterCommand command)
+        public ValueTask<ReactionEnd> RespondAsync(CounterFlowContext context, CounterCommand command)
         {
             context.GetRequired<ICounterStateAccess>().Fail(failure);
             return new(GetEnd(failure));

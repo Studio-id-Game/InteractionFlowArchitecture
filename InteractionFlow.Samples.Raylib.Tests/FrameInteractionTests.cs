@@ -21,7 +21,8 @@ public sealed class FrameInteractionTests
         var counter = new RecordingCounter();
         var window = new TestWindow(() => Assert.Equal(new[] { CounterCommand.Increment }, counter.Commands));
         var input = new TestInput(frame => frame.Command = CounterCommand.Increment);
-        using var context = new CounterFlowContext().With(new FrameState());
+        using var context = new CounterFlowContext();
+        context.With(new FrameState());
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -35,7 +36,8 @@ public sealed class FrameInteractionTests
         var counter = new RecordingCounter();
         var window = new TestWindow();
         var input = new TestInput(frame => frame.Command = null);
-        using var context = new CounterFlowContext().With(new FrameState { Command = CounterCommand.Exit });
+        using var context = new CounterFlowContext();
+        context.With(new FrameState { Command = CounterCommand.Exit });
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -58,7 +60,8 @@ public sealed class FrameInteractionTests
             frame.CloseRequested = close;
             frame.CancelRequested = cancel;
         });
-        using var context = new CounterFlowContext().With(new FrameState());
+        using var context = new CounterFlowContext();
+        context.With(new FrameState());
 
         var end = await CreateInteraction(input, window, counter).ExecuteAsync(context);
 
@@ -115,7 +118,7 @@ public sealed class FrameInteractionTests
         {
         }
 
-        public void Poll(IFlowContext context) => poll(context.GetRequired<FrameState>());
+        public void Poll(CounterFlowContext context) => poll(context.GetRequired<FrameState>());
     }
 
     private sealed class RecordingCounter : Operation, ICounterOperation
@@ -126,13 +129,13 @@ public sealed class FrameInteractionTests
         {
         }
 
-        public bool Submit(IFlowContext context, CounterCommand command)
+        public bool Submit(CounterFlowContext context, CounterCommand command)
         {
             Commands.Add(command);
             return true;
         }
 
-        public ValueTask<CounterCommand> ReadAsync(IFlowContext context)
+        public ValueTask<CounterCommand> ReadAsync(CounterFlowContext context)
             => throw new NotSupportedException();
     }
 
@@ -144,15 +147,15 @@ public sealed class FrameInteractionTests
         {
         }
 
-        public ReactionEnd Open(IFlowContext context) => GetEnd();
+        public ReactionEnd Open(CounterFlowContext context) => GetEnd();
 
-        public ReactionEnd Draw(IFlowContext context)
+        public ReactionEnd Draw(CounterFlowContext context)
         {
             onDraw?.Invoke();
             DrawCount++;
             return GetEnd();
         }
 
-        public ReactionEnd Close(IFlowContext context, Result result) => GetEnd(result);
+        public ReactionEnd Close(CounterFlowContext context, Result result) => GetEnd(result);
     }
 }

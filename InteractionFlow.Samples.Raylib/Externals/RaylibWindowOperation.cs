@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using Raylib_cs;
 using RL = Raylib_cs.Raylib;
@@ -17,7 +18,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
     {
     }
 
-    public void Poll(IFlowContext context)
+    public void Poll(CounterFlowContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
         var close = RL.WindowShouldClose();

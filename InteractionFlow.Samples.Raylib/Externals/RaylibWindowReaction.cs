@@ -1,8 +1,8 @@
-using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.Raylib.Entities;
+using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using Raylib_cs;
 using System;
@@ -46,7 +46,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         viewState = new();
     }
 
-    public ReactionEnd Open(IFlowContext context)
+    public ReactionEnd Open(CounterFlowContext context)
     {
         var window = context.GetRequired<WindowState>();
 
@@ -64,7 +64,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return Draw(context);
     }
 
-    public ReactionEnd Close(IFlowContext context, Result result)
+    public ReactionEnd Close(CounterFlowContext context, Result result)
     {
         try
         {
@@ -100,10 +100,10 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     private static Result Combine(Result result, Exception error)
         => result.Try(out var previous) ? error : new AggregateException(previous, error);
 
-    public ReactionEnd Draw(IFlowContext context)
+    public ReactionEnd Draw(CounterFlowContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        context.GetRequired<ICounterDisplayAccess>().Snapshot(
+        context.Display.Snapshot(
             out var count,
             out var message,
             out var acceptingInput);

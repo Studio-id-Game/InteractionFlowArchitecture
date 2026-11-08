@@ -15,8 +15,8 @@ Raylib サンプルの API 検証で見つかった、Interaction の Context �
 TryGetCore もプロパティを返す形で整理できます。
 
 さらに Port の引数を CounterFlowContext にできれば、プロパティへ直接アクセスでき、
-値の探索と必須値の実行時取得を省けます。しかし、現在の Interaction の実行契約がその接続の障壁になります。
-プロパティ公開と Port の型変更も、この記録時点では検討案です。
+値の探索と必須値の実行時取得を省けます。導入前は Interaction の実行契約がその接続の障壁でした。
+Raylib サンプルでは、プロパティ公開と Port の型変更も実施しました。
 
 ## 導入前の契約の非対称性
 
@@ -26,12 +26,12 @@ TryGetCore もプロパティを返す形で整理できます。
 | SystemFlow | `SystemFlow<TContext>` で要求する Context 型を指定できる |
 | Interaction | `ExecuteAsync(IFlowContext)` / `ExecuteCoreAsync(IFlowContext)` に固定されていた |
 
-型付き SystemFlow から Interaction へ渡す際、静的な Context 型が IFlowContext へ落ちます。
-Port が専用 Context を要求すると、Interaction 内で実行時の型確認・変換が必要です。
-ExecuteCoreAsync の引数だけを派生 Context 型に置き換えて override することはできません。
+導入前は、型付き SystemFlow から Interaction へ渡す際、静的な Context 型が IFlowContext へ落ちていました。
+Port が専用 Context を要求すると、Interaction 内で実行時の型確認・変換が必要でした。
+ExecuteCoreAsync の引数だけを派生 Context 型に置き換えて override することはできませんでした。
 
-このため、単に Port を型付きにするだけでは、SystemFlow から Port まで型の要件を一貫して表現できません。
-サンプル固有のキャストで吸収し続けるより、基盤 API の表現力として検討する価値がある問題です。
+このため、単に Port を型付きにするだけでは、SystemFlow から Port まで型の要件を一貫して表現できませんでした。
+サンプル固有のキャストで吸収する問題として扱わず、基盤 API を拡張しました。
 
 ## 採用した契約
 

@@ -11,12 +11,38 @@ namespace InteractionFlow.Samples.Raylib.Externals;
 
 internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 {
+    private class ViewState
+    {
+        private int prevCount = 0;
+        public float Dump { get; private set; } = 0;
+        public Color CircleColor => Color.Lerp(Color.Red, Color.Gold, 1f - Dump);
+
+        public void Update(int count, float elapsedSeconds)
+        {
+            if (count == prevCount)
+            {
+                // 60 FPS で毎フレーム 0.9 倍だった減衰を、経過秒数へ換算します。
+                Dump *= MathF.Pow(0.9f, elapsedSeconds * 60f);
+            }
+            else
+            {
+                Dump = 1f;
+            }
+
+            prevCount = count;
+        }
+    }
+
+    private ViewState viewState;
+
     public RaylibWindowReaction()
     {
+        viewState = new();
     }
 
     public override void ForceResetMemoryState()
     {
+        viewState = new();
     }
 
     public ReactionEnd Open(IFlowContext context)
@@ -81,18 +107,22 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
             out var message,
             out var acceptingInput);
 
+        viewState.Update(count, RL.GetFrameTime());
+
         RL.BeginDrawing();
 
         try
         {
             RL.ClearBackground(new Color(24, 29, 42, 255));
+
+            // 入力待ち・処理中のどちらでも描画が継続していることを示します。
+            var x = (int)(280 * (Math.Sin(RL.GetTime() * 3) + 1));
+            var y = (int)(20 * viewState.Dump * (Math.Sin(RL.GetTime() * 100) + 1));
+            RL.DrawCircle(40 + x, 205 + y, 9 + count * 5, viewState.CircleColor);
+
             RL.DrawText("InteractionFlow / Raylib", 40, 30, 28, Color.RayWhite);
             RL.DrawText($"Count: {count}", 40, 90, 38, Color.SkyBlue);
             RL.DrawText(message, 40, 150, 20, Color.RayWhite);
-
-            // 入力待ち・処理中のどちらでも描画が継続していることを示します。
-            var x = 40 + (int)((Math.Sin(RL.GetTime() * 3) + 1) * 280);
-            RL.DrawCircle(x, 205, 9, Color.Gold);
 
             DrawButton(RaylibLayout.Increment, "Run +1", acceptingInput);
             DrawButton(RaylibLayout.Cancel, "Cancel", true);

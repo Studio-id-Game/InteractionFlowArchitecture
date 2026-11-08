@@ -49,6 +49,6 @@ namespace InteractionFlow.Core.SystemFlows
         /// </summary>
         /// <param name="context">SystemFlow に渡すコンテキスト。</param>
         /// <returns>SystemFlow の終了結果。</returns>
-        Task<FlowEndToken> ExecuteAsync(TContext context);
+        Task<InteractionEnd> ExecuteAsync(TContext context);
     }
 }

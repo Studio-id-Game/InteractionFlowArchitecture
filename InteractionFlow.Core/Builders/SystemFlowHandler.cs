@@ -34,7 +34,7 @@ namespace InteractionFlow.Core.Builders
         /// <param name="context">SystemFlow に渡すコンテキスト。</param>
         /// <returns>SystemFlow の終了結果。</returns>
         /// <exception cref="ObjectDisposedException">このハンドラが破棄済みの場合に発生します。</exception>
-        public async Task<FlowEndToken> ExecuteAsync(TContext context)
+        public async Task<InteractionEnd> ExecuteAsync(TContext context)
         {
             var systemFlow = this.systemFlow ?? throw new ObjectDisposedException(nameof(SystemFlowHandler<TContext>));
             return await systemFlow.ExecuteAsync(context).ConfigureAwait(false);

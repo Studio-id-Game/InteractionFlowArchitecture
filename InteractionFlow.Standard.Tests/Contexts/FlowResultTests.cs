@@ -119,20 +119,20 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 => new(GetEnd(waitAndResetResult));
         }
 
-        private sealed class Forward(FlowEndToken token) : SystemFlow
+        private sealed class Forward(InteractionEnd token) : SystemFlow
         {
-            protected override Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context) => Task.FromResult(token);
+            protected override Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context) => Task.FromResult(token);
         }
 
         private sealed class Nested(Forward child) : SystemFlow(child)
         {
-            protected override Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+            protected override Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
                 => child.ExecuteAsync(context);
         }
 
         private sealed class FailingFlow(Exception failure) : SystemFlow
         {
-            protected override Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context) => throw failure;
+            protected override Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context) => throw failure;
         }
     }
 }

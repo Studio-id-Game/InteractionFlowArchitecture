@@ -10,7 +10,7 @@ namespace InteractionFlow.Samples.HelloDoor.Lock.SystemFlows
 {
     public sealed class LockDoorSystemFlow(OperateDoor operateDoor, DoorSystemFlow doorSystem) : SystemFlow<IFlowContext>(operateDoor, doorSystem)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             using var lockContext = new ScopedFlowContext(context)
                 // OperationとReactionの間で契約を変更せずに値を受け渡しするための状態を、このスコープでのみ追加

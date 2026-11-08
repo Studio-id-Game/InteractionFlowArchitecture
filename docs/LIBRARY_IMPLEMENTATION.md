@@ -211,7 +211,7 @@ Console の新しい標準実装の配置と入出力・キャンセルの契約
 
 - [ライブラリ実装の詳細](./LIBRARY_IMPLEMENTATION_DETAIL.md#implementation-details)
   - [システムの組み立て (System Flow Builder)](./LIBRARY_IMPLEMENTATION_DETAIL.md#system-flow-builder)
-  - [値と処理結果の意味論 (Result, ReactionEnd, FlowEndToken, Entry)](./LIBRARY_IMPLEMENTATION_DETAIL.md#entry-result)
+  - [値と処理結果の意味論 (Result, ReactionEnd, InteractionEnd, Entry)](./LIBRARY_IMPLEMENTATION_DETAIL.md#entry-result)
   - [文脈の構成 (Context)](./LIBRARY_IMPLEMENTATION_DETAIL.md#context)
   - [機能の分離 (Functions)](./LIBRARY_IMPLEMENTATION_DETAIL.md#functions)
   - [体験と相互作用のフロー (Interaction, SystemFlow)](./LIBRARY_IMPLEMENTATION_DETAIL.md#interaction-systemflow)
@@ -317,7 +317,7 @@ DI の登録一覧全体、動的なサービス取得、実行途中で追加�
 | **Context 更新の原則** | ライブラリでは保証しない |
 | **実行時の依存ノードツリーの保証** | Analyzer が、認識可能なコンストラクタ依存と `Dependency` 列挙の整合性を検査する |
 | SystemFlow が受け取る `IFlowContext` 実装型 | `ISystemFlowBuilder<TContext>` や `SystemFlowHandler<TContext>` が、ジェネリック型制約と API によって保証する |
-| `ReactionEnd`/`FlowEndToken` が `反応`/`相互作用` の結果を意味する | 各 `internal` コンストラクタと実行元の `protected` 関数が、生成元のみを保証する |
+| `ReactionEnd`/`InteractionEnd` が `反応`/`相互作用` の結果を意味する | 各 `internal` コンストラクタと実行元の `protected` 関数が、生成元のみを保証する |
 | `Interaction` 派生クラスにおける例外とキャンセルの自動キャッチと Port への委譲 | `Interaction` 基底クラスが、基底実装によって保証する |
 | Reaction が User に観測されること | 原理上保証できない |
 

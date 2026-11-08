@@ -400,7 +400,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
         }
 
         private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private static async Task<FlowEndToken> Finish(Task<FlowEndToken> execution)
+        private static async Task<InteractionEnd> Finish(Task<InteractionEnd> execution)
             => await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         private static Task<ReactionEnd> CancelBody(IFlowContext context)
         {

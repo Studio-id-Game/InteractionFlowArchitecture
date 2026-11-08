@@ -63,10 +63,10 @@ namespace InteractionFlow.Core.Interactions
         /// <remarks>
         /// 渡されたコンテキストの所有権は取得せず、破棄しません。
         /// 本体で発生した例外とキャンセルは対応する Reaction ポートへ委譲しますが、
-        /// そのポート自身が例外を送出した場合は終了トークンを生成せず、その例外を呼び出し側へ伝播します。
+        /// そのポート自身が例外を送出した場合は終了結果を生成せず、その例外を呼び出し側へ伝播します。
         /// </remarks>
         /// <exception cref="Exception">例外処理またはキャンセル処理を担当するポートから未処理の例外が伝播した場合。</exception>
-        public async Task<FlowEndToken> ExecuteAsync(IFlowContext context)
+        public async Task<InteractionEnd> ExecuteAsync(IFlowContext context)
         {
             IDisposable? registration = null;
             TaskCompletionSource<bool>? completion = null;
@@ -270,11 +270,11 @@ namespace InteractionFlow.Core.Interactions
         }
 
         /// <summary>
-        /// Reaction が生成した終了結果から Interaction の終了トークンを生成します。
+        /// Reaction が生成した終了結果から Interaction の終了結果を生成します。
         /// </summary>
         /// <param name="reactionEnd">Reaction が生成したフロー終了結果。</param>
-        /// <returns>Interaction の終了トークン。</returns>
-        private static FlowEndToken GetEnd(ReactionEnd reactionEnd)
+        /// <returns>Interaction の終了結果。</returns>
+        private static InteractionEnd GetEnd(ReactionEnd reactionEnd)
         {
             return IInteraction.GetEnd(reactionEnd);
         }

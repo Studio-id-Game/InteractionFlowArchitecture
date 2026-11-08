@@ -3,7 +3,7 @@
 `InteractionFlow.Core.Entities` の `Result` は、局所的な処理の成功・失敗を明示して連結するための API です。
 この文書を、Result の契約と例外の扱いを確認する基準とします。
 `ReactionEnd` はこの Result を保持し、Reaction による終了結果の生成規則を付与します。
-`FlowEndToken` はそれに基づく Interaction / SystemFlow の完了を表し、Context は保持しません。
+`InteractionEnd` はそれに基づく Interaction / SystemFlow の完了を表し、Context は保持しません。
 詳細は [Reaction とフローの結果](./REACTION_RESULTS.md) を参照してください。
 
 ## 成功値と失敗

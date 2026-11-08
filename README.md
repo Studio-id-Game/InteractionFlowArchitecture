@@ -88,7 +88,7 @@ Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参�
 キャンセル要求・登録 Task の待機とリセットは [CancellationObject](./docs/CANCELLATION.md) を参照してください。
 期限到達時のキャンセル通知と処理結果の集約は [CancellationScheduler](./docs/CANCELLATION_SCHEDULER.md) を参照してください。
 文脈値の必須・任意の取得については [文脈値の取得](./docs/CONTEXT_VALUES.md) を参照してください。
-ReactionEnd・FlowEndToken と Result の関係は [Reaction とフローの結果](./docs/REACTION_RESULTS.md) を参照してください。
+ReactionEnd・InteractionEnd と Result の関係は [Reaction とフローの結果](./docs/REACTION_RESULTS.md) を参照してください。
 
 形式変換の文字コードと Stream の契約は [Standard SerializationSystem](./docs/SERIALIZATION.md) を参照してください。
 - `InteractionFlow.Standard` は、Core に現実のユースケースで扱いやすい機能を加えた標準パッケージです。
@@ -590,7 +590,7 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
 #### Step 8. ユーザー体験を実装します。
 
 `OperateDoor` を繰り返し、Context に終了要求が出るまで Context Loop を継続します。
-各実行が例外を含む `FlowEndToken` を返した場合も継続せず、その終了結果を `Program` へ返します。
+各実行が例外を含む `InteractionEnd` を返した場合も継続せず、その終了結果を `Program` へ返します。
 
 <details>
 <summary><code>SystemFlows/DoorSystemFlow.cs</code> のコードを表示</summary>
@@ -607,9 +607,9 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
     internal sealed class DoorSystemFlow(OperateDoor operateDoor)
         : SystemFlow<IFlowContext>(operateDoor)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            FlowEndToken end;
+            InteractionEnd end;
 
             while (true)
             {
@@ -637,7 +637,7 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
 
 #### Step 9. エントリーポイントで、実行環境の組み立てと実行を実装します。
 
-`ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。実行後は `FlowEndToken` を確認し、未解決例外が含まれる場合にエントリーポイントで表示します。
+`ScopeBuilder`を用いてPort、External実装、InteractionをDIへ登録し、初期ContextとSystemFlowを構築して実行します。`OperateDoor` は、`Interaction` 基底クラスが例外やキャンセルを Reaction として扱うための実装も必要とします。この実装として Console 実装を登録するために、`ConsoleBuilder.Profile` も適用します。実行後は `InteractionEnd` を確認し、未解決例外が含まれる場合にエントリーポイントで表示します。
 
 <details>
 <summary><code>Program.cs</code> のコードを表示</summary>

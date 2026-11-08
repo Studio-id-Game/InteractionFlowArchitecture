@@ -9,9 +9,9 @@ namespace InteractionFlow.Samples.HelloDoor.SystemFlows
     public sealed class DoorSystemFlow(OperateDoor operateDoor)
         : SystemFlow<IFlowContext>(operateDoor)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
         {
-            FlowEndToken end;
+            InteractionEnd end;
 
             while (true)
             {

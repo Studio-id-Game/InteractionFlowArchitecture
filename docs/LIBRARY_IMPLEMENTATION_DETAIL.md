@@ -16,7 +16,7 @@
 ## 実装の詳細 - 目次
 
 - [システムの組み立て (System Flow Builder)](#system-flow-builder)
-- [値と処理結果の意味論 (Result, ReactionEnd, FlowEndToken, Entry)](#entry-result)
+- [値と処理結果の意味論 (Result, ReactionEnd, InteractionEnd, Entry)](#entry-result)
 - [文脈の構成 (Context)](#context)
 - [機能の分離 (Functions)](#functions)
 - [体験と相互作用のフロー (Interaction, SystemFlow)](#interaction-systemflow)
@@ -193,7 +193,7 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 
 詳細は、[保証と制約と責務](./LIBRARY_IMPLEMENTATION.md#guarantees) を参照してください。
 
-## 値と処理結果の意味論 (Result, ReactionEnd, FlowEndToken, Entry) <a id="entry-result"></a>
+## 値と処理結果の意味論 (Result, ReactionEnd, InteractionEnd, Entry) <a id="entry-result"></a>
 
 このライブラリでは、**値の意味** が様々な場面で重要な役割を持ちます。
 
@@ -212,7 +212,7 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 | `Result` | 値を持たない結果に意味を持たせる |
 | `Result<TValue>` | 値を持つ結果に意味を持たせる |
 | `ReactionEnd` | `Reaction` の結果に意味を持たせる |
-| `FlowEndToken` | `Interaction`/`SystemFlow` の結果に意味を持たせる |
+| `InteractionEnd` | `Interaction`/`SystemFlow` の結果に意味を持たせる |
 | `Entry<TValue>` | 保持する値に意味を持たせる |
 
 ### Result
@@ -322,11 +322,11 @@ if (!end.Result.Try(out var error))
 また、途中の Reaction の結果を受け取っただけで、体験全体が終了するわけではありません。
 次の Interaction を実行するか、体験を終了するかは SystemFlow が判断します。
 
-### FlowEndToken
+### InteractionEnd
 
-ソースコード: [`FlowEndToken.cs`](../InteractionFlow.Core/Entities/Contexts/FlowEndToken.cs)
+ソースコード: [`InteractionEnd.cs`](../InteractionFlow.Core/Entities/Contexts/InteractionEnd.cs)
 
-`FlowEndToken` は ReactionEnd に基づく Interaction / SystemFlow の完了を表します。
+`InteractionEnd` は ReactionEnd に基づく Interaction / SystemFlow の完了を表します。
 Context は保持せず、LastContext と境界ごとの Context 結合は廃止しました。
 
 - `End` は Reaction が生成した ReactionEnd です。
@@ -356,7 +356,7 @@ SystemFlow の送出例外も自動で Result 化しません。
 
 `Entry<TValue>` は、保持する値に、型としての解決や更新可能性などの意味を持たせるための基底クラスです。
 
-これは `Result` / `ReactionEnd` / `FlowEndToken` と同様に値の意味を表しますが、
+これは `Result` / `ReactionEnd` / `InteractionEnd` と同様に値の意味を表しますが、
 特に `IFlowContext` や Storage が値固有の知識を持たずに、
 値を保持・保存できるようにするために、以下のような特徴を持ちます。
 
@@ -1431,7 +1431,7 @@ namespace MyApp.Interactions
 
 より一般には、Interaction は、一つ以上の Reaction / Operation / Storage / Silent External を含む「相互作用の段階」を実装することが出来ます。
 User からの入力を必要としない Interaction では Operation を含まない構成も可能です。
-ただし、終了状態である `FlowEndToken` は Reaction 系 API からのみ取得できる `ReactionEnd` を必要とします。
+ただし、終了状態である `InteractionEnd` は Reaction 系 API からのみ取得できる `ReactionEnd` を必要とします。
 これは、Interaction を Reaction で終了してユーザー体験として閉じるために、ライブラリ利用者が守る必要がある制約を型として表現したものです。
 ただし、ライブラリ側では、Reaction 系 API が返す `ReactionEnd` が「System が実際に反応を実行したこと」を保証しないため、ライブラリ利用者がこのことを保証する責務を持ちます。
 
@@ -1443,10 +1443,10 @@ Interaction の実装粒度は、「相互作用の意味」として独立し�
 - 本体と `OnCancellation` の完了を表す通知 Task をキャンセル待機一覧へ登録
 - 本体 Task のキャンセル例外に対して `OnCancellation` を待ち、完了通知を確定してから `Interaction.CancellationPort` へ委譲
 - `ExecuteCoreAsync` 内でスローされたその他の例外の `Interaction.ExceptionPort` への委譲
-- `ReactionEnd` からの `FlowEndToken` 作成
+- `ReactionEnd` からの `InteractionEnd` 作成
 
 これにより、Interaction 前のキャンセル確認、例外への反応の委譲、Reaction に由来する終了結果の生成を行います。
-ただし、ExceptionPort / CancellationPort 自身が例外を送出する場合は、呼び出し側で捕捉されない限り、そのまま未処理例外として上位へ伝播し、`FlowEndToken` も作成されません。
+ただし、ExceptionPort / CancellationPort 自身が例外を送出する場合は、呼び出し側で捕捉されない限り、そのまま未処理例外として上位へ伝播し、`InteractionEnd` も作成されません。
 
 結果として、派生 Interaction は、例外・キャンセルの反応を直接実装せず、固有の Function の組み合わせへ集中できます。
 
@@ -1506,19 +1506,19 @@ Interaction 同士の共有 Context による直接ネストの循環待機を�
 `ISystemFlow<TContext>` は、指定された `IFlowContext` 実装型で SystemFlow を実行する契約です。
 
 ```csharp
-Task<FlowEndToken> ExecuteAsync(TContext context);
+Task<InteractionEnd> ExecuteAsync(TContext context);
 ```
 
 SystemFlow は、Interaction を一つの段階として実行するだけでなく、複数の相互作用を合成し、体験の流れを構築します。
 
-`SystemFlow<TContext>` 基底クラスは、派生型の `ExecuteCoreAsync` が返した終了トークンをそのまま返します。
-終了トークンに Context は保持しません。
+`SystemFlow<TContext>` 基底クラスは、派生型の `ExecuteCoreAsync` が返した終了結果をそのまま返します。
+終了結果に Context は保持しません。
 
 
 ```csharp
-protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
 {
-    FlowEndToken end;
+    InteractionEnd end;
 
     end = await helloInteraction.ExecuteAsync(context);
 
@@ -1542,7 +1542,7 @@ protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext contex
 破棄しません。
 文脈値を破棄する責務は、その `IFlowContext` を作成した呼び出し側が保持します。
 これにより、作成した `IFlowContext` インスタンスは、必要に応じて次の SystemFlow などへ再利用することができます。
-`FlowEndToken` は Context の参照を保持しません。
+`InteractionEnd` は Context の参照を保持しません。
 
 ---
 

@@ -7,7 +7,7 @@
 | --- | --- |
 | Result | 局所的な処理の成功・失敗と連結 |
 | ReactionEnd | Result を保持し、Reaction による生成規則を付与 |
-| FlowEndToken | ReactionEnd に基づく Interaction / SystemFlow の完了 |
+| InteractionEnd | ReactionEnd に基づく Interaction / SystemFlow の完了 |
 
 ## 結果の生成と利用
 
@@ -36,7 +36,7 @@ Notepad のキー取得補助は相互作用の終了境界ではなく、Task<R
 選択・下書き編集 Operation 内の出力失敗の扱いは、既存の契約を維持します。
 それらは ReactionEnd を返す API ではなく、今回の整理では戻り値の契約を変更しません。
 
-ReactionEnd.Result と FlowEndToken.Result は既存の Result の契約に従います。
+ReactionEnd.Result と InteractionEnd.Result は既存の Result の契約に従います。
 返された失敗、送出例外、キャンセルされた Task を混同しません。
 Result の連結 API に、委譲先の例外を自動捕捉する動作は追加しません。
 
@@ -47,7 +47,7 @@ HasCanceled / CanceledException はその直接の原因が OperationCanceledExc
 集約例外の中にキャンセルがあっても、集約全体をキャンセルとは判定しません。
 キャンセル処理の成功は成功 Result であり、ユーザーの終了意図とは別です。
 
-## FlowEndToken の役割と移行
+## InteractionEnd の役割と移行
 
 LastContext は削除しました。Context は引数として渡し、寿命は呼び出し側が管理します。
 IInteraction の実装では GetEnd(context, reactionEnd) を GetEnd(reactionEnd) に置き換えます。
@@ -55,6 +55,9 @@ Interaction 基底クラスを利用する場合は、この変更は内部で�
 SystemFlow の GetEnd(context, token) は削除し、子から返された token を直接返します。
 SystemFlow 基底クラスも同じトークンを返し、Context の結合やトークンの再生成を行いません。
 
-FlowEndToken は今回は維持し、Reaction の完了と Interaction / SystemFlow の完了を区別します。
+InteractionEnd は Reaction の完了と、単独または SystemFlow で合成された相互作用の完了を区別します。
+ここでの Interaction はクラス名だけでなく相互作用を意味します。
+旧名は FlowEndToken です。Context 保持を廃止した後の責務に合わせて改名しました。
+SystemFlowEnd は追加しません。SystemFlow 固有の終了契約が必要になった時点で分離を検討します。
 今回の実装で追加された実行識別子や履歴はなく、過去の結果の再利用まで禁止するものではありません。
 トークンが返されたこと自体はアプリ全体の終了指示ではなく、進行は SystemFlow が判断します。

@@ -9,7 +9,7 @@ namespace InteractionFlow.Samples.Parrot.SystemFlows
     internal sealed class ParrotApplication(SelectSample selectSample, TalkToParrot parrot)
         : SystemFlow<IFlowContext>(selectSample, parrot)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(IFlowContext context)
+        protected override async Task<InteractionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             while (true)
             {

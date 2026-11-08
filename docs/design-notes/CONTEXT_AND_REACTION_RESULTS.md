@@ -4,7 +4,7 @@
 
 Parrot 移行後の振り返りを受けた設計検討の記録です。
 ユーザーの検討方針と、それに対するエージェントの意見を区別して残します。
-コード生成は未実装・未決定です。ReactionEnd の Result 保持と FlowEndToken の Context 保持廃止を試行しました。
+コード生成は未実装・未決定です。ReactionEnd の Result 保持と InteractionEnd の Context 保持廃止を試行しました。
 現行仕様は [Reaction とフローの結果](../REACTION_RESULTS.md) を参照してください。
 以下の検討記録は変更前の背景を含みます。
 必須値取得の最小 API として GetRequired<T>() と専用例外を追加しました。
@@ -76,7 +76,7 @@ ReactionEnd 周りについて、Result との統合を検討中です。
 
 1・2 だけでも重複を減らせる可能性があります。
 3 では、現行の「Reaction による終了結果を生成する」という境界をどう保つかが課題になります。
-現在は ReactionEnd の internal コンストラクタ等が生成元を制限し、FlowEndToken が実行時の Context と結び付けます。
+現在は ReactionEnd の internal コンストラクタ等が生成元を制限し、InteractionEnd が実行時の Context と結び付けます。
 任意の Result をそのまま終了結果として使えるようにすると、生成元の制約は変わります。
 その変更を意図するか、明示的な境界変換で残すかを決める必要があります。
 

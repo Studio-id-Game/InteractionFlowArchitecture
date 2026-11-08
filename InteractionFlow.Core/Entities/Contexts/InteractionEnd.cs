@@ -3,9 +3,9 @@ using System;
 namespace InteractionFlow.Core.Entities.Contexts
 {
     /// <summary>
-    /// Reaction の終了結果に基づく Interaction / SystemFlow の完了を表すトークンです。
+    /// Reaction の結果に基づき、単独または SystemFlow で合成された相互作用の完了を表します。
     /// </summary>
-    public sealed class FlowEndToken
+    public sealed class InteractionEnd
     {
         /// <summary>
         /// Reaction が生成したフロー終了結果を取得します。
@@ -35,7 +35,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// </summary>
         public bool HasCanceled => End.HasCanceled;
 
-        internal FlowEndToken(ReactionEnd end)
+        internal InteractionEnd(ReactionEnd end)
         {
             End = end ?? throw new ArgumentNullException(nameof(end));
         }

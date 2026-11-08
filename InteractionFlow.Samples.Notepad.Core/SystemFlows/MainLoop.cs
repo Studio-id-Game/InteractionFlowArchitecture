@@ -10,7 +10,7 @@ namespace InteractionFlow.Samples.Notepad.Core.SystemFlows
         NoteCreate create, NoteEdit edit, NoteDelete delete)
         : SystemFlow<NotepadContext>(login, list, select, create, edit, delete)
     {
-        protected override async Task<FlowEndToken> ExecuteCoreAsync(NotepadContext context)
+        protected override async Task<InteractionEnd> ExecuteCoreAsync(NotepadContext context)
         {
             var end = await login.ExecuteAsync(context);
             while (!end.HasException && !context.ExitRequested)

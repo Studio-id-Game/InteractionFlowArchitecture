@@ -33,10 +33,10 @@ namespace InteractionFlow.Core.SystemFlows
         /// <returns>SystemFlow の終了結果。</returns>
         /// <remarks>
         /// 渡されたコンテキストの所有権は取得せず、破棄しません。
-        /// 派生型の <see cref="ExecuteCoreAsync(TContext)"/> が返した終了トークンをそのまま返します。
+        /// 派生型の <see cref="ExecuteCoreAsync(TContext)"/> が返した終了結果をそのまま返します。
         /// </remarks>
         /// <exception cref="Exception"><see cref="ExecuteCoreAsync(TContext)"/> から未処理の例外が伝播した場合。</exception>
-        public async Task<FlowEndToken> ExecuteAsync(TContext context)
+        public async Task<InteractionEnd> ExecuteAsync(TContext context)
         {
             var end = await ExecuteCoreAsync(context).ConfigureAwait(false);
             return end;
@@ -46,8 +46,8 @@ namespace InteractionFlow.Core.SystemFlows
         /// 指定されたコンテキストで SystemFlow の本体を実行します。
         /// </summary>
         /// <param name="context">SystemFlow に渡すコンテキスト。</param>
-        /// <returns>SystemFlow 内の Interaction が返した終了トークン。</returns>
-        protected abstract Task<FlowEndToken> ExecuteCoreAsync(TContext context);
+        /// <returns>SystemFlow 内の Interaction が返した終了結果。</returns>
+        protected abstract Task<InteractionEnd> ExecuteCoreAsync(TContext context);
 
     }
 }

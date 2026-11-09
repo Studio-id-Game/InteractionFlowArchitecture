@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace InteractionFlow.Core.Entities
@@ -42,31 +43,44 @@ namespace InteractionFlow.Core.Entities
         /// </returns>
         public Result<T> Parse<T>()
         {
-            HashSet<IEntry> visitedEntries = new(EntryReferenceEqualityComparer.Instance);
-            return ((IEntry)this).Parse<T>(visitedEntries);
+            return ((IEntry)this).TryResolve<T>(true, null, out var value, out var error)
+                ? value : (Result<T>)error!;
         }
 
-        Result<T> IEntry.Parse<T>(ISet<IEntry> visitedEntries)
+        bool IEntry.TryResolve<T>(bool reportMissing, ISet<IEntry>? visitedEntries,
+            [MaybeNullWhen(false)] out T value, out Exception? error)
         {
+            value = default;
+            error = null;
             if (Value == null)
             {
-                return new EntryValueNotFoundException($"Entry value is null. Requested type: {typeof(T).FullName}.");
+                if (reportMissing)
+                    error = new EntryValueNotFoundException($"Entry value is null. Requested type: {typeof(T).FullName}.");
+                return false;
             }
-            else if (!visitedEntries.Add(this))
+            else if (visitedEntries != null && !visitedEntries.Add(this))
             {
-                return new InvalidOperationException($"Circular Entry reference was detected. Requested type: {typeof(T).FullName}. Entry type: {GetType().FullName}.");
+                error = new InvalidOperationException($"Circular Entry reference was detected. Requested type: {typeof(T).FullName}. Entry type: {GetType().FullName}.");
+                return false;
             }
             else if (Value is T t)
             {
-                return t;
+                value = t;
+                return true;
             }
             else if (Value is IEntry entry)
             {
-                return entry.Parse<T>(visitedEntries);
+                if (visitedEntries is null)
+                {
+                    visitedEntries = new HashSet<IEntry>(EntryReferenceEqualityComparer.Instance) { this };
+                }
+                return entry.TryResolve(reportMissing, visitedEntries, out value, out error);
             }
             else
             {
-                return new EntryValueNotFoundException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
+                if (reportMissing)
+                    error = new EntryValueNotFoundException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
+                return false;
             }
 
         }

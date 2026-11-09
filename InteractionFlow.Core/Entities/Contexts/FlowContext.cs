@@ -72,12 +72,12 @@ namespace InteractionFlow.Core.Entities.Contexts
             var entries = Values;
             for (var i = entries.Count - 1; i >= 0; i--)
             {
-                if (entries[i].Parse<T>().Try(out var found, out var error))
+                if (entries[i].TryResolve<T>(false, null, out var found, out var error))
                 {
                     value = found;
                     return true;
                 }
-                if (error.InnerException is null or not EntryValueNotFoundException) throw error;
+                if (error != null) throw new ResultException(error);
             }
             return TryGetCore(out value);
         }

@@ -1,7 +1,7 @@
 # 一部屋のターン制脱出ゲーム — 仕様書案
 
-状態: レビュー用ドラフト。ゲーム内容・配置・キー・演出時間・型名は本書での提案であり、未実装です。
-これまで合意した設計方針と、仕様を具体化するための仮決定を分けて記載します。
+状態: 初版実装済みの仕様書案。ゲーム内容・配置・キー・演出時間は本書の提案を初版に採用しています。
+設計判断と検証結果は [サンプルREADME](../../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ## 1. 目的と設計の前提
 
@@ -160,7 +160,7 @@ Preparing / Resultではポーズを受理せず、Stoppingから再開はでき
 
 ### 2.7 Contextと提供するアクセス
 
-仮称EscapeFlowContextは、Input / World / Display / Presentation等の用途別アクセスを提供します。
+EscapeApplicationContextは、Input / World / Display / Presentation / Controlの用途別アクセスを提供します。
 ポーズの制御状態と協調待機へのアクセスも提供しますが、Context自身がフローを停止・再開する処理は持ちません。
 Worldは複数Stateを整合して更新する入口で、生の共有可変Stateや可変コレクションを外へ返しません。
 Displayのスナップショットには、盤面・位置・仕掛け・段階・選択・メッセージ・版を一貫した形で含めます。
@@ -192,7 +192,7 @@ Program
        │    └─ SessionSystemFlow（初期化→ターン反復→結果入力→終了）をリトライごとに実行
        │         └─ TurnSystemFlow（選択反復→プレイヤー行動→敵行動）
        ├─ PresentFrameを反復（ゲーム側の入力・提示待ち・ポーズ中も継続）
-       │    └─ フレーム結果の制御要求を受け、ChangePauseを実行
+       │    └─ フレーム結果の制御要求を受け、ChangeControlを実行
        └─ 終了要求の適用→キャンセル→GameSystemFlowの合流→CloseWindow
 ```
 
@@ -216,7 +216,7 @@ SystemFlowは状態・結果から経路を選び、ユーザー向けの状態�
 
 ### 3.3 Flow全体の協調的なポーズ制御
 
-WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け、ChangePause Interactionを実行します。
+WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け、ChangeControl Interactionを実行します。
 この制御経路は通常のゲーム入力Operationや演出完了待機から独立させ、
 ゲーム側がそのどちらを待っていても操作できます。Interaction同士を直接ネストしません。
 ポーズ表示の適用は次の描画で確認できます。
@@ -266,8 +266,9 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 | ApplyPlayerAction | 行動Reaction | 再検証・確定・状態更新・提示完了まで |
 | ApplyEnemyAction | 敵行動Reaction | 移動・捕獲判定・状態更新・提示完了まで |
 | ShowResult | 結果Reaction | 結果段階の設定と結果画面の提示まで |
-| SelectResultAction | 結果入力Operation→応答Reaction | リトライまたは終了の意図を記録するまで |
-| ChangePause | 制御Reaction | 可能な段階でPaused/Activeを適用し、受付・提示時間の制御を整合させるまで。再開待機は行わない |
+| SelectAction（結果段階でも共用） | 結果入力Operation→応答Reaction | リトライの意図を記録するまで。終了は独立した制御経路 |
+| ChangeControl | 制御Reaction | 可能な段階でPaused/Active、または現在の提示の省略を適用するまで。再開待機は行わない |
+| EnableSelection / EnableResultInput | 受付開始Reaction | 必要な提示完了後、段階と受付可能性を更新するまで |
 | EndSession / RequestShutdown | 寿命終了・停止Reaction | 入力・提示の閉鎖と必要な応答まで。Task合流はSystemFlowの責務 |
 
 全Interactionは明示Reactionの終了結果で完了し、他のInteractionを直接実行しません。
@@ -304,6 +305,8 @@ Portは専用Contextを受け取り、Input / World / Display / Presentationを�
 状態更新は先に確定し、描画側だけが開始位置から確定位置へ補間します。
 最初のフレーム取得時を演出開始とし、既に提示済みの古い要求を再演しません。
 ポーズ中は現在の補間位置を保ち、ポーズ中の実時間をゲーム演出の経過時間へ加算しません。
+初版では、制御版が変わった境界フレームのdeltaを破棄します。ポーズ区間の混入を防ぐため、
+最大一フレーム分の動作時間も捨て得る保守的な時間処理を採用します。
 最終フレームを描画してもPaused成立後は新しいゲーム提示完了を報告せず、再開後に一度だけ報告します。
 報告時も共有アクセスの同期境界で制御状態を再確認し、ポーズ前に取得した表示だけを根拠に完了させません。
 
@@ -391,6 +394,6 @@ FPSが変わっても演出時間が大きく変わらないこと、演出省�
 4. raylibの入力・描画・経過時間による演出へ接続する。
 5. 実画面確認と計測を行い、Coreの不足があればサンプル固有の都合と区別して記録する。
 
-実装前にレビューしたい仮決定は、盤面と敵巡回、全行動の仮選択・確定方式、Esc/Fの用途、
+初版に採用した提案は、盤面と敵巡回、全行動の仮選択・確定方式、Esc/Fの用途、
 提示完了を待つ範囲です。これらを変更する場合は、状態とフロー、受け入れ条件を一緒に見直します。
 初版でセーブ、複数敵、攻撃、ランダム生成、汎用描画エンジン、提示通知のCore標準化は行いません。

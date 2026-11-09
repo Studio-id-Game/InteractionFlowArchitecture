@@ -1,0 +1,383 @@
+using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Builders;
+using InteractionFlow.Samples.EscapeGame.Entities;
+using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.Interactions;
+using InteractionFlow.Samples.EscapeGame.SystemFlows;
+using InteractionFlow.Standard.Builders;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
+
+namespace InteractionFlow.Samples.EscapeGame.Tests;
+
+public sealed class FlowTests
+{
+    [Fact]
+    public async Task InitialPresentationWaitKeepsFramesAliveUntilRenderedAcknowledgment()
+    {
+        using var fixture = new Fixture();
+        var heldFrames = 0;
+        fixture.Window.CompletePresentations = false;
+        fixture.Input.PollFrame = context =>
+        {
+            var snapshot = context.Display.Snapshot();
+            if (snapshot.SessionId == 0)
+                return;
+
+            heldFrames++;
+            Assert.Equal(GameStage.Preparing, snapshot.Stage);
+            Assert.False(snapshot.AcceptingInput);
+            Assert.False(context.Input.TrySubmit(snapshot.SessionId, GameCommand.Up));
+            if (heldFrames >= 5)
+                context.GetRequired<FrameState>().ShutdownRequested = true;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.Equal(5, heldFrames);
+        Assert.True(fixture.Window.DrawCount >= 5);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.False(fixture.Context.Cancellation.HasTask);
+    }
+
+    [Fact]
+    public async Task TwelveTurnSolutionPresentsResultThenRetriesWithNewSession()
+    {
+        using var fixture = new Fixture();
+        var commands = new Queue<GameCommand>(Solution.SelectMany(command => new[] { command, GameCommand.Confirm }));
+        GameSnapshot? won = null;
+        long firstSession = 0;
+        long secondSession = 0;
+        fixture.Input.PollFrame = context =>
+        {
+            var snapshot = context.Display.Snapshot();
+            if (snapshot.SessionId == 0)
+                return;
+            if (firstSession == 0)
+                firstSession = snapshot.SessionId;
+
+            var input = context.GetRequired<FrameState>();
+            if (snapshot.SessionId != firstSession)
+            {
+                secondSession = snapshot.SessionId;
+                Assert.Equal(0, snapshot.Turn);
+                Assert.Equal(snapshot.Room.PlayerStart, snapshot.Player);
+                Assert.False(snapshot.HasKey);
+                Assert.False(snapshot.DoorUnlocked);
+                input.ShutdownRequested = true;
+                return;
+            }
+
+            if (!snapshot.AcceptingInput)
+                return;
+            if (commands.TryDequeue(out var command))
+            {
+                input.Command = command;
+                return;
+            }
+
+            won = snapshot;
+            Assert.Equal(GameStage.Result, snapshot.Stage);
+            Assert.Equal(GameOutcome.Won, snapshot.Outcome);
+            input.Command = GameCommand.Retry;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.NotNull(won);
+        Assert.Equal(12, won.Turn);
+        Assert.True(won.KeyCollected);
+        Assert.False(won.HasKey);
+        Assert.True(won.SwitchActivated);
+        Assert.True(won.DoorUnlocked);
+        Assert.Equal(3, won.EnemyPatrolIndex);
+        Assert.True(secondSession > firstSession);
+        Assert.All(fixture.Window.Threads, thread => Assert.Equal(fixture.Window.Threads[0], thread));
+    }
+
+    [Fact]
+    public async Task PausedPresentationAndInputRemainFrozenWhileFramesContinueThenResume()
+    {
+        using var fixture = new Fixture();
+        var phase = 0;
+        var pausedFrames = 0;
+        GameSnapshot? frozen = null;
+        fixture.Input.PollFrame = context =>
+        {
+            var snapshot = context.Display.Snapshot();
+            var input = context.GetRequired<FrameState>();
+            if (phase == 0 && snapshot.AcceptingInput)
+            {
+                input.Command = GameCommand.Up;
+                phase = 1;
+            }
+            else if (phase == 1 && snapshot.AcceptingInput)
+            {
+                input.Command = GameCommand.Confirm;
+                phase = 2;
+                fixture.Window.CompletePresentations = false;
+            }
+            else if (phase == 2 && snapshot.Stage == GameStage.PlayerPresenting)
+            {
+                input.PauseRequested = true;
+                phase = 3;
+            }
+            else if (phase == 3 && snapshot.Mode == ExecutionMode.Paused)
+            {
+                frozen ??= snapshot;
+                Assert.Equal(frozen.Player, snapshot.Player);
+                Assert.Equal(frozen.Enemy, snapshot.Enemy);
+                Assert.Equal(frozen.Turn, snapshot.Turn);
+                Assert.Equal(frozen.Stage, snapshot.Stage);
+                Assert.Equal(frozen.Presentation!.Key, snapshot.Presentation!.Key);
+                Assert.Equal(frozen.Presentation.ElapsedSeconds, snapshot.Presentation.ElapsedSeconds);
+                Assert.False(context.Input.TrySubmit(snapshot.SessionId, GameCommand.Confirm));
+                if (++pausedFrames == 5)
+                {
+                    input.PauseRequested = true;
+                    phase = 4;
+                    fixture.Window.CompletePresentations = true;
+                }
+            }
+            else if (phase == 4 && snapshot.AcceptingInput)
+            {
+                Assert.Equal(1, snapshot.Turn);
+                input.ShutdownRequested = true;
+            }
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.Equal(5, pausedFrames);
+        Assert.Equal(4, phase);
+    }
+
+    [Fact]
+    public async Task ShutdownBeforeWorkerStartsIsSuccessful()
+    {
+        using var fixture = new Fixture();
+        fixture.Window.OnOpen = context => context.World.RequestShutdown();
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.False(fixture.Context.Cancellation.HasTask);
+    }
+
+    [Fact]
+    public async Task StopPortFailureStillCancelsJoinsAndClosesWithoutNextPresentation()
+    {
+        var failure = new InvalidOperationException("stop failed");
+        using var fixture = new Fixture(failure);
+        fixture.Window.CompletePresentations = false;
+        fixture.Input.PollFrame = context =>
+        {
+            if (context.Display.Snapshot().Presentation is not null)
+                context.GetRequired<FrameState>().ShutdownRequested = true;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(end.HasException);
+        Assert.True(Contains(end.Exception, failure));
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.False(fixture.Context.Cancellation.HasTask);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ClosingCancellationPreservesPriorFailureAndCancellation(bool earlierFailure)
+    {
+        var previous = new FormatException("earlier failed");
+        var canceled = new OperationCanceledException("close canceled");
+        using var context = new EscapeApplicationContext();
+        context.With<Result>(earlierFailure ? previous : Result.Success);
+        var window = new HeadlessWindowReaction { CloseFailure = canceled };
+        var interaction = new CloseWindow(window, new GameExceptionHandling(), new GameCancellationHandling());
+
+        var end = await interaction.ExecuteAsync(context);
+
+        Assert.True(end.HasException);
+        Assert.True(Contains(end.Exception, canceled));
+        if (earlierFailure)
+            Assert.True(Contains(end.Exception, previous));
+    }
+
+    [Fact]
+    public async Task EndSessionCancellationPreservesEarlierFailureAndResetFailure()
+    {
+        var previous = new FormatException("session failed");
+        var canceled = new OperationCanceledException("end session canceled");
+        using var context = new EscapeApplicationContext();
+        context.With<Result>(previous);
+        var port = new CanceledSessionReaction(canceled);
+        var interaction = new EndSession(port, new GameExceptionHandling(), new GameCancellationHandling());
+
+        var end = await interaction.ExecuteAsync(context);
+
+        Assert.True(end.HasException);
+        Assert.True(Contains(end.Exception, previous));
+        Assert.True(Contains(end.Exception, canceled));
+        Assert.True(ContainsMessage(end.Exception, "Cancellation is not requested."));
+        Assert.True(context.World.ShutdownRequested);
+        Assert.False(context.Cancellation.HasTask);
+    }
+
+    private static readonly GameCommand[] Solution =
+    [
+        GameCommand.Up, GameCommand.Up, GameCommand.Down, GameCommand.Down,
+        GameCommand.Right, GameCommand.Interact, GameCommand.Right, GameCommand.Right,
+        GameCommand.Right, GameCommand.Interact, GameCommand.Up, GameCommand.Up
+    ];
+
+    private static bool Contains(Exception? actual, Exception expected)
+    {
+        if (ReferenceEquals(actual, expected))
+            return true;
+        if (actual is AggregateException aggregate && aggregate.InnerExceptions.Any(inner => Contains(inner, expected)))
+            return true;
+        return actual?.InnerException is not null && Contains(actual.InnerException, expected);
+    }
+
+    private static bool ContainsMessage(Exception? actual, string message)
+    {
+        if (actual?.Message == message)
+            return true;
+        if (actual is AggregateException aggregate && aggregate.InnerExceptions.Any(inner => ContainsMessage(inner, message)))
+            return true;
+        return actual?.InnerException is not null && ContainsMessage(actual.InnerException, message);
+    }
+
+    private sealed class Fixture : IDisposable
+    {
+        private readonly InteractionFlow.Core.Builders.ScopeHandler scope;
+        public EscapeApplicationContext Context { get; } = new();
+        public InteractionFlow.Core.Builders.SystemFlowHandler<EscapeApplicationContext> Flow { get; }
+        public ScriptedWindowOperation Input { get; }
+        public HeadlessWindowReaction Window { get; }
+
+        public Fixture(Exception? stopFailure = null)
+        {
+            var builder = new ScopeBuilder();
+            builder.Apply(new EscapeGameProfile())
+                .UseFunction<IWindowOperation, ScriptedWindowOperation>()
+                .UseFunction<IWindowReaction, HeadlessWindowReaction>();
+            if (stopFailure is not null)
+                builder.UseFunction<ISessionReaction, FailingStopReaction>();
+            scope = builder.BuildScope();
+            Input = Assert.IsType<ScriptedWindowOperation>(scope.GetRequiredService<IWindowOperation>());
+            Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
+            if (stopFailure is not null)
+                Assert.IsType<FailingStopReaction>(scope.GetRequiredService<ISessionReaction>()).Failure = stopFailure;
+            Flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
+        }
+
+        public void Dispose()
+        {
+            Flow.Dispose();
+            scope.Dispose();
+            Context.Dispose();
+        }
+    }
+
+    public sealed class ScriptedWindowOperation : Operation, IWindowOperation
+    {
+        private readonly Stopwatch timeout = Stopwatch.StartNew();
+        public Action<EscapeApplicationContext>? PollFrame { get; set; }
+        public override void ForceResetMemoryState() { }
+        public void Poll(EscapeApplicationContext context)
+        {
+            if (timeout.Elapsed > TimeSpan.FromSeconds(10))
+                throw new TimeoutException("The scripted game did not finish.");
+            var frame = context.GetRequired<FrameState>();
+            var snapshot = context.Display.Snapshot();
+            frame.SessionId = snapshot.SessionId;
+            frame.Command = null;
+            frame.PauseRequested = false;
+            frame.SkipRequested = false;
+            frame.ShutdownRequested = false;
+            frame.Presentation = snapshot.Presentation?.Key;
+            PollFrame?.Invoke(context);
+        }
+    }
+
+    public sealed class HeadlessWindowReaction : Reaction, IWindowReaction
+    {
+        public List<string> Events { get; } = [];
+        public List<int> Threads { get; } = [];
+        public int DrawCount { get; private set; }
+        public bool CompletePresentations { get; set; } = true;
+        public Exception? CloseFailure { get; set; }
+        public Action<EscapeApplicationContext>? OnOpen { get; set; }
+        public override void ForceResetMemoryState() { }
+        public ReactionEnd Open(EscapeApplicationContext context)
+        {
+            Record("open");
+            OnOpen?.Invoke(context);
+            return GetEnd();
+        }
+        public ReactionEnd Draw(EscapeApplicationContext context)
+        {
+            Record("draw");
+            DrawCount++;
+            var snapshot = context.Display.Snapshot();
+            if (snapshot.Presentation is { } presentation)
+            {
+                context.Presentation.Advance(presentation.Key, 0, snapshot.ControlRevision);
+                if (CompletePresentations)
+                {
+                    context.Presentation.Advance(presentation.Key, presentation.DurationSeconds, snapshot.ControlRevision);
+                    context.Presentation.TryComplete(presentation.Key);
+                }
+            }
+            Thread.Yield();
+            return GetEnd();
+        }
+        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        {
+            Record("close");
+            if (CloseFailure is not null)
+                throw CloseFailure;
+            return GetEnd(previous);
+        }
+        private void Record(string name)
+        {
+            Events.Add(name);
+            Threads.Add(Environment.CurrentManagedThreadId);
+        }
+    }
+
+    public sealed class FailingStopReaction : Reaction, ISessionReaction
+    {
+        public Exception Failure { get; set; } = new InvalidOperationException("stop failed");
+        public override void ForceResetMemoryState() { }
+        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => throw Failure;
+        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
+        {
+            context.World.EndSession(context.SessionId);
+            return GetEnd(previous);
+        }
+    }
+
+    private sealed class CanceledSessionReaction(OperationCanceledException canceled) : Reaction, ISessionReaction
+    {
+        public override void ForceResetMemoryState() { }
+        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => GetEnd();
+        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous) => throw canceled;
+    }
+}

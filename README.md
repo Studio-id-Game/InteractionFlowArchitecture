@@ -141,10 +141,12 @@ Context 型ごとの追加値の制約は、[Context の値取得と拡張](./do
   dotnet run --project InteractionFlow.Samples.Notepad
   dotnet run --project InteractionFlow.Samples.Notepad.Secure
   dotnet run --project InteractionFlow.Samples.Raylib
+  dotnet run --project InteractionFlow.Samples.EscapeGame
   ```
 
 入力・描画ループと非同期処理の接続例は [Raylib counter](./InteractionFlow.Samples.Raylib/README.md) を参照してください。
 次のサンプルの初期設計には、[InteractionFlowの利用設計と描画環境への接続指針](./docs/guides/README.md) を参照してください。
+状態とターン進行、提示待機、ポーズ・再開の接続例は [Turn-based escape](./InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ## Others
 

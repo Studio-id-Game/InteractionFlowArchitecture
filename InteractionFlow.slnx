@@ -4,6 +4,7 @@
     <Project Path="InteractionFlow.Analyzers/InteractionFlow.Analyzers.csproj" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="InteractionFlow.Samples.EscapeGame.Tests/InteractionFlow.Samples.EscapeGame.Tests.csproj" />
     <Project Path="InteractionFlow.Samples.Raylib.Tests/InteractionFlow.Samples.Raylib.Tests.csproj" />
     <Project Path="InteractionFlow.Samples.Notepad.Tests/InteractionFlow.Samples.Notepad.Tests.csproj" />
     <Project Path="InteractionFlow.Standard.Tests/InteractionFlow.Standard.Tests.csproj" />
@@ -14,6 +15,7 @@
     <Project Path="InteractionFlow.Standard/InteractionFlow.Standard.csproj" />
   </Folder>
   <Folder Name="/Samples/">
+    <Project Path="InteractionFlow.Samples.EscapeGame/InteractionFlow.Samples.EscapeGame.csproj" />
     <Project Path="InteractionFlow.Samples.Raylib/InteractionFlow.Samples.Raylib.csproj" />
     <Project Path="InteractionFlow.Samples.HelloDoor.Lock/InteractionFlow.Samples.HelloDoor.Lock.csproj" Id="2bfce6d8-8377-4f8e-921e-4017adee5701" />
     <Project Path="InteractionFlow.Samples.HelloDoor/InteractionFlow.Samples.HelloDoor.csproj" />

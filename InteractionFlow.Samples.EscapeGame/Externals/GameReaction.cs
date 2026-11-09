@@ -3,7 +3,6 @@ using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.ExternalPorts;
-using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Externals;
@@ -12,74 +11,130 @@ public sealed class GameReaction : Reaction, IGameReaction
 {
     public override void ForceResetMemoryState() { }
 
-    public ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
-        => ApplyAndPresentAsync(context, () => context.World.BeginSession(context.SessionId), waitBeforeApply: false);
-
-    public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
-        => ApplyAsync(context, () => context.World.EnterSelecting(context.SessionId));
-
-    public ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
-        => ApplyAsync(context, () => context.World.ApplySelection(context.SessionId, command));
-
-    public ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
-        => ApplyAndPresentAsync(context, () => context.World.ApplyPlayer(context.SessionId));
-
-    public ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
-        => ApplyAndPresentAsync(context, () => context.World.ApplyEnemy(context.SessionId));
-
-    public ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
-        => ApplyAndPresentAsync(context, () => context.World.ShowResult(context.SessionId));
-
-    public ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
-        => ApplyAsync(context, () => context.World.EnableResultInput(context.SessionId));
-
-    private static async ValueTask<ReactionEnd> ApplyAsync(
-        EscapeApplicationContext context,
-        Func<MutationStatus> apply)
+    public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
     {
-        while (await context.Control.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken()))
+        // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
+        var change = context.World.BeginSession(context.SessionId);
+        var failure = GameMutationValidation.Presentation(change, nameof(BeginAsync));
+        if (failure is not null || change.Status == MutationStatus.Stopped)
+            return GetEnd(failure);
+
+        return await PresentAsync(context, change.Presentation!.Value);
+    }
+
+    public async ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = apply();
+            var status = context.World.EnterSelecting(context.SessionId);
             if (status == MutationStatus.Deferred)
                 continue;
 
-            // Rejected は無効操作のフィードバックであり、実行障害ではありません。
-            return GetEnd();
+            return GetEnd(GameMutationValidation.RequiredTransition(status, nameof(EnableSelectionAsync)));
         }
 
         return GetEnd();
     }
 
-    private static async ValueTask<ReactionEnd> ApplyAndPresentAsync(
-        EscapeApplicationContext context,
-        Func<MutationResult> apply,
-        bool waitBeforeApply = true)
+    public async ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
     {
         var token = context.Cancellation.GetToken();
-
-        while (true)
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
         {
-            // Begin は未公開セッションを公開するため、公開前の Current/Active 判定を要求しません。
-            if (waitBeforeApply && !await context.Control.WaitForActiveAsync(context.SessionId, token))
-                return GetEnd();
+            var status = context.World.ApplySelection(context.SessionId, command);
+            if (status == MutationStatus.Deferred)
+                continue;
 
-            waitBeforeApply = true;
-            // ポーズ確認と更新はアクセス管理でも一括検証します。Deferred は同じ仕事を保持します。
-            var change = apply();
+            // 選択の Rejected は通常の無効操作。アクセス管理が理由を表示へ反映済みです。
+            return GetEnd(GameMutationValidation.Selection(status, nameof(SelectAsync)));
+        }
+
+        return GetEnd();
+    }
+
+    public async ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        {
+            // 事前の再開確認直後にもポーズし得るため、更新側の Deferred 検査は残します。
+            var change = context.World.ApplyPlayer(context.SessionId);
             if (change.Status == MutationStatus.Deferred)
                 continue;
 
-            if (change.Status != MutationStatus.Applied || change.Presentation is not PresentationKey key)
-                return GetEnd();
+            var failure = GameMutationValidation.Presentation(change, nameof(ApplyPlayerAsync));
+            if (failure is not null || change.Status == MutationStatus.Stopped)
+                return GetEnd(failure);
 
-            var completion = await context.Presentation.WaitAsync(key, token);
-            if (completion == PresentationCompletion.Stopped)
-                return GetEnd();
-
-            // 完了受領後のポーズでも、次のゲーム段階へは進めません。
-            await context.Control.WaitForActiveAsync(context.SessionId, token);
-            return GetEnd();
+            return await PresentAsync(context, change.Presentation!.Value);
         }
 
+        return GetEnd();
+    }
+
+    public async ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        {
+            var change = context.World.ApplyEnemy(context.SessionId);
+            if (change.Status == MutationStatus.Deferred)
+                continue;
+
+            var failure = GameMutationValidation.Presentation(change, nameof(ApplyEnemyAsync));
+            if (failure is not null || change.Status == MutationStatus.Stopped)
+                return GetEnd(failure);
+
+            return await PresentAsync(context, change.Presentation!.Value);
+        }
+
+        return GetEnd();
+    }
+
+    public async ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        {
+            var change = context.World.ShowResult(context.SessionId);
+            if (change.Status == MutationStatus.Deferred)
+                continue;
+
+            var failure = GameMutationValidation.Presentation(change, nameof(ShowResultAsync));
+            if (failure is not null || change.Status == MutationStatus.Stopped)
+                return GetEnd(failure);
+
+            return await PresentAsync(context, change.Presentation!.Value);
+        }
+
+        return GetEnd();
+    }
+
+    public async ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        {
+            var status = context.World.EnableResultInput(context.SessionId);
+            if (status == MutationStatus.Deferred)
+                continue;
+
+            return GetEnd(GameMutationValidation.RequiredTransition(status, nameof(EnableResultInputAsync)));
+        }
+
+        return GetEnd();
+    }
+
+    private static async ValueTask<ReactionEnd> PresentAsync(EscapeApplicationContext context, PresentationKey key)
+    {
+        var token = context.Cancellation.GetToken();
+        var completion = await context.Presentation.WaitAsync(key, token);
+        if (completion == PresentationCompletion.Stopped)
+            return GetEnd();
+
+        // 通知受領後のポーズも、次のゲーム段階へ進む前に待ちます。
+        await context.Control.WaitForActiveAsync(context.SessionId, token);
+        return GetEnd();
     }
 }

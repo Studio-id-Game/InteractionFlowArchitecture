@@ -117,6 +117,16 @@ Release簡易計測のPresentFrameは488B/回・約229～237nsで、割り当て
 Context生成時の負担は増えており、フレーム計測から生成コストや競合時の性能は保証しない。
 実画面での再確認は未実施。
 
+### Core API採用：独自のContext基底を削除
+
+CoreのContextInheritance導入後、WindowContextとEscapeApplicationContextを通常のFlowContext派生へ戻した。
+ゲームContextは`base(parent, ContextInheritance.Cancellation)`で親の値を探索せずCancellationだけを共有する。
+プロパティとTryGetCoreの明示的な提供、固定アクセス追加の検証、破棄時の参照解放は具体Contextに残す。
+独自のEscapeContext、内部ValuesContext、CancellationContextと、それらの委譲処理は削除した。
+WindowSystemFlowやゲーム処理の手順は変更しない。既存の生成メソッドと具体型名を維持し、変更範囲を絞った。
+全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功した。
+Release簡易計測の通常PresentFrameは488B/回・約232～241ns。実画面での再確認は未実施。
+
 ## Interaction粒度の見直し
 
 `ShowResult`へ「結果提示を待つ→失敗なら短絡→結果入力を開く」を統合し、

@@ -11,15 +11,15 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class ContextTests
 {
     [Fact]
-    public void DedicatedContextsImplementIFlowContextWithoutInheritingFlowContext()
+    public void DedicatedContextsUseStandardFlowContextImplementation()
     {
         using var window = new WindowContext();
         using var game = window.CreateGameContext();
 
         Assert.IsAssignableFrom<IFlowContext>(window);
         Assert.IsAssignableFrom<IFlowContext>(game);
-        Assert.False(typeof(FlowContext).IsAssignableFrom(typeof(WindowContext)));
-        Assert.False(typeof(FlowContext).IsAssignableFrom(typeof(EscapeApplicationContext)));
+        Assert.IsAssignableFrom<FlowContext>(window);
+        Assert.IsAssignableFrom<FlowContext>(game);
     }
 
     [Fact]

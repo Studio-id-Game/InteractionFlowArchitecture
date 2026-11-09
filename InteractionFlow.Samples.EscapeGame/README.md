@@ -106,10 +106,11 @@ Window側の追加値・親探索を引き継ぎません。ゲーム実行側�
 CreateIndependentContextはアクセスと対象IDだけを共有し、Cancellationと追加値を分離します。
 型付きの親ありContextは、アクセス・対象ID・Cancellationを共有し、追加値を親へ探索します。
 各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
-両Contextの共通基底[EscapeContext](./Entities/Contexts/EscapeContext.cs)はIFlowContextを直接実装します。
-内部のFlowContextへ追加値・Entry解決・破棄確認を委譲し、値探索先とCancellationの共有元を分けます。
+両Contextは通常のFlowContext派生型です。ゲーム用Contextの構築時に
+`base(parent, ContextInheritance.Cancellation)`を指定して、値探索とCancellation共有を分けます。
+サンプル独自の共通基底や接続用Contextは不要です。
 探索順は追加値→自身の固定アクセス→同種の親→ルートのCancellationです。
-Cancellationだけの接続先は元Contextを保持・探索しません。
+Cancellationだけを引き継ぐ場合、FlowContextは親の探索参照を保持しません。
 
 呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
 WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
@@ -151,13 +152,18 @@ GameReactionTestsは通常の無効選択と内部前提違反、FinishingTests�
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
 
-IFlowContext直接実装への再実験後は、EscapeGameの99件と他プロジェクトの445件が成功しています。
+ContextInheritance採用後は全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功しています。
+Release簡易計測の通常PresentFrameは488B/回・約232～241nsで、割り当て量を維持しました。
+実画面での再確認は未実施です。
+
+IFlowContext直接実装への再実験時点では、EscapeGameの99件と他プロジェクトの445件が成功しました。
 全体ビルドは警告・エラー0件です。ContextTestsでは公開・非公開契約の探索、固定契約の追加拒否、
 親探索とCancellationの境界、破棄の独立性を確認します。FlowTestsでは外部キャンセルと停止失敗時にも、
 ゲーム側のTask登録が解放され、セッション終了・合流後にCloseへ進むことを確認します。
 Release簡易計測はSnapshotが128B・約32～34ns、直接フレームが256B・約138～140ns、
 PresentFrameが488B・約229～237nsでした。測定条件は下記と同じで、割り当て量は維持しています。
-Context生成時の補助オブジェクトは増えます。この計測は生成コストや競合を含む性能保証ではありません。
+これは直接実装時点の記録です。ContextInheritanceへの移行では生成時の接続用オブジェクトを削除しています。
+この計測は生成コストや競合を含む性能保証ではありません。
 再実験後の実画面確認は未実施です。
 
 ## 利用側改修後の確認結果

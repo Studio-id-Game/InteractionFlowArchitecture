@@ -78,7 +78,7 @@ public sealed class FinishingTests
         using var app = new WindowContext();
         using var window = app.CreateIndependentContext();
         using var game = app.CreateGameContext();
-        EscapeContext context = kind == FinishingKind.CloseWindow ? window : game;
+        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("earlier failure");
         Exception current = canceled
             ? new OperationCanceledException("finishing canceled")
@@ -107,7 +107,7 @@ public sealed class FinishingTests
         using var app = new WindowContext();
         using var window = app.CreateIndependentContext();
         using var game = app.CreateGameContext();
-        EscapeContext context = kind == FinishingKind.CloseWindow ? window : game;
+        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("prior failure");
         var resetFailure = new InvalidOperationException("registered task failed");
         context.With(new Finishing(kind, previous));
@@ -160,7 +160,7 @@ public sealed class FinishingTests
         using var app = new WindowContext();
         using var window = app.CreateIndependentContext();
         using var game = app.CreateGameContext();
-        EscapeContext context = operation == FinishingKind.CloseWindow ? window : game;
+        FlowContext context = operation == FinishingKind.CloseWindow ? window : game;
         var wrong = operation == FinishingKind.CloseWindow ? FinishingKind.EndSession : FinishingKind.CloseWindow;
         context.With(new Finishing(wrong, Result.Success));
         var ports = new FailingPorts(new Exception("must not execute"));

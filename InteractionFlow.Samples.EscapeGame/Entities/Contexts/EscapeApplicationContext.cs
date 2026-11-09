@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
 // ゲーム実行用。実行・公開は Reaction の責務で、この型はアクセス値とスコープを提供します。
-public sealed class EscapeApplicationContext : EscapeContext
+public sealed class EscapeApplicationContext : FlowContext
 {
     // 0 は特定セッションを指さないゲーム全体のスコープです。実セッションIDは1から始まります。
     public const long ApplicationSessionId = 0;
@@ -33,8 +33,8 @@ public sealed class EscapeApplicationContext : EscapeContext
         access = shared;
         SessionId = sessionId;
     }
-    internal EscapeApplicationContext(EscapeAccess shared, long sessionId, CancellationObject cancellation)
-        : base(cancellation)
+    internal EscapeApplicationContext(EscapeAccess shared, long sessionId, IFlowContext parent)
+        : base(parent, ContextInheritance.Cancellation)
     {
         access = shared;
         SessionId = sessionId;
@@ -73,5 +73,9 @@ public sealed class EscapeApplicationContext : EscapeContext
 
         return base.TryGetCore(out value);
     }
+
+    protected override void ValidateAdditionalValue<T>(T value)
+        => EscapeContextValues.ValidateAdditional(value!);
+
     protected override void DisposeCore() => access = null;
 }

@@ -28,6 +28,12 @@
 - 設計思想に関連するタスクの場合
   - `docs/PHILOSOPHY.md`
 
+- サンプル・ゲームの初期設計や改修の場合
+  - `docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md`
+  - GUI・描画を伴う場合は `docs/guides/RENDERING_LIBRARY_INTEGRATION.md`
+  - 状態・コンテキスト → SystemFlow → Interaction → Port契約の順に設計し、制約が見つかったら前提へ戻る
+  - Counter固有の採用例と、一般に適用する方針を区別する
+
 - SystemFlowBuilder に関連するタスクの場合
   - `docs/SYSTEM_FLOW_BUILDER.md`
 

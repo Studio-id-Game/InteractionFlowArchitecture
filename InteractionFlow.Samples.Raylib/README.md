@@ -4,6 +4,8 @@ raylib-cs のフレーム処理と非同期の相互作用を、SystemFlow で�
 
 三文書との対応、終了時の文脈更新・画面提示に関する留保は
 [アーキテクチャとの整合性分析](./ARCHITECTURE_ANALYSIS.md) にまとめています。
+このサンプルの改修から得た設計方針は、[InteractionFlowの利用設計](../docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md) と
+[描画ライブラリとの接続設計](../docs/guides/RENDERING_LIBRARY_INTEGRATION.md) に分けてまとめています。
 
 ```powershell
 dotnet run --project InteractionFlow.Samples.Raylib

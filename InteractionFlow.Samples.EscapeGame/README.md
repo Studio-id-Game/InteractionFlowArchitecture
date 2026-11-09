@@ -68,29 +68,16 @@ Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終�
 
 ## Contextとアクセスの所有
 
-[WindowContext](./Entities/Contexts/WindowContext.cs) はWindowSystemFlowと画面側Interactionへ、
-[EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs) はGame / Session / TurnSystemFlowと
-ゲーム側Interactionへ渡します。関心別Stateの協調更新は、両Contextが共有する一つのEscapeAccessとgateで行います。
-
-| 提供する値 | WindowContext | EscapeApplicationContext |
-| --- | --- | --- |
-| 入力 | IGameInputWriter（送信） | IGameInputReader（待機） |
-| Session | あり | あり |
-| World | なし | あり |
-| Display | あり | なし |
-| Presentation / Control | あり | あり |
-
-プロパティだけでなくTryGetCoreも同じ提供範囲に限定します。例えばWindowContextから
-IGameWorldAccess、ゲームContextからIGameDisplayAccessやIGameInputWriterは探索できません。
-実体の全インターフェースを公開する型判定は使いません。Session / Presentation / Controlは
-現時点では各契約全体を共有しており、メソッド単位の権限制限にはしていません。
-返したAccess実体へのキャストまで防ぐセキュリティ境界ではありません。
+[EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs)を全フロー・Interaction・Portで使います。
+AccessContractsの分類を見直す前提としてContextは一種類に戻し、画面側とゲーム側の公開範囲は分けていません。
+関心別Stateの協調更新は、共有する一つのEscapeAccessとgateで行います。
+プロパティとTryGetCoreは同じアクセス契約を提供し、固定契約とEntryの追加は拒否します。
 
 | アクセス | 用途 |
 | --- | --- |
 | Session | 公開・終了・アプリ停止、進行状態の参照 |
 | World | 選択、プレイヤー・敵行動、結果表示、選択・結果の受付開始 |
-| Input | 一件の入力待機とセッションID付きの受理 |
+| Input / InputWriter | 一件の入力待機 / セッションID付き入力の送信 |
 | Control | ポーズ・再開と協調的な再開待機 |
 | Display / Presentation | 一貫した表示の取得、識別付き提示要求の進行・完了 |
 
@@ -98,19 +85,16 @@ Session / Worldの分離は、同じアクセス管理の呼び分けです。
 管理オブジェクトやロックを増やしていません。
 今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
 
-`ApplicationSessionId = 0`は、特定のゲームセッションを指さないゲーム実行ルートの固定対象です。
-WindowContext.CreateGameContextはアクセスとCancellationを共有するゲームContextを作り、
-Window側の追加値・親探索を引き継ぎません。ゲーム実行側はこのContextを持ち、
-そこからCreateSessionContextで新規ID・初期状態を割り当てます。
-そのセッションはゲーム側Cancellationを共有し、BeginSessionのReactionで公開されます。
-CreateIndependentContextはアクセスと対象IDだけを共有し、Cancellationと追加値を分離します。
+`ApplicationSessionId = 0`は、特定のゲームセッションを指さないアプリの固定対象です。
+WindowSystemFlowはルートContextをGameSystemFlowへ直接渡します。
+CreateSessionContextは新規ID・初期状態を割り当て、ルートのCancellationと値探索を引き継ぎます。
+セッションの公開はBeginSessionのReactionが担当します。
+CreateIndependentContextはContextInheritance.Noneを使い、アクセスと対象IDだけを共有してCancellationと追加値を分離します。
 型付きの親ありContextは、アクセス・対象ID・Cancellationを共有し、追加値を親へ探索します。
 各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
-両Contextは通常のFlowContext派生型です。ゲーム用Contextの構築時に
-`base(parent, ContextInheritance.Cancellation)`を指定して、値探索とCancellation共有を分けます。
-サンプル独自の共通基底や接続用Contextは不要です。
-探索順は追加値→自身の固定アクセス→同種の親→ルートのCancellationです。
-Cancellationだけを引き継ぐ場合、FlowContextは親の探索参照を保持しません。
+ルートへ追加した値はゲーム側セッションから探索できます。
+FrameStateとWindowStateは独立したフレームContext、Close用Finishingは終了専用スコープへ置きます。
+探索順は追加値→自身の固定アクセス→親→ルートのCancellationです。
 
 呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
 WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
@@ -152,7 +136,14 @@ GameReactionTestsは通常の無効選択と内部前提違反、FinishingTests�
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
 
-ContextInheritance採用後は全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功しています。
+単一Contextへ戻した後は、全体ビルドが警告・エラー0件、EscapeGame94件と他プロジェクト470件が成功しています。
+分割専用のテストは統合し、ルート値の親探索と独立フレーム・終了スコープの分離を検証しています。
+Release簡易計測の通常PresentFrameは488B/回・約245～249nsで、割り当て量を維持しました。
+実画面での再確認は未実施です。
+
+### 参考：Context分割時の検証
+
+ContextInheritance採用時点では全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功しました。
 Release簡易計測の通常PresentFrameは488B/回・約232～241nsで、割り当て量を維持しました。
 実画面での再確認は未実施です。
 
@@ -166,7 +157,7 @@ PresentFrameが488B・約229～237nsでした。測定条件は下記と同じ�
 この計測は生成コストや競合を含む性能保証ではありません。
 再実験後の実画面確認は未実施です。
 
-## 利用側改修後の確認結果
+## 参考：利用側改修後の確認結果
 
 全体ビルドは警告・エラー0件、全体テストは527件成功しました。
 同じ条件のRelease簡易計測では、フレームの割り当て量は初版から増えていません。

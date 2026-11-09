@@ -24,7 +24,7 @@ public sealed class FrameTests
     public async Task FrameControlRequestsSuppressOrdinaryInputBeforeDrawing(
         bool stop, bool pause, bool skip, int delivered)
     {
-        using var context = new WindowContext();
+        using var context = new EscapeApplicationContext();
         context.With(new FrameState());
         var operation = new FrameOperation(frame =>
         {
@@ -51,9 +51,8 @@ public sealed class FrameTests
     [Fact]
     public async Task PauseAndResumeControlDoesNotReplaceExistingInputWait()
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
         var pending = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
         using var frames = app.CreateIndependentContext();
         var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
@@ -64,12 +63,12 @@ public sealed class FrameTests
         Assert.False((await control.ExecuteAsync(frames)).HasException);
         Assert.True(session.Session.GetProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
-        Assert.False(app.Input.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.False(app.InputWriter.TrySubmit(session.SessionId, GameCommand.Up));
 
         Assert.False((await control.ExecuteAsync(frames)).HasException);
         Assert.False(session.Session.GetProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
-        Assert.True(app.Input.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.True(app.InputWriter.TrySubmit(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await pending.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
     }
@@ -77,9 +76,8 @@ public sealed class FrameTests
     [Fact]
     public void SkipCapturedForPreviousPresentationDoesNotSkipTheNextOne()
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(session.SessionId, GameCommand.Up));
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(session.SessionId, GameCommand.Confirm));
         var player = session.World.ApplyPlayer(session.SessionId);
@@ -109,7 +107,7 @@ public sealed class FrameTests
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(WindowContext context) => poll(context.GetRequired<FrameState>());
+        public void Poll(EscapeApplicationContext context) => poll(context.GetRequired<FrameState>());
     }
 
     private sealed class RecordedGameOperation : Operation, IGameOperation
@@ -118,7 +116,7 @@ public sealed class FrameTests
         public override void ForceResetMemoryState() { }
         public ValueTask<GameCommand> ReadAsync(EscapeApplicationContext context)
             => throw new NotSupportedException();
-        public bool Submit(WindowContext context, long sessionId, GameCommand command)
+        public bool Submit(EscapeApplicationContext context, long sessionId, GameCommand command)
         {
             Commands.Add((sessionId, command));
             return true;
@@ -129,13 +127,13 @@ public sealed class FrameTests
     {
         public int DrawCount { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(WindowContext context) => GetEnd();
-        public ReactionEnd Draw(WindowContext context)
+        public ReactionEnd Open(EscapeApplicationContext context) => GetEnd();
+        public ReactionEnd Draw(EscapeApplicationContext context)
         {
             onDraw();
             DrawCount++;
             return GetEnd();
         }
-        public ReactionEnd Close(WindowContext context, Result previous) => GetEnd(previous);
+        public ReactionEnd Close(EscapeApplicationContext context, Result previous) => GetEnd(previous);
     }
 }

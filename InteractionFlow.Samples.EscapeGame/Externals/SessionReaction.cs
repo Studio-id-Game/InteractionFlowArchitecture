@@ -23,7 +23,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
         return GetEnd(previous);
     }
 
-    public ReactionEnd RequestShutdown(WindowContext context)
+    public ReactionEnd RequestShutdown(EscapeApplicationContext context)
     {
         // 停止・入力閉鎖・提示解除・再開待機解除は同じ共有アクセス境界で行います。
         context.Session.RequestShutdown();

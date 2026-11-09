@@ -9,13 +9,12 @@ public sealed class DomainTests
     [Fact]
     public void KnownSolutionWinsInTwelveTurnsWithKeyConsumedAndNoTerminalEnemyMove()
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
         GameCommand[] commands = [GameCommand.Up, GameCommand.Up, GameCommand.Down, GameCommand.Down,
             GameCommand.Right, GameCommand.Interact, GameCommand.Right, GameCommand.Right, GameCommand.Right,
             GameCommand.Interact, GameCommand.Up, GameCommand.Up];
-        foreach (var command in commands) GameTestSteps.PlayTurn(session, app, command);
+        foreach (var command in commands) GameTestSteps.PlayTurn(session, command);
         var snapshot = app.Display.Snapshot();
         Assert.Equal(GameOutcome.Won, snapshot.Outcome);
         Assert.Equal(12, snapshot.Turn);
@@ -31,9 +30,8 @@ public sealed class DomainTests
     [Fact]
     public void SelectionCancellationAndInvalidActionsDoNotConsumeATurn()
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
         var initial = app.Display.Snapshot();
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(id, GameCommand.Up));
@@ -53,10 +51,9 @@ public sealed class DomainTests
     [Fact]
     public void ClosedDoorAndUnqualifiedUnlockRemainInvalid()
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
-        for (var i = 0; i < 4; i++) GameTestSteps.PlayTurn(session, app, GameCommand.Right);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        for (var i = 0; i < 4; i++) GameTestSteps.PlayTurn(session, GameCommand.Right);
         var before = app.Display.Snapshot();
         Assert.Equal(new GridPosition(5, 3), before.Player);
         Assert.Equal(MutationStatus.Rejected, session.World.ApplySelection(session.SessionId, GameCommand.Up));
@@ -72,12 +69,11 @@ public sealed class DomainTests
     [InlineData(true)]
     public void PlayerAndEnemyCaptureBothProduceGameLoss(bool playerEntersGuard)
     {
-        using var app = new WindowContext();
-        using var game = app.CreateGameContext();
-        using var session = GameTestSteps.Ready(game, app);
-        if (playerEntersGuard) GameTestSteps.PlayTurn(session, app, GameCommand.Wait);
-        GameTestSteps.PlayTurn(session, app, GameCommand.Up);
-        GameTestSteps.PlayTurn(session, app, GameCommand.Right);
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        if (playerEntersGuard) GameTestSteps.PlayTurn(session, GameCommand.Wait);
+        GameTestSteps.PlayTurn(session, GameCommand.Up);
+        GameTestSteps.PlayTurn(session, GameCommand.Right);
         var snapshot = app.Display.Snapshot();
         Assert.Equal(GameOutcome.Lost, snapshot.Outcome);
         Assert.Equal(snapshot.Player, snapshot.Enemy);

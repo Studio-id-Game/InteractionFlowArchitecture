@@ -8,5 +8,5 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 public interface ISessionReaction : IReactionPort
 {
     ReactionEnd EndSession(EscapeApplicationContext context, Result previous);
-    ReactionEnd RequestShutdown(WindowContext context);
+    ReactionEnd RequestShutdown(EscapeApplicationContext context);
 }

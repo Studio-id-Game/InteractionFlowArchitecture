@@ -16,12 +16,11 @@ public sealed class WindowSystemFlow(
     RequestShutdown stop,
     CloseWindow close,
     GameSystemFlow game)
-    : SystemFlow<WindowContext>(open, frame, control, stop, close, game)
+    : SystemFlow<EscapeApplicationContext>(open, frame, control, stop, close, game)
 {
-    protected override Task<InteractionEnd> ExecuteCoreAsync(WindowContext context)
+    protected override Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
     {
         using var frames = context.CreateIndependentContext();
-        using var gameContext = context.CreateGameContext();
         var input = new FrameState();
         frames.With(input).With(new WindowState());
         var failures = new FailureCollector();
@@ -33,7 +32,7 @@ public sealed class WindowSystemFlow(
             failures.Add(opened.Result);
             if (!opened.HasException)
             {
-                execution = Task.Run(() => game.ExecuteAsync(gameContext));
+                execution = Task.Run(() => game.ExecuteAsync(context));
                 PresentFrames(frames, input, execution, failures);
             }
         }
@@ -43,11 +42,11 @@ public sealed class WindowSystemFlow(
         }
         finally
         {
-            StopAndJoin(gameContext, frames, execution, failures);
+            StopAndJoin(context, frames, execution, failures);
         }
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
-        using var shutdown = new WindowContext(frames);
+        using var shutdown = new EscapeApplicationContext(frames);
         shutdown.With(new Finishing(FinishingKind.CloseWindow, failures.ToResult()));
         try
         {
@@ -61,7 +60,7 @@ public sealed class WindowSystemFlow(
     }
 
     private void PresentFrames(
-        WindowContext frames,
+        EscapeApplicationContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
         FailureCollector failures)
@@ -86,7 +85,7 @@ public sealed class WindowSystemFlow(
 
     private void StopAndJoin(
         EscapeApplicationContext context,
-        WindowContext frames,
+        EscapeApplicationContext frames,
         Task<InteractionEnd>? execution,
         FailureCollector failures)
     {

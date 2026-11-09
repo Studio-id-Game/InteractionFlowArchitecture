@@ -15,8 +15,8 @@ internal static class Program
         builder.Apply(new EscapeGameProfile());
 
         using var scope = builder.BuildScope();
-        using var flow = scope.BuildSystemFlow<WindowSystemFlow, WindowContext>();
-        using var context = new WindowContext();
+        using var flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
+        using var context = new EscapeApplicationContext();
 
         return flow.ExecuteAsync(context).GetAwaiter().GetResult().HasException ? 1 : 0;
     }

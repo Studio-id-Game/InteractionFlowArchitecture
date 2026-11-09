@@ -1,13 +1,14 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-// ゲーム実行用。実行・公開は Reaction の責務で、この型はアクセス値とスコープを提供します。
+// 共有アクセスと実行スコープを提供します。進行・実行管理はSystemFlow、公開はReactionが担当します。
 public sealed class EscapeApplicationContext : FlowContext
 {
-    // 0 は特定セッションを指さないゲーム全体のスコープです。実セッションIDは1から始まります。
+    // 0 は特定セッションを指さないアプリのスコープです。実セッションIDは1から始まります。
     public const long ApplicationSessionId = 0;
 
     private EscapeAccess? access;
@@ -28,23 +29,20 @@ public sealed class EscapeApplicationContext : FlowContext
         access = parent.Access;
         SessionId = sessionId;
     }
-    internal EscapeApplicationContext(EscapeAccess shared, long sessionId)
+    private EscapeApplicationContext(EscapeApplicationContext parent, ContextInheritance inheritance)
+        : base(parent, inheritance)
     {
-        access = shared;
-        SessionId = sessionId;
-    }
-    internal EscapeApplicationContext(EscapeAccess shared, long sessionId, IFlowContext parent)
-        : base(parent, ContextInheritance.Cancellation)
-    {
-        access = shared;
-        SessionId = sessionId;
+        access = parent.Access;
+        SessionId = parent.SessionId;
     }
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));
     // 固定された対象ID。アクティブセッションへの自動的な追従は行いません。
     public long SessionId { get; }
     public IGameInputReader Input => Access;
+    public IGameInputWriter InputWriter => Access;
     public IGameSessionAccess Session => Access;
     public IGameWorldAccess World => Access;
+    public IGameDisplayAccess Display => Access;
     public IGamePresentationAccess Presentation => Access;
     public IGameControlAccess Control => Access;
 
@@ -56,13 +54,15 @@ public sealed class EscapeApplicationContext : FlowContext
         return new EscapeApplicationContext(this, shared.CreateSession());
     }
     // 対象IDとアクセスだけを共有する独立ルートです。Cancellationと追加値は共有しません。
-    public EscapeApplicationContext CreateIndependentContext() => new(Access, SessionId);
+    public EscapeApplicationContext CreateIndependentContext() => new(this, ContextInheritance.None);
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
         object? provided = typeof(T) == typeof(IGameInputReader) ? Input
+            : typeof(T) == typeof(IGameInputWriter) ? InputWriter
             : typeof(T) == typeof(IGameSessionAccess) ? Session
             : typeof(T) == typeof(IGameWorldAccess) ? World
+            : typeof(T) == typeof(IGameDisplayAccess) ? Display
             : typeof(T) == typeof(IGamePresentationAccess) ? Presentation
             : typeof(T) == typeof(IGameControlAccess) ? Control : null;
         if (provided is T found)
@@ -75,7 +75,19 @@ public sealed class EscapeApplicationContext : FlowContext
     }
 
     protected override void ValidateAdditionalValue<T>(T value)
-        => EscapeContextValues.ValidateAdditional(value!);
+    {
+        if (value is IGameInputReader or IGameInputWriter or IGameSessionAccess or IGameWorldAccess
+            or IGameDisplayAccess or IGamePresentationAccess or IGameControlAccess || IsEntry(value!))
+            throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
+    }
+
+    private static bool IsEntry(object value)
+    {
+        for (var type = value.GetType(); type is not null; type = type.BaseType)
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Entry<>))
+                return true;
+        return false;
+    }
 
     protected override void DisposeCore() => access = null;
 }

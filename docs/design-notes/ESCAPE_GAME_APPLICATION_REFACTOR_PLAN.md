@@ -127,6 +127,23 @@ WindowSystemFlowやゲーム処理の手順は変更しない。既存の生成�
 全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功した。
 Release簡易計測の通常PresentFrameは488B/回・約232～241ns。実画面での再確認は未実施。
 
+### Contextを一種類へ戻す
+
+AccessContractsの役割分類を見直す前に、Contextの公開範囲分割はいったん取り除く。
+WindowContextと専用のゲームContext生成を削除し、EscapeApplicationContextを全フローで使用する。
+入力のreader/writer等のAccess契約は変更せず、Input / InputWriterとして提供する。
+共有用の検証クラスは不要になったため、固定アクセス・Entryの検証を具体Contextへ戻す。
+
+WindowSystemFlowはルートContextをGameSystemFlowへ直接渡す。
+ルートの追加値はゲームのセッションから探索できる。FrameState / WindowStateは独立フレームContextへ、
+CloseのFinishingは終了専用スコープへ置くため、ルート経由では届かない。
+CreateIndependentContextはContextInheritance.Noneで、Accessと対象IDだけを共有する。
+Core APIと、取消競合・失敗集約・終了手順の修正は維持する。
+前節までの分離契約と検証数は各実験時点の記録であり、現在の公開範囲を示すものではない。
+単一Contextへの復帰後は全体ビルドが警告・エラー0件、EscapeGame94件と他プロジェクト470件が成功した。
+分割専用テストを統合した一方、スコープ・固定値・破棄・取消競合・終了合流の検証は維持している。
+Release簡易計測の通常PresentFrameは488B/回・約245～249ns。実画面での再確認は未実施。
+
 ## Interaction粒度の見直し
 
 `ShowResult`へ「結果提示を待つ→失敗なら短絡→結果入力を開く」を統合し、

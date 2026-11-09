@@ -13,9 +13,9 @@ public sealed class CloseWindow(
     IWindowReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<WindowContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(WindowContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
     {
         var finishing = context.GetRequired<Finishing>();
         if (finishing.Kind != FinishingKind.CloseWindow)

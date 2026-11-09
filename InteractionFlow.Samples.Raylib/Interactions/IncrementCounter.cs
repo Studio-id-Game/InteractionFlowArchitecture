@@ -15,6 +15,6 @@ public sealed class IncrementCounter(
     ICancellationPort cancellationPort)
     : Interaction<CounterFlowContext>(exceptionPort, cancellationPort, operation, reaction)
 {
-    protected override async Task<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
+    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
         => await reaction.RespondAsync(context, await operation.ReadAsync(context));
 }

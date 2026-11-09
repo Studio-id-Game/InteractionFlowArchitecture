@@ -85,7 +85,7 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
             ICancellationPort cancellationPort)
             : Interaction(exceptionPort, cancellationPort, input, output)
         {
-            protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+            protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
             {
                 var line = await input.ReadLineAsync(context);
                 return await output.WriteLineAsync(context, line is null ? "EOF" : $"Hello, {line}!");

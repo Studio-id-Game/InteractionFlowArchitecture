@@ -415,10 +415,10 @@ namespace InteractionFlow.Standard.Tests.Interactions
             public Func<IFlowContext, Task> Hook { get; set; } = _ => Task.CompletedTask;
             public int BodyCount { get; private set; }
             public int HookCount { get; private set; }
-            protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
             {
                 BodyCount++;
-                return Body(context);
+                return new(Body(context));
             }
             protected override Task OnCancellation(IFlowContext context)
             {

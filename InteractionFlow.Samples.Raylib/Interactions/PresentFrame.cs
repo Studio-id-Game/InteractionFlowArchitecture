@@ -17,7 +17,7 @@ public sealed class PresentFrame(
     ICancellationPort cancellationPort)
     : Interaction<CounterFlowContext>(exceptionPort, cancellationPort, operation, reaction, counter)
 {
-    protected override Task<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
     {
         operation.Poll(context);
 
@@ -26,6 +26,6 @@ public sealed class PresentFrame(
         if (!input.CloseRequested && !input.CancelRequested && input.Command is CounterCommand command)
             counter.Submit(context, command);
 
-        return Task.FromResult(reaction.Draw(context));
+        return new(reaction.Draw(context));
     }
 }

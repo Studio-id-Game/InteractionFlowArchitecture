@@ -9,6 +9,7 @@ using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Xunit;
 
 namespace InteractionFlow.Standard.Tests.Interactions
@@ -208,6 +209,31 @@ namespace InteractionFlow.Standard.Tests.Interactions
         private static TaskCompletionSource<bool> Signal()
             => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ValueTaskSourceIsConsumedOnceForSynchronousAndSuspendedSuccess(bool completeFirst)
+        {
+            using var context = new SpecializedContext();
+            var source = new SingleUseSource();
+            var expected = Ends.Create();
+            if (completeFirst) source.Complete(expected);
+            var interaction = new ValueProbe(source);
+
+            var execution = interaction.ExecuteAsync(context);
+            if (!completeFirst)
+            {
+                Assert.False(execution.IsCompleted);
+                Assert.True(context.Cancellation.HasTask);
+                source.Complete(expected);
+            }
+
+            var end = await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            Assert.Same(expected, end.End);
+            Assert.Equal(1, source.ReadCount);
+            Assert.False(context.Cancellation.HasTask);
+        }
+
         [Fact]
         public async Task SynchronousSuccessKeepsAnotherExecutionRegisteredOnSameInstanceAndContext()
         {
@@ -285,8 +311,8 @@ namespace InteractionFlow.Standard.Tests.Interactions
             ICancellationPort cancellationPort)
             : Interaction<SpecializedContext>(exceptionPort, cancellationPort, reaction)
         {
-            protected override Task<ReactionEnd> ExecuteCoreAsync(SpecializedContext context)
-                => Task.FromResult(reaction.Complete(context));
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(SpecializedContext context)
+                => new(reaction.Complete(context));
         }
 
         private sealed class TypedFlow(TypedPortInteraction interaction)
@@ -305,10 +331,10 @@ namespace InteractionFlow.Standard.Tests.Interactions
             public int BodyCount { get; private set; }
             public int HookCount { get; private set; }
 
-            protected override Task<ReactionEnd> ExecuteCoreAsync(SpecializedContext context)
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(SpecializedContext context)
             {
                 BodyCount++;
-                return Body(context);
+                return new(Body(context));
             }
 
             protected override Task OnCancellation(SpecializedContext context)
@@ -321,8 +347,31 @@ namespace InteractionFlow.Standard.Tests.Interactions
         private sealed class LegacyInteraction(IExceptionPort<Exception> errors, ICancellationPort cancellations)
             : Interaction(errors, cancellations)
         {
-            protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
-                => Task.FromResult(Ends.Create());
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+                => new(Ends.Create());
+        }
+
+        private sealed class ValueProbe(SingleUseSource source)
+            : Interaction<SpecializedContext>(new Errors(), new Cancellations())
+        {
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(SpecializedContext context)
+                => source.Task;
+        }
+
+        private sealed class SingleUseSource : IValueTaskSource<ReactionEnd>
+        {
+            private ManualResetValueTaskSourceCore<ReactionEnd> core;
+            public int ReadCount { get; private set; }
+            public ValueTask<ReactionEnd> Task => new(this, core.Version);
+            public void Complete(ReactionEnd end) => core.SetResult(end);
+            public ReactionEnd GetResult(short token)
+            {
+                if (++ReadCount != 1) throw new InvalidOperationException("ValueTask consumed twice.");
+                return core.GetResult(token);
+            }
+            public ValueTaskSourceStatus GetStatus(short token) => core.GetStatus(token);
+            public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
+                => core.OnCompleted(continuation, state, token, flags);
         }
 
         private sealed class DirectLegacyInteraction : IInteraction

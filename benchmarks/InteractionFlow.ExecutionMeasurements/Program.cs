@@ -39,6 +39,7 @@ internal static class Program
         var cachedTask = Task.FromResult(success);
         var fresh = new Probe(errors, cancels, () => Task.FromResult(success));
         var cached = new Probe(errors, cancels, () => cachedTask);
+        var inline = new ValueProbe(errors, cancels, success);
         TaskCompletionSource<ReactionEnd>? pending = null;
         var suspended = new Probe(errors, cancels, () => pending!.Task);
 
@@ -59,6 +60,7 @@ internal static class Program
         MeasureCaptureObject();
         Measure("minimal Interaction fresh body Task", () => sink = fresh.ExecuteAsync(context).GetAwaiter().GetResult());
         Measure("minimal Interaction cached body Task", () => sink = cached.ExecuteAsync(context).GetAwaiter().GetResult());
+        Measure("minimal Interaction inline ValueTask body", () => sink = inline.ExecuteAsync(context).GetAwaiter().GetResult());
         Measure("controlled pending body roundtrip", () =>
         {
             // Inline completion deliberately isolates suspension from ThreadPool scheduling.
@@ -120,7 +122,7 @@ internal static class Program
     private sealed class Probe(Errors errors, Cancels cancels, Func<Task<ReactionEnd>> body)
         : Interaction<CounterFlowContext>(errors, cancels)
     {
-        protected override Task<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context) => body();
+        protected override ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context) => new(body());
     }
 
     private sealed class EndFactory : IInteraction<CounterFlowContext>
@@ -129,6 +131,12 @@ internal static class Program
         internal static InteractionEnd Create(ReactionEnd end) => IInteraction<CounterFlowContext>.GetEnd(end);
         public Task<InteractionEnd> ExecuteAsync(CounterFlowContext context)
             => Task.FromResult(Create(Drawing.Success()));
+    }
+
+    private sealed class ValueProbe(Errors errors, Cancels cancels, ReactionEnd end)
+        : Interaction<CounterFlowContext>(errors, cancels)
+    {
+        protected override ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context) => new(end);
     }
 
     private sealed class Polling : Operation, IWindowOperation

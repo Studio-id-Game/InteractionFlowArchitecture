@@ -26,7 +26,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
             return Task.CompletedTask;
         }
 
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             var selection = context.GetRequired<SampleSelection>();
 

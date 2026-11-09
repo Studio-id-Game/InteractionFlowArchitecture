@@ -34,7 +34,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
 
         protected abstract Task<Preparation> PrepareAsync(NotepadKey key);
 
-        protected sealed override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
+        protected sealed override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);

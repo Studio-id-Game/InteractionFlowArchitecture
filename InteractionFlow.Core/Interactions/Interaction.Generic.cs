@@ -113,16 +113,16 @@ namespace InteractionFlow.Core.Interactions
         /// 指定されたコンテキストで Interaction の本体を実行します。
         /// </summary>
         /// <param name="context">Interaction に渡すフローコンテキスト。</param>
-        /// <returns>Reaction が生成した終了結果。</returns>
-        protected abstract Task<ReactionEnd> ExecuteCoreAsync(TContext context);
+        /// <returns>Reaction が生成した終了結果。一度だけ消費します。</returns>
+        protected abstract ValueTask<ReactionEnd> ExecuteCoreAsync(TContext context);
 
         /// <summary>
-        /// 本体 Task がキャンセル例外で終了したとき、CancellationPort に委譲する前に追加処理を実行します。
+        /// 本体の非同期結果がキャンセル例外で終了したとき、CancellationPort に委譲する前に追加処理を実行します。
         /// </summary>
         /// <param name="context">現在のフローコンテキスト。</param>
         /// <returns>追加処理の完了を表すタスク。</returns>
         /// <remarks>
-        /// 開始前キャンセルや、本体が Task を返す前の同期例外では呼びません。
+        /// 開始前キャンセルや、本体が ValueTask を返す前の同期例外では呼びません。
         /// 失敗はキャンセル完了の待機 Task へ保持し、元のキャンセルと共に扱います。
         /// この処理内で同じ CancellationObject の WaitForTasksAndResetCancellationAsync を待ってはいけません。
         /// </remarks>

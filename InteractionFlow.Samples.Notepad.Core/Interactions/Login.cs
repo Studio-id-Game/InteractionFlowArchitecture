@@ -20,7 +20,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             return Task.CompletedTask;
         }
 
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
+        protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);

@@ -16,7 +16,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         IConsoleChoiceOperation choices)
         : Interaction(exceptionPort, cancellationPort, output, binding, notes, choices)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
+        protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext flowContext)
         {
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);

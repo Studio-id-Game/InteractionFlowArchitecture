@@ -14,6 +14,6 @@ public sealed class OpenWindow(
     ICancellationPort cancellationPort)
     : Interaction<CounterFlowContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override Task<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
-        => Task.FromResult(reaction.Open(context));
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
+        => new(reaction.Open(context));
 }

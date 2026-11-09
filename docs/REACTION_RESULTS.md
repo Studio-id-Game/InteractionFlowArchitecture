@@ -88,3 +88,10 @@ Context の所有権や Interaction の直接ネストに関する契約は変�
 同期成功時は内部のTaskラッパーを介さず結果を処理しますが、本体開始前のキャンセル登録と
 後始末を含む通知完了・登録解除の契約は共通です。
 計測と改善範囲は [Interaction実行の性能計画](./design-notes/INTERACTION_EXECUTION_PERFORMANCE_PLAN.md) を参照してください。
+
+Interaction の本体契約 `ExecuteCoreAsync` は `ValueTask<ReactionEnd>` を返します。
+同期処理は `new(reactionEnd)` で結果を返し、非同期処理は `async ValueTask<ReactionEnd>` で実装できます。
+既存 Task を包む場合は `new ValueTask<ReactionEnd>(task)` を使用できます。
+これは派生実装の override に対する戻り値型の変更です。公開の `ExecuteAsync` は
+`Task<InteractionEnd>` を維持し、直接interface実装と呼び出し側の契約は変更していません。
+基底は本体の ValueTask を一度だけ消費します。複数回の await や AsTask 変換は行いません。

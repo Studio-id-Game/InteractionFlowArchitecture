@@ -14,7 +14,7 @@ namespace InteractionFlow.Samples.HelloDoor.Interactions
         ICancellationPort cancellationPort)
         : Interaction(exceptionPort, cancellationPort, operation, reaction)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             var command = await operation.ReadDoorCommandAsync(context);
             return await reaction.ReactDoorAsync(context, command);

@@ -21,7 +21,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
         ICancellationPort cancellation)
         : Interaction(exception, cancellation, input, automaticInput, output, binding)
     {
-        protected override async Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
+        protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context)
         {
             var mode = context.GetRequired<SampleMode>();
 

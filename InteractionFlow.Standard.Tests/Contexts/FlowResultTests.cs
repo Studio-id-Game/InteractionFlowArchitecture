@@ -101,7 +101,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         private sealed class Probe(ReactionEnd end)
             : Interaction(new Handling(), new CancellationHandlingStub())
         {
-            protected override Task<ReactionEnd> ExecuteCoreAsync(IFlowContext context) => Task.FromResult(end);
+            protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IFlowContext context) => new(end);
         }
 
         private sealed class Handling : ExceptionHandling

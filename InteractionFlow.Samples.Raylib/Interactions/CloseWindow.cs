@@ -15,6 +15,6 @@ public sealed class CloseWindow(
     ICancellationPort cancellationPort)
     : Interaction<CounterFlowContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override Task<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
-        => Task.FromResult(reaction.Close(context, context.GetRequired<Result>()));
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(CounterFlowContext context)
+        => new(reaction.Close(context, context.GetRequired<Result>()));
 }

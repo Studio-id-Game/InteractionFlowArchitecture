@@ -1,14 +1,13 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-// 実行・公開は Reaction の責務です。この型はアクセス値とスコープを提供します。
+// ゲーム実行用。実行・公開は Reaction の責務で、この型はアクセス値とスコープを提供します。
 public sealed class EscapeApplicationContext : FlowContext
 {
-    // 0 は特定のゲームセッションを指さないアプリ/フレーム用スコープです。実セッションIDは1から始まります。
+    // 0 は特定セッションを指さないゲーム全体のスコープです。実セッションIDは1から始まります。
     public const long ApplicationSessionId = 0;
 
     private EscapeAccess? access;
@@ -29,7 +28,7 @@ public sealed class EscapeApplicationContext : FlowContext
         access = parent.Access;
         SessionId = sessionId;
     }
-    private EscapeApplicationContext(EscapeAccess shared, long sessionId)
+    internal EscapeApplicationContext(EscapeAccess shared, long sessionId)
     {
         access = shared;
         SessionId = sessionId;
@@ -37,10 +36,9 @@ public sealed class EscapeApplicationContext : FlowContext
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));
     // 固定された対象ID。アクティブセッションへの自動的な追従は行いません。
     public long SessionId { get; }
-    public IGameInputAccess Input => Access;
+    public IGameInputReader Input => Access;
     public IGameSessionAccess Session => Access;
     public IGameWorldAccess World => Access;
-    public IGameDisplayAccess Display => Access;
     public IGamePresentationAccess Presentation => Access;
     public IGameControlAccess Control => Access;
 
@@ -56,10 +54,9 @@ public sealed class EscapeApplicationContext : FlowContext
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
-        object? provided = typeof(T) == typeof(IGameInputAccess) ? Input
+        object? provided = typeof(T) == typeof(IGameInputReader) ? Input
             : typeof(T) == typeof(IGameSessionAccess) ? Session
             : typeof(T) == typeof(IGameWorldAccess) ? World
-            : typeof(T) == typeof(IGameDisplayAccess) ? Display
             : typeof(T) == typeof(IGamePresentationAccess) ? Presentation
             : typeof(T) == typeof(IGameControlAccess) ? Control : null;
         if (provided is T found)
@@ -71,17 +68,7 @@ public sealed class EscapeApplicationContext : FlowContext
         return base.TryGetCore(out value);
     }
     protected override void ValidateAdditionalValue<T>(T value)
-    {
-        if (value is IGameInputAccess or IGameSessionAccess or IGameWorldAccess or IGameDisplayAccess
-            or IGamePresentationAccess or IGameControlAccess || IsEntry(value!))
-            throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
-    }
-    private static bool IsEntry(object value)
-    {
-        for (var type = value.GetType(); type is not null; type = type.BaseType)
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Entry<>))
-                return true;
-        return false;
-    }
+        => EscapeContextValues.ValidateAdditional(value!);
+
     protected override void DisposeCore() => access = null;
 }

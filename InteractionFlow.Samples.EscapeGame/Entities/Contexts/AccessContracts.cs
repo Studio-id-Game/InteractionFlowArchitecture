@@ -3,9 +3,12 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-public interface IGameInputAccess
+public interface IGameInputReader
 {
     ValueTask<GameCommand> ReadAsync(long sessionId, CancellationToken token);
+}
+public interface IGameInputWriter
+{
     bool TrySubmit(long sessionId, GameCommand command);
 }
 // セッションの公開・寿命・進行参照。ゲーム内の行動更新とは区別します。

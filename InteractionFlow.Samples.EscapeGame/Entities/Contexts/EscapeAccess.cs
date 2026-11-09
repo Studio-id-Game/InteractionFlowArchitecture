@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-internal sealed partial class EscapeAccess : IGameInputAccess, IGameSessionAccess, IGameWorldAccess, IGameDisplayAccess,
-    IGameControlAccess, IGamePresentationAccess
+internal sealed partial class EscapeAccess : IGameInputReader, IGameInputWriter, IGameSessionAccess,
+    IGameWorldAccess, IGameDisplayAccess, IGameControlAccess, IGamePresentationAccess
 {
     private readonly object gate = new();
     private readonly Dictionary<long, SessionRuntime> sessions = new();

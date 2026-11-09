@@ -12,8 +12,9 @@ public sealed class AccessTests
     [Fact]
     public async Task ConfirmedActionCannotStartAnotherInputWait()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         session.World.ApplySelection(id, GameCommand.Up);
         session.World.ApplySelection(id, GameCommand.Confirm);
@@ -29,8 +30,9 @@ public sealed class AccessTests
     [Fact]
     public void PauseBeforeCommitPreservesConfirmedActionAndPreventsDoubleApplication()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         session.World.ApplySelection(id, GameCommand.Up);
         session.World.ApplySelection(id, GameCommand.Confirm);
@@ -51,13 +53,14 @@ public sealed class AccessTests
     [Fact]
     public async Task OldPresentationKeyCannotSkipOrCompleteNextPresentationInSameSession()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         session.World.ApplySelection(id, GameCommand.Up);
         session.World.ApplySelection(id, GameCommand.Confirm);
         var player = session.World.ApplyPlayer(id).Presentation!.Value;
-        GameTestSteps.Complete(session, player);
+        GameTestSteps.Complete(app, player);
         var enemy = session.World.ApplyEnemy(id).Presentation!.Value;
         var waiting = session.Presentation.WaitAsync(enemy, TestContext.Current.CancellationToken).AsTask();
         Assert.False(session.Presentation.TrySkip(player));
@@ -66,7 +69,7 @@ public sealed class AccessTests
         Assert.False(app.Display.Snapshot().Presentation!.SkipRequested);
         Assert.False(waiting.IsCompleted);
         Assert.True(session.Presentation.TrySkip(enemy));
-        GameTestSteps.Complete(session, enemy);
+        GameTestSteps.Complete(app, enemy);
         Assert.Equal(PresentationCompletion.Completed, await waiting);
         Assert.Equal(1, app.Display.Snapshot().Turn);
     }
@@ -74,24 +77,25 @@ public sealed class AccessTests
     [Fact]
     public async Task ResultInputIsUnavailableUntilFinalResultFrameAndNewWait()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
-        GameTestSteps.PlayTurn(session, GameCommand.Up);
-        GameTestSteps.PlayTurn(session, GameCommand.Right);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Up);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Right);
         var result = session.World.ShowResult(id).Presentation!.Value;
-        Assert.False(session.Input.TrySubmit(id, GameCommand.Retry));
+        Assert.False(app.Input.TrySubmit(id, GameCommand.Retry));
         Assert.Equal(MutationStatus.Rejected, session.World.EnableResultInput(id));
         Assert.False(session.Control.TrySetPaused(id, true));
-        GameTestSteps.Complete(session, result);
+        GameTestSteps.Complete(app, result);
         Assert.Equal(MutationStatus.Applied, session.World.EnableResultInput(id));
-        Assert.False(session.Input.TrySubmit(id, GameCommand.Retry));
+        Assert.False(app.Input.TrySubmit(id, GameCommand.Retry));
         var input = session.Input.ReadAsync(id, TestContext.Current.CancellationToken);
-        Assert.True(session.Input.TrySubmit(id, GameCommand.Retry));
+        Assert.True(app.Input.TrySubmit(id, GameCommand.Retry));
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(id, await input));
         Assert.True(session.Session.GetProgress(id).RetryRequested);
         session.Session.EndSession(id);
-        using var fresh = GameTestSteps.Ready(app);
+        using var fresh = GameTestSteps.Ready(game, app);
         Assert.NotEqual(id, fresh.SessionId);
         Assert.Equal(0, app.Display.Snapshot().Turn);
         Assert.Equal(GameOutcome.Running, app.Display.Snapshot().Outcome);
@@ -101,17 +105,18 @@ public sealed class AccessTests
     [Fact]
     public async Task PauseRetainsAcceptedCommandUntilResumeAndClosesNewInput()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         var read = session.Input.ReadAsync(id, TestContext.Current.CancellationToken);
         Assert.True(app.Display.Snapshot().AcceptingInput);
-        Assert.True(session.Input.TrySubmit(id, GameCommand.Up));
+        Assert.True(app.Input.TrySubmit(id, GameCommand.Up));
         Assert.True(session.Control.TrySetPaused(id, true));
         var command = await read;
         var before = app.Display.Snapshot();
         Assert.Equal(MutationStatus.Deferred, session.World.ApplySelection(id, command));
-        Assert.False(session.Input.TrySubmit(id, GameCommand.Right));
+        Assert.False(app.Input.TrySubmit(id, GameCommand.Right));
         var checkpoint = session.Control.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
         Assert.False(checkpoint.IsCompleted);
         Assert.True(session.Control.TrySetPaused(id, false));
@@ -125,8 +130,9 @@ public sealed class AccessTests
     [Fact]
     public async Task PresentationClockAndAcknowledgmentFreezeAcrossPauseAndResumeRevision()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         session.World.ApplySelection(id, GameCommand.Up);
         session.World.ApplySelection(id, GameCommand.Confirm);
@@ -154,8 +160,9 @@ public sealed class AccessTests
     [Fact]
     public async Task ShutdownWhilePausedReleasesInputPresentationAndCheckpointWaits()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         var input = session.Input.ReadAsync(id, TestContext.Current.CancellationToken).AsTask();
         Assert.True(session.Control.TrySetPaused(id, true));
@@ -166,38 +173,40 @@ public sealed class AccessTests
         Assert.True(app.Session.ShutdownRequested);
         Assert.False(session.Control.TrySetPaused(id, false));
         Assert.Equal(MutationStatus.Stopped, session.World.ApplyPlayer(id).Status);
-        Assert.False(session.Input.TrySubmit(id, GameCommand.Up));
+        Assert.False(app.Input.TrySubmit(id, GameCommand.Up));
     }
 
     [Fact]
     public async Task OldPresentationAndControlCannotAffectRetriedSession()
     {
-        using var app = new EscapeApplicationContext();
-        using var old = app.CreateSessionContext();
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var old = game.CreateSessionContext();
         var oldKey = old.Session.BeginSession(old.SessionId).Presentation!.Value;
         var stoppedWait = old.Presentation.WaitAsync(oldKey, TestContext.Current.CancellationToken).AsTask();
         old.Session.EndSession(old.SessionId);
         Assert.Equal(PresentationCompletion.Stopped, await stoppedWait);
-        using var fresh = app.CreateSessionContext();
+        using var fresh = game.CreateSessionContext();
         var freshKey = fresh.Session.BeginSession(fresh.SessionId).Presentation!.Value;
         var freshWait = fresh.Presentation.WaitAsync(freshKey, TestContext.Current.CancellationToken).AsTask();
         Assert.NotEqual(old.SessionId, fresh.SessionId);
         Assert.False(old.Presentation.TryComplete(oldKey));
         Assert.False(old.Presentation.TrySkip(oldKey));
         Assert.False(old.Control.TrySetPaused(old.SessionId, true));
-        Assert.False(old.Input.TrySubmit(old.SessionId, GameCommand.Retry));
+        Assert.False(app.Input.TrySubmit(old.SessionId, GameCommand.Retry));
         old.Session.EndSession(old.SessionId);
         Assert.False(freshWait.IsCompleted);
         Assert.Equal(freshKey, app.Display.Snapshot().Presentation!.Key);
-        GameTestSteps.Complete(fresh, freshKey);
+        GameTestSteps.Complete(app, freshKey);
         Assert.Equal(PresentationCompletion.Completed, await freshWait);
     }
 
     [Fact]
     public async Task PresentationWaitIsCancelableWithoutRollingBackCommittedMove()
     {
-        using var app = new EscapeApplicationContext();
-        using var session = GameTestSteps.Ready(app);
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, app);
         var id = session.SessionId;
         session.World.ApplySelection(id, GameCommand.Up);
         session.World.ApplySelection(id, GameCommand.Confirm);

@@ -8,5 +8,5 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 public interface IGameOperation : IOperationPort
 {
     ValueTask<GameCommand> ReadAsync(EscapeApplicationContext context);
-    bool Submit(EscapeApplicationContext context, long sessionId, GameCommand command);
+    bool Submit(WindowContext context, long sessionId, GameCommand command);
 }

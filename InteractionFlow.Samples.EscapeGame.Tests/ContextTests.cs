@@ -3,6 +3,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -10,17 +11,148 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class ContextTests
 {
     [Fact]
+    public void WindowAndGameExposeDifferentContracts()
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+
+        Assert.Same(window.Input, window.GetRequired<IGameInputWriter>());
+        Assert.Same(game.Input, game.GetRequired<IGameInputReader>());
+        Assert.Same(window.Display, window.GetRequired<IGameDisplayAccess>());
+        Assert.Same(game.World, game.GetRequired<IGameWorldAccess>());
+        Assert.False(window.TryGet<IGameWorldAccess>(out _));
+        Assert.False(window.TryGet<IGameInputReader>(out _));
+        Assert.False(game.TryGet<IGameInputWriter>(out _));
+        Assert.False(game.TryGet<IGameDisplayAccess>(out _));
+        Assert.Null(typeof(WindowContext).GetProperty("World"));
+        Assert.Null(typeof(EscapeApplicationContext).GetProperty("Display"));
+    }
+
+    [Fact]
+    public void FixedContractsCannotBeAddedToTheWrongSideEvenAsObjectOrEntry()
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+        using var entry = new RefEntry<object>(game.World);
+
+        Assert.Throws<ArgumentException>(() => window.With<object>(game.World));
+        Assert.Throws<ArgumentException>(() => window.With<object>(game.Input));
+        Assert.Throws<ArgumentException>(() => window.With(entry));
+        Assert.Throws<ArgumentException>(() => game.With<object>(window.Display));
+        Assert.Throws<ArgumentException>(() => game.With<object>(window.Input));
+        Assert.Throws<ArgumentException>(() => game.With(entry));
+        Assert.False(window.TryGet<IGameWorldAccess>(out _));
+        Assert.False(window.TryGet<IGameInputReader>(out _));
+        Assert.False(game.TryGet<IGameDisplayAccess>(out _));
+        Assert.False(game.TryGet<IGameInputWriter>(out _));
+    }
+
+    [Fact]
+    public void DisposedWindowRejectsNewAccessAndContextFactories()
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+        var sessionAccess = game.Session;
+
+        window.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => window.Input);
+        Assert.Throws<ObjectDisposedException>(() => window.Session);
+        Assert.Throws<ObjectDisposedException>(() => window.Display);
+        Assert.Throws<ObjectDisposedException>(() => window.Presentation);
+        Assert.Throws<ObjectDisposedException>(() => window.Control);
+        Assert.Throws<ObjectDisposedException>(() => window.CreateGameContext());
+        Assert.Throws<ObjectDisposedException>(() => window.CreateIndependentContext());
+        Assert.Throws<ObjectDisposedException>(() => new WindowContext(window));
+        Assert.Throws<ObjectDisposedException>(() => window.GetRequired<IGameDisplayAccess>());
+        Assert.Same(sessionAccess, game.Session);
+        Assert.False(game.Session.ShutdownRequested);
+    }
+
+    [Fact]
+    public void WindowValuesAndCancellationDoNotCrossTheGameFactoryBoundary()
+    {
+        using var window = new WindowContext();
+        var frame = new FrameState();
+        var native = new WindowState();
+        var finishing = new Finishing(FinishingKind.CloseWindow, Result.Success);
+        window.With(frame).With(native).With(finishing).With(new LocalValue("window"));
+        using var windowChild = new WindowContext(window);
+        using var independentWindow = window.CreateIndependentContext();
+        using var game = window.CreateGameContext();
+        game.With(new LocalValue("game"));
+        using var session = game.CreateSessionContext();
+        using var gameChild = new EscapeApplicationContext(session);
+        using var independentGame = session.CreateIndependentContext();
+
+        Assert.Same(window.Cancellation, windowChild.Cancellation);
+        Assert.Same(frame, windowChild.GetRequired<FrameState>());
+        Assert.Same(native, windowChild.GetRequired<WindowState>());
+        Assert.False(independentWindow.TryGet<FrameState>(out _));
+        Assert.NotSame(window.Cancellation, independentWindow.Cancellation);
+        Assert.NotSame(window.Cancellation, game.Cancellation);
+        Assert.Same(game.Cancellation, session.Cancellation);
+        Assert.Same(game.Cancellation, gameChild.Cancellation);
+        Assert.NotSame(session.Cancellation, independentGame.Cancellation);
+        Assert.False(game.TryGet<FrameState>(out _));
+        Assert.False(game.TryGet<WindowState>(out _));
+        Assert.False(game.TryGet<Finishing>(out _));
+        Assert.Equal("game", gameChild.GetRequired<LocalValue>().Name);
+        Assert.False(independentGame.TryGet<LocalValue>(out _));
+    }
+
+    [Fact]
+    public async Task WindowWriterCommunicatesWithGameReaderWithoutSharingCancellation()
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, window);
+        var read = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+
+        window.Cancellation.Cancel();
+
+        Assert.False(game.Cancellation.IsCancellationRequested);
+        Assert.False(session.Cancellation.IsCancellationRequested);
+        Assert.False(read.IsCompleted);
+        Assert.True(window.Input.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.Equal(GameCommand.Up, await read.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.True(window.Cancellation.IsCancellationRequested);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DisposingOneSideDoesNotStopTheOtherOrItsExistingSession(bool disposeWindow)
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+        using var session = game.CreateSessionContext();
+        var display = window.Display;
+        if (disposeWindow)
+            window.Dispose();
+        else
+            game.Dispose();
+
+        Assert.Equal(MutationStatus.Applied, session.Session.BeginSession(session.SessionId).Status);
+        Assert.Equal(session.SessionId, display.Snapshot().SessionId);
+        Assert.False(session.Session.ShutdownRequested);
+        using var sibling = session.CreateIndependentContext();
+        Assert.Same(session.World, sibling.World);
+    }
+
+    [Fact]
     public void ScopeSharesAccessButSeparatesCancellationOnlyForIndependentRoots()
     {
-        using var app = new EscapeApplicationContext();
+        using var app = new WindowContext();
         app.With(new FrameState());
-        using var game = app.CreateIndependentContext();
+        using var game = app.CreateGameContext();
         using var session = game.CreateSessionContext();
         using var sibling = session.CreateIndependentContext();
         using var child = new EscapeApplicationContext(session);
-        Assert.Same(app.World, session.World);
+        Assert.Same(game.World, session.World);
         Assert.Same(app.Session, session.Session);
-        Assert.Same(app.Session, app.World);
+        Assert.Same(app.Session, game.World);
         Assert.Same(app.Input, session.Input);
         Assert.Same(session.Cancellation, game.Cancellation);
         Assert.Same(session.Cancellation, child.Cancellation);
@@ -110,4 +242,6 @@ public sealed class ContextTests
         public void EndSession(long sessionId) => inner.EndSession(sessionId);
         public void RequestShutdown() => inner.RequestShutdown();
     }
+
+    private sealed record LocalValue(string Name);
 }

@@ -75,8 +75,10 @@ public sealed class FinishingTests
         bool canceled,
         bool earlierFailure)
     {
-        using var app = new EscapeApplicationContext();
-        using var context = app.CreateIndependentContext();
+        using var app = new WindowContext();
+        using var window = app.CreateIndependentContext();
+        using var game = app.CreateGameContext();
+        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("earlier failure");
         Exception current = canceled
             ? new OperationCanceledException("finishing canceled")
@@ -84,7 +86,7 @@ public sealed class FinishingTests
         context.With(new Finishing(kind, earlierFailure ? previous : Result.Success));
         var ports = new FailingPorts(current);
 
-        var end = await CreateFinishing(kind, ports).ExecuteAsync(context);
+        var end = await ExecuteFinishingAsync(kind, ports, window, game);
 
         Assert.True(end.HasException);
         Assert.True(Contains(end.Exception, current));
@@ -102,7 +104,10 @@ public sealed class FinishingTests
     [InlineData(FinishingKind.EndSession)]
     public async Task FinishingCancellationRetainsRegisteredTaskFailureDuringReset(FinishingKind kind)
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new WindowContext();
+        using var window = app.CreateIndependentContext();
+        using var game = app.CreateGameContext();
+        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("prior failure");
         var resetFailure = new InvalidOperationException("registered task failed");
         context.With(new Finishing(kind, previous));
@@ -110,7 +115,7 @@ public sealed class FinishingTests
         context.Cancellation.Cancel();
         var ports = new FailingPorts(new InvalidOperationException("must not execute"));
 
-        var end = await CreateFinishing(kind, ports).ExecuteAsync(context);
+        var end = await ExecuteFinishingAsync(kind, ports, window, game);
 
         Assert.True(end.HasException);
         Assert.True(Contains(end.Exception, previous));
@@ -130,8 +135,8 @@ public sealed class FinishingTests
             .UseFunction<IGameReaction, ObservedGameReaction>()
             .UseFunction<ISessionReaction, ObservedSessionReaction>();
         using var scope = builder.BuildScope();
-        using var flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
-        using var context = new EscapeApplicationContext();
+        using var flow = scope.BuildSystemFlow<WindowSystemFlow, WindowContext>();
+        using var context = new WindowContext();
 
         var end = await flow.ExecuteAsync(context);
 
@@ -152,22 +157,29 @@ public sealed class FinishingTests
     [InlineData(FinishingKind.EndSession)]
     public async Task WrongFinishingKindDoesNotInvokeOperation(FinishingKind operation)
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new WindowContext();
+        using var window = app.CreateIndependentContext();
+        using var game = app.CreateGameContext();
+        FlowContext context = operation == FinishingKind.CloseWindow ? window : game;
         var wrong = operation == FinishingKind.CloseWindow ? FinishingKind.EndSession : FinishingKind.CloseWindow;
         context.With(new Finishing(wrong, Result.Success));
         var ports = new FailingPorts(new Exception("must not execute"));
 
-        var end = await CreateFinishing(operation, ports).ExecuteAsync(context);
+        var end = await ExecuteFinishingAsync(operation, ports, window, game);
 
         Assert.True(end.HasException);
         Assert.Equal(0, ports.Calls);
         Assert.Contains("matching finishing information", end.Exception!.Message);
     }
 
-    private static IInteraction<EscapeApplicationContext> CreateFinishing(FinishingKind kind, FailingPorts ports)
+    private static Task<InteractionEnd> ExecuteFinishingAsync(
+        FinishingKind kind,
+        FailingPorts ports,
+        WindowContext window,
+        EscapeApplicationContext game)
         => kind == FinishingKind.CloseWindow
-            ? new CloseWindow(ports, new GameExceptionHandling(), new GameCancellationHandling())
-            : new EndSession(ports, new GameExceptionHandling(), new GameCancellationHandling());
+            ? new CloseWindow(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(window)
+            : new EndSession(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(game);
 
     private static bool Contains(Exception? actual, Exception expected)
     {
@@ -203,10 +215,10 @@ public sealed class FinishingTests
     {
         public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Draw(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Open(WindowContext context) => GetEnd();
+        public ReactionEnd Draw(WindowContext context) => GetEnd();
+        public ReactionEnd RequestShutdown(WindowContext context) => GetEnd();
+        public ReactionEnd Close(WindowContext context, Result previous)
         {
             Calls++;
             throw error;
@@ -232,7 +244,7 @@ public sealed class FinishingTests
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
         public override void ForceResetMemoryState() { }
-        public void Poll(EscapeApplicationContext context)
+        public void Poll(WindowContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(5))
@@ -250,18 +262,18 @@ public sealed class FinishingTests
         public bool Opened { get; private set; }
         public bool Closed { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context)
+        public ReactionEnd Open(WindowContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             Opened = true;
             return GetEnd();
         }
-        public ReactionEnd Draw(EscapeApplicationContext context)
+        public ReactionEnd Draw(WindowContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             return GetEnd();
         }
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Close(WindowContext context, Result previous)
         {
             Assert.Equal(FinishingKind.CloseWindow, context.GetRequired<Finishing>().Kind);
             Closed = true;
@@ -280,7 +292,7 @@ public sealed class FinishingTests
             Ended = true;
             return GetEnd(previous);
         }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context)
+        public ReactionEnd RequestShutdown(WindowContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             context.Session.RequestShutdown();

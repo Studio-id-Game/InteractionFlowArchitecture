@@ -73,7 +73,7 @@ public sealed class GameReactionTests
         Assert.Equal(GameStage.Preparing, snapshot.Stage);
         Assert.False(begin.IsCompleted);
         Assert.NotNull(snapshot.Presentation);
-        GameTestSteps.Complete(fixture.Session, snapshot.Presentation.Key);
+        GameTestSteps.Complete(fixture.App, snapshot.Presentation.Key);
         Assert.False((await begin).HasException);
         Assert.False((await fixture.Reaction.EnableSelectionAsync(fixture.Session)).HasException);
         Assert.Equal(GameStage.Selecting, fixture.App.Display.Snapshot().Stage);
@@ -117,15 +117,15 @@ public sealed class GameReactionTests
     public async Task ResultInputCannotStartBeforeResultPresentationCompletes()
     {
         using var fixture = new ReactionFixture();
-        GameTestSteps.PlayTurn(fixture.Session, GameCommand.Up);
-        GameTestSteps.PlayTurn(fixture.Session, GameCommand.Right);
+        GameTestSteps.PlayTurn(fixture.Session, fixture.App, GameCommand.Up);
+        GameTestSteps.PlayTurn(fixture.Session, fixture.App, GameCommand.Right);
         var result = fixture.Reaction.ShowResultAsync(fixture.Session).AsTask();
         var snapshot = fixture.App.Display.Snapshot();
 
         Assert.True((await fixture.Reaction.EnableResultInputAsync(fixture.Session)).HasException);
         Assert.False(result.IsCompleted);
         Assert.False(snapshot.AcceptingInput);
-        GameTestSteps.Complete(fixture.Session, snapshot.Presentation!.Key);
+        GameTestSteps.Complete(fixture.App, snapshot.Presentation!.Key);
         Assert.False((await result).HasException);
         Assert.False((await fixture.Reaction.EnableResultInputAsync(fixture.Session)).HasException);
     }
@@ -147,7 +147,7 @@ public sealed class GameReactionTests
         Assert.True(context.Control.TrySetPaused(context.SessionId, false));
         var presentation = await WaitForPresentationAsync(fixture.App);
         Assert.Equal(1, fixture.App.Display.Snapshot().Turn);
-        GameTestSteps.Complete(context, presentation.Key);
+        GameTestSteps.Complete(fixture.App, presentation.Key);
         Assert.False((await execution).HasException);
         Assert.Equal(1, fixture.App.Display.Snapshot().Turn);
         Assert.True((await fixture.Reaction.ApplyPlayerAsync(context)).HasException);
@@ -211,7 +211,7 @@ public sealed class GameReactionTests
         Assert.IsType<InvalidOperationException>(GameMutationValidation.Presentation(new(unknown), "present"));
     }
 
-    private static async Task<PresentationSnapshot> WaitForPresentationAsync(EscapeApplicationContext context)
+    private static async Task<PresentationSnapshot> WaitForPresentationAsync(WindowContext context)
     {
         var timer = Stopwatch.StartNew();
         while (true)
@@ -226,17 +226,22 @@ public sealed class GameReactionTests
 
     private sealed class ReactionFixture : IDisposable
     {
-        internal EscapeApplicationContext App { get; } = new();
+        internal WindowContext App { get; } = new();
+        private EscapeApplicationContext Game { get; }
         internal EscapeApplicationContext Session { get; }
         internal GameReaction Reaction { get; } = new();
 
         internal ReactionFixture(bool prepare = true)
-            => Session = prepare ? GameTestSteps.Ready(App) : App.CreateSessionContext();
+        {
+            Game = App.CreateGameContext();
+            Session = prepare ? GameTestSteps.Ready(Game, App) : Game.CreateSessionContext();
+        }
 
         public void Dispose()
         {
             App.Session.RequestShutdown();
             Session.Dispose();
+            Game.Dispose();
             App.Dispose();
         }
     }

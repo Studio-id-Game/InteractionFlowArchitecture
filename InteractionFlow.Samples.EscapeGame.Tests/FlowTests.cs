@@ -23,6 +23,58 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class FlowTests
 {
     [Fact]
+    public async Task PreCanceledWindowSkipsOpenAndStillStopsAndCloses()
+    {
+        using var fixture = new Fixture();
+        fixture.Context.Cancellation.Cancel();
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.DoesNotContain("open", fixture.Window.Events);
+        Assert.Equal(new[] { "close" }, fixture.Window.Events);
+        Assert.True(fixture.Context.Session.ShutdownRequested);
+        Assert.True(fixture.Context.Cancellation.IsCancellationRequested);
+        Assert.False(fixture.Context.Cancellation.HasTask);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExternalWindowCancellationStopsPresentationWaitAndJoinsEvenIfStopFails(bool failStop)
+    {
+        var stopFailure = new InvalidOperationException("stop failed during external cancellation");
+        using var fixture = new Fixture(failStop ? stopFailure : null);
+        fixture.Window.CompletePresentations = false;
+        var canceledDuringPresentation = false;
+        var closeSawJoinedGame = false;
+        fixture.Window.BeforeClose = () => closeSawJoinedGame = fixture.Session.Ended
+            && fixture.Game.Cancellation is { HasTask: false };
+        fixture.Input.PollFrame = frames =>
+        {
+            if (frames.Display.Snapshot().Presentation is null)
+                return;
+            Assert.NotSame(fixture.Context.Cancellation, frames.Cancellation);
+            fixture.Context.Cancellation.Cancel();
+            canceledDuringPresentation = true;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(canceledDuringPresentation);
+        Assert.True(closeSawJoinedGame);
+        Assert.NotNull(fixture.Game.Cancellation);
+        Assert.False(fixture.Game.Cancellation.HasTask);
+        Assert.Equal(failStop, end.HasException);
+        if (failStop)
+            Assert.True(Contains(end.Exception, stopFailure));
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.True(fixture.Context.Session.ShutdownRequested);
+        Assert.True(fixture.Context.Cancellation.IsCancellationRequested);
+        Assert.False(fixture.Context.Cancellation.HasTask);
+    }
+
+    [Fact]
     public async Task InitialPresentationWaitKeepsFramesAliveUntilRenderedAcknowledgment()
     {
         using var fixture = new Fixture();
@@ -205,7 +257,7 @@ public sealed class FlowTests
     {
         var previous = new FormatException("earlier failed");
         var canceled = new OperationCanceledException("close canceled");
-        using var context = new EscapeApplicationContext();
+        using var context = new WindowContext();
         context.With(new Finishing(FinishingKind.CloseWindow, earlierFailure ? previous : Result.Success));
         var window = new HeadlessWindowReaction { CloseFailure = canceled };
         var interaction = new CloseWindow(window, new GameExceptionHandling(), new GameCancellationHandling());
@@ -266,25 +318,28 @@ public sealed class FlowTests
     private sealed class Fixture : IDisposable
     {
         private readonly InteractionFlow.Core.Builders.ScopeHandler scope;
-        public EscapeApplicationContext Context { get; } = new();
-        public InteractionFlow.Core.Builders.SystemFlowHandler<EscapeApplicationContext> Flow { get; }
+        public WindowContext Context { get; } = new();
+        public InteractionFlow.Core.Builders.SystemFlowHandler<WindowContext> Flow { get; }
         public ScriptedWindowOperation Input { get; }
         public HeadlessWindowReaction Window { get; }
+        public TrackingGameReaction Game { get; }
+        public TrackingSessionReaction Session { get; }
 
         public Fixture(Exception? stopFailure = null)
         {
             var builder = new ScopeBuilder();
             builder.Apply(new EscapeGameProfile())
                 .UseFunction<IWindowOperation, ScriptedWindowOperation>()
-                .UseFunction<IWindowReaction, HeadlessWindowReaction>();
-            if (stopFailure is not null)
-                builder.UseFunction<ISessionReaction, FailingStopReaction>();
+                .UseFunction<IWindowReaction, HeadlessWindowReaction>()
+                .UseFunction<IGameReaction, TrackingGameReaction>()
+                .UseFunction<ISessionReaction, TrackingSessionReaction>();
             scope = builder.BuildScope();
             Input = Assert.IsType<ScriptedWindowOperation>(scope.GetRequiredService<IWindowOperation>());
             Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
-            if (stopFailure is not null)
-                Assert.IsType<FailingStopReaction>(scope.GetRequiredService<ISessionReaction>()).Failure = stopFailure;
-            Flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
+            Game = Assert.IsType<TrackingGameReaction>(scope.GetRequiredService<IGameReaction>());
+            Session = Assert.IsType<TrackingSessionReaction>(scope.GetRequiredService<ISessionReaction>());
+            Session.Failure = stopFailure;
+            Flow = scope.BuildSystemFlow<WindowSystemFlow, WindowContext>();
         }
 
         public void Dispose()
@@ -298,9 +353,9 @@ public sealed class FlowTests
     public sealed class ScriptedWindowOperation : Operation, IWindowOperation
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
-        public Action<EscapeApplicationContext>? PollFrame { get; set; }
+        public Action<WindowContext>? PollFrame { get; set; }
         public override void ForceResetMemoryState() { }
-        public void Poll(EscapeApplicationContext context)
+        public void Poll(WindowContext context)
         {
             if (timeout.Elapsed > TimeSpan.FromSeconds(10))
                 throw new TimeoutException("The scripted game did not finish.");
@@ -323,15 +378,16 @@ public sealed class FlowTests
         public int DrawCount { get; private set; }
         public bool CompletePresentations { get; set; } = true;
         public Exception? CloseFailure { get; set; }
-        public Action<EscapeApplicationContext>? OnOpen { get; set; }
+        public Action<WindowContext>? OnOpen { get; set; }
+        public Action? BeforeClose { get; set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context)
+        public ReactionEnd Open(WindowContext context)
         {
             Record("open");
             OnOpen?.Invoke(context);
             return GetEnd();
         }
-        public ReactionEnd Draw(EscapeApplicationContext context)
+        public ReactionEnd Draw(WindowContext context)
         {
             Record("draw");
             DrawCount++;
@@ -348,9 +404,10 @@ public sealed class FlowTests
             Thread.Yield();
             return GetEnd();
         }
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Close(WindowContext context, Result previous)
         {
             Record("close");
+            BeforeClose?.Invoke();
             if (CloseFailure is not null)
                 throw CloseFailure;
             return GetEnd(previous);
@@ -362,22 +419,54 @@ public sealed class FlowTests
         }
     }
 
-    public sealed class FailingStopReaction : Reaction, ISessionReaction
+    public sealed class TrackingSessionReaction : Reaction, ISessionReaction
     {
-        public Exception Failure { get; set; } = new InvalidOperationException("stop failed");
+        public Exception? Failure { get; set; }
+        public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => throw Failure;
+        public ReactionEnd RequestShutdown(WindowContext context)
+        {
+            if (Failure is not null)
+                throw Failure;
+            context.Session.RequestShutdown();
+            return GetEnd();
+        }
         public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
         {
             context.Session.EndSession(context.SessionId);
+            Ended = true;
             return GetEnd(previous);
         }
+    }
+
+    public sealed class TrackingGameReaction : Reaction, IGameReaction
+    {
+        private readonly GameReaction inner = new();
+        public CancellationObject? Cancellation { get; private set; }
+        public override void ForceResetMemoryState() { }
+        public ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
+        {
+            Cancellation = context.Cancellation;
+            return inner.BeginAsync(context);
+        }
+        public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
+            => inner.EnableSelectionAsync(context);
+        public ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
+            => inner.SelectAsync(context, command);
+        public ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
+            => inner.ApplyPlayerAsync(context);
+        public ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
+            => inner.ApplyEnemyAsync(context);
+        public ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
+            => inner.ShowResultAsync(context);
+        public ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+            => inner.EnableResultInputAsync(context);
     }
 
     private sealed class CanceledSessionReaction(OperationCanceledException canceled) : Reaction, ISessionReaction
     {
         public override void ForceResetMemoryState() { }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => GetEnd();
+        public ReactionEnd RequestShutdown(WindowContext context) => GetEnd();
         public ReactionEnd EndSession(EscapeApplicationContext context, Result previous) => throw canceled;
     }
 }

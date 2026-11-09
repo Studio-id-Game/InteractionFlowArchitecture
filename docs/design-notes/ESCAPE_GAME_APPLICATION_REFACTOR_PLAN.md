@@ -70,7 +70,25 @@ Contextがすべての契約を提供するため、Portが最小権限になっ
 | CreateSessionContext | アクセス、ゲーム実行側のCancellation、親の値探索 | 新規IDと初期状態。公開はBeginSessionのReactionが行う |
 
 生の可変Stateを外へ返さない構成、追加値・Entryによる固定契約の隠蔽拒否、破棄後の取得拒否は維持した。
-強いID型やContext型の追加分割は今回見送り、既存の提示キーによる識別も維持した。
+この段階では強いID型やContext型の追加分割を見送り、既存の提示キーによる識別を維持した。
+
+### 後続改善：SystemFlowの範囲に応じたContext分離
+
+WindowSystemFlowにはWindowContext、Game / Session / TurnSystemFlowにはEscapeApplicationContextを渡す。
+どちらも同じEscapeAccessを共有するが、Window側はWorld、ゲーム側はDisplayを提供しない。
+入力契約もIGameInputWriterとIGameInputReaderに分け、各ContextのプロパティとTryGetCoreで同じ範囲を提供する。
+Session / Presentation / Controlは共通の契約を維持し、メソッド単位の最小権限化までは行わない。
+
+WindowからゲームContextを作る際は、アクセス以外の追加値・Cancellation・親探索を引き継がない。
+WindowSystemFlowは外部キャンセルをフレーム境界等で観測して既存の停止・合流へ接続する。
+同種Context内の子スコープは従来どおり親探索とCancellation共有を行う。
+固定アクセスとEntryの追加拒否により、標準の追加値経路から提供範囲を変えない。
+ただし返却したAccess実体へのキャストを防ぐ機構ではなく、悪意あるコードに対する隔離は目的としない。
+
+分離後の全体ビルドは警告・エラー0件、テストはEscapeGame92件と他プロジェクト445件が成功した。
+非公開契約の探索・追加拒否、親探索とCancellation共有の境界、破棄の独立性、入力通信を検証した。
+外部キャンセル時は停止の成功・失敗いずれでも、実ゲーム側のTask登録解放と合流後のCloseを確認している。
+Release簡易計測で通常フレームの488B/回を維持した。実画面での再確認は未実施。
 
 ## Interaction粒度の見直し
 

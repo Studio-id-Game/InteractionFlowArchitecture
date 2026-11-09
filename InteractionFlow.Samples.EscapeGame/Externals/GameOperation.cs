@@ -13,6 +13,6 @@ public sealed class GameOperation : Operation, IGameOperation
     public ValueTask<GameCommand> ReadAsync(EscapeApplicationContext context)
         => context.Input.ReadAsync(context.SessionId, context.Cancellation.GetToken());
 
-    public bool Submit(EscapeApplicationContext context, long sessionId, GameCommand command)
+    public bool Submit(WindowContext context, long sessionId, GameCommand command)
         => context.Input.TrySubmit(sessionId, command);
 }

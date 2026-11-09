@@ -5,6 +5,7 @@ using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Interactions;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
@@ -16,24 +17,30 @@ public sealed class WindowSystemFlow(
     RequestShutdown stop,
     CloseWindow close,
     GameSystemFlow game)
-    : SystemFlow<EscapeApplicationContext>(open, frame, control, stop, close, game)
+    : SystemFlow<WindowContext>(open, frame, control, stop, close, game)
 {
-    protected override Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override Task<InteractionEnd> ExecuteCoreAsync(WindowContext context)
     {
         using var frames = context.CreateIndependentContext();
+        using var gameContext = context.CreateGameContext();
         var input = new FrameState();
         frames.With(input).With(new WindowState());
         var failures = new FailureCollector();
         Task<InteractionEnd>? execution = null;
+        // 呼び出し元のキャンセルは停止要求として観測し、ゲーム側のリセットとは分離します。
+        var token = context.Cancellation.GetToken();
 
         try
         {
-            var opened = open.ExecuteAsync(frames).GetAwaiter().GetResult();
-            failures.Add(opened.Result);
-            if (!opened.HasException)
+            if (!token.IsCancellationRequested)
             {
-                execution = Task.Run(() => game.ExecuteAsync(context));
-                PresentFrames(frames, input, execution, failures);
+                var opened = open.ExecuteAsync(frames).GetAwaiter().GetResult();
+                failures.Add(opened.Result);
+                if (!opened.HasException && !token.IsCancellationRequested)
+                {
+                    execution = Task.Run(() => game.ExecuteAsync(gameContext));
+                    PresentFrames(frames, input, execution, failures, token);
+                }
             }
         }
         catch (Exception error)
@@ -42,11 +49,11 @@ public sealed class WindowSystemFlow(
         }
         finally
         {
-            StopAndJoin(context, frames, execution, failures);
+            StopAndJoin(gameContext, frames, execution, failures);
         }
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
-        using var shutdown = new EscapeApplicationContext(frames);
+        using var shutdown = new WindowContext(frames);
         shutdown.With(new Finishing(FinishingKind.CloseWindow, failures.ToResult()));
         try
         {
@@ -60,12 +67,13 @@ public sealed class WindowSystemFlow(
     }
 
     private void PresentFrames(
-        EscapeApplicationContext frames,
+        WindowContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
-        FailureCollector failures)
+        FailureCollector failures,
+        CancellationToken token)
     {
-        while (!execution.IsCompleted && !frames.Session.ShutdownRequested)
+        while (!execution.IsCompleted && !frames.Session.ShutdownRequested && !token.IsCancellationRequested)
         {
             var shown = frame.ExecuteAsync(frames).GetAwaiter().GetResult();
             failures.Add(shown.Result);
@@ -85,7 +93,7 @@ public sealed class WindowSystemFlow(
 
     private void StopAndJoin(
         EscapeApplicationContext context,
-        EscapeApplicationContext frames,
+        WindowContext frames,
         Task<InteractionEnd>? execution,
         FailureCollector failures)
     {

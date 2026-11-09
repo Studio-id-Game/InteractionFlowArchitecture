@@ -16,8 +16,9 @@ internal static class EscapeFrameMeasurements
 
     internal static void Run()
     {
-        using var root = new EC.EscapeApplicationContext();
-        using var session = root.CreateSessionContext();
+        using var root = new EC.WindowContext();
+        using var game = root.CreateGameContext();
+        using var session = game.CreateSessionContext();
         var initial = session.Session.BeginSession(session.SessionId).Presentation!.Value;
         session.Presentation.Advance(initial, 0, 0);
         if (!session.Presentation.TryComplete(initial)
@@ -47,7 +48,7 @@ internal static class EscapeFrameMeasurements
     private sealed class Polling : Operation, EP.IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(EC.EscapeApplicationContext context)
+        public void Poll(EC.WindowContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
             var state = context.Display.Snapshot();
@@ -62,9 +63,9 @@ internal static class EscapeFrameMeasurements
     private sealed class Drawing : Reaction, EP.IWindowReaction
     {
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EC.EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Close(EC.EscapeApplicationContext context, Result previous) => GetEnd(previous);
-        public ReactionEnd Draw(EC.EscapeApplicationContext context)
+        public ReactionEnd Open(EC.WindowContext context) => GetEnd();
+        public ReactionEnd Close(EC.WindowContext context, Result previous) => GetEnd(previous);
+        public ReactionEnd Draw(EC.WindowContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
             sink = context.Display.Snapshot();

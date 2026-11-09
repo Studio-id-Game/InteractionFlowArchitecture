@@ -58,8 +58,9 @@ public sealed class ResultInteractionTests
     [InlineData(true)]
     public async Task StopOrCancellationAfterPresentationDoesNotLeaveAWait(bool cancel)
     {
-        using var app = new EscapeApplicationContext();
-        using var context = app.CreateSessionContext();
+        using var app = new WindowContext();
+        using var game = app.CreateGameContext();
+        using var context = game.CreateSessionContext();
         var actual = new GameReaction();
         var reaction = new ResultReaction
         {

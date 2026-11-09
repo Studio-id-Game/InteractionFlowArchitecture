@@ -5,5 +5,5 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
 public interface IWindowOperation : IOperationPort
 {
-    void Poll(EscapeApplicationContext context);
+    void Poll(WindowContext context);
 }

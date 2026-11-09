@@ -14,7 +14,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
 
     public override void ForceResetMemoryState() { }
 
-    public void Poll(EscapeApplicationContext context)
+    public void Poll(WindowContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
         var snapshot = context.Display.Snapshot();

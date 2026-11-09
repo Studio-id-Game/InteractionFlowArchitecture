@@ -68,8 +68,23 @@ Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終�
 
 ## Contextとアクセスの所有
 
-[EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs) は用途別アクセスを提供します。
-関心別Stateの協調更新は、一つのEscapeAccessとgateで行います。
+[WindowContext](./Entities/Contexts/WindowContext.cs) はWindowSystemFlowと画面側Interactionへ、
+[EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs) はGame / Session / TurnSystemFlowと
+ゲーム側Interactionへ渡します。関心別Stateの協調更新は、両Contextが共有する一つのEscapeAccessとgateで行います。
+
+| 提供する値 | WindowContext | EscapeApplicationContext |
+| --- | --- | --- |
+| 入力 | IGameInputWriter（送信） | IGameInputReader（待機） |
+| Session | あり | あり |
+| World | なし | あり |
+| Display | あり | なし |
+| Presentation / Control | あり | あり |
+
+プロパティだけでなくTryGetCoreも同じ提供範囲に限定します。例えばWindowContextから
+IGameWorldAccess、ゲームContextからIGameDisplayAccessやIGameInputWriterは探索できません。
+実体の全インターフェースを公開する型判定は使いません。Session / Presentation / Controlは
+現時点では各契約全体を共有しており、メソッド単位の権限制限にはしていません。
+返したAccess実体へのキャストまで防ぐセキュリティ境界ではありません。
 
 | アクセス | 用途 |
 | --- | --- |
@@ -80,15 +95,21 @@ Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終�
 | Display / Presentation | 一貫した表示の取得、識別付き提示要求の進行・完了 |
 
 Session / Worldの分離は、同じアクセス管理の呼び分けです。
-管理オブジェクトやロックを増やしておらず、Contextを受け取るPortへの完全な権限制限も意味しません。
+管理オブジェクトやロックを増やしていません。
 今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
 
-`ApplicationSessionId = 0`は、特定のゲームセッションを指さないアプリ・フレーム用の固定対象です。
-ゲーム実行側は独立Contextを持ち、そこからCreateSessionContextで新規ID・初期状態を割り当てます。
+`ApplicationSessionId = 0`は、特定のゲームセッションを指さないゲーム実行ルートの固定対象です。
+WindowContext.CreateGameContextはアクセスだけを共有する独立したゲームContextを作り、
+Window側の追加値・Cancellation・親探索を引き継ぎません。ゲーム実行側はこの独立Contextを持ち、
+そこからCreateSessionContextで新規ID・初期状態を割り当てます。
 そのセッションはゲーム側Cancellationを共有し、BeginSessionのReactionで公開されます。
 CreateIndependentContextはアクセスと対象IDだけを共有し、Cancellationと追加値を分離します。
 型付きの親ありContextは、アクセス・対象ID・Cancellationを共有し、追加値を親へ探索します。
 各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
+WindowSystemFlowは呼び出し元のCancellationを起動前・ゲーム開始前・各フレームの境界で観測し、
+停止・ゲーム側Cancellation・合流・Closeの経路へ接続します。Window側のキャンセルをゲーム側へ
+直接共有しないため、Window側で要求されたキャンセル状態はゲーム側のリセットでは解除されません。
+開始前にキャンセル済みならOpenとゲーム開始を省略し、停止・Closeを実行します。
 
 ## 完了範囲と終了結果
 
@@ -121,6 +142,14 @@ Close / EndSessionの専用スコープへは、[Finishing](./Entities/Finishing
 GameReactionTestsは通常の無効選択と内部前提違反、FinishingTestsは明示終了情報、
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
+
+Context分離後は、EscapeGameの92件と他プロジェクトの445件が成功しています。
+全体ビルドは警告・エラー0件です。ContextTestsでは公開・非公開契約の探索、固定契約の追加拒否、
+親探索とCancellationの境界、破棄の独立性を確認します。FlowTestsでは外部キャンセルと停止失敗時にも、
+ゲーム側のTask登録が解放され、セッション終了・合流後にCloseへ進むことを確認します。
+Release簡易計測はSnapshotが128B・約33～34ns、直接フレームが256B・約139～143ns、
+PresentFrameが488B・約232～242nsでした。測定条件は下記と同じで、割り当て量は維持しています。
+Context分離後の実画面確認は未実施です。
 
 ## 利用側改修後の確認結果
 

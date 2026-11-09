@@ -2,7 +2,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Interactions;
+using InteractionFlow.Samples.EscapeGame.Gameplay.Interactions;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;

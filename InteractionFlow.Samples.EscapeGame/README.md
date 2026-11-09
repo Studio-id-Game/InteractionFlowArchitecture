@@ -32,6 +32,11 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 ## 構成の読み方
 
+ExternalPorts / Externals / Interactionsは、Context依存を含む最も狭い範囲を先に配置します。
+例えばGameplay.Interactions、View.Externals、Lifetime.Interactions、Application.ExternalPortsです。
+複数範囲を扱うPort / ExternalはApplication、共通Handlerは既存Externals直下に置きます。
+分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
+
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
 SessionLoopSystemFlowはセッションを繰り返し、SessionSystemFlowとTurnSystemFlowが状態に応じてInteractionを合成します。
 ゲーム側は演出提示の完了を非同期に待ちますが、フレーム側はその間も描画・制御入力を継続します。
@@ -52,13 +57,13 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
 
 ## 一操作をコードから追う
 
-1. [RaylibWindowOperation](./Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
-   [PresentFrame](./Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
-2. [HandleGameInput](./Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
-   [GameplayReaction.HandleCommandAsync](./Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
+1. [RaylibWindowOperation](View/Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
+   [PresentFrame](View/Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
+2. [HandleGameInput](Gameplay/Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
+   [GameplayReaction.HandleCommandAsync](Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
 3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
-4. [RaylibWindowReaction](./Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
+4. [RaylibWindowReaction](Application/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
    フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
 
 ゲーム上の無効な選択は、理由を表示する正常なRejectedです。
@@ -121,7 +126,7 @@ Interaction間の待機で発生した実行自身のキャンセルも、Sessio
 
 ## 完了範囲と終了結果
 
-[PresentResult](./Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
+[PresentResult](Gameplay/Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
 提示Reactionの失敗時は短絡し、受付開始へ進みません。間にフロー選択はなく、結果段階はポーズ対象外です。
 停止との競合は受付更新側で再確認します。独立したEnableResultInput Interactionは削除しました。
 
@@ -143,6 +148,10 @@ Close / EndSessionの専用スコープへは、[CleanupInfo](./Entities/Cleanup
 改修の判断と対象外は [利用側改善プランと実装結果](../docs/design-notes/ESCAPE_GAME_APPLICATION_REFACTOR_PLAN.md) を参照してください。
 
 ## 検証
+
+役割→レイヤー順の配置変更後も全体ビルドは警告・エラー0件、全569件成功です。
+名前空間・using・参照名を除いたメソッド本体、画面文字列、ゲーム規則は変更していません。
+Release簡易計測の通常PresentFrameは488B/回・約221〜234ns。実画面での再確認は未実施です。
 
 命名整理後も全体ビルドは警告・エラー0件、全569件成功です。
 Release簡易計測の通常PresentFrameは488B/回・約228〜233nsで、割り当て量を維持しています。

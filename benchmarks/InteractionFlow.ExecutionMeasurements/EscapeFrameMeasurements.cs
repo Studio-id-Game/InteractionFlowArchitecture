@@ -1,12 +1,14 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Application.Externals;
+using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.View.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.View.Interactions;
 using System;
 using E = InteractionFlow.Samples.EscapeGame.Entities;
 using EC = InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using EP = InteractionFlow.Samples.EscapeGame.ExternalPorts;
-using EF = InteractionFlow.Samples.EscapeGame.Externals;
-using EI = InteractionFlow.Samples.EscapeGame.Interactions;
 
 namespace InteractionFlow.ExecutionMeasurements;
 
@@ -30,8 +32,8 @@ internal static class EscapeFrameMeasurements
         frames.With(window).With(new E.FrameState());
         var poll = new Polling();
         var draw = new Drawing();
-        var frame = new EI.PresentFrame(poll, draw, new EF.GameInputOperation(),
-            new EF.GameExceptionHandling(), new EF.GameCancellationHandling());
+        var frame = new PresentFrame(poll, draw, new GameInputOperation(),
+            new GameExceptionHandling(), new GameCancellationHandling());
 
         Program.Measure("Escape Display.Snapshot", () => sink = root.View.CaptureSnapshot());
         Program.Measure("Escape idle frame direct (two snapshots)", () =>
@@ -44,7 +46,7 @@ internal static class EscapeFrameMeasurements
         GC.KeepAlive(sink);
     }
 
-    private sealed class Polling : Operation, EP.IWindowOperation
+    private sealed class Polling : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState() { }
         public void PollFrameInput(EC.IGameViewContext context)
@@ -59,7 +61,7 @@ internal static class EscapeFrameMeasurements
         }
     }
 
-    private sealed class Drawing : Reaction, EP.IWindowReaction
+    private sealed class Drawing : Reaction, IWindowReaction
     {
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(EC.IGameViewContext context) => GetEnd();

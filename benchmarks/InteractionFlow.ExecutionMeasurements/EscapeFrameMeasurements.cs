@@ -17,11 +17,11 @@ internal static class EscapeFrameMeasurements
     internal static void Run()
     {
         using var root = new EC.EscapeApplicationContext();
-        using var session = new EC.GameplayContext(root, root.Gameplay.CreateSession(), ContextInheritance.Cancellation);
+        using var session = new EC.GameplayContext(root, root.Gameplay.AllocateSession(), ContextInheritance.Cancellation);
         var initial = session.Gameplay.BeginSession(session.SessionId).Presentation!.Value;
-        root.View.Advance(initial, 0, 0);
-        if (!root.View.TryComplete(initial)
-            || session.Gameplay.EnterSelecting(session.SessionId) != E.MutationStatus.Applied)
+        root.View.AdvancePresentation(initial, 0, 0);
+        if (!root.View.TryCompletePresentation(initial)
+            || session.Gameplay.BeginActionSelection(session.SessionId) != E.MutationStatus.Applied)
             throw new InvalidOperationException("Failed to initialize measurement session.");
 
         using var frames = new EC.GameViewContext(root, ContextInheritance.None);
@@ -30,15 +30,15 @@ internal static class EscapeFrameMeasurements
         frames.With(window).With(new E.FrameState());
         var poll = new Polling();
         var draw = new Drawing();
-        var frame = new EI.PresentFrame(poll, draw, new EF.GameOperation(),
+        var frame = new EI.PresentFrame(poll, draw, new EF.GameInputOperation(),
             new EF.GameExceptionHandling(), new EF.GameCancellationHandling());
 
-        Program.Measure("Escape Display.Snapshot", () => sink = root.View.Snapshot());
+        Program.Measure("Escape Display.Snapshot", () => sink = root.View.CaptureSnapshot());
         Program.Measure("Escape idle frame direct (two snapshots)", () =>
         {
-            poll.Poll(frames);
+            poll.PollFrameInput(frames);
             _ = frames.GetRequired<E.FrameState>();
-            sink = draw.Draw(frames);
+            sink = draw.DrawFrame(frames);
         });
         Program.Measure("Escape idle PresentFrame.ExecuteAsync", () => sink = frame.ExecuteAsync(frames).GetAwaiter().GetResult());
         GC.KeepAlive(sink);
@@ -47,10 +47,10 @@ internal static class EscapeFrameMeasurements
     private sealed class Polling : Operation, EP.IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(EC.IGameViewContext context)
+        public void PollFrameInput(EC.IGameViewContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
-            var state = context.View.Snapshot();
+            var state = context.View.CaptureSnapshot();
             var frame = context.GetRequired<E.FrameState>();
             frame.SessionId = state.SessionId;
             frame.Presentation = state.Presentation?.Key;
@@ -64,10 +64,10 @@ internal static class EscapeFrameMeasurements
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(EC.IGameViewContext context) => GetEnd();
         public ReactionEnd Close(EC.ILifetimeContext context, Result previous) => GetEnd(previous);
-        public ReactionEnd Draw(EC.IGameViewContext context)
+        public ReactionEnd DrawFrame(EC.IGameViewContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
-            sink = context.View.Snapshot();
+            sink = context.View.CaptureSnapshot();
             return GetEnd();
         }
     }

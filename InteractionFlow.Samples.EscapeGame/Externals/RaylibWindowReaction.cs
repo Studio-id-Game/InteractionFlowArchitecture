@@ -43,18 +43,18 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         window.MarkOpened();
         RL.SetExitKey(KeyboardKey.Null);
         RL.SetTargetFPS(60);
-        return Draw(context);
+        return DrawFrame(context);
     }
 
-    public ReactionEnd Draw(IGameViewContext context)
+    public ReactionEnd DrawFrame(IGameViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        var state = context.View.Snapshot();
+        var state = context.View.CaptureSnapshot();
         var presentation = state.Presentation;
         if (presentation is not null)
         {
             var elapsed = previousPresentation == presentation.Key ? RL.GetFrameTime() : 0;
-            presentation = context.View.Advance(presentation.Key, elapsed, previousControlRevision);
+            presentation = context.View.AdvancePresentation(presentation.Key, elapsed, previousControlRevision);
         }
         previousPresentation = state.Presentation?.Key;
         previousControlRevision = state.ControlRevision;
@@ -73,7 +73,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
         if (presentation is not null
             && (presentation.SkipRequested || presentation.ElapsedSeconds >= presentation.DurationSeconds))
-            context.View.TryComplete(presentation.Key);
+            context.View.TryCompletePresentation(presentation.Key);
         return GetEnd();
     }
 

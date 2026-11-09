@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
 public sealed class ApplyPlayerAction(
-    IGameReaction reaction,
+    IGameplayReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
-        => reaction.ApplyPlayerAsync(context);
+        => reaction.ApplyPlayerActionAsync(context);
 }

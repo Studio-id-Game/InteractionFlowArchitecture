@@ -18,7 +18,8 @@ internal sealed partial class EscapeAccess
         return new(MutationStatus.Applied, key);
     }
 
-    public async ValueTask<PresentationCompletion> WaitForPresentationAsync(PresentationKey key, CancellationToken token)
+    public async ValueTask<PresentationCompletion> WaitForPresentationCompletionAsync(
+        PresentationKey key, CancellationToken token)
     {
         Task<PresentationCompletion> task;
         lock (gate)
@@ -33,7 +34,7 @@ internal sealed partial class EscapeAccess
     }
 
     // controlRevision は前フレームの値。ポーズ/再開の境界をまたいだ delta は捨てます。
-    public PresentationSnapshot? Advance(PresentationKey key, double elapsedSeconds, long controlRevision)
+    public PresentationSnapshot? AdvancePresentation(PresentationKey key, double elapsedSeconds, long controlRevision)
     {
         lock (gate)
         {
@@ -57,7 +58,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public bool TryComplete(PresentationKey key)
+    public bool TryCompletePresentation(PresentationKey key)
     {
         lock (gate)
         {
@@ -70,7 +71,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public bool TrySkip(PresentationKey key)
+    public bool TryRequestPresentationSkip(PresentationKey key)
     {
         lock (gate)
         {

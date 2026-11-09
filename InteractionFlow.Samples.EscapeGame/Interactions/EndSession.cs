@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
 public sealed class EndSession(
-    ISessionReaction reaction,
+    IGameLifetimeReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)

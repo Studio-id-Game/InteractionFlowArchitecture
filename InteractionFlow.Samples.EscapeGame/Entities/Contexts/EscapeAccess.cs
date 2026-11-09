@@ -12,7 +12,7 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
     private bool shutdown;
     private static RoomDefinition Room => RoomDefinition.Default;
 
-    public long CreateSession()
+    public long AllocateSession()
     {
         lock (gate)
         {
@@ -57,7 +57,7 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         }
     }
 
-    public GameProgress GetProgress(long sessionId)
+    public GameProgress GetSessionProgress(long sessionId)
     {
         lock (gate)
         {
@@ -69,7 +69,7 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         }
     }
 
-    public GameSnapshot Snapshot()
+    public GameSnapshot CaptureSnapshot()
     {
         lock (gate)
         {

@@ -35,7 +35,7 @@ public sealed class FrameTests
             frame.PauseRequested = pause;
             frame.SkipRequested = skip;
         });
-        var game = new RecordedGameOperation();
+        var game = new RecordedGameInputOperation();
         var window = new FrameReaction(() => Assert.Equal(delivered, game.Commands.Count));
         var interaction = new PresentFrame(operation, window, game,
             new GameExceptionHandling(), new GameCancellationHandling());
@@ -54,22 +54,22 @@ public sealed class FrameTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        var pending = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+        var pending = session.Gameplay.ReadCommandAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
         using var frames = new GameViewContext(app, ContextInheritance.None);
         var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
         frames.With(frame);
-        var control = new ChangeControl(new GameControlReaction(),
+        var control = new HandleControlInput(new GameControlReaction(),
             new GameExceptionHandling(), new GameCancellationHandling());
 
         Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.True(session.Gameplay.GetProgress(session.SessionId).Paused);
+        Assert.True(session.Gameplay.GetSessionProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
-        Assert.False(app.View.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.False(app.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
 
         Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.False(session.Gameplay.GetProgress(session.SessionId).Paused);
+        Assert.False(session.Gameplay.GetSessionProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
-        Assert.True(app.View.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.True(app.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await pending.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
     }
@@ -79,9 +79,9 @@ public sealed class FrameTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(session.SessionId, GameCommand.Up));
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(session.SessionId, GameCommand.Confirm));
-        var player = session.Gameplay.ApplyPlayer(session.SessionId);
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Up));
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Confirm));
+        var player = session.Gameplay.ApplyPlayerAction(session.SessionId);
         var oldKey = Assert.IsType<PresentationKey>(player.Presentation);
         var frame = new FrameState
         {
@@ -90,34 +90,34 @@ public sealed class FrameTests
             Presentation = oldKey
         };
         GameTestSteps.Complete(app, oldKey);
-        var enemy = session.Gameplay.ApplyEnemy(session.SessionId);
+        var enemy = session.Gameplay.ApplyEnemyAction(session.SessionId);
         var newKey = Assert.IsType<PresentationKey>(enemy.Presentation);
         Assert.NotEqual(oldKey, newKey);
         using var frames = new GameViewContext(app, ContextInheritance.None);
         frames.With(frame);
         var control = new GameControlReaction();
 
-        Assert.False(control.Change(frames).HasException);
-        Assert.False(app.View.Snapshot().Presentation!.SkipRequested);
+        Assert.False(control.ApplyControlRequest(frames).HasException);
+        Assert.False(app.View.CaptureSnapshot().Presentation!.SkipRequested);
 
         frame.Presentation = newKey;
-        Assert.False(control.Change(frames).HasException);
-        Assert.True(app.View.Snapshot().Presentation!.SkipRequested);
+        Assert.False(control.ApplyControlRequest(frames).HasException);
+        Assert.True(app.View.CaptureSnapshot().Presentation!.SkipRequested);
     }
 
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(IGameViewContext context) => poll(context.GetRequired<FrameState>());
+        public void PollFrameInput(IGameViewContext context) => poll(context.GetRequired<FrameState>());
     }
 
-    private sealed class RecordedGameOperation : Operation, IGameOperation
+    private sealed class RecordedGameInputOperation : Operation, IGameInputOperation
     {
         public List<(long, GameCommand)> Commands { get; } = [];
         public override void ForceResetMemoryState() { }
-        public ValueTask<GameCommand> ReadAsync(IGameplayContext context)
+        public ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context)
             => throw new NotSupportedException();
-        public bool Submit(IGameViewContext context, long sessionId, GameCommand command)
+        public bool TrySubmitCommand(IGameViewContext context, long sessionId, GameCommand command)
         {
             Commands.Add((sessionId, command));
             return true;
@@ -129,7 +129,7 @@ public sealed class FrameTests
         public int DrawCount { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(IGameViewContext context) => GetEnd();
-        public ReactionEnd Draw(IGameViewContext context)
+        public ReactionEnd DrawFrame(IGameViewContext context)
         {
             onDraw();
             DrawCount++;

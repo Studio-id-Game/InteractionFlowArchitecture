@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession endSession)
+public sealed class SessionLoopSystemFlow(SessionSystemFlow sessionFlow, EndSession endSession)
     : SystemFlow<IGameplayContext>(sessionFlow, endSession)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
@@ -19,7 +19,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             GameplayContext created;
             try
             {
-                var id = context.Gameplay.CreateSession();
+                var id = context.Gameplay.AllocateSession();
                 created = new GameplayContext(context, id, ContextInheritance.All);
             }
             catch (InvalidOperationException) when (context.Lifetime.ShutdownRequested)
@@ -37,7 +37,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             {
                 var end = await sessionFlow.ExecuteAsync(session);
                 outcome = end.Result;
-                retry = !end.HasException && session.Gameplay.GetProgress(session.SessionId).RetryRequested;
+                retry = !end.HasException && session.Gameplay.GetSessionProgress(session.SessionId).RetryRequested;
             }
             // Interaction間の再開待機も、実行自身へのキャンセルなら通常停止です。
             catch (OperationCanceledException) when (session.Lifetime.ShutdownRequested

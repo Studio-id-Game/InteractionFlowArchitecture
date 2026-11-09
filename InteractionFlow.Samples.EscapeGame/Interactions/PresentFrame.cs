@@ -12,22 +12,22 @@ namespace InteractionFlow.Samples.EscapeGame.Interactions;
 public sealed class PresentFrame(
     IWindowOperation operation,
     IWindowReaction reaction,
-    IGameOperation game,
+    IGameInputOperation game,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameViewContext>(exceptionPort, cancellationPort, operation, reaction, game)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameViewContext context)
     {
-        operation.Poll(context);
+        operation.PollFrameInput(context);
         var input = context.GetRequired<FrameState>();
 
         if (!input.ShutdownRequested && !input.PauseRequested && !input.SkipRequested
             && input.Command is GameCommand command)
         {
-            game.Submit(context, input.SessionId, command);
+            game.TrySubmitCommand(context, input.SessionId, command);
         }
 
-        return new(reaction.Draw(context));
+        return new(reaction.DrawFrame(context));
     }
 }

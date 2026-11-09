@@ -12,10 +12,10 @@ namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 public sealed class WindowSystemFlow(
     OpenWindow open,
     PresentFrame frame,
-    ChangeControl control,
+    HandleControlInput control,
     RequestShutdown stop,
     CloseWindow close,
-    GameSystemFlow game)
+    SessionLoopSystemFlow game)
     : SystemFlow<IApplicationContext>(open, frame, control, stop, close, game)
 {
     protected override Task<InteractionEnd> ExecuteCoreAsync(IApplicationContext context)
@@ -34,7 +34,7 @@ public sealed class WindowSystemFlow(
             if (!opened.HasException)
             {
                 execution = Task.Run(() => game.ExecuteAsync(gameplay));
-                PresentFrames(frames, input, execution, failures);
+                RunFrameLoop(frames, input, execution, failures);
             }
         }
         catch (Exception error)
@@ -43,7 +43,7 @@ public sealed class WindowSystemFlow(
         }
         finally
         {
-            StopAndJoin(gameplay, frames, execution, failures);
+            StopAndJoinGameplay(gameplay, frames, execution, failures);
         }
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
@@ -60,7 +60,7 @@ public sealed class WindowSystemFlow(
         }
     }
 
-    private void PresentFrames(
+    private void RunFrameLoop(
         IGameViewContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
@@ -84,7 +84,7 @@ public sealed class WindowSystemFlow(
         }
     }
 
-    private void StopAndJoin(
+    private void StopAndJoinGameplay(
         IGameplayContext context,
         IGameViewContext frames,
         Task<InteractionEnd>? execution,

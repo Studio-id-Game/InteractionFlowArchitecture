@@ -8,7 +8,7 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Externals;
 
-public sealed class SessionReaction : Reaction, ISessionReaction
+public sealed class GameLifetimeReaction : Reaction, IGameLifetimeReaction
 {
     public override void ForceResetMemoryState() { }
 

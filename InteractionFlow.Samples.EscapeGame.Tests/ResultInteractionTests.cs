@@ -62,8 +62,8 @@ public sealed class ResultInteractionTests
     public async Task StopOrCancellationAfterPresentationDoesNotLeaveAWait(bool cancel)
     {
         using var app = new EscapeApplicationContext();
-        using var context = GameTestSteps.CreateSession(app);
-        var actual = new GameReaction();
+        using var context = GameTestSteps.AllocateSession(app);
+        var actual = new GameplayReaction();
         var reaction = new ResultReaction
         {
             Show = current =>
@@ -78,29 +78,29 @@ public sealed class ResultInteractionTests
             .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.False(end.HasException);
         Assert.False(context.Cancellation.HasTask);
-        Assert.False(app.View.Snapshot().AcceptingInput);
+        Assert.False(app.View.CaptureSnapshot().AcceptingInput);
     }
 
-    private static ShowResult Create(IGameReaction reaction)
+    private static PresentResult Create(IGameplayReaction reaction)
         => new(reaction, new GameExceptionHandling(), new GameCancellationHandling());
 
-    private sealed class ResultReaction : Reaction, IGameReaction
+    private sealed class ResultReaction : Reaction, IGameplayReaction
     {
         public Func<IGameplayContext, ValueTask<ReactionEnd>> Show { get; init; } = _ => new(End());
         public Func<IGameplayContext, ValueTask<ReactionEnd>> Enable { get; init; } = _ => new(End());
         public int Enabled { get; private set; }
         public static ReactionEnd End(Exception? failure = null) => GetEnd(failure);
         public override void ForceResetMemoryState() { }
-        public ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context) => Show(context);
+        public ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context) => Show(context);
         public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
         {
             Enabled++;
             return Enable(context);
         }
-        public ValueTask<ReactionEnd> BeginAsync(IGameplayContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> BeginActionSelectionAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context) => throw new NotSupportedException();
     }
 }

@@ -5,7 +5,7 @@ using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
 namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
-public interface ISessionReaction : IReactionPort
+public interface IGameLifetimeReaction : IReactionPort
 {
     ReactionEnd EndSession(IGameplayContext context, Result previous);
     ReactionEnd RequestShutdown(ILifetimeContext context);

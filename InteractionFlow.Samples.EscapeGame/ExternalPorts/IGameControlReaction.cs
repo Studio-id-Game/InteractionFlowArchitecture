@@ -6,5 +6,5 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
 public interface IGameControlReaction : IReactionPort
 {
-    ReactionEnd Change(IGameViewContext context);
+    ReactionEnd ApplyControlRequest(IGameViewContext context);
 }

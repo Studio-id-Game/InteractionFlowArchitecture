@@ -43,19 +43,19 @@ public sealed class LifetimeAccessTests
     public void GameplayAllocatesUnpublishedSessionsAndRejectsCreationAfterShutdown()
     {
         using var app = new EscapeApplicationContext();
-        var first = app.Gameplay.CreateSession();
-        var second = app.Gameplay.CreateSession();
+        var first = app.Gameplay.AllocateSession();
+        var second = app.Gameplay.AllocateSession();
         Assert.True(first > EscapeApplicationContext.ApplicationSessionId);
         Assert.True(second > first);
-        Assert.Equal(EscapeApplicationContext.ApplicationSessionId, app.View.Snapshot().SessionId);
+        Assert.Equal(EscapeApplicationContext.ApplicationSessionId, app.View.CaptureSnapshot().SessionId);
         Assert.Equal(MutationStatus.Applied, app.Gameplay.BeginSession(first).Status);
-        Assert.Equal(first, app.View.Snapshot().SessionId);
+        Assert.Equal(first, app.View.CaptureSnapshot().SessionId);
         Assert.Equal(MutationStatus.Rejected, app.Gameplay.BeginSession(second).Status);
         app.Gameplay.EndSession(first);
         Assert.Equal(MutationStatus.Applied, app.Gameplay.BeginSession(second).Status);
         app.Lifetime.RequestShutdown();
-        Assert.Throws<InvalidOperationException>(() => app.Gameplay.CreateSession());
-        Assert.True(app.Gameplay.GetProgress(second).Stopping);
+        Assert.Throws<InvalidOperationException>(() => app.Gameplay.AllocateSession());
+        Assert.True(app.Gameplay.GetSessionProgress(second).Stopping);
     }
 
     private sealed class Lifetime : IApplicationLifetimeAccess

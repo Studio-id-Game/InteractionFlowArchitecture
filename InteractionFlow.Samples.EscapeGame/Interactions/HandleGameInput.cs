@@ -9,16 +9,16 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
 // Selecting / Result のどちらも、一件の入力を受け、現在段階に応じた反応を返します。
-public sealed class SelectAction(
-    IGameOperation operation,
-    IGameReaction reaction,
+public sealed class HandleGameInput(
+    IGameInputOperation operation,
+    IGameplayReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, operation, reaction)
 {
     protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        var command = await operation.ReadAsync(context);
-        return await reaction.SelectAsync(context, command);
+        var command = await operation.ReadCommandAsync(context);
+        return await reaction.HandleCommandAsync(context, command);
     }
 }

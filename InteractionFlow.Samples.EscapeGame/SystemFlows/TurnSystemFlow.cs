@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
 public sealed class TurnSystemFlow(
-    EnableSelection enable,
-    SelectAction select,
+    BeginActionSelection enable,
+    HandleGameInput select,
     ApplyPlayerAction player,
     ApplyEnemyAction enemy)
     : SystemFlow<IGameplayContext>(enable, select, player, enemy)
@@ -17,19 +17,19 @@ public sealed class TurnSystemFlow(
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var end = await enable.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        while (!context.Gameplay.GetProgress(context.SessionId).HasConfirmedAction)
+        while (!context.Gameplay.GetSessionProgress(context.SessionId).HasConfirmedAction)
         {
             end = await select.ExecuteAsync(context);
-            if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+            if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
                 return end;
         }
 
         end = await player.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.CanContinueAsync(context, end)
-            || context.Gameplay.GetProgress(context.SessionId).Outcome != GameOutcome.Running)
+        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end)
+            || context.Gameplay.GetSessionProgress(context.SessionId).Outcome != GameOutcome.Running)
         {
             return end;
         }

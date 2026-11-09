@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
-public sealed class ShowResult(
-    IGameReaction reaction,
+public sealed class PresentResult(
+    IGameplayReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        var shown = await reaction.ShowResultAsync(context);
+        var shown = await reaction.PresentResultAsync(context);
         if (shown.HasException)
             return shown;
 

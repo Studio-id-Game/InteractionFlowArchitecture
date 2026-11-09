@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
-public interface IGameOperation : IOperationPort
+public interface IGameInputOperation : IOperationPort
 {
-    ValueTask<GameCommand> ReadAsync(IGameplayContext context);
-    bool Submit(IGameViewContext context, long sessionId, GameCommand command);
+    ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context);
+    bool TrySubmitCommand(IGameViewContext context, long sessionId, GameCommand command);
 }

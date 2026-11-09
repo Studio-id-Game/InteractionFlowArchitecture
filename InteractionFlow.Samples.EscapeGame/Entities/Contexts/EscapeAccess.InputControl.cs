@@ -19,7 +19,7 @@ internal sealed partial class EscapeAccess
             && session.Input is { Task.IsCompleted: false } && !session.InputToken.IsCancellationRequested;
     }
 
-    public async ValueTask<GameCommand> ReadAsync(long sessionId, CancellationToken token)
+    public async ValueTask<GameCommand> ReadCommandAsync(long sessionId, CancellationToken token)
     {
         SessionRuntime session;
         TaskCompletionSource<GameCommand> source;
@@ -51,7 +51,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public bool TrySubmit(long sessionId, GameCommand command)
+    public bool TrySubmitCommand(long sessionId, GameCommand command)
     {
         lock (gate)
         {

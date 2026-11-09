@@ -33,7 +33,7 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 ## 構成の読み方
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
-GameSystemFlowはセッションを繰り返し、SessionSystemFlowとTurnSystemFlowが状態に応じてInteractionを合成します。
+SessionLoopSystemFlowはセッションを繰り返し、SessionSystemFlowとTurnSystemFlowが状態に応じてInteractionを合成します。
 ゲーム側は演出提示の完了を非同期に待ちますが、フレーム側はその間も描画・制御入力を継続します。
 
 Entitiesは描画環境から独立した状態と安全なアクセス管理を提供します。
@@ -53,9 +53,9 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
 ## 一操作をコードから追う
 
 1. [RaylibWindowOperation](./Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
-   [PresentFrame](./Interactions/PresentFrame.cs) が優先順位を確認してGameOperationへ配送します。
-2. [SelectAction](./Interactions/SelectAction.cs) が入力Operationを一件待ち、
-   [GameReaction.SelectAsync](./Externals/GameReaction.cs) がGameplayへ選択・取消・確定を要求します。
+   [PresentFrame](./Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
+2. [HandleGameInput](./Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
+   [GameplayReaction.HandleCommandAsync](./Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
 3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
 4. [RaylibWindowReaction](./Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
@@ -114,19 +114,19 @@ Allで親の通常値を引き継ぐ構築を選んだ場合も、反対側の�
 呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
 WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
 開始前にキャンセル済みでもOpenを実行し、ゲーム側がキャンセルを処理して停止・合流・Closeへ進みます。
-Interaction間の待機で発生した実行自身のキャンセルも、GameSystemFlowで通常停止として扱います。
+Interaction間の待機で発生した実行自身のキャンセルも、SessionLoopSystemFlowで通常停止として扱います。
 このFlow境界での停止はHandlerを通らないため、Cancellationをリセットしません。
 通常停止後の現在のキャンセル状態は処理経路で異なります。キャンセル済みの発行済みtokenはリセット後も取消済みです。
 フレーム・停止・Close用Contextは別Cancellationを使い、ゲーム側のキャンセル中も後始末を実行します。
 
 ## 完了範囲と終了結果
 
-[ShowResult](./Interactions/ShowResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
+[PresentResult](./Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
 提示Reactionの失敗時は短絡し、受付開始へ進みません。間にフロー選択はなく、結果段階はポーズ対象外です。
 停止との競合は受付更新側で再確認します。独立したEnableResultInput Interactionは削除しました。
 
-EnableSelectionとSelectActionは維持しています。選択段階を開く境界と、一件の入力へ応答して反復する境界は別で、
-その間と各反復にはフローの再開・停止確認があります。SelectActionは結果段階のリトライ入力にも使います。
+BeginActionSelectionとHandleGameInputは維持しています。選択段階を開く境界と、一件の入力へ応答して反復する境界は別で、
+その間と各反復にはフローの再開・停止確認があります。HandleGameInputは結果段階のリトライ入力にも使います。
 プレイヤー・敵行動の間にも勝敗の選択があるため、薄いという理由だけで相互作用を一律にまとめていません。
 
 [GameFlowCheckpoint](./SystemFlows/GameFlowCheckpoint.cs) はフローの失敗・停止・再開確認を共有します。
@@ -147,7 +147,7 @@ Close / EndSessionの専用スコープへは、[Finishing](./Entities/Finishing
 `InteractionFlow.Samples.EscapeGame.Tests`は画面を開かず、Portや提示通知を差し替えて検証します。
 操作と確定の分離、鍵と解錠の整合性、勝敗、ポーズ境界、古い通知、リトライ、失敗・終了待機を確認します。
 実画面では描画継続、補間、入力、ポーズ・再開、結果表示と終了を確認します。
-GameReactionTestsは通常の無効選択と内部前提違反、FinishingTestsは明示終了情報、
+GameplayReactionTestsは通常の無効選択と内部前提違反、FinishingTestsは明示終了情報、
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
 

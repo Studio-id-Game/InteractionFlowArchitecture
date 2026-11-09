@@ -58,7 +58,7 @@ public sealed class ContextTests
         app.With(new LocalValue("application"));
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         game.With(new LocalValue("game"));
-        using var session = new GameplayContext(game, game.Gameplay.CreateSession(), ContextInheritance.All);
+        using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
         using var frames = new GameViewContext(app, ContextInheritance.None);
         var frame = new FrameState();
         var window = new WindowState();
@@ -137,15 +137,15 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var session = new GameplayContext(game, game.Gameplay.CreateSession(), ContextInheritance.All);
+        using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.Equal(0, app.View.Snapshot().SessionId);
+        Assert.Equal(0, app.View.CaptureSnapshot().SessionId);
         Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
-        Assert.Equal(session.SessionId, app.View.Snapshot().SessionId);
+        Assert.Equal(session.SessionId, app.View.CaptureSnapshot().SessionId);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.True(game.Gameplay.GetProgress(game.SessionId).Stopping);
+        Assert.True(game.Gameplay.GetSessionProgress(game.SessionId).Stopping);
     }
 
     [Fact]
@@ -175,11 +175,11 @@ public sealed class ContextTests
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         using var view = new GameViewContext(app, ContextInheritance.None);
         using var session = GameTestSteps.Ready(app);
-        var read = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken());
-        Assert.True(view.View.TrySubmit(session.SessionId, GameCommand.Up));
+        var read = session.Gameplay.ReadCommandAsync(session.SessionId, session.Cancellation.GetToken());
+        Assert.True(view.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await read);
         var token = game.Cancellation.GetToken();
-        var next = session.Gameplay.ReadAsync(session.SessionId, token).AsTask();
+        var next = session.Gameplay.ReadCommandAsync(session.SessionId, token).AsTask();
         app.Cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => next);
         Assert.False(view.Cancellation.IsCancellationRequested);
@@ -205,9 +205,9 @@ public sealed class ContextTests
         var lifetime = game.Lifetime;
         if (disposeSource) app.Dispose();
         else game.Dispose();
-        var id = gameplay.CreateSession();
+        var id = gameplay.AllocateSession();
         Assert.Equal(MutationStatus.Applied, gameplay.BeginSession(id).Status);
-        Assert.Equal(id, view.View.Snapshot().SessionId);
+        Assert.Equal(id, view.View.CaptureSnapshot().SessionId);
         Assert.False(lifetime.ShutdownRequested);
         Assert.False(game.Cancellation.IsCancellationRequested);
     }

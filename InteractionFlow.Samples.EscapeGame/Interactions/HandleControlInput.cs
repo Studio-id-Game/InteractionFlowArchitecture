@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
-public sealed class ChangeControl(
+public sealed class HandleControlInput(
     IGameControlReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameViewContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameViewContext context)
-        => new(reaction.Change(context));
+        => new(reaction.ApplyControlRequest(context));
 }

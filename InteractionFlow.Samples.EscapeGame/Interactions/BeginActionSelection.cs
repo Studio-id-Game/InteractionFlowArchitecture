@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
-public sealed class EnableSelection(
-    IGameReaction reaction,
+public sealed class BeginActionSelection(
+    IGameplayReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
-        => reaction.EnableSelectionAsync(context);
+        => reaction.BeginActionSelectionAsync(context);
 }

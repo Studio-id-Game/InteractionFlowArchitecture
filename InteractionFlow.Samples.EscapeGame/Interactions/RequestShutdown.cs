@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.Interactions;
 
 public sealed class RequestShutdown(
-    ISessionReaction reaction,
+    IGameLifetimeReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<ILifetimeContext>(exceptionPort, cancellationPort, reaction)

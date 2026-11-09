@@ -10,32 +10,32 @@ namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 public sealed class SessionSystemFlow(
     BeginSession begin,
     TurnSystemFlow turn,
-    ShowResult show,
-    SelectAction select)
+    PresentResult show,
+    HandleGameInput select)
     : SystemFlow<IGameplayContext>(begin, turn, show, select)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var end = await begin.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        while (context.Gameplay.GetProgress(context.SessionId).Outcome == GameOutcome.Running)
+        while (context.Gameplay.GetSessionProgress(context.SessionId).Outcome == GameOutcome.Running)
         {
             end = await turn.ExecuteAsync(context);
-            if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+            if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
                 return end;
         }
 
         end = await show.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        // ShowResultが提示と受付開始を完了してから、リトライ入力を待ちます。
-        while (!context.Gameplay.GetProgress(context.SessionId).RetryRequested)
+        // PresentResultが提示と受付開始を完了してから、リトライ入力を待ちます。
+        while (!context.Gameplay.GetSessionProgress(context.SessionId).RetryRequested)
         {
             end = await select.ExecuteAsync(context);
-            if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
+            if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
                 return end;
         }
 

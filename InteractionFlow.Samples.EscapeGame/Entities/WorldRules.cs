@@ -2,7 +2,7 @@ namespace InteractionFlow.Samples.EscapeGame.Entities;
 
 internal static class WorldRules
 {
-    internal static MutationStatus ApplySelection(GameCommand command, SessionState state, PlayerState player,
+    internal static MutationStatus ApplyInputCommand(GameCommand command, SessionState state, PlayerState player,
         InventoryState inventory, MechanismState mechanisms, out string message)
     {
         if (state.Stage == GameStage.Result && state.ResultInputEnabled && command == GameCommand.Retry)

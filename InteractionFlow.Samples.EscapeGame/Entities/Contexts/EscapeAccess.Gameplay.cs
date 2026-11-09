@@ -2,7 +2,7 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
 internal sealed partial class EscapeAccess
 {
-    public MutationStatus ApplySelection(long sessionId, GameCommand command)
+    public MutationStatus ApplyInputCommand(long sessionId, GameCommand command)
     {
         lock (gate)
         {
@@ -10,14 +10,14 @@ internal sealed partial class EscapeAccess
             var status = CanMutate(session);
             if (status != MutationStatus.Applied)
                 return status;
-            var applied = WorldRules.ApplySelection(command, session!.Progress, session.Player,
+            var applied = WorldRules.ApplyInputCommand(command, session!.Progress, session.Player,
                 session.Inventory, session.Mechanisms, out var message);
             session.Display.Set(message);
             return applied;
         }
     }
 
-    public MutationResult ApplyPlayer(long sessionId)
+    public MutationResult ApplyPlayerAction(long sessionId)
     {
         lock (gate)
         {
@@ -31,7 +31,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public MutationResult ApplyEnemy(long sessionId)
+    public MutationResult ApplyEnemyAction(long sessionId)
     {
         lock (gate)
         {
@@ -53,7 +53,7 @@ internal sealed partial class EscapeAccess
         return Present(session, value.Kind, value.From, value.To, value.DurationSeconds);
     }
 
-    public MutationStatus EnterSelecting(long sessionId)
+    public MutationStatus BeginActionSelection(long sessionId)
     {
         lock (gate)
         {
@@ -72,7 +72,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public MutationResult ShowResult(long sessionId)
+    public MutationResult BeginResultPresentation(long sessionId)
     {
         lock (gate)
         {

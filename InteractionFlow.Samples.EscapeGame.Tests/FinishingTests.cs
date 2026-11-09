@@ -132,8 +132,8 @@ public sealed class FinishingTests
         builder.Apply(new EscapeGameProfile())
             .UseFunction<IWindowOperation, ObservedWindowOperation>()
             .UseFunction<IWindowReaction, ObservedWindowReaction>()
-            .UseFunction<IGameReaction, ObservedGameReaction>()
-            .UseFunction<ISessionReaction, ObservedSessionReaction>();
+            .UseFunction<IGameplayReaction, ObservedGameplayReaction>()
+            .UseFunction<IGameLifetimeReaction, ObservedGameLifetimeReaction>();
         using var scope = builder.BuildScope();
         using var flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         using var context = new EscapeApplicationContext();
@@ -143,8 +143,8 @@ public sealed class FinishingTests
         Assert.False(end.HasException);
         Assert.False(context.TryGet<Finishing>(out _));
         var window = Assert.IsType<ObservedWindowReaction>(scope.GetRequiredService<IWindowReaction>());
-        var game = Assert.IsType<ObservedGameReaction>(scope.GetRequiredService<IGameReaction>());
-        var session = Assert.IsType<ObservedSessionReaction>(scope.GetRequiredService<ISessionReaction>());
+        var game = Assert.IsType<ObservedGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
+        var session = Assert.IsType<ObservedGameLifetimeReaction>(scope.GetRequiredService<IGameLifetimeReaction>());
         Assert.True(window.Opened);
         Assert.True(window.Closed);
         Assert.True(game.Began);
@@ -211,12 +211,12 @@ public sealed class FinishingTests
         }
     }
 
-    private sealed class FailingPorts(Exception error) : Reaction, IWindowReaction, ISessionReaction
+    private sealed class FailingPorts(Exception error) : Reaction, IWindowReaction, IGameLifetimeReaction
     {
         public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(IGameViewContext context) => GetEnd();
-        public ReactionEnd Draw(IGameViewContext context) => GetEnd();
+        public ReactionEnd DrawFrame(IGameViewContext context) => GetEnd();
         public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
         public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
@@ -244,7 +244,7 @@ public sealed class FinishingTests
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
         public override void ForceResetMemoryState() { }
-        public void Poll(IGameViewContext context)
+        public void PollFrameInput(IGameViewContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(5))
@@ -253,7 +253,7 @@ public sealed class FinishingTests
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
-            frame.ShutdownRequested = context.View.Snapshot().SessionId != 0;
+            frame.ShutdownRequested = context.View.CaptureSnapshot().SessionId != 0;
         }
     }
 
@@ -268,7 +268,7 @@ public sealed class FinishingTests
             Opened = true;
             return GetEnd();
         }
-        public ReactionEnd Draw(IGameViewContext context)
+        public ReactionEnd DrawFrame(IGameViewContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             return GetEnd();
@@ -281,7 +281,7 @@ public sealed class FinishingTests
         }
     }
 
-    public sealed class ObservedSessionReaction : Reaction, ISessionReaction
+    public sealed class ObservedGameLifetimeReaction : Reaction, IGameLifetimeReaction
     {
         public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
@@ -300,27 +300,27 @@ public sealed class FinishingTests
         }
     }
 
-    public sealed class ObservedGameReaction : Reaction, IGameReaction
+    public sealed class ObservedGameplayReaction : Reaction, IGameplayReaction
     {
-        private readonly GameReaction inner = new();
+        private readonly GameplayReaction inner = new();
         public bool Began { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ValueTask<ReactionEnd> BeginAsync(IGameplayContext context)
+        public ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             Began = true;
-            return inner.BeginAsync(context);
+            return inner.BeginSessionAsync(context);
         }
-        public ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context)
-            => inner.EnableSelectionAsync(context);
-        public ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command)
-            => inner.SelectAsync(context, command);
-        public ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context)
-            => inner.ApplyPlayerAsync(context);
-        public ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context)
-            => inner.ApplyEnemyAsync(context);
-        public ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context)
-            => inner.ShowResultAsync(context);
+        public ValueTask<ReactionEnd> BeginActionSelectionAsync(IGameplayContext context)
+            => inner.BeginActionSelectionAsync(context);
+        public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command)
+            => inner.HandleCommandAsync(context, command);
+        public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)
+            => inner.ApplyPlayerActionAsync(context);
+        public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context)
+            => inner.ApplyEnemyActionAsync(context);
+        public ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context)
+            => inner.PresentResultAsync(context);
         public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
             => inner.EnableResultInputAsync(context);
     }

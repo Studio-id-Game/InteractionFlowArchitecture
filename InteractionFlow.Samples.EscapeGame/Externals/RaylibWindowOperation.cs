@@ -14,10 +14,10 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
 
     public override void ForceResetMemoryState() { }
 
-    public void Poll(IGameViewContext context)
+    public void PollFrameInput(IGameViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        var snapshot = context.View.Snapshot();
+        var snapshot = context.View.CaptureSnapshot();
         var frame = context.GetRequired<FrameState>();
         frame.SessionId = snapshot.SessionId;
         frame.Presentation = snapshot.Presentation?.Key;

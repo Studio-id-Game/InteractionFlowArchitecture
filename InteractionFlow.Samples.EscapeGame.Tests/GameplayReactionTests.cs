@@ -145,7 +145,7 @@ public sealed class GameplayReactionTests
         Assert.Equal(0, fixture.App.View.CaptureSnapshot().Turn);
         Assert.True(context.Gameplay.GetSessionProgress(context.SessionId).HasConfirmedAction);
         Assert.True(fixture.App.View.TrySetPaused(context.SessionId, false));
-        var presentation = await WaitForPresentationCompletionAsync(fixture.App);
+        var presentation = await WaitForPresentationStartAsync(fixture.App);
         Assert.Equal(1, fixture.App.View.CaptureSnapshot().Turn);
         GameTestSteps.Complete(fixture.App, presentation.Key);
         Assert.False((await execution).HasException);
@@ -211,7 +211,7 @@ public sealed class GameplayReactionTests
         Assert.IsType<InvalidOperationException>(GameUpdateValidation.Presentation(new(unknown), "present"));
     }
 
-    private static async Task<PresentationSnapshot> WaitForPresentationCompletionAsync(EscapeApplicationContext context)
+    private static async Task<PresentationSnapshot> WaitForPresentationStartAsync(EscapeApplicationContext context)
     {
         var timer = Stopwatch.StartNew();
         while (true)
@@ -232,7 +232,7 @@ public sealed class GameplayReactionTests
 
         internal ReactionFixture(bool prepare = true)
         {
-            Session = prepare ? GameTestSteps.Ready(App) : GameTestSteps.AllocateSession(App);
+            Session = prepare ? GameTestSteps.Ready(App) : GameTestSteps.CreateSessionContext(App);
         }
 
         public void Dispose()

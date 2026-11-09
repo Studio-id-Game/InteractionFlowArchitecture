@@ -1,6 +1,7 @@
 # EscapeGame Access契約の再分類プラン
 
 状態: 3Accessへの再編と、後半のContext契約分割を実装済み。
+本文は再分類・分割時点の名称を記録している。現行名称との対応は[命名整理](./ESCAPE_GAME_NAMING_PLAN.md)を参照。
 調査・実装ともサブエージェントは使用していない。
 調査対象は単一EscapeApplicationContextへ戻した40af6fe時点の本番コードと、関連テスト・計測コード。
 Core API、Context型、State、同期境界を変更せず、公開Access契約の分類を先に見直す。

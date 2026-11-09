@@ -10,6 +10,6 @@ internal static class RaylibLayout
     internal const int BoardY = 120;
     internal const int Cell = 76;
 
-    internal static Rectangle Button(int index)
+    internal static Rectangle GetButtonBounds(int index)
         => new(32 + index % 4 * 224, 566 + index / 4 * 56, 208, 42);
 }

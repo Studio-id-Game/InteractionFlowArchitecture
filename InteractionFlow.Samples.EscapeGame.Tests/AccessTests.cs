@@ -173,12 +173,12 @@ public sealed class AccessTests
     public async Task OldPresentationAndControlCannotAffectRetriedSession()
     {
         using var app = new EscapeApplicationContext();
-        using var old = GameTestSteps.AllocateSession(app);
+        using var old = GameTestSteps.CreateSessionContext(app);
         var oldKey = old.Gameplay.BeginSession(old.SessionId).Presentation!.Value;
         var stoppedWait = old.Gameplay.WaitForPresentationCompletionAsync(oldKey, TestContext.Current.CancellationToken).AsTask();
         old.Gameplay.EndSession(old.SessionId);
         Assert.Equal(PresentationCompletion.Stopped, await stoppedWait);
-        using var fresh = GameTestSteps.AllocateSession(app);
+        using var fresh = GameTestSteps.CreateSessionContext(app);
         var freshKey = fresh.Gameplay.BeginSession(fresh.SessionId).Presentation!.Value;
         var freshWait = fresh.Gameplay.WaitForPresentationCompletionAsync(freshKey, TestContext.Current.CancellationToken).AsTask();
         Assert.NotEqual(old.SessionId, fresh.SessionId);

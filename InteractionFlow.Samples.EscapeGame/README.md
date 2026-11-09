@@ -144,6 +144,11 @@ Close / EndSessionの専用スコープへは、[CleanupInfo](./Entities/Cleanup
 
 ## 検証
 
+命名整理後も全体ビルドは警告・エラー0件、全569件成功です。
+Release簡易計測の通常PresentFrameは488B/回・約228〜233nsで、割り当て量を維持しています。
+識別子・コメント・空白以外のコードと画面文字列は変更していません。実画面の再確認は未実施です。
+旧名からの対応と整理方針は[命名整理プランと結果](../docs/design-notes/ESCAPE_GAME_NAMING_PLAN.md)を参照してください。
+
 `InteractionFlow.Samples.EscapeGame.Tests`は画面を開かず、Portや提示通知を差し替えて検証します。
 操作と確定の分離、鍵と解錠の整合性、勝敗、ポーズ境界、古い通知、リトライ、失敗・終了待機を確認します。
 実画面では描画継続、補間、入力、ポーズ・再開、結果表示と終了を確認します。

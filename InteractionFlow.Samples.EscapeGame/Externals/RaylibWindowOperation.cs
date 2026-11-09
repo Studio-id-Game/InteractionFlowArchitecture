@@ -26,7 +26,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
         frame.SkipRequested = false;
         frame.ShutdownRequested = RL.WindowShouldClose();
 
-        var button = ClickedButton();
+        var button = GetClickedButtonIndex();
         if (frame.ShutdownRequested || button == 7)
         {
             frame.ShutdownRequested = true;
@@ -49,22 +49,22 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
             frame.Command = GameCommand.Interact;
         else if (RL.IsKeyPressed(KeyboardKey.Space) || button == 3)
             frame.Command = GameCommand.Wait;
-        else if (Pressed(KeyboardKey.Up, KeyboardKey.W)) frame.Command = GameCommand.Up;
-        else if (Pressed(KeyboardKey.Right, KeyboardKey.D)) frame.Command = GameCommand.Right;
-        else if (Pressed(KeyboardKey.Down, KeyboardKey.S)) frame.Command = GameCommand.Down;
-        else if (Pressed(KeyboardKey.Left, KeyboardKey.A)) frame.Command = GameCommand.Left;
+        else if (IsEitherKeyPressed(KeyboardKey.Up, KeyboardKey.W)) frame.Command = GameCommand.Up;
+        else if (IsEitherKeyPressed(KeyboardKey.Right, KeyboardKey.D)) frame.Command = GameCommand.Right;
+        else if (IsEitherKeyPressed(KeyboardKey.Down, KeyboardKey.S)) frame.Command = GameCommand.Down;
+        else if (IsEitherKeyPressed(KeyboardKey.Left, KeyboardKey.A)) frame.Command = GameCommand.Left;
         else if (RL.IsKeyPressed(KeyboardKey.Enter) || button == 0) frame.Command = GameCommand.Confirm;
     }
 
-    private static bool Pressed(KeyboardKey first, KeyboardKey second)
+    private static bool IsEitherKeyPressed(KeyboardKey first, KeyboardKey second)
         => RL.IsKeyPressed(first) || RL.IsKeyPressed(second);
 
-    private static int ClickedButton()
+    private static int GetClickedButtonIndex()
     {
         if (!RL.IsMouseButtonPressed(MouseButton.Left)) return -1;
         var mouse = RL.GetMousePosition();
         for (var index = 0; index < 8; index++)
-            if (RL.CheckCollisionPointRec(mouse, RaylibLayout.Button(index))) return index;
+            if (RL.CheckCollisionPointRec(mouse, RaylibLayout.GetButtonBounds(index))) return index;
         return -1;
     }
 }

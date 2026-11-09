@@ -8,12 +8,12 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 // 公開アクセスを操作する共通の準備手順です。ゲーム規則や描画計算は複製しません。
 internal static class GameTestSteps
 {
-    internal static GameplayContext AllocateSession(IGameplayContext app)
+    internal static GameplayContext CreateSessionContext(IGameplayContext app)
         => new(app, app.Gameplay.AllocateSession(), ContextInheritance.Cancellation);
 
     internal static GameplayContext Ready(IApplicationContext app)
     {
-        var session = AllocateSession(app);
+        var session = CreateSessionContext(app);
         var begin = session.Gameplay.BeginSession(session.SessionId);
         Assert.Equal(GameUpdateStatus.Applied, begin.Status);
         Complete(app, Assert.IsType<PresentationKey>(begin.Presentation));

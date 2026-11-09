@@ -112,7 +112,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         for (var y = 0; y < state.Room.Height; y++)
         for (var x = 0; x < state.Room.Width; x++)
         {
-            var bounds = Tile(x, y);
+            var bounds = GetTileBounds(x, y);
             var wall = state.Room.TileAt(x, y) == '#';
             RL.DrawRectangleRec(bounds, wall ? new Color(43, 57, 76, 255) : new Color(29, 40, 56, 255));
             if (wall) RL.DrawRectangle((int)bounds.X + 7, (int)bounds.Y + 7, (int)bounds.Width - 14, 4, new Color(57, 73, 94, 255));
@@ -124,17 +124,18 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
         if (state.Selection is GameAction action)
         {
-            var bounds = Tile(action.Target.X, action.Target.Y);
+            var bounds = GetTileBounds(action.Target.X, action.Target.Y);
             RL.DrawRectangleLinesEx(bounds, 3, Color.Gold);
         }
 
-        var player = Center(state.Player);
-        var enemy = Center(state.Enemy);
+        var player = GetTileCenter(state.Player);
+        var enemy = GetTileCenter(state.Enemy);
         if (presentation is not null)
         {
             var t = presentation.DurationSeconds <= 0 || presentation.SkipRequested ? 1f
                 : (float)Math.Clamp(presentation.ElapsedSeconds / presentation.DurationSeconds, 0, 1);
-            var position = Vector2.Lerp(Center(presentation.From), Center(presentation.To), t * t * (3 - 2 * t));
+            var position = Vector2.Lerp(
+                GetTileCenter(presentation.From), GetTileCenter(presentation.To), t * t * (3 - 2 * t));
             if (presentation.Kind == PresentationKind.PlayerMove) player = position;
             if (presentation.Kind == PresentationKind.EnemyMove) enemy = position;
         }
@@ -153,7 +154,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
     private static void DrawMark(GridPosition position, string text, Color color)
     {
-        var center = Center(position);
+        var center = GetTileCenter(position);
         RL.DrawRectangle((int)center.X - 29, (int)center.Y - 20, 58, 40, new Color(color.R, color.G, color.B, (byte)65));
         RL.DrawText(text, (int)center.X - RL.MeasureText(text, 17) / 2, (int)center.Y - 9, 17, color);
     }
@@ -169,7 +170,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         RL.DrawText($"Switch    {(state.SwitchActivated ? "active" : "inactive")}", 622, 250, 18, muted);
         RL.DrawText($"Door      {(state.DoorUnlocked ? "open" : "locked")}", 622, 282, 18, muted);
         RL.DrawText($"Selection: {state.Selection?.Kind.ToString() ?? "none"}", 622, 330, 18, Color.Gold);
-        DrawWrapped(state.Message, 622, 372, 280);
+        DrawWrappedText(state.Message, 622, 372, 280);
         var next = state.Room.PatrolAt((state.EnemyPatrolIndex + 1) % state.Room.PatrolLength);
         var direction = next.X > state.Enemy.X ? "right" : next.X < state.Enemy.X ? "left"
             : next.Y > state.Enemy.Y ? "down" : "up";
@@ -177,7 +178,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         RL.DrawText("MOVE: arrows / WASD       CONFIRM: Enter", 32, 521, 19, muted);
     }
 
-    private void DrawWrapped(string text, int x, int y, int width)
+    private void DrawWrappedText(string text, int x, int y, int width)
     {
         if (wrappedMessage != text)
         {
@@ -219,7 +220,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
                 6 => active && state.AcceptingInput && state.Stage == GameStage.Result,
                 _ => true
             };
-            var bounds = RaylibLayout.Button(i);
+            var bounds = RaylibLayout.GetButtonBounds(i);
             var hover = enabled && RL.CheckCollisionPointRec(RL.GetMousePosition(), bounds);
             RL.DrawRectangleRec(bounds, !enabled ? new Color(30, 40, 54, 255)
                 : hover ? new Color(58, 92, 119, 255) : new Color(39, 64, 86, 255));
@@ -228,11 +229,11 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         }
     }
 
-    private static Rectangle Tile(int x, int y)
+    private static Rectangle GetTileBounds(int x, int y)
         => new(RaylibLayout.BoardX + x * RaylibLayout.Cell + 2, RaylibLayout.BoardY + y * RaylibLayout.Cell + 2,
             RaylibLayout.Cell - 4, RaylibLayout.Cell - 4);
 
-    private static Vector2 Center(GridPosition position)
+    private static Vector2 GetTileCenter(GridPosition position)
         => new(RaylibLayout.BoardX + (position.X + 0.5f) * RaylibLayout.Cell,
             RaylibLayout.BoardY + (position.Y + 0.5f) * RaylibLayout.Cell);
 }

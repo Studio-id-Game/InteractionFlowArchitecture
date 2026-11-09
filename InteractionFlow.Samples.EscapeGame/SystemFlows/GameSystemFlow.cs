@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Interactions;
 using System;
@@ -24,7 +25,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             {
                 // ウィンドウ停止とセッション生成が競合した通常終了です。
                 using var stopped = context.CreateIndependentContext();
-                stopped.With(Result.Success);
+                stopped.With(new Finishing(FinishingKind.EndSession, Result.Success));
                 return await endSession.ExecuteAsync(stopped);
             }
 
@@ -48,7 +49,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
 
             // 旧セッションの待機を閉じてから、新しいセッションを作成・公開します。
             using var cleanup = session.CreateIndependentContext();
-            cleanup.With(outcome);
+            cleanup.With(new Finishing(FinishingKind.EndSession, outcome));
             InteractionEnd ended;
             try { ended = await endSession.ExecuteAsync(cleanup); }
             catch (Exception error) when (!outcome.Try(out _))

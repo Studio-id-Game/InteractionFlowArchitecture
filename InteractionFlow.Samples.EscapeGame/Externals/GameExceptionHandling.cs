@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using System;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ public sealed class GameExceptionHandling : ExceptionHandling
     protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
     {
         Result result = exception;
-        if (context.TryGet<Result>(out var previous) && !previous.Try(out var earlierFailure))
+        if (context.TryGet<Finishing>(out var finishing) && !finishing.Previous.Try(out var earlierFailure))
             result = new AggregateException(earlierFailure, exception);
 
         try { context.GetRequired<IGameWorldAccess>().RequestShutdown(); }

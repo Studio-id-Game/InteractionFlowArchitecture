@@ -206,7 +206,7 @@ public sealed class FlowTests
         var previous = new FormatException("earlier failed");
         var canceled = new OperationCanceledException("close canceled");
         using var context = new EscapeApplicationContext();
-        context.With<Result>(earlierFailure ? previous : Result.Success);
+        context.With(new Finishing(FinishingKind.CloseWindow, earlierFailure ? previous : Result.Success));
         var window = new HeadlessWindowReaction { CloseFailure = canceled };
         var interaction = new CloseWindow(window, new GameExceptionHandling(), new GameCancellationHandling());
 
@@ -224,7 +224,7 @@ public sealed class FlowTests
         var previous = new FormatException("session failed");
         var canceled = new OperationCanceledException("end session canceled");
         using var context = new EscapeApplicationContext();
-        context.With<Result>(previous);
+        context.With(new Finishing(FinishingKind.EndSession, previous));
         var port = new CanceledSessionReaction(canceled);
         var interaction = new EndSession(port, new GameExceptionHandling(), new GameCancellationHandling());
 

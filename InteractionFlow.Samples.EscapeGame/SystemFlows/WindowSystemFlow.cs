@@ -48,7 +48,7 @@ public sealed class WindowSystemFlow(
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
         using var shutdown = new EscapeApplicationContext(frames);
-        shutdown.With(ToResult(failures));
+        shutdown.With(new Finishing(FinishingKind.CloseWindow, ToResult(failures)));
         try
         {
             return Task.FromResult(close.ExecuteAsync(shutdown).GetAwaiter().GetResult());

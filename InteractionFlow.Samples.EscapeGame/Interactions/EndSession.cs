@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.ExternalPorts;
 using System;
@@ -16,5 +16,11 @@ public sealed class EndSession(
     : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
-        => new(reaction.EndSession(context, context.GetRequired<Result>()));
+    {
+        var finishing = context.GetRequired<Finishing>();
+        if (finishing.Kind != FinishingKind.EndSession)
+            throw new InvalidOperationException("EndSession requires matching finishing information.");
+
+        return new(reaction.EndSession(context, finishing.Previous));
+    }
 }

@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using System;
 using System.Collections.Generic;
@@ -18,8 +19,8 @@ public sealed class GameCancellationHandling : CancellationHandling
         Result waitAndResetResult)
     {
         var failures = new List<Exception>();
-        var finishing = context.TryGet<Result>(out var previous);
-        if (finishing && !previous.Try(out var earlierFailure))
+        var finishing = context.TryGet<Finishing>(out var operation);
+        if (finishing && !operation!.Previous.Try(out var earlierFailure))
             failures.Add(earlierFailure);
 
         var resetSucceeded = waitAndResetResult.Try(out var waitFailure);

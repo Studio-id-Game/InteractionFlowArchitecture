@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.ExternalPorts;
 using System;
@@ -16,5 +16,11 @@ public sealed class CloseWindow(
     : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
-        => new(reaction.Close(context, context.GetRequired<Result>()));
+    {
+        var finishing = context.GetRequired<Finishing>();
+        if (finishing.Kind != FinishingKind.CloseWindow)
+            throw new InvalidOperationException("CloseWindow requires matching finishing information.");
+
+        return new(reaction.Close(context, finishing.Previous));
+    }
 }

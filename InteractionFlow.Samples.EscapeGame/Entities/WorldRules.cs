@@ -2,19 +2,19 @@ namespace InteractionFlow.Samples.EscapeGame.Entities;
 
 internal static class WorldRules
 {
-    internal static MutationStatus ApplyInputCommand(GameCommand command, SessionState state, PlayerState player,
+    internal static GameUpdateStatus ApplyInputCommand(GameCommand command, SessionProgressState state, PlayerState player,
         InventoryState inventory, MechanismState mechanisms, out string message)
     {
         if (state.Stage == GameStage.Result && state.ResultInputEnabled && command == GameCommand.Retry)
         {
             state.RetryRequested = true;
             message = "Retrying";
-            return MutationStatus.Applied;
+            return GameUpdateStatus.Applied;
         }
         if (state.Stage != GameStage.Selecting || state.Outcome != GameOutcome.Running || state.Confirmed)
         {
             message = "This stage does not accept selection";
-            return MutationStatus.Rejected;
+            return GameUpdateStatus.Rejected;
         }
         if (command == GameCommand.CancelSelection)
         {
@@ -27,7 +27,7 @@ internal static class WorldRules
             {
                 state.Selection = null;
                 message = "Select a valid action first";
-                return MutationStatus.Rejected;
+                return GameUpdateStatus.Rejected;
             }
             state.Confirmed = true;
             message = "Action confirmed";
@@ -36,12 +36,12 @@ internal static class WorldRules
         {
             state.Selection = Select(command, player, inventory, mechanisms, out message);
             if (state.Selection is null)
-                return MutationStatus.Rejected;
+                return GameUpdateStatus.Rejected;
         }
-        return MutationStatus.Applied;
+        return GameUpdateStatus.Applied;
     }
 
-    internal static ActionEffect? ApplyPlayer(SessionState state, PlayerState player,
+    internal static ActionEffect? ApplyPlayer(SessionProgressState state, PlayerState player,
         InventoryState inventory, MechanismState mechanisms, EnemyState enemy)
     {
         if (state.Stage != GameStage.Selecting || !state.Confirmed || state.Selection is not { } action
@@ -82,7 +82,7 @@ internal static class WorldRules
         return new(kind, from, player.Position, duration, "Player: " + action.Kind);
     }
 
-    internal static ActionEffect? ApplyEnemy(SessionState state, PlayerState player, EnemyState enemy)
+    internal static ActionEffect? ApplyEnemy(SessionProgressState state, PlayerState player, EnemyState enemy)
     {
         if (state.Stage != GameStage.PlayerPresenting || state.Outcome != GameOutcome.Running)
             return null;
@@ -94,7 +94,7 @@ internal static class WorldRules
         return new(PresentationKind.EnemyMove, from, room.PatrolAt(enemy.PatrolIndex), .15, "Guard moves");
     }
 
-    private static void EvaluateOutcome(SessionState state, PlayerState player, EnemyState enemy)
+    private static void EvaluateOutcome(SessionProgressState state, PlayerState player, EnemyState enemy)
     {
         if (state.Outcome != GameOutcome.Running) return;
         if (player.Position == RoomDefinition.Default.PatrolAt(enemy.PatrolIndex)) state.Outcome = GameOutcome.Lost;

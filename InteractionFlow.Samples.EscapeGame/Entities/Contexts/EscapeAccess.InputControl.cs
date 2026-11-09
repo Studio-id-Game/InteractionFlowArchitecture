@@ -26,7 +26,7 @@ internal sealed partial class EscapeAccess
         lock (gate)
         {
             token.ThrowIfCancellationRequested();
-            session = Current(sessionId)!;
+            session = FindActiveSession(sessionId)!;
             if (session is null)
                 return GameCommand.Stop;
             if (session.Input is not null)
@@ -55,7 +55,7 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            var session = Current(sessionId);
+            var session = FindActiveSession(sessionId);
             if (session is null || !CanAcceptInput(session) || command == GameCommand.Stop)
                 return false;
             if (session.Progress.Stage == GameStage.Result && command != GameCommand.Retry)
@@ -70,7 +70,7 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            var session = Current(sessionId);
+            var session = FindActiveSession(sessionId);
             if (session is null || session.Mode == ExecutionMode.Stopping
                 || session.Progress.Stage is not (GameStage.Selecting
                     or GameStage.PlayerPresenting or GameStage.EnemyPresenting)
@@ -101,7 +101,7 @@ internal sealed partial class EscapeAccess
             lock (gate)
             {
                 token.ThrowIfCancellationRequested();
-                var session = Current(sessionId);
+                var session = FindActiveSession(sessionId);
                 if (session is null || session.Mode == ExecutionMode.Stopping)
                     return false;
                 if (!IsPaused(session))

@@ -7,16 +7,16 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 public interface IGameplayAccess
 {
     long AllocateSession();
-    MutationResult BeginSession(long sessionId);
+    GameUpdateResult BeginSession(long sessionId);
     void EndSession(long sessionId);
-    GameProgress GetSessionProgress(long sessionId);
+    SessionProgress GetSessionProgress(long sessionId);
     ValueTask<GameCommand> ReadCommandAsync(long sessionId, CancellationToken token);
-    MutationStatus ApplyInputCommand(long sessionId, GameCommand command);
-    MutationResult ApplyPlayerAction(long sessionId);
-    MutationResult ApplyEnemyAction(long sessionId);
-    MutationResult BeginResultPresentation(long sessionId);
-    MutationStatus BeginActionSelection(long sessionId);
-    MutationStatus EnableResultInput(long sessionId);
+    GameUpdateStatus ApplyInputCommand(long sessionId, GameCommand command);
+    GameUpdateResult ApplyPlayerAction(long sessionId);
+    GameUpdateResult ApplyEnemyAction(long sessionId);
+    GameUpdateResult BeginResultPresentation(long sessionId);
+    GameUpdateStatus BeginActionSelection(long sessionId);
+    GameUpdateStatus EnableResultInput(long sessionId);
     ValueTask<bool> WaitForActiveAsync(long sessionId, CancellationToken token);
     ValueTask<PresentationCompletion> WaitForPresentationCompletionAsync(PresentationKey key, CancellationToken token);
 }
@@ -24,9 +24,9 @@ public interface IGameplayAccess
 // 画面側が表示を読み、入力・制御要求と描画後の提示完了を通知するための契約です。
 public interface IGameViewAccess
 {
-    GameSnapshot CaptureSnapshot();
+    GameViewSnapshot CaptureSnapshot();
     bool TrySubmitCommand(long sessionId, GameCommand command);
-    GameProgress GetSessionProgress(long sessionId);
+    SessionProgress GetSessionProgress(long sessionId);
     bool TrySetPaused(long sessionId, bool paused);
     PresentationSnapshot? AdvancePresentation(PresentationKey key, double elapsedSeconds, long controlRevision);
     bool TryCompletePresentation(PresentationKey key);

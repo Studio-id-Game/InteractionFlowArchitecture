@@ -15,8 +15,8 @@ public sealed class GameExceptionHandling : ExceptionHandling
     protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
     {
         Result result = exception;
-        if (context.TryGet<Finishing>(out var finishing))
-            result = FailureCollector.Append(finishing.Previous, exception);
+        if (context.TryGet<CleanupInfo>(out var finishing))
+            result = FailureCollector.Append(finishing.PreviousResult, exception);
 
         try { context.GetRequired<IApplicationLifetimeAccess>().RequestShutdown(); }
         catch (Exception stopFailure)

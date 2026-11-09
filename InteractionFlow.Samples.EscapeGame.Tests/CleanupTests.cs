@@ -20,7 +20,7 @@ using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
 
-public sealed class FinishingTests
+public sealed class CleanupTests
 {
     [Theory]
     [InlineData(false)]
@@ -35,7 +35,7 @@ public sealed class FinishingTests
         var end = await interaction.ExecuteAsync(context);
 
         Assert.False(end.HasException);
-        Assert.False(context.TryGet<Finishing>(out _));
+        Assert.False(context.TryGet<CleanupInfo>(out _));
         Assert.False(context.Cancellation.IsCancellationRequested);
         Assert.False(context.Cancellation.HasTask);
         Assert.Equal(!failedResult, context.GetRequired<Result>().Try(out _));
@@ -56,34 +56,34 @@ public sealed class FinishingTests
 
         Assert.Same(failure, end.Exception);
         Assert.False(Contains(end.Exception, unrelated));
-        Assert.False(context.TryGet<Finishing>(out _));
+        Assert.False(context.TryGet<CleanupInfo>(out _));
         Assert.False(context.Cancellation.HasTask);
         Assert.Equal(!failedResult, context.GetRequired<Result>().Try(out _));
     }
 
     [Theory]
-    [InlineData(FinishingKind.CloseWindow, false, false)]
-    [InlineData(FinishingKind.CloseWindow, false, true)]
-    [InlineData(FinishingKind.CloseWindow, true, false)]
-    [InlineData(FinishingKind.CloseWindow, true, true)]
-    [InlineData(FinishingKind.EndSession, false, false)]
-    [InlineData(FinishingKind.EndSession, false, true)]
-    [InlineData(FinishingKind.EndSession, true, false)]
-    [InlineData(FinishingKind.EndSession, true, true)]
+    [InlineData(CleanupKind.CloseWindow, false, false)]
+    [InlineData(CleanupKind.CloseWindow, false, true)]
+    [InlineData(CleanupKind.CloseWindow, true, false)]
+    [InlineData(CleanupKind.CloseWindow, true, true)]
+    [InlineData(CleanupKind.EndSession, false, false)]
+    [InlineData(CleanupKind.EndSession, false, true)]
+    [InlineData(CleanupKind.EndSession, true, false)]
+    [InlineData(CleanupKind.EndSession, true, true)]
     public async Task FinishingFailurePreservesOperationAndPriorFailures(
-        FinishingKind kind,
+        CleanupKind kind,
         bool canceled,
         bool earlierFailure)
     {
         using var app = new EscapeApplicationContext();
         using var window = new GameViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
+        FlowContext context = kind == CleanupKind.CloseWindow ? window : game;
         var previous = new FormatException("earlier failure");
         Exception current = canceled
             ? new OperationCanceledException("finishing canceled")
             : new InvalidOperationException("finishing failed");
-        context.With(new Finishing(kind, earlierFailure ? previous : Result.Success));
+        context.With(new CleanupInfo(kind, earlierFailure ? previous : Result.Success));
         var ports = new FailingPorts(current);
 
         var end = await ExecuteFinishingAsync(kind, ports, window, game);
@@ -95,22 +95,22 @@ public sealed class FinishingTests
         if (canceled)
             Assert.True(ContainsMessage(end.Exception, "Cancellation is not requested."));
         Assert.Equal(1, ports.Calls);
-        Assert.False(app.TryGet<Finishing>(out _));
+        Assert.False(app.TryGet<CleanupInfo>(out _));
         Assert.False(context.Cancellation.HasTask);
     }
 
     [Theory]
-    [InlineData(FinishingKind.CloseWindow)]
-    [InlineData(FinishingKind.EndSession)]
-    public async Task FinishingCancellationRetainsRegisteredTaskFailureDuringReset(FinishingKind kind)
+    [InlineData(CleanupKind.CloseWindow)]
+    [InlineData(CleanupKind.EndSession)]
+    public async Task FinishingCancellationRetainsRegisteredTaskFailureDuringReset(CleanupKind kind)
     {
         using var app = new EscapeApplicationContext();
         using var window = new GameViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
+        FlowContext context = kind == CleanupKind.CloseWindow ? window : game;
         var previous = new FormatException("prior failure");
         var resetFailure = new InvalidOperationException("registered task failed");
-        context.With(new Finishing(kind, previous));
+        context.With(new CleanupInfo(kind, previous));
         using var registration = context.Cancellation.AddCancelableTask(Task.FromException(resetFailure));
         context.Cancellation.Cancel();
         var ports = new FailingPorts(new InvalidOperationException("must not execute"));
@@ -141,7 +141,7 @@ public sealed class FinishingTests
         var end = await flow.ExecuteAsync(context);
 
         Assert.False(end.HasException);
-        Assert.False(context.TryGet<Finishing>(out _));
+        Assert.False(context.TryGet<CleanupInfo>(out _));
         var window = Assert.IsType<ObservedWindowReaction>(scope.GetRequiredService<IWindowReaction>());
         var game = Assert.IsType<ObservedGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
         var session = Assert.IsType<ObservedGameLifetimeReaction>(scope.GetRequiredService<IGameLifetimeReaction>());
@@ -153,16 +153,16 @@ public sealed class FinishingTests
     }
 
     [Theory]
-    [InlineData(FinishingKind.CloseWindow)]
-    [InlineData(FinishingKind.EndSession)]
-    public async Task WrongFinishingKindDoesNotInvokeOperation(FinishingKind operation)
+    [InlineData(CleanupKind.CloseWindow)]
+    [InlineData(CleanupKind.EndSession)]
+    public async Task WrongFinishingKindDoesNotInvokeOperation(CleanupKind operation)
     {
         using var app = new EscapeApplicationContext();
         using var window = new GameViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        FlowContext context = operation == FinishingKind.CloseWindow ? window : game;
-        var wrong = operation == FinishingKind.CloseWindow ? FinishingKind.EndSession : FinishingKind.CloseWindow;
-        context.With(new Finishing(wrong, Result.Success));
+        FlowContext context = operation == CleanupKind.CloseWindow ? window : game;
+        var wrong = operation == CleanupKind.CloseWindow ? CleanupKind.EndSession : CleanupKind.CloseWindow;
+        context.With(new CleanupInfo(wrong, Result.Success));
         var ports = new FailingPorts(new Exception("must not execute"));
 
         var end = await ExecuteFinishingAsync(operation, ports, window, game);
@@ -173,11 +173,11 @@ public sealed class FinishingTests
     }
 
     private static Task<InteractionEnd> ExecuteFinishingAsync(
-        FinishingKind kind,
+        CleanupKind kind,
         FailingPorts ports,
         IGameViewContext window,
         IGameplayContext game)
-        => kind == FinishingKind.CloseWindow
+        => kind == CleanupKind.CloseWindow
             ? new CloseWindow(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(window)
             : new EndSession(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(game);
 
@@ -246,7 +246,7 @@ public sealed class FinishingTests
         public override void ForceResetMemoryState() { }
         public void PollFrameInput(IGameViewContext context)
         {
-            Assert.False(context.TryGet<Finishing>(out _));
+            Assert.False(context.TryGet<CleanupInfo>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(5))
                 throw new TimeoutException("Expected session publication.");
             var frame = context.GetRequired<FrameState>();
@@ -264,18 +264,18 @@ public sealed class FinishingTests
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(IGameViewContext context)
         {
-            Assert.False(context.TryGet<Finishing>(out _));
+            Assert.False(context.TryGet<CleanupInfo>(out _));
             Opened = true;
             return GetEnd();
         }
         public ReactionEnd DrawFrame(IGameViewContext context)
         {
-            Assert.False(context.TryGet<Finishing>(out _));
+            Assert.False(context.TryGet<CleanupInfo>(out _));
             return GetEnd();
         }
         public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
-            Assert.Equal(FinishingKind.CloseWindow, context.GetRequired<Finishing>().Kind);
+            Assert.Equal(CleanupKind.CloseWindow, context.GetRequired<CleanupInfo>().Kind);
             Closed = true;
             return GetEnd(previous);
         }
@@ -287,14 +287,14 @@ public sealed class FinishingTests
         public override void ForceResetMemoryState() { }
         public ReactionEnd EndSession(IGameplayContext context, Result previous)
         {
-            Assert.Equal(FinishingKind.EndSession, context.GetRequired<Finishing>().Kind);
+            Assert.Equal(CleanupKind.EndSession, context.GetRequired<CleanupInfo>().Kind);
             context.Gameplay.EndSession(context.SessionId);
             Ended = true;
             return GetEnd(previous);
         }
         public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
-            Assert.False(context.TryGet<Finishing>(out _));
+            Assert.False(context.TryGet<CleanupInfo>(out _));
             context.Lifetime.RequestShutdown();
             return GetEnd();
         }
@@ -307,7 +307,7 @@ public sealed class FinishingTests
         public override void ForceResetMemoryState() { }
         public ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
         {
-            Assert.False(context.TryGet<Finishing>(out _));
+            Assert.False(context.TryGet<CleanupInfo>(out _));
             Began = true;
             return inner.BeginSessionAsync(context);
         }

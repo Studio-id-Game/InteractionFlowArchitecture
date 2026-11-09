@@ -17,10 +17,10 @@ public sealed class EndSession(
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        var finishing = context.GetRequired<Finishing>();
-        if (finishing.Kind != FinishingKind.EndSession)
+        var finishing = context.GetRequired<CleanupInfo>();
+        if (finishing.Kind != CleanupKind.EndSession)
             throw new InvalidOperationException("EndSession requires matching finishing information.");
 
-        return new(reaction.EndSession(context, finishing.Previous));
+        return new(reaction.EndSession(context, finishing.PreviousResult));
     }
 }

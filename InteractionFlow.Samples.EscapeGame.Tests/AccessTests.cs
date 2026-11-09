@@ -23,7 +23,7 @@ public sealed class AccessTests
 
         Assert.False(app.View.CaptureSnapshot().AcceptingInput);
         Assert.True(session.Gameplay.GetSessionProgress(id).HasConfirmedAction);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyPlayerAction(id).Status);
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyPlayerAction(id).Status);
     }
 
     [Fact]
@@ -36,13 +36,13 @@ public sealed class AccessTests
         session.Gameplay.ApplyInputCommand(id, GameCommand.Confirm);
         var token = session.Cancellation.GetToken();
         Assert.True(app.View.TrySetPaused(id, true));
-        Assert.Equal(MutationStatus.Deferred, session.Gameplay.ApplyPlayerAction(id).Status);
+        Assert.Equal(GameUpdateStatus.Deferred, session.Gameplay.ApplyPlayerAction(id).Status);
         Assert.True(session.Gameplay.GetSessionProgress(id).HasConfirmedAction);
         Assert.Equal(0, app.View.CaptureSnapshot().Turn);
         Assert.True(app.View.TrySetPaused(id, false));
         var applied = session.Gameplay.ApplyPlayerAction(id);
-        Assert.Equal(MutationStatus.Applied, applied.Status);
-        Assert.Equal(MutationStatus.Rejected, session.Gameplay.ApplyPlayerAction(id).Status);
+        Assert.Equal(GameUpdateStatus.Applied, applied.Status);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyPlayerAction(id).Status);
         Assert.Equal(1, app.View.CaptureSnapshot().Turn);
         Assert.Equal(token, session.Cancellation.GetToken());
         Assert.Equal(id, app.View.CaptureSnapshot().SessionId);
@@ -81,14 +81,14 @@ public sealed class AccessTests
         GameTestSteps.PlayTurn(session, app, GameCommand.Right);
         var result = session.Gameplay.BeginResultPresentation(id).Presentation!.Value;
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Retry));
-        Assert.Equal(MutationStatus.Rejected, session.Gameplay.EnableResultInput(id));
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.EnableResultInput(id));
         Assert.False(app.View.TrySetPaused(id, true));
         GameTestSteps.Complete(app, result);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.EnableResultInput(id));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.EnableResultInput(id));
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Retry));
         var input = session.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken);
         Assert.True(app.View.TrySubmitCommand(id, GameCommand.Retry));
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(id, await input));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, await input));
         Assert.True(session.Gameplay.GetSessionProgress(id).RetryRequested);
         session.Gameplay.EndSession(id);
         using var fresh = GameTestSteps.Ready(app);
@@ -110,13 +110,13 @@ public sealed class AccessTests
         Assert.True(app.View.TrySetPaused(id, true));
         var command = await read;
         var before = app.View.CaptureSnapshot();
-        Assert.Equal(MutationStatus.Deferred, session.Gameplay.ApplyInputCommand(id, command));
+        Assert.Equal(GameUpdateStatus.Deferred, session.Gameplay.ApplyInputCommand(id, command));
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Right));
         var checkpoint = session.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
         Assert.False(checkpoint.IsCompleted);
         Assert.True(app.View.TrySetPaused(id, false));
         Assert.True(await checkpoint);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));
         Assert.Equal(0, app.View.CaptureSnapshot().Turn);
         Assert.Equal(before.Player, app.View.CaptureSnapshot().Player);
         Assert.NotNull(app.View.CaptureSnapshot().Selection);
@@ -165,7 +165,7 @@ public sealed class AccessTests
         Assert.False(await checkpoint);
         Assert.True(app.Lifetime.ShutdownRequested);
         Assert.False(app.View.TrySetPaused(id, false));
-        Assert.Equal(MutationStatus.Stopped, session.Gameplay.ApplyPlayerAction(id).Status);
+        Assert.Equal(GameUpdateStatus.Stopped, session.Gameplay.ApplyPlayerAction(id).Status);
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
     }
 

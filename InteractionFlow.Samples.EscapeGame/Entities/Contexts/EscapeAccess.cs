@@ -33,35 +33,35 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         }
     }
 
-    private SessionRuntime? Current(long id)
+    private SessionRuntime? FindActiveSession(long id)
         => !shutdown && active is { } current && current.Progress.Id == id && !current.Progress.Retired
             ? current : null;
 
     private static bool IsPaused(SessionRuntime session) => session.Mode == ExecutionMode.Paused;
-    private static MutationStatus CanMutate(SessionRuntime? session)
-        => session is null || session.Mode == ExecutionMode.Stopping ? MutationStatus.Stopped
-            : IsPaused(session) ? MutationStatus.Deferred : MutationStatus.Applied;
+    private static GameUpdateStatus GetUpdateStatus(SessionRuntime? session)
+        => session is null || session.Mode == ExecutionMode.Stopping ? GameUpdateStatus.Stopped
+            : IsPaused(session) ? GameUpdateStatus.Deferred : GameUpdateStatus.Applied;
 
-    public MutationResult BeginSession(long sessionId)
+    public GameUpdateResult BeginSession(long sessionId)
     {
         lock (gate)
         {
             if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Progress.Retired)
-                return new(MutationStatus.Stopped);
+                return new(GameUpdateStatus.Stopped);
             if (session.Progress.Published || active is { Progress.Retired: false })
-                return new(MutationStatus.Rejected);
+                return new(GameUpdateStatus.Rejected);
             active = session;
             session.Progress.Published = true;
-            session.Display.Set("Find the key, activate the switch, unlock the door");
-            return Present(session, PresentationKind.Initial, session.Player.Position, session.Player.Position, 0);
+            session.Display.SetMessage("Find the key, activate the switch, unlock the door");
+            return BeginPresentation(session, PresentationKind.Initial, session.Player.Position, session.Player.Position, 0);
         }
     }
 
-    public GameProgress GetSessionProgress(long sessionId)
+    public SessionProgress GetSessionProgress(long sessionId)
     {
         lock (gate)
         {
-            var session = Current(sessionId);
+            var session = FindActiveSession(sessionId);
             return session is null
                 ? new(GameStage.Stopping, GameOutcome.Running, false, false, true, false)
                 : new(session.Progress.Stage, session.Progress.Outcome, session.Progress.Confirmed,
@@ -69,12 +69,12 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         }
     }
 
-    public GameSnapshot CaptureSnapshot()
+    public GameViewSnapshot CaptureSnapshot()
     {
         lock (gate)
         {
             if (active is not { } session)
-                return new(EscapeApplicationContext.ApplicationSessionId, 0,
+                return new(EscapeApplicationContext.NoSessionId, 0,
                     Room, Room.PlayerStart, Room.PatrolAt(0), 0, false, false, false, false,
                     0, GameStage.Preparing, GameOutcome.Running,
                     shutdown ? ExecutionMode.Stopping : ExecutionMode.Active, 0, null,
@@ -96,7 +96,7 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         lock (gate)
         {
             if (!sessions.TryGetValue(sessionId, out var session)) return;
-            Stop(session);
+            StopSession(session);
             sessions.Remove(sessionId);
         }
     }
@@ -107,12 +107,12 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, I
         {
             if (shutdown) return;
             shutdown = true;
-            foreach (var session in sessions.Values) Stop(session);
+            foreach (var session in sessions.Values) StopSession(session);
             sessions.Clear();
         }
     }
 
-    private static void Stop(SessionRuntime session)
+    private static void StopSession(SessionRuntime session)
     {
         session.Progress.Retired = true;
         session.Progress.Stage = GameStage.Stopping;

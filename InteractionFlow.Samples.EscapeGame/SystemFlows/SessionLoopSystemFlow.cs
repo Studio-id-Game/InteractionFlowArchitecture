@@ -26,7 +26,7 @@ public sealed class SessionLoopSystemFlow(SessionSystemFlow sessionFlow, EndSess
             {
                 // ウィンドウ停止とセッション生成が競合した通常終了です。
                 using var stopped = new GameplayContext(context, ContextInheritance.None);
-                stopped.With(new Finishing(FinishingKind.EndSession, Result.Success));
+                stopped.With(new CleanupInfo(CleanupKind.EndSession, Result.Success));
                 return await endSession.ExecuteAsync(stopped);
             }
 
@@ -52,7 +52,7 @@ public sealed class SessionLoopSystemFlow(SessionSystemFlow sessionFlow, EndSess
 
             // 旧セッションの待機を閉じてから、新しいセッションを作成・公開します。
             using var cleanup = new GameplayContext(session, ContextInheritance.None);
-            cleanup.With(new Finishing(FinishingKind.EndSession, outcome));
+            cleanup.With(new CleanupInfo(CleanupKind.EndSession, outcome));
             InteractionEnd ended;
             try { ended = await endSession.ExecuteAsync(cleanup); }
             catch (Exception error) when (!outcome.Try(out _))

@@ -17,10 +17,10 @@ public sealed class CloseWindow(
 {
     protected override ValueTask<ReactionEnd> ExecuteCoreAsync(ILifetimeContext context)
     {
-        var finishing = context.GetRequired<Finishing>();
-        if (finishing.Kind != FinishingKind.CloseWindow)
+        var finishing = context.GetRequired<CleanupInfo>();
+        if (finishing.Kind != CleanupKind.CloseWindow)
             throw new InvalidOperationException("CloseWindow requires matching finishing information.");
 
-        return new(reaction.Close(context, finishing.Previous));
+        return new(reaction.Close(context, finishing.PreviousResult));
     }
 }

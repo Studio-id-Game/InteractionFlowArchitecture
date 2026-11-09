@@ -15,8 +15,8 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     {
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
         var change = context.Gameplay.BeginSession(context.SessionId);
-        var failure = GameMutationValidation.Presentation(change, nameof(BeginSessionAsync));
-        if (failure is not null || change.Status == MutationStatus.Stopped)
+        var failure = GameUpdateValidation.Presentation(change, nameof(BeginSessionAsync));
+        if (failure is not null || change.Status == GameUpdateStatus.Stopped)
             return GetEnd(failure);
 
         return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -28,10 +28,10 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             var status = context.Gameplay.BeginActionSelection(context.SessionId);
-            if (status == MutationStatus.Deferred)
+            if (status == GameUpdateStatus.Deferred)
                 continue;
 
-            return GetEnd(GameMutationValidation.RequiredTransition(status, nameof(BeginActionSelectionAsync)));
+            return GetEnd(GameUpdateValidation.RequiredTransition(status, nameof(BeginActionSelectionAsync)));
         }
 
         return GetEnd();
@@ -43,11 +43,11 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             var status = context.Gameplay.ApplyInputCommand(context.SessionId, command);
-            if (status == MutationStatus.Deferred)
+            if (status == GameUpdateStatus.Deferred)
                 continue;
 
             // 選択の Rejected は通常の無効操作。アクセス管理が理由を表示へ反映済みです。
-            return GetEnd(GameMutationValidation.Selection(status, nameof(HandleCommandAsync)));
+            return GetEnd(GameUpdateValidation.Selection(status, nameof(HandleCommandAsync)));
         }
 
         return GetEnd();
@@ -60,11 +60,11 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         {
             // 事前の再開確認直後にもポーズし得るため、更新側の Deferred 検査は残します。
             var change = context.Gameplay.ApplyPlayerAction(context.SessionId);
-            if (change.Status == MutationStatus.Deferred)
+            if (change.Status == GameUpdateStatus.Deferred)
                 continue;
 
-            var failure = GameMutationValidation.Presentation(change, nameof(ApplyPlayerActionAsync));
-            if (failure is not null || change.Status == MutationStatus.Stopped)
+            var failure = GameUpdateValidation.Presentation(change, nameof(ApplyPlayerActionAsync));
+            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
                 return GetEnd(failure);
 
             return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -79,11 +79,11 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             var change = context.Gameplay.ApplyEnemyAction(context.SessionId);
-            if (change.Status == MutationStatus.Deferred)
+            if (change.Status == GameUpdateStatus.Deferred)
                 continue;
 
-            var failure = GameMutationValidation.Presentation(change, nameof(ApplyEnemyActionAsync));
-            if (failure is not null || change.Status == MutationStatus.Stopped)
+            var failure = GameUpdateValidation.Presentation(change, nameof(ApplyEnemyActionAsync));
+            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
                 return GetEnd(failure);
 
             return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -98,11 +98,11 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             var change = context.Gameplay.BeginResultPresentation(context.SessionId);
-            if (change.Status == MutationStatus.Deferred)
+            if (change.Status == GameUpdateStatus.Deferred)
                 continue;
 
-            var failure = GameMutationValidation.Presentation(change, nameof(PresentResultAsync));
-            if (failure is not null || change.Status == MutationStatus.Stopped)
+            var failure = GameUpdateValidation.Presentation(change, nameof(PresentResultAsync));
+            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
                 return GetEnd(failure);
 
             return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -117,10 +117,10 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             var status = context.Gameplay.EnableResultInput(context.SessionId);
-            if (status == MutationStatus.Deferred)
+            if (status == GameUpdateStatus.Deferred)
                 continue;
 
-            return GetEnd(GameMutationValidation.RequiredTransition(status, nameof(EnableResultInputAsync)));
+            return GetEnd(GameUpdateValidation.RequiredTransition(status, nameof(EnableResultInputAsync)));
         }
 
         return GetEnd();

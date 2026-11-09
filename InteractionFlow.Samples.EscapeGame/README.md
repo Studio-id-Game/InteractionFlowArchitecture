@@ -95,7 +95,7 @@ GetProgressはゲームの進行判断と画面側のポーズ切替の両方で
 CreateSessionは初期状態の割り当て、BeginSessionはReactionによる公開・提示開始で、役割は維持しています。
 今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
 
-`ApplicationSessionId = 0`は、特定のゲームセッションを指さないアプリの固定対象です。
+`NoSessionId = 0`は、特定のゲームセッションを指さないアプリの固定対象です。
 WindowSystemFlowはルートからゲーム用ContextをCancellationモード、画面用ContextをNoneモードで構築します。
 ゲーム用ContextはルートのCancellationを共有しますが、ルートの値を探索しません。
 セッションIDはGameplay.CreateSessionで割り当て、GameplayContextのコンストラクターへ渡します。
@@ -133,7 +133,7 @@ BeginActionSelectionとHandleGameInputは維持しています。選択段階を
 更新側でもポーズを再確認して一括反映するため、チェックポイントだけで原子性を保証する設計ではありません。
 [FailureCollector](./Entities/FailureCollector.cs) は終了時の原因を観測順に保持し、通常のResult連結とは区別します。
 
-Close / EndSessionの専用スコープへは、[Finishing](./Entities/Finishing.cs)で処理種別と先行Resultを渡します。
+Close / EndSessionの専用スコープへは、[CleanupInfo](./Entities/CleanupInfo.cs)で処理種別と先行Resultを渡します。
 通常Contextに無関係なResultがあっても、終了処理中という意味にはなりません。
 終了の送出例外やキャンセルも先行失敗へ合成し、通常停止の回復と終了処理自身の失敗を分けます。
 通常フレームや通常セッションへFinishingを持ち越さず、終了処理のためだけに渡します。

@@ -64,7 +64,7 @@ public sealed class ContextTests
         var window = new WindowState();
         frames.With(frame).With(window);
         using var close = new GameViewContext(frames, ContextInheritance.All);
-        close.With(new Finishing(FinishingKind.CloseWindow, Result.Success));
+        close.With(new CleanupInfo(CleanupKind.CloseWindow, Result.Success));
         using var cleanup = new GameplayContext(session, ContextInheritance.None);
 
         Assert.Same(app.Cancellation, game.Cancellation);
@@ -78,10 +78,10 @@ public sealed class ContextTests
         Assert.False(cleanup.TryGet<LocalValue>(out _));
         Assert.False(session.TryGet<FrameState>(out _));
         Assert.False(session.TryGet<WindowState>(out _));
-        Assert.False(session.TryGet<Finishing>(out _));
+        Assert.False(session.TryGet<CleanupInfo>(out _));
         Assert.Same(frame, close.GetRequired<FrameState>());
         Assert.Same(window, close.GetRequired<WindowState>());
-        Assert.False(frames.TryGet<Finishing>(out _));
+        Assert.False(frames.TryGet<CleanupInfo>(out _));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class ContextTests
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
         Assert.Equal(0, app.View.CaptureSnapshot().SessionId);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
         Assert.Equal(session.SessionId, app.View.CaptureSnapshot().SessionId);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
@@ -206,7 +206,7 @@ public sealed class ContextTests
         if (disposeSource) app.Dispose();
         else game.Dispose();
         var id = gameplay.AllocateSession();
-        Assert.Equal(MutationStatus.Applied, gameplay.BeginSession(id).Status);
+        Assert.Equal(GameUpdateStatus.Applied, gameplay.BeginSession(id).Status);
         Assert.Equal(id, view.View.CaptureSnapshot().SessionId);
         Assert.False(lifetime.ShutdownRequested);
         Assert.False(game.Cancellation.IsCancellationRequested);

@@ -18,8 +18,8 @@ public sealed class GameCancellationHandling : CancellationHandling
         Result waitAndResetResult)
     {
         var failures = new FailureCollector();
-        var finishing = context.TryGet<Finishing>(out var operation);
-        if (finishing && !operation!.Previous.Try(out var earlierFailure))
+        var finishing = context.TryGet<CleanupInfo>(out var operation);
+        if (finishing && !operation!.PreviousResult.Try(out var earlierFailure))
             failures.Add(earlierFailure);
 
         var resetSucceeded = waitAndResetResult.Try(out var waitFailure);

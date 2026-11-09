@@ -6,16 +6,16 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
 internal sealed partial class EscapeAccess
 {
-    private static bool PresentationFinished(SessionRuntime session)
+    private static bool IsPresentationComplete(SessionRuntime session)
         => session.Presentation?.Completion.Task.IsCompletedSuccessfully == true
             && session.Presentation.Completion.Task.Result == PresentationCompletion.Completed;
 
-    private MutationResult Present(
+    private GameUpdateResult BeginPresentation(
         SessionRuntime session, PresentationKind kind, GridPosition from, GridPosition to, double duration)
     {
         var key = new PresentationKey(session.Progress.Id, ++session.NextPresentation, session.Display.Version);
         session.Presentation = new(new(key, kind, from, to, duration, 0, false));
-        return new(MutationStatus.Applied, key);
+        return new(GameUpdateStatus.Applied, key);
     }
 
     public async ValueTask<PresentationCompletion> WaitForPresentationCompletionAsync(
@@ -25,7 +25,7 @@ internal sealed partial class EscapeAccess
         lock (gate)
         {
             token.ThrowIfCancellationRequested();
-            var session = Current(key.SessionId);
+            var session = FindActiveSession(key.SessionId);
             if (session?.Presentation is not { } presentation || presentation.Snapshot.Key != key)
                 return PresentationCompletion.Stopped;
             task = presentation.Completion.Task;
@@ -38,7 +38,7 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            var session = Current(key.SessionId);
+            var session = FindActiveSession(key.SessionId);
             if (session?.Presentation is not { } presentation || presentation.Snapshot.Key != key)
                 return null;
             if (!double.IsFinite(elapsedSeconds) || elapsedSeconds < 0)
@@ -62,7 +62,7 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            var session = Current(key.SessionId);
+            var session = FindActiveSession(key.SessionId);
             if (session is null || IsPaused(session) || session.Presentation is not { } presentation
                 || presentation.Snapshot.Key != key || !presentation.Started
                 || presentation.Snapshot.ElapsedSeconds < presentation.Snapshot.DurationSeconds)
@@ -75,7 +75,7 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            var session = Current(key.SessionId);
+            var session = FindActiveSession(key.SessionId);
             if (session is null || IsPaused(session)
                 || session.Progress.Stage is not (GameStage.PlayerPresenting or GameStage.EnemyPresenting)
                 || session.Presentation is not { } presentation || presentation.Snapshot.Key != key

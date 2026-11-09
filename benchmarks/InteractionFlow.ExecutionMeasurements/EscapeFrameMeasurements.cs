@@ -21,7 +21,7 @@ internal static class EscapeFrameMeasurements
         var initial = session.Gameplay.BeginSession(session.SessionId).Presentation!.Value;
         root.View.AdvancePresentation(initial, 0, 0);
         if (!root.View.TryCompletePresentation(initial)
-            || session.Gameplay.BeginActionSelection(session.SessionId) != E.MutationStatus.Applied)
+            || session.Gameplay.BeginActionSelection(session.SessionId) != E.GameUpdateStatus.Applied)
             throw new InvalidOperationException("Failed to initialize measurement session.");
 
         using var frames = new EC.GameViewContext(root, ContextInheritance.None);

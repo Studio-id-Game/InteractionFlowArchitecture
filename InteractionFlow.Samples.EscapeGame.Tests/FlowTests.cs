@@ -140,7 +140,7 @@ public sealed class FlowTests
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.CaptureSnapshot();
-            if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
+            if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
 
             heldFrames++;
@@ -165,13 +165,13 @@ public sealed class FlowTests
     {
         using var fixture = new Fixture();
         var commands = new Queue<GameCommand>(Solution.SelectMany(command => new[] { command, GameCommand.Confirm }));
-        GameSnapshot? won = null;
+        GameViewSnapshot? won = null;
         long firstSession = 0;
         long secondSession = 0;
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.CaptureSnapshot();
-            if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
+            if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
             if (firstSession == 0)
                 firstSession = snapshot.SessionId;
@@ -222,7 +222,7 @@ public sealed class FlowTests
         using var fixture = new Fixture();
         var phase = 0;
         var pausedFrames = 0;
-        GameSnapshot? frozen = null;
+        GameViewSnapshot? frozen = null;
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.CaptureSnapshot();
@@ -315,7 +315,7 @@ public sealed class FlowTests
         var previous = new FormatException("earlier failed");
         var canceled = new OperationCanceledException("close canceled");
         using var context = new EscapeApplicationContext();
-        context.With(new Finishing(FinishingKind.CloseWindow, earlierFailure ? previous : Result.Success));
+        context.With(new CleanupInfo(CleanupKind.CloseWindow, earlierFailure ? previous : Result.Success));
         var window = new HeadlessWindowReaction { CloseFailure = canceled };
         var interaction = new CloseWindow(window, new GameExceptionHandling(), new GameCancellationHandling());
 
@@ -333,7 +333,7 @@ public sealed class FlowTests
         var previous = new FormatException("session failed");
         var canceled = new OperationCanceledException("end session canceled");
         using var context = new EscapeApplicationContext();
-        context.With(new Finishing(FinishingKind.EndSession, previous));
+        context.With(new CleanupInfo(CleanupKind.EndSession, previous));
         var port = new CanceledGameLifetimeReaction(canceled);
         var interaction = new EndSession(port, new GameExceptionHandling(), new GameCancellationHandling());
 

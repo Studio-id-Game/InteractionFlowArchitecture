@@ -6,7 +6,7 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 // すべて EscapeAccess の同期境界内で扱います。State と通知の寿命をまとめる内部補助です。
 internal sealed class SessionRuntime(long id)
 {
-    internal readonly SessionState Progress = new(id);
+    internal readonly SessionProgressState Progress = new(id);
     internal readonly PlayerState Player = new();
     internal readonly InventoryState Inventory = new();
     internal readonly MechanismState Mechanisms = new();

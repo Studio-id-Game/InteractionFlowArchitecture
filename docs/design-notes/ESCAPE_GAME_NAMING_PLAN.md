@@ -1,6 +1,6 @@
 # EscapeGameの命名整理プラン
 
-状態: 段階1完了。段階2・3は後続で実施する。
+状態: 段階1・2完了。段階3は後続で実施する。
 基準はContext契約分割を終えた763cf02。対象はEscapeGame、そのテスト・計測・説明文書。
 Core / Standardの公開APIと他サンプルは対象外。サブエージェントは使用しない。
 
@@ -196,6 +196,8 @@ ActionEffectも、勝敗を表すGameOutcomeと混同するActionOutcomeへは�
 - 段階1: 全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件、計569件が成功。
   C#66ファイルの識別子・コメント・空白以外のトークンを比較し差分なし。移動ソースへの文書リンク切れなし。
   旧名と新名の対応表は履歴・移行用として残す。
+- 段階2: データ型と内部補助を改名し、全体ビルドは警告・エラー0件、全569件成功。
+  C#66ファイルの識別子・コメント・空白以外のトークンに差分なし。
 
 関連: [AccessとContextの再分類](./ESCAPE_GAME_ACCESS_CONTRACT_REVIEW_PLAN.md)、
 [サンプルの構成と検証](../../InteractionFlow.Samples.EscapeGame/README.md)。

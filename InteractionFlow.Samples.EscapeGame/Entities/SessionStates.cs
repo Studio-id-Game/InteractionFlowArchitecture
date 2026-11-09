@@ -21,7 +21,7 @@ internal sealed class EnemyState
     internal int PatrolIndex;
 }
 
-internal sealed class SessionState(long id)
+internal sealed class SessionProgressState(long id)
 {
     internal long Id { get; } = id;
     internal GameStage Stage = GameStage.Preparing;
@@ -39,7 +39,7 @@ internal sealed class DisplayState
     internal long Version;
     internal string Message = "Preparing room";
 
-    internal void Set(string message)
+    internal void SetMessage(string message)
     {
         Message = message;
         Version++;

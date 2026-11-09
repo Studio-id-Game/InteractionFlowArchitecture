@@ -15,9 +15,9 @@ internal static class GameTestSteps
     {
         var session = AllocateSession(app);
         var begin = session.Gameplay.BeginSession(session.SessionId);
-        Assert.Equal(MutationStatus.Applied, begin.Status);
+        Assert.Equal(GameUpdateStatus.Applied, begin.Status);
         Complete(app, Assert.IsType<PresentationKey>(begin.Presentation));
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginActionSelection(session.SessionId));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginActionSelection(session.SessionId));
         return session;
     }
 
@@ -33,19 +33,19 @@ internal static class GameTestSteps
     internal static void PlayTurn(IGameplayContext session, IGameViewContext view, GameCommand command)
     {
         var id = session.SessionId;
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(id, GameCommand.Confirm));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, GameCommand.Confirm));
 
         var player = session.Gameplay.ApplyPlayerAction(id);
-        Assert.Equal(MutationStatus.Applied, player.Status);
+        Assert.Equal(GameUpdateStatus.Applied, player.Status);
         Complete(view, Assert.IsType<PresentationKey>(player.Presentation));
         if (session.Gameplay.GetSessionProgress(id).Outcome != GameOutcome.Running)
             return;
 
         var enemy = session.Gameplay.ApplyEnemyAction(id);
-        Assert.Equal(MutationStatus.Applied, enemy.Status);
+        Assert.Equal(GameUpdateStatus.Applied, enemy.Status);
         Complete(view, Assert.IsType<PresentationKey>(enemy.Presentation));
         if (session.Gameplay.GetSessionProgress(id).Outcome == GameOutcome.Running)
-            Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginActionSelection(id));
+            Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginActionSelection(id));
     }
 }

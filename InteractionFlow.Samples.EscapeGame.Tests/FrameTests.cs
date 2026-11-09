@@ -79,8 +79,8 @@ public sealed class FrameTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Up));
-        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Confirm));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Up));
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Confirm));
         var player = session.Gameplay.ApplyPlayerAction(session.SessionId);
         var oldKey = Assert.IsType<PresentationKey>(player.Presentation);
         var frame = new FrameState

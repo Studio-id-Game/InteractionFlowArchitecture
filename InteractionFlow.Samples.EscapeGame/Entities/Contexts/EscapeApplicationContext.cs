@@ -8,13 +8,13 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 public sealed class EscapeApplicationContext : FlowContext, IApplicationContext
 {
     // 0 は特定セッションを指さないアプリのスコープです。実セッションIDは1から始まります。
-    public const long ApplicationSessionId = 0;
+    public const long NoSessionId = 0;
 
     private EscapeAccess? access;
     public EscapeApplicationContext()
     {
         access = new();
-        SessionId = ApplicationSessionId;
+        SessionId = NoSessionId;
     }
 
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));

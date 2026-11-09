@@ -100,14 +100,14 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return GetEnd(previous);
     }
 
-    private static void DrawHeader(GameSnapshot state)
+    private static void DrawHeader(GameViewSnapshot state)
     {
         RL.DrawText("ONE ROOM / ONE WAY OUT", 32, 26, 30, accent);
         RL.DrawText("Find the key. Activate the switch. Unlock the exit.", 32, 70, 19, muted);
         RL.DrawText($"TURN {state.Turn:00}", 784, 30, 26, Color.RayWhite);
     }
 
-    private static void DrawBoard(GameSnapshot state, PresentationSnapshot? presentation)
+    private static void DrawBoard(GameViewSnapshot state, PresentationSnapshot? presentation)
     {
         for (var y = 0; y < state.Room.Height; y++)
         for (var x = 0; x < state.Room.Width; x++)
@@ -158,7 +158,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         RL.DrawText(text, (int)center.X - RL.MeasureText(text, 17) / 2, (int)center.Y - 9, 17, color);
     }
 
-    private void DrawStatus(GameSnapshot state)
+    private void DrawStatus(GameViewSnapshot state)
     {
         RL.DrawRectangle(600, 120, 328, 380, new Color(25, 35, 50, 255));
         RL.DrawText("SESSION", 622, 140, 17, muted);
@@ -204,7 +204,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         }
     }
 
-    private static void DrawButtons(GameSnapshot state)
+    private static void DrawButtons(GameViewSnapshot state)
     {
         var active = state.Mode == ExecutionMode.Active;
         for (var i = 0; i < labels.Length; i++)

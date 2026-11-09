@@ -28,13 +28,34 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <summary>親の文脈値を探索し、キャンセル状態を共有する子コンテキストを作成します。</summary>
         /// <param name="parentContext">値の探索先となる親。</param>
         /// <exception cref="ArgumentNullException">親が null の場合。</exception>
-        public FlowContext(IFlowContext parentContext)
+        public FlowContext(IFlowContext parentContext) : this(parentContext, ContextInheritance.All)
         {
-            this.parentContext = parentContext ?? throw new ArgumentNullException(nameof(parentContext));
-            Cancellation = parentContext.Cancellation;
         }
 
-        /// <summary>キャンセル状態を取得します。子は親と同じインスタンスを共有します。</summary>
+        /// <summary>親の値探索とキャンセル状態を、指定した範囲で引き継ぐコンテキストを作成します。</summary>
+        /// <param name="parentContext">引き継ぎ元。None の場合も null は指定できません。</param>
+        /// <param name="inheritance">親から引き継ぐ範囲。</param>
+        /// <remarks>
+        /// Values は親への探索を有効にし、値をコピーしません。Cancellation を指定しなければ新規に作成します。
+        /// Values のみの場合、Cancellation プロパティは独自ですが、値探索では親の CancellationObject が
+        /// 返ることがあります。追加値による上書きを含め、値探索はプロパティと独立しています。
+        /// 親とその値、共有する CancellationObject の所有権は取得しません。
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">親が null の場合。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">未定義のフラグが含まれる場合。</exception>
+        public FlowContext(IFlowContext parentContext, ContextInheritance inheritance)
+        {
+            if (parentContext is null) throw new ArgumentNullException(nameof(parentContext));
+            if ((inheritance & ~ContextInheritance.All) != 0)
+                throw new ArgumentOutOfRangeException(nameof(inheritance), inheritance, "Unknown context inheritance flags.");
+
+            this.parentContext = (inheritance & ContextInheritance.Values) != 0 ? parentContext : null;
+            Cancellation = (inheritance & ContextInheritance.Cancellation) != 0
+                ? parentContext.Cancellation
+                : new CancellationObject();
+        }
+
+        /// <summary>キャンセル状態を取得します。構築時に Cancellation の引き継ぎを指定した場合は親と共有します。</summary>
         /// <remarks>破棄後も参照できます。Context の破棄でキャンセル・リセットは行いません。</remarks>
         public CancellationObject Cancellation { get; }
 
@@ -90,7 +111,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// <param name="value">取得した値。不在の場合は既定値。</param>
         /// <returns>値を取得できた場合は true。</returns>
         /// <remarks>
-        /// 既定では親を探索し、ルートでは Cancellation を提供します。
+        /// Values を引き継いだ場合は親を探索し、そうでなければ自身の Cancellation を提供します。
         /// 派生型は独自値を見つけられなければ base.TryGetCore を呼んでください。
         /// 公開の TryGet が、追加値の優先と破棄チェックを先に行います。
         /// </remarks>

@@ -90,6 +90,8 @@ ReactionEnd・InteractionEnd と Result の関係は [Reaction とフローの�
 専用の Context 型を要求する相互作用には `Interaction<TContext>` を使用できます。
 従来の `Interaction` は、任意の `IFlowContext` を受け取る基底として引き続き利用できます。
 Context 型ごとの追加値の制約は、[Context の値取得と拡張](./docs/CONTEXT_VALUES.md) を参照してください。
+`FlowContext(parent, ContextInheritance)`で、親の値探索とCancellation共有を別々に指定できます。
+例えば`ContextInheritance.Cancellation`は、親の値を探索せずキャンセル制御だけを共有します。
 
 ## Standard
 

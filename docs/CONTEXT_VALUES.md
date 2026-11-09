@@ -55,6 +55,41 @@ using var child = new FlowContext(root).With(new SampleMode());
 既定の TryGetCore は親を探索し、ルートでは Cancellation を提供します。
 親スコープの上書きも維持します。値の追加は Cancellation プロパティの参照先を変更しません。
 
+### 親から引き継ぐ範囲
+
+`FlowContext(parent, ContextInheritance)`で値探索とCancellation共有を別々に指定できます。
+ContextInheritanceはFlags列挙型です。既存の`FlowContext(parent)`はAll相当で、挙動は変わりません。
+
+| 指定 | 親の値探索 | Cancellationプロパティ |
+| --- | --- | --- |
+| None | なし | 新規 |
+| Values | あり | 新規 |
+| Cancellation | なし | 親と同じインスタンス |
+| All（Values \| Cancellation） | あり | 親と同じインスタンス |
+
+```csharp
+// 公開範囲を切り替えるとき、親の値は探索せずキャンセル制御だけ共有する。
+using var restricted = new FlowContext(parent, ContextInheritance.Cancellation);
+
+// 親の値を参照しつつ、独立したキャンセル制御を使う。
+using var independent = new FlowContext(parent, ContextInheritance.Values);
+```
+
+Valuesはコピーではなく親への探索です。子の追加値とTryGetCoreを先に処理し、その後で親を探索します。
+Valuesを指定しなければ親の探索参照を保持せず、既定TryGetCoreは自身のCancellationを提供します。
+Cancellationを指定しなければ、構築時に親のCancellationプロパティを読みません。
+親はNoneを含む全モードで必須です。nullはArgumentNullException、未定義ビットはArgumentOutOfRangeExceptionです。
+
+**Cancellationプロパティと、文脈値としてのCancellationObject取得は独立しています。**
+Valuesのみの場合、プロパティは独自のCancellationですが、TryGetは親の結果をそのまま使用します。
+そのため、親のCancellationObjectや追加値による上書きを返すことがあります。
+親がCancellationObjectを値として提供しなければ、子のTryGetもfalseになり、自身へ再フォールバックしません。
+Interactionの実行制御対象はCancellationプロパティです。
+
+各モードとも親・追加値・共有Cancellationの所有権を取得しません。
+値探索を引き継いだ子は、ローカル取得で見つからず破棄済みの親へ到達すると取得に失敗します。
+Cancellationのみを引き継いだ子は親を探索しないため、親の破棄後も共有Cancellationを利用できます。
+
 派生型の public override TryGet は protected override TryGetCore へ移行します。
 独自値がなければ base.TryGetCore を呼びます。追加値は派生型の値にも優先されます。
 

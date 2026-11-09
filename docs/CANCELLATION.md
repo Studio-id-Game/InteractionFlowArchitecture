@@ -1,5 +1,11 @@
 # CancellationObject の要求・待機・リセット
 
+FlowContextの親からの共有範囲は`ContextInheritance`で指定できます。
+既存の親あり構築はAll（値探索とCancellation共有）を維持します。
+Cancellationのみを指定すると、親の値を探索せず同じキャンセル制御を共有できます。
+Valuesのみでは独自のCancellationプロパティを持ちますが、値探索は親のCancellationObjectを返す場合があります。
+実行制御に使用するプロパティと文脈値の違いは[Context契約](./CONTEXT_VALUES.md#親から引き継ぐ範囲)を参照してください。
+
 `InteractionFlow.Core.Entities.Contexts.CancellationObject` は、キャンセル要求の通知と、
 登録 Task の終了待機を分けて扱います。処理の強制停止や、体験の継続・終了判断は行いません。
 

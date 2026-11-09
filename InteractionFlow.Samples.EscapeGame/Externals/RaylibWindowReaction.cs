@@ -89,19 +89,16 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
                 window.MarkClosed();
             }
         }
-        catch (Exception error) { previous = Combine(previous, error); }
+        catch (Exception error) { previous = FailureCollector.Append(previous, error); }
 
         try
         {
             if (previous.Try(out var error)) Console.WriteLine("Escape game closed.");
             else Console.Error.WriteLine(error);
         }
-        catch (Exception error) { previous = Combine(previous, error); }
+        catch (Exception error) { previous = FailureCollector.Append(previous, error); }
         return GetEnd(previous);
     }
-
-    private static Result Combine(Result previous, Exception error)
-        => previous.Try(out var earlier) ? error : new AggregateException(earlier, error);
 
     private static void DrawHeader(GameSnapshot state)
     {

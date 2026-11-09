@@ -1,6 +1,7 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.ExternalPorts;
 using System;
@@ -13,10 +14,10 @@ public sealed class SessionReaction : Reaction, ISessionReaction
 
     public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
     {
-        try { context.World.EndSession(context.SessionId); }
+        try { context.Session.EndSession(context.SessionId); }
         catch (Exception error)
         {
-            previous = previous.Try(out var earlier) ? error : new AggregateException(earlier, error);
+            previous = FailureCollector.Append(previous, error);
         }
 
         return GetEnd(previous);
@@ -25,7 +26,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
     public ReactionEnd RequestShutdown(EscapeApplicationContext context)
     {
         // 停止・入力閉鎖・提示解除・再開待機解除は同じ共有アクセス境界で行います。
-        context.World.RequestShutdown();
+        context.Session.RequestShutdown();
         return GetEnd();
     }
 }

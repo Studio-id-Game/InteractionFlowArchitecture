@@ -64,7 +64,7 @@ public sealed class GameReactionTests
     public async Task BeginExplicitlyPublishesUninitializedSessionAndWaitsForItsInitialFrame()
     {
         using var fixture = new ReactionFixture(prepare: false);
-        Assert.Equal(0, fixture.App.World.ActiveSessionId);
+        Assert.Equal(0, fixture.App.Session.ActiveSessionId);
 
         var begin = fixture.Reaction.BeginAsync(fixture.Session).AsTask();
 
@@ -90,7 +90,7 @@ public sealed class GameReactionTests
         Assert.True(early.HasException);
         Assert.False(begin.IsCompleted);
         Assert.Equal(GameStage.Preparing, fixture.App.Display.Snapshot().Stage);
-        fixture.App.World.RequestShutdown();
+        fixture.App.Session.RequestShutdown();
         Assert.False((await begin).HasException);
     }
 
@@ -109,7 +109,7 @@ public sealed class GameReactionTests
         Assert.False(player.IsCompleted);
         Assert.Equal(before.Enemy, fixture.App.Display.Snapshot().Enemy);
         Assert.Equal(1, fixture.App.Display.Snapshot().Turn);
-        fixture.App.World.RequestShutdown();
+        fixture.App.Session.RequestShutdown();
         Assert.False((await player).HasException);
     }
 
@@ -143,7 +143,7 @@ public sealed class GameReactionTests
 
         Assert.False(execution.IsCompleted);
         Assert.Equal(0, fixture.App.Display.Snapshot().Turn);
-        Assert.True(context.World.GetProgress(context.SessionId).HasConfirmedAction);
+        Assert.True(context.Session.GetProgress(context.SessionId).HasConfirmedAction);
         Assert.True(context.Control.TrySetPaused(context.SessionId, false));
         var presentation = await WaitForPresentationAsync(fixture.App);
         Assert.Equal(1, fixture.App.Display.Snapshot().Turn);
@@ -163,7 +163,7 @@ public sealed class GameReactionTests
         Assert.True(context.Control.TrySetPaused(context.SessionId, true));
         var execution = fixture.Reaction.ApplyPlayerAsync(context).AsTask();
 
-        fixture.App.World.RequestShutdown();
+        fixture.App.Session.RequestShutdown();
 
         Assert.False((await execution).HasException);
         Assert.Equal(0, fixture.App.Display.Snapshot().Turn);
@@ -235,7 +235,7 @@ public sealed class GameReactionTests
 
         public void Dispose()
         {
-            App.World.RequestShutdown();
+            App.Session.RequestShutdown();
             Session.Dispose();
             App.Dispose();
         }

@@ -17,39 +17,23 @@ public sealed class TurnSystemFlow(
     protected override async Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
     {
         var end = await enable.ExecuteAsync(context);
-        if (!await CanContinueAsync(context, end))
+        if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
             return end;
 
-        while (!context.World.GetProgress(context.SessionId).HasConfirmedAction)
+        while (!context.Session.GetProgress(context.SessionId).HasConfirmedAction)
         {
             end = await select.ExecuteAsync(context);
-            if (!await CanContinueAsync(context, end))
+            if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
                 return end;
         }
 
         end = await player.ExecuteAsync(context);
-        if (!await CanContinueAsync(context, end)
-            || context.World.GetProgress(context.SessionId).Outcome != GameOutcome.Running)
+        if (!await GameFlowCheckpoint.CanContinueAsync(context, end)
+            || context.Session.GetProgress(context.SessionId).Outcome != GameOutcome.Running)
         {
             return end;
         }
 
         return await enemy.ExecuteAsync(context);
-    }
-
-    private static async ValueTask<bool> CanContinueAsync(EscapeApplicationContext context, InteractionEnd end)
-    {
-        if (end.HasException || context.World.GetProgress(context.SessionId).Stopping)
-            return false;
-
-        try
-        {
-            return await context.Control.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken())
-                && !context.World.GetProgress(context.SessionId).Stopping;
-        }
-        catch (System.OperationCanceledException) when (context.World.ShutdownRequested)
-        {
-            return false;
-        }
     }
 }

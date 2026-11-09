@@ -18,7 +18,7 @@ internal static class EscapeFrameMeasurements
     {
         using var root = new EC.EscapeApplicationContext();
         using var session = root.CreateSessionContext();
-        var initial = session.World.BeginSession(session.SessionId).Presentation!.Value;
+        var initial = session.Session.BeginSession(session.SessionId).Presentation!.Value;
         session.Presentation.Advance(initial, 0, 0);
         if (!session.Presentation.TryComplete(initial)
             || session.World.EnterSelecting(session.SessionId) != E.MutationStatus.Applied)

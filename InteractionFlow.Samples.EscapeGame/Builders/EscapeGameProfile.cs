@@ -33,7 +33,6 @@ public sealed class EscapeGameProfile : IScopeProfile
             .UseInteraction<ApplyPlayerAction>()
             .UseInteraction<ApplyEnemyAction>()
             .UseInteraction<ShowResult>()
-            .UseInteraction<EnableResultInput>()
             .UseSystemFlow<TurnSystemFlow>()
             .UseSystemFlow<SessionSystemFlow>()
             .UseSystemFlow<GameSystemFlow>();

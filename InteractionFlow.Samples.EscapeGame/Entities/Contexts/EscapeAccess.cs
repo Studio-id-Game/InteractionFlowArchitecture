@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-internal sealed partial class EscapeAccess : IGameInputAccess, IGameWorldAccess, IGameDisplayAccess,
+internal sealed partial class EscapeAccess : IGameInputAccess, IGameSessionAccess, IGameWorldAccess, IGameDisplayAccess,
     IGameControlAccess, IGamePresentationAccess
 {
     private readonly object gate = new();
@@ -30,7 +30,7 @@ internal sealed partial class EscapeAccess : IGameInputAccess, IGameWorldAccess,
         get
         {
             lock (gate)
-                return active?.Progress.Id ?? 0;
+                return active?.Progress.Id ?? EscapeApplicationContext.ApplicationSessionId;
         }
     }
 
@@ -52,6 +52,21 @@ internal sealed partial class EscapeAccess : IGameInputAccess, IGameWorldAccess,
         => session is null || session.Mode == ExecutionMode.Stopping ? MutationStatus.Stopped
             : IsPaused(session) ? MutationStatus.Deferred : MutationStatus.Applied;
 
+    public MutationResult BeginSession(long sessionId)
+    {
+        lock (gate)
+        {
+            if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Progress.Retired)
+                return new(MutationStatus.Stopped);
+            if (session.Progress.Published || active is { Progress.Retired: false })
+                return new(MutationStatus.Rejected);
+            active = session;
+            session.Progress.Published = true;
+            session.Display.Set("Find the key, activate the switch, unlock the door");
+            return Present(session, PresentationKind.Initial, session.Player.Position, session.Player.Position, 0);
+        }
+    }
+
     public GameProgress GetProgress(long sessionId)
     {
         lock (gate)
@@ -69,7 +84,8 @@ internal sealed partial class EscapeAccess : IGameInputAccess, IGameWorldAccess,
         lock (gate)
         {
             if (active is not { } session)
-                return new(0, 0, Room, Room.PlayerStart, Room.PatrolAt(0), 0, false, false, false, false,
+                return new(EscapeApplicationContext.ApplicationSessionId, 0,
+                    Room, Room.PlayerStart, Room.PatrolAt(0), 0, false, false, false, false,
                     0, GameStage.Preparing, GameOutcome.Running,
                     shutdown ? ExecutionMode.Stopping : ExecutionMode.Active, 0, null,
                     "Preparing room", false, false, false, shutdown, null);

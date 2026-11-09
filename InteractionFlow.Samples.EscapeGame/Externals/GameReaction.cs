@@ -14,7 +14,7 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
     {
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
-        var change = context.World.BeginSession(context.SessionId);
+        var change = context.Session.BeginSession(context.SessionId);
         var failure = GameMutationValidation.Presentation(change, nameof(BeginAsync));
         if (failure is not null || change.Status == MutationStatus.Stopped)
             return GetEnd(failure);

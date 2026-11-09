@@ -31,7 +31,7 @@ public sealed class FlowTests
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.Display.Snapshot();
-            if (snapshot.SessionId == 0)
+            if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
                 return;
 
             heldFrames++;
@@ -62,7 +62,7 @@ public sealed class FlowTests
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.Display.Snapshot();
-            if (snapshot.SessionId == 0)
+            if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
                 return;
             if (firstSession == 0)
                 firstSession = snapshot.SessionId;
@@ -169,7 +169,7 @@ public sealed class FlowTests
     public async Task ShutdownBeforeWorkerStartsIsSuccessful()
     {
         using var fixture = new Fixture();
-        fixture.Window.OnOpen = context => context.World.RequestShutdown();
+        fixture.Window.OnOpen = context => context.Session.RequestShutdown();
 
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
@@ -234,7 +234,7 @@ public sealed class FlowTests
         Assert.True(Contains(end.Exception, previous));
         Assert.True(Contains(end.Exception, canceled));
         Assert.True(ContainsMessage(end.Exception, "Cancellation is not requested."));
-        Assert.True(context.World.ShutdownRequested);
+        Assert.True(context.Session.ShutdownRequested);
         Assert.False(context.Cancellation.HasTask);
     }
 
@@ -369,7 +369,7 @@ public sealed class FlowTests
         public ReactionEnd RequestShutdown(EscapeApplicationContext context) => throw Failure;
         public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
         {
-            context.World.EndSession(context.SessionId);
+            context.Session.EndSession(context.SessionId);
             return GetEnd(previous);
         }
     }

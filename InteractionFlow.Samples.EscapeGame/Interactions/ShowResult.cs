@@ -14,6 +14,14 @@ public sealed class ShowResult(
     ICancellationPort cancellationPort)
     : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
-        => reaction.ShowResultAsync(context);
+    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    {
+        var shown = await reaction.ShowResultAsync(context);
+        if (shown.HasException)
+            return shown;
+
+        // 結果画面はポーズ対象外。提示後に受付を開くまでを一つの目的にまとめます。
+        // 停止との競合は受付Reaction側で再確認します。
+        return await reaction.EnableResultInputAsync(context);
+    }
 }

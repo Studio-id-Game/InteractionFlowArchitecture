@@ -52,8 +52,7 @@ public sealed class FrameTests
     public async Task PauseAndResumeControlDoesNotReplaceExistingInputWait()
     {
         using var app = new EscapeApplicationContext();
-        using var session = app.CreateSessionContext();
-        BeginSelecting(session);
+        using var session = GameTestSteps.Ready(app);
         var pending = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
         using var frames = app.CreateIndependentContext();
         var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
@@ -62,12 +61,12 @@ public sealed class FrameTests
             new GameExceptionHandling(), new GameCancellationHandling());
 
         Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.True(session.World.GetProgress(session.SessionId).Paused);
+        Assert.True(session.Session.GetProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
         Assert.False(session.Input.TrySubmit(session.SessionId, GameCommand.Up));
 
         Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.False(session.World.GetProgress(session.SessionId).Paused);
+        Assert.False(session.Session.GetProgress(session.SessionId).Paused);
         Assert.False(pending.IsCompleted);
         Assert.True(session.Input.TrySubmit(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await pending.WaitAsync(
@@ -78,8 +77,7 @@ public sealed class FrameTests
     public void SkipCapturedForPreviousPresentationDoesNotSkipTheNextOne()
     {
         using var app = new EscapeApplicationContext();
-        using var session = app.CreateSessionContext();
-        BeginSelecting(session);
+        using var session = GameTestSteps.Ready(app);
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(session.SessionId, GameCommand.Up));
         Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(session.SessionId, GameCommand.Confirm));
         var player = session.World.ApplyPlayer(session.SessionId);
@@ -90,7 +88,7 @@ public sealed class FrameTests
             SkipRequested = true,
             Presentation = oldKey
         };
-        Complete(session, oldKey);
+        GameTestSteps.Complete(session, oldKey);
         var enemy = session.World.ApplyEnemy(session.SessionId);
         var newKey = Assert.IsType<PresentationKey>(enemy.Presentation);
         Assert.NotEqual(oldKey, newKey);
@@ -104,22 +102,6 @@ public sealed class FrameTests
         frame.Presentation = newKey;
         Assert.False(control.Change(frames).HasException);
         Assert.True(session.Display.Snapshot().Presentation!.SkipRequested);
-    }
-
-    private static void BeginSelecting(EscapeApplicationContext session)
-    {
-        var beginning = session.World.BeginSession(session.SessionId);
-        Complete(session, Assert.IsType<PresentationKey>(beginning.Presentation));
-        Assert.Equal(MutationStatus.Applied, session.World.EnterSelecting(session.SessionId));
-    }
-
-    private static void Complete(EscapeApplicationContext context, PresentationKey key)
-    {
-        var snapshot = context.Display.Snapshot();
-        var first = context.Presentation.Advance(key, 0, snapshot.ControlRevision);
-        Assert.NotNull(first);
-        context.Presentation.Advance(key, first.DurationSeconds, snapshot.ControlRevision);
-        Assert.True(context.Presentation.TryComplete(key));
     }
 
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation

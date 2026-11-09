@@ -5,7 +5,6 @@ using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Interactions;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
@@ -24,13 +23,13 @@ public sealed class WindowSystemFlow(
         using var frames = context.CreateIndependentContext();
         var input = new FrameState();
         frames.With(input).With(new WindowState());
-        var failures = new List<Exception>();
+        var failures = new FailureCollector();
         Task<InteractionEnd>? execution = null;
 
         try
         {
             var opened = open.ExecuteAsync(frames).GetAwaiter().GetResult();
-            Add(opened.Result, failures);
+            failures.Add(opened.Result);
             if (!opened.HasException)
             {
                 execution = Task.Run(() => game.ExecuteAsync(context));
@@ -48,15 +47,15 @@ public sealed class WindowSystemFlow(
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
         using var shutdown = new EscapeApplicationContext(frames);
-        shutdown.With(new Finishing(FinishingKind.CloseWindow, ToResult(failures)));
+        shutdown.With(new Finishing(FinishingKind.CloseWindow, failures.ToResult()));
         try
         {
             return Task.FromResult(close.ExecuteAsync(shutdown).GetAwaiter().GetResult());
         }
-        catch (Exception error) when (failures.Count > 0)
+        catch (Exception error) when (failures.HasFailure)
         {
             failures.Add(error);
-            throw new AggregateException(failures);
+            throw failures.ToAggregate();
         }
     }
 
@@ -64,12 +63,12 @@ public sealed class WindowSystemFlow(
         EscapeApplicationContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
-        List<Exception> failures)
+        FailureCollector failures)
     {
-        while (!execution.IsCompleted && !frames.World.ShutdownRequested)
+        while (!execution.IsCompleted && !frames.Session.ShutdownRequested)
         {
             var shown = frame.ExecuteAsync(frames).GetAwaiter().GetResult();
-            Add(shown.Result, failures);
+            failures.Add(shown.Result);
             if (shown.HasException || input.ShutdownRequested)
                 break;
 
@@ -77,7 +76,7 @@ public sealed class WindowSystemFlow(
             if (input.PauseRequested || input.SkipRequested)
             {
                 var changed = control.ExecuteAsync(frames).GetAwaiter().GetResult();
-                Add(changed.Result, failures);
+                failures.Add(changed.Result);
                 if (changed.HasException)
                     break;
             }
@@ -88,11 +87,11 @@ public sealed class WindowSystemFlow(
         EscapeApplicationContext context,
         EscapeApplicationContext frames,
         Task<InteractionEnd>? execution,
-        List<Exception> failures)
+        FailureCollector failures)
     {
         // Stop は提示・入力・再開待機を解除します。失敗しても cancel/join/close を続けます。
         using var stopping = frames.CreateIndependentContext();
-        try { Add(stop.ExecuteAsync(stopping).GetAwaiter().GetResult().Result, failures); }
+        try { failures.Add(stop.ExecuteAsync(stopping).GetAwaiter().GetResult().Result); }
         catch (Exception error) { failures.Add(error); }
 
         if (execution is null)
@@ -101,21 +100,8 @@ public sealed class WindowSystemFlow(
         try { if (!execution.IsCompleted) context.Cancellation.Cancel(); }
         catch (Exception error) { failures.Add(error); }
 
-        try { Add(execution.GetAwaiter().GetResult().Result, failures); }
+        try { failures.Add(execution.GetAwaiter().GetResult().Result); }
         catch (Exception error) { failures.Add(error); }
     }
 
-    private static void Add(Result result, List<Exception> failures)
-    {
-        if (!result.Try(out var error))
-            failures.Add(error);
-    }
-
-    private static Result ToResult(List<Exception> failures)
-        => failures.Count switch
-        {
-            0 => Result.Success,
-            1 => failures[0],
-            _ => new AggregateException(failures)
-        };
 }

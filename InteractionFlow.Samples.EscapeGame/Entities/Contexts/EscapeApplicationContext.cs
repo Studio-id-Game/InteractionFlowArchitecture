@@ -8,12 +8,17 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 // 実行・公開は Reaction の責務です。この型はアクセス値とスコープを提供します。
 public sealed class EscapeApplicationContext : FlowContext
 {
+    // 0 は特定のゲームセッションを指さないアプリ/フレーム用スコープです。実セッションIDは1から始まります。
+    public const long ApplicationSessionId = 0;
+
     private EscapeAccess? access;
     public EscapeApplicationContext()
     {
         access = new();
+        SessionId = ApplicationSessionId;
     }
 
+    // 同じ対象セッション・アクセス・Cancellationを共有し、追加値を親へ探索する子スコープです。
     public EscapeApplicationContext(EscapeApplicationContext parent) : base(parent)
     {
         access = parent.Access;
@@ -30,24 +35,29 @@ public sealed class EscapeApplicationContext : FlowContext
         SessionId = sessionId;
     }
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));
+    // 固定された対象ID。アクティブセッションへの自動的な追従は行いません。
     public long SessionId { get; }
     public IGameInputAccess Input => Access;
+    public IGameSessionAccess Session => Access;
     public IGameWorldAccess World => Access;
     public IGameDisplayAccess Display => Access;
     public IGamePresentationAccess Presentation => Access;
     public IGameControlAccess Control => Access;
 
-    // 初期値のセッションを割り当てるだけです。公開・提示開始は BeginSession で行います。
+    // ゲーム実行側から呼びます。新規セッションと親のCancellationを共有する子スコープを作ります。
+    // 初期値の割当てだけを行い、公開・提示開始はSession.BeginSessionを呼ぶReactionが担当します。
     public EscapeApplicationContext CreateSessionContext()
     {
         var shared = Access;
         return new EscapeApplicationContext(this, shared.CreateSession());
     }
+    // 対象IDとアクセスだけを共有する独立ルートです。Cancellationと追加値は共有しません。
     public EscapeApplicationContext CreateIndependentContext() => new(Access, SessionId);
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
         object? provided = typeof(T) == typeof(IGameInputAccess) ? Input
+            : typeof(T) == typeof(IGameSessionAccess) ? Session
             : typeof(T) == typeof(IGameWorldAccess) ? World
             : typeof(T) == typeof(IGameDisplayAccess) ? Display
             : typeof(T) == typeof(IGamePresentationAccess) ? Presentation
@@ -62,7 +72,7 @@ public sealed class EscapeApplicationContext : FlowContext
     }
     protected override void ValidateAdditionalValue<T>(T value)
     {
-        if (value is IGameInputAccess or IGameWorldAccess or IGameDisplayAccess
+        if (value is IGameInputAccess or IGameSessionAccess or IGameWorldAccess or IGameDisplayAccess
             or IGamePresentationAccess or IGameControlAccess || IsEntry(value!))
             throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
     }

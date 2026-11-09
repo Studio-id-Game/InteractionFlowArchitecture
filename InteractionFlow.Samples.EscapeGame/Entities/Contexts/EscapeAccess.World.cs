@@ -2,21 +2,6 @@ namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
 internal sealed partial class EscapeAccess
 {
-    public MutationResult BeginSession(long sessionId)
-    {
-        lock (gate)
-        {
-            if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Progress.Retired)
-                return new(MutationStatus.Stopped);
-            if (session.Progress.Published || active is { Progress.Retired: false })
-                return new(MutationStatus.Rejected);
-            active = session;
-            session.Progress.Published = true;
-            session.Display.Set("Find the key, activate the switch, unlock the door");
-            return Present(session, PresentationKind.Initial, session.Player.Position, session.Player.Position, 0);
-        }
-    }
-
     public MutationStatus ApplySelection(long sessionId, GameCommand command)
     {
         lock (gate)

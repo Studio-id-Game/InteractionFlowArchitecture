@@ -15,13 +15,13 @@ public sealed class GameExceptionHandling : ExceptionHandling
     protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
     {
         Result result = exception;
-        if (context.TryGet<Finishing>(out var finishing) && !finishing.Previous.Try(out var earlierFailure))
-            result = new AggregateException(earlierFailure, exception);
+        if (context.TryGet<Finishing>(out var finishing))
+            result = FailureCollector.Append(finishing.Previous, exception);
 
-        try { context.GetRequired<IGameWorldAccess>().RequestShutdown(); }
+        try { context.GetRequired<IGameSessionAccess>().RequestShutdown(); }
         catch (Exception stopFailure)
         {
-            result = result.Try(out var earlier) ? stopFailure : new AggregateException(earlier, stopFailure);
+            result = FailureCollector.Append(result, stopFailure);
         }
 
         return new(GetEnd(result));

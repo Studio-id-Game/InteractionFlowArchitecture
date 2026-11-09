@@ -10,38 +10,38 @@ internal static class GameTestSteps
     internal static EscapeApplicationContext Ready(EscapeApplicationContext app)
     {
         var session = app.CreateSessionContext();
-        var begin = session.Session.BeginSession(session.SessionId);
+        var begin = session.Gameplay.BeginSession(session.SessionId);
         Assert.Equal(MutationStatus.Applied, begin.Status);
         Complete(session, Assert.IsType<PresentationKey>(begin.Presentation));
-        Assert.Equal(MutationStatus.Applied, session.World.EnterSelecting(session.SessionId));
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.EnterSelecting(session.SessionId));
         return session;
     }
 
     internal static void Complete(EscapeApplicationContext context, PresentationKey key)
     {
-        var revision = context.Display.Snapshot().ControlRevision;
-        var first = context.Presentation.Advance(key, 0, revision);
+        var revision = context.View.Snapshot().ControlRevision;
+        var first = context.View.Advance(key, 0, revision);
         Assert.NotNull(first);
-        context.Presentation.Advance(key, first.DurationSeconds, revision);
-        Assert.True(context.Presentation.TryComplete(key));
+        context.View.Advance(key, first.DurationSeconds, revision);
+        Assert.True(context.View.TryComplete(key));
     }
 
     internal static void PlayTurn(EscapeApplicationContext session, GameCommand command)
     {
         var id = session.SessionId;
-        Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(id, command));
-        Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(id, GameCommand.Confirm));
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(id, command));
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(id, GameCommand.Confirm));
 
-        var player = session.World.ApplyPlayer(id);
+        var player = session.Gameplay.ApplyPlayer(id);
         Assert.Equal(MutationStatus.Applied, player.Status);
         Complete(session, Assert.IsType<PresentationKey>(player.Presentation));
-        if (session.Session.GetProgress(id).Outcome != GameOutcome.Running)
+        if (session.Gameplay.GetProgress(id).Outcome != GameOutcome.Running)
             return;
 
-        var enemy = session.World.ApplyEnemy(id);
+        var enemy = session.Gameplay.ApplyEnemy(id);
         Assert.Equal(MutationStatus.Applied, enemy.Status);
         Complete(session, Assert.IsType<PresentationKey>(enemy.Presentation));
-        if (session.Session.GetProgress(id).Outcome == GameOutcome.Running)
-            Assert.Equal(MutationStatus.Applied, session.World.EnterSelecting(id));
+        if (session.Gameplay.GetProgress(id).Outcome == GameOutcome.Running)
+            Assert.Equal(MutationStatus.Applied, session.Gameplay.EnterSelecting(id));
     }
 }

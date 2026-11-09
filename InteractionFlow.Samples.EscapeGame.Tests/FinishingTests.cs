@@ -253,7 +253,7 @@ public sealed class FinishingTests
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
-            frame.ShutdownRequested = context.Session.ActiveSessionId != 0;
+            frame.ShutdownRequested = context.View.Snapshot().SessionId != 0;
         }
     }
 
@@ -288,14 +288,14 @@ public sealed class FinishingTests
         public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
         {
             Assert.Equal(FinishingKind.EndSession, context.GetRequired<Finishing>().Kind);
-            context.Session.EndSession(context.SessionId);
+            context.Gameplay.EndSession(context.SessionId);
             Ended = true;
             return GetEnd(previous);
         }
         public ReactionEnd RequestShutdown(EscapeApplicationContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
-            context.Session.RequestShutdown();
+            context.Lifetime.RequestShutdown();
             return GetEnd();
         }
     }

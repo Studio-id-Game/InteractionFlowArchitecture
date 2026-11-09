@@ -49,7 +49,7 @@ public sealed class ResultInteractionTests
         var reaction = new ResultReaction { Enable = _ => throw failure };
         var end = await Create(reaction).ExecuteAsync(context);
         Assert.Same(failure, end.Exception);
-        Assert.True(context.Session.ShutdownRequested);
+        Assert.True(context.Lifetime.ShutdownRequested);
         Assert.False(context.Cancellation.HasTask);
     }
 
@@ -65,7 +65,7 @@ public sealed class ResultInteractionTests
         {
             Show = current =>
             {
-                current.Session.RequestShutdown();
+                current.Lifetime.RequestShutdown();
                 if (cancel) current.Cancellation.Cancel();
                 return new(ResultReaction.End());
             },
@@ -75,7 +75,7 @@ public sealed class ResultInteractionTests
             .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.False(end.HasException);
         Assert.False(context.Cancellation.HasTask);
-        Assert.False(app.Display.Snapshot().AcceptingInput);
+        Assert.False(app.View.Snapshot().AcceptingInput);
     }
 
     private static ShowResult Create(IGameReaction reaction)

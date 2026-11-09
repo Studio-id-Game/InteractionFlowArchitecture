@@ -14,7 +14,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
 
     public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
     {
-        try { context.Session.EndSession(context.SessionId); }
+        try { context.Gameplay.EndSession(context.SessionId); }
         catch (Exception error)
         {
             previous = FailureCollector.Append(previous, error);
@@ -26,7 +26,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
     public ReactionEnd RequestShutdown(EscapeApplicationContext context)
     {
         // 停止・入力閉鎖・提示解除・再開待機解除は同じ共有アクセス境界で行います。
-        context.Session.RequestShutdown();
+        context.Lifetime.RequestShutdown();
         return GetEnd();
     }
 }

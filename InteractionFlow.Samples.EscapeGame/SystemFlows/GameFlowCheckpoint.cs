@@ -10,15 +10,15 @@ internal static class GameFlowCheckpoint
 {
     internal static async ValueTask<bool> CanContinueAsync(EscapeApplicationContext context, InteractionEnd end)
     {
-        if (end.HasException || context.Session.GetProgress(context.SessionId).Stopping)
+        if (end.HasException || context.Gameplay.GetProgress(context.SessionId).Stopping)
             return false;
 
         try
         {
-            return await context.Control.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken())
-                && !context.Session.GetProgress(context.SessionId).Stopping;
+            return await context.Gameplay.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken())
+                && !context.Gameplay.GetProgress(context.SessionId).Stopping;
         }
-        catch (OperationCanceledException) when (context.Session.ShutdownRequested)
+        catch (OperationCanceledException) when (context.Lifetime.ShutdownRequested)
         {
             return false;
         }

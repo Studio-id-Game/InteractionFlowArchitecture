@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-internal sealed partial class EscapeAccess : IGameInputReader, IGameInputWriter, IGameSessionAccess,
-    IGameWorldAccess, IGameDisplayAccess, IGameControlAccess, IGamePresentationAccess
+internal sealed partial class EscapeAccess : IGameplayAccess, IGameViewAccess, IApplicationLifetimeAccess
 {
     private readonly object gate = new();
     private readonly Dictionary<long, SessionRuntime> sessions = new();
@@ -13,7 +12,7 @@ internal sealed partial class EscapeAccess : IGameInputReader, IGameInputWriter,
     private bool shutdown;
     private static RoomDefinition Room => RoomDefinition.Default;
 
-    internal long CreateSession()
+    public long CreateSession()
     {
         lock (gate)
         {
@@ -22,15 +21,6 @@ internal sealed partial class EscapeAccess : IGameInputReader, IGameInputWriter,
             var id = ++nextSession;
             sessions.Add(id, new SessionRuntime(id));
             return id;
-        }
-    }
-
-    public long ActiveSessionId
-    {
-        get
-        {
-            lock (gate)
-                return active?.Progress.Id ?? EscapeApplicationContext.ApplicationSessionId;
         }
     }
 

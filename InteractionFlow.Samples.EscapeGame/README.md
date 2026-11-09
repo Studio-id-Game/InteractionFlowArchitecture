@@ -55,8 +55,8 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
 1. [RaylibWindowOperation](./Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
    [PresentFrame](./Interactions/PresentFrame.cs) が優先順位を確認してGameOperationへ配送します。
 2. [SelectAction](./Interactions/SelectAction.cs) が入力Operationを一件待ち、
-   [GameReaction.SelectAsync](./Externals/GameReaction.cs) がWorldアクセスへ選択・取消・確定を要求します。
-3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がSessionの進行参照から確定を確認し、
+   [GameReaction.SelectAsync](./Externals/GameReaction.cs) がGameplayへ選択・取消・確定を要求します。
+3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
 4. [RaylibWindowReaction](./Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
    フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
@@ -69,26 +69,28 @@ Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終�
 ## Contextとアクセスの所有
 
 [EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs)を全フロー・Interaction・Portで使います。
-AccessContractsの分類を見直す前提としてContextは一種類に戻し、画面側とゲーム側の公開範囲は分けていません。
+Contextは一種類のまま、Access契約をゲーム実行・画面接続・全体寿命の3つへ再編しています。
+画面側とゲーム側のContext公開範囲はまだ分けていません。
 関心別Stateの協調更新は、共有する一つのEscapeAccessとgateで行います。
 プロパティとTryGetCoreは同じアクセス契約を提供し、固定契約とEntryの追加は拒否します。
 
 | アクセス | 用途 |
 | --- | --- |
-| Session | 公開・終了・アプリ停止、進行状態の参照 |
-| World | 選択、プレイヤー・敵行動、結果表示、選択・結果の受付開始 |
-| Input / InputWriter | 一件の入力待機 / セッションID付き入力の送信 |
-| Control | ポーズ・再開と協調的な再開待機 |
-| Display / Presentation | 一貫した表示の取得、識別付き提示要求の進行・完了 |
+| Gameplay / IGameplayAccess | セッション割り当て・開始・終了、進行参照、入力待機、ゲーム更新、再開・提示完了待機 |
+| View / IGameViewAccess | 表示取得、入力送信、進行参照、ポーズ変更・省略要求、提示進行・完了通知 |
+| Lifetime / IApplicationLifetimeAccess | アプリ全体の停止要求・参照 |
 
-Session / Worldの分離は、同じアクセス管理の呼び分けです。
-管理オブジェクトやロックを増やしていません。
+3契約は同じアクセス管理の呼び分けで、管理オブジェクトやロックを増やしていません。
+GetProgressはゲームの進行判断と画面側のポーズ切替の両方で使うため、GameplayとViewへ公開します。
+共通の例外・取消HandlerはLifetimeだけを要求します。
+CreateSessionは初期状態の割り当て、BeginSessionはReactionによる公開・提示開始で、役割は維持しています。
 今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
 
 `ApplicationSessionId = 0`は、特定のゲームセッションを指さないアプリの固定対象です。
 WindowSystemFlowはルートContextをGameSystemFlowへ直接渡します。
 CreateSessionContextは新規ID・初期状態を割り当て、ルートのCancellationと値探索を引き継ぎます。
 セッションの公開はBeginSessionのReactionが担当します。
+直接割り当てる場合もGameplay.CreateSessionで取得したIDを使い、公開はBeginSessionまで行いません。
 CreateIndependentContextはContextInheritance.Noneを使い、アクセスと対象IDだけを共有してCancellationと追加値を分離します。
 型付きの親ありContextは、アクセス・対象ID・Cancellationを共有し、追加値を親へ探索します。
 各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
@@ -136,7 +138,15 @@ GameReactionTestsは通常の無効選択と内部前提違反、FinishingTests�
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
 
-単一Contextへ戻した後は、全体ビルドが警告・エラー0件、EscapeGame94件と他プロジェクト470件が成功しています。
+3Accessへの再編後は、全体ビルドが警告・エラー0件、EscapeGame97件と他プロジェクト470件が成功しています。
+Lifetime専用Contextでの共通Handler実行、Gameplay経由の未公開セッション割り当てを追加検証しました。
+Release簡易計測の通常PresentFrameは488B/回・約227～238nsで、割り当て量を維持しました。
+実画面での再確認は未実施です。再編の根拠とContext契約の次段階は
+[Access契約の再分類プラン](../docs/design-notes/ESCAPE_GAME_ACCESS_CONTRACT_REVIEW_PLAN.md)を参照してください。
+
+### 参考：単一Contextへ戻した時点
+
+全体ビルドが警告・エラー0件、EscapeGame94件と他プロジェクト470件が成功しました。
 分割専用のテストは統合し、ルート値の親探索と独立フレーム・終了スコープの分離を検証しています。
 Release簡易計測の通常PresentFrameは488B/回・約245～249nsで、割り当て量を維持しました。
 実画面での再確認は未実施です。

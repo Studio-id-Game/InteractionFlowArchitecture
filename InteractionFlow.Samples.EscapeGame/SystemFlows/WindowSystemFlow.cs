@@ -65,7 +65,7 @@ public sealed class WindowSystemFlow(
         Task<InteractionEnd> execution,
         FailureCollector failures)
     {
-        while (!execution.IsCompleted && !frames.Session.ShutdownRequested)
+        while (!execution.IsCompleted && !frames.Lifetime.ShutdownRequested)
         {
             var shown = frame.ExecuteAsync(frames).GetAwaiter().GetResult();
             failures.Add(shown.Result);

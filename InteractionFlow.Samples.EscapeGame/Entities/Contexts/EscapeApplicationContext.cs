@@ -38,16 +38,12 @@ public sealed class EscapeApplicationContext : FlowContext
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));
     // 固定された対象ID。アクティブセッションへの自動的な追従は行いません。
     public long SessionId { get; }
-    public IGameInputReader Input => Access;
-    public IGameInputWriter InputWriter => Access;
-    public IGameSessionAccess Session => Access;
-    public IGameWorldAccess World => Access;
-    public IGameDisplayAccess Display => Access;
-    public IGamePresentationAccess Presentation => Access;
-    public IGameControlAccess Control => Access;
+    public IGameplayAccess Gameplay => Access;
+    public IGameViewAccess View => Access;
+    public IApplicationLifetimeAccess Lifetime => Access;
 
     // ゲーム実行側から呼びます。新規セッションと親のCancellationを共有する子スコープを作ります。
-    // 初期値の割当てだけを行い、公開・提示開始はSession.BeginSessionを呼ぶReactionが担当します。
+    // 初期値の割当てだけを行い、公開・提示開始はGameplay.BeginSessionを呼ぶReactionが担当します。
     public EscapeApplicationContext CreateSessionContext()
     {
         var shared = Access;
@@ -58,13 +54,9 @@ public sealed class EscapeApplicationContext : FlowContext
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
-        object? provided = typeof(T) == typeof(IGameInputReader) ? Input
-            : typeof(T) == typeof(IGameInputWriter) ? InputWriter
-            : typeof(T) == typeof(IGameSessionAccess) ? Session
-            : typeof(T) == typeof(IGameWorldAccess) ? World
-            : typeof(T) == typeof(IGameDisplayAccess) ? Display
-            : typeof(T) == typeof(IGamePresentationAccess) ? Presentation
-            : typeof(T) == typeof(IGameControlAccess) ? Control : null;
+        object? provided = typeof(T) == typeof(IGameplayAccess) ? Gameplay
+            : typeof(T) == typeof(IGameViewAccess) ? View
+            : typeof(T) == typeof(IApplicationLifetimeAccess) ? Lifetime : null;
         if (provided is T found)
         {
             value = found;
@@ -76,8 +68,7 @@ public sealed class EscapeApplicationContext : FlowContext
 
     protected override void ValidateAdditionalValue<T>(T value)
     {
-        if (value is IGameInputReader or IGameInputWriter or IGameSessionAccess or IGameWorldAccess
-            or IGameDisplayAccess or IGamePresentationAccess or IGameControlAccess || IsEntry(value!))
+        if (value is IGameplayAccess or IGameViewAccess or IApplicationLifetimeAccess || IsEntry(value!))
             throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
     }
 

@@ -21,7 +21,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             {
                 created = context.CreateSessionContext();
             }
-            catch (InvalidOperationException) when (context.Session.ShutdownRequested)
+            catch (InvalidOperationException) when (context.Lifetime.ShutdownRequested)
             {
                 // ウィンドウ停止とセッション生成が競合した通常終了です。
                 using var stopped = context.CreateIndependentContext();
@@ -36,10 +36,10 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             {
                 var end = await sessionFlow.ExecuteAsync(session);
                 outcome = end.Result;
-                retry = !end.HasException && session.Session.GetProgress(session.SessionId).RetryRequested;
+                retry = !end.HasException && session.Gameplay.GetProgress(session.SessionId).RetryRequested;
             }
             // Interaction間の再開待機も、実行自身へのキャンセルなら通常停止です。
-            catch (OperationCanceledException) when (session.Session.ShutdownRequested
+            catch (OperationCanceledException) when (session.Lifetime.ShutdownRequested
                 || session.Cancellation.IsCancellationRequested)
             {
                 outcome = Result.Success;
@@ -59,7 +59,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
                 throw FailureCollector.Append(outcome, error);
             }
 
-            if (ended.HasException || !retry || context.Session.ShutdownRequested)
+            if (ended.HasException || !retry || context.Lifetime.ShutdownRequested)
                 return ended;
         }
     }

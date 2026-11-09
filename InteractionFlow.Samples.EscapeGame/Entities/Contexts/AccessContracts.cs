@@ -3,44 +3,39 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-public interface IGameInputReader
+// ゲーム側が入力を待ち、論理状態を進め、その提示の完了を待つための契約です。
+public interface IGameplayAccess
 {
-    ValueTask<GameCommand> ReadAsync(long sessionId, CancellationToken token);
-}
-public interface IGameInputWriter
-{
-    bool TrySubmit(long sessionId, GameCommand command);
-}
-// セッションの公開・寿命・進行参照。ゲーム内の行動更新とは区別します。
-public interface IGameSessionAccess
-{
-    long ActiveSessionId { get; }
-    bool ShutdownRequested { get; }
-    GameProgress GetProgress(long sessionId);
+    long CreateSession();
     MutationResult BeginSession(long sessionId);
     void EndSession(long sessionId);
-    void RequestShutdown();
-}
-// 同じ同期管理の下で行う、選択・行動・提示段階の更新です。
-public interface IGameWorldAccess
-{
+    GameProgress GetProgress(long sessionId);
+    ValueTask<GameCommand> ReadAsync(long sessionId, CancellationToken token);
     MutationStatus ApplySelection(long sessionId, GameCommand command);
     MutationResult ApplyPlayer(long sessionId);
     MutationResult ApplyEnemy(long sessionId);
     MutationResult ShowResult(long sessionId);
     MutationStatus EnterSelecting(long sessionId);
     MutationStatus EnableResultInput(long sessionId);
-}
-public interface IGameDisplayAccess { GameSnapshot Snapshot(); }
-public interface IGameControlAccess
-{
-    bool TrySetPaused(long sessionId, bool paused);
     ValueTask<bool> WaitForActiveAsync(long sessionId, CancellationToken token);
+    ValueTask<PresentationCompletion> WaitForPresentationAsync(PresentationKey key, CancellationToken token);
 }
-public interface IGamePresentationAccess
+
+// 画面側が表示を読み、入力・制御要求と描画後の提示完了を通知するための契約です。
+public interface IGameViewAccess
 {
-    ValueTask<PresentationCompletion> WaitAsync(PresentationKey key, CancellationToken token);
+    GameSnapshot Snapshot();
+    bool TrySubmit(long sessionId, GameCommand command);
+    GameProgress GetProgress(long sessionId);
+    bool TrySetPaused(long sessionId, bool paused);
     PresentationSnapshot? Advance(PresentationKey key, double elapsedSeconds, long controlRevision);
     bool TryComplete(PresentationKey key);
     bool TrySkip(PresentationKey key);
+}
+
+// 全体停止は、通常の両実行経路と共通Handlerから利用します。
+public interface IApplicationLifetimeAccess
+{
+    bool ShutdownRequested { get; }
+    void RequestShutdown();
 }

@@ -14,7 +14,7 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
     {
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
-        var change = context.Session.BeginSession(context.SessionId);
+        var change = context.Gameplay.BeginSession(context.SessionId);
         var failure = GameMutationValidation.Presentation(change, nameof(BeginAsync));
         if (failure is not null || change.Status == MutationStatus.Stopped)
             return GetEnd(failure);
@@ -25,9 +25,9 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.World.EnterSelecting(context.SessionId);
+            var status = context.Gameplay.EnterSelecting(context.SessionId);
             if (status == MutationStatus.Deferred)
                 continue;
 
@@ -40,9 +40,9 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.World.ApplySelection(context.SessionId, command);
+            var status = context.Gameplay.ApplySelection(context.SessionId, command);
             if (status == MutationStatus.Deferred)
                 continue;
 
@@ -56,10 +56,10 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
             // 事前の再開確認直後にもポーズし得るため、更新側の Deferred 検査は残します。
-            var change = context.World.ApplyPlayer(context.SessionId);
+            var change = context.Gameplay.ApplyPlayer(context.SessionId);
             if (change.Status == MutationStatus.Deferred)
                 continue;
 
@@ -76,9 +76,9 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var change = context.World.ApplyEnemy(context.SessionId);
+            var change = context.Gameplay.ApplyEnemy(context.SessionId);
             if (change.Status == MutationStatus.Deferred)
                 continue;
 
@@ -95,9 +95,9 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var change = context.World.ShowResult(context.SessionId);
+            var change = context.Gameplay.ShowResult(context.SessionId);
             if (change.Status == MutationStatus.Deferred)
                 continue;
 
@@ -114,9 +114,9 @@ public sealed class GameReaction : Reaction, IGameReaction
     public async ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
     {
         var token = context.Cancellation.GetToken();
-        while (await context.Control.WaitForActiveAsync(context.SessionId, token))
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.World.EnableResultInput(context.SessionId);
+            var status = context.Gameplay.EnableResultInput(context.SessionId);
             if (status == MutationStatus.Deferred)
                 continue;
 
@@ -129,12 +129,12 @@ public sealed class GameReaction : Reaction, IGameReaction
     private static async ValueTask<ReactionEnd> PresentAsync(EscapeApplicationContext context, PresentationKey key)
     {
         var token = context.Cancellation.GetToken();
-        var completion = await context.Presentation.WaitAsync(key, token);
+        var completion = await context.Gameplay.WaitForPresentationAsync(key, token);
         if (completion == PresentationCompletion.Stopped)
             return GetEnd();
 
         // 通知受領後のポーズも、次のゲーム段階へ進む前に待ちます。
-        await context.Control.WaitForActiveAsync(context.SessionId, token);
+        await context.Gameplay.WaitForActiveAsync(context.SessionId, token);
         return GetEnd();
     }
 }

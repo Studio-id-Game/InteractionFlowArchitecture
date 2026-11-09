@@ -18,10 +18,10 @@ internal static class EscapeFrameMeasurements
     {
         using var root = new EC.EscapeApplicationContext();
         using var session = root.CreateSessionContext();
-        var initial = session.Session.BeginSession(session.SessionId).Presentation!.Value;
-        session.Presentation.Advance(initial, 0, 0);
-        if (!session.Presentation.TryComplete(initial)
-            || session.World.EnterSelecting(session.SessionId) != E.MutationStatus.Applied)
+        var initial = session.Gameplay.BeginSession(session.SessionId).Presentation!.Value;
+        session.View.Advance(initial, 0, 0);
+        if (!session.View.TryComplete(initial)
+            || session.Gameplay.EnterSelecting(session.SessionId) != E.MutationStatus.Applied)
             throw new InvalidOperationException("Failed to initialize measurement session.");
 
         using var frames = root.CreateIndependentContext();
@@ -33,7 +33,7 @@ internal static class EscapeFrameMeasurements
         var frame = new EI.PresentFrame(poll, draw, new EF.GameOperation(),
             new EF.GameExceptionHandling(), new EF.GameCancellationHandling());
 
-        Program.Measure("Escape Display.Snapshot", () => sink = root.Display.Snapshot());
+        Program.Measure("Escape Display.Snapshot", () => sink = root.View.Snapshot());
         Program.Measure("Escape idle frame direct (two snapshots)", () =>
         {
             poll.Poll(frames);
@@ -50,7 +50,7 @@ internal static class EscapeFrameMeasurements
         public void Poll(EC.EscapeApplicationContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
-            var state = context.Display.Snapshot();
+            var state = context.View.Snapshot();
             var frame = context.GetRequired<E.FrameState>();
             frame.SessionId = state.SessionId;
             frame.Presentation = state.Presentation?.Key;
@@ -67,7 +67,7 @@ internal static class EscapeFrameMeasurements
         public ReactionEnd Draw(EC.EscapeApplicationContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
-            sink = context.Display.Snapshot();
+            sink = context.View.Snapshot();
             return GetEnd();
         }
     }

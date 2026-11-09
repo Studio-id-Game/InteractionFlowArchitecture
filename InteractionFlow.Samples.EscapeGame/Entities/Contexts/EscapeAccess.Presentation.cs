@@ -18,7 +18,7 @@ internal sealed partial class EscapeAccess
         return new(MutationStatus.Applied, key);
     }
 
-    public async ValueTask<PresentationCompletion> WaitAsync(PresentationKey key, CancellationToken token)
+    public async ValueTask<PresentationCompletion> WaitForPresentationAsync(PresentationKey key, CancellationToken token)
     {
         Task<PresentationCompletion> task;
         lock (gate)

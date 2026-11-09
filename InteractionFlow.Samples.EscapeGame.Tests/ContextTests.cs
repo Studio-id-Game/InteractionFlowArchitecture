@@ -20,23 +20,20 @@ public sealed class ContextTests
         using var child = new EscapeApplicationContext(session);
         using var independent = session.CreateIndependentContext();
 
-        Assert.Same(app.World, session.World);
-        Assert.Same(app.Session, child.Session);
-        Assert.Same(app.Input, child.Input);
-        Assert.Same(app.InputWriter, child.InputWriter);
-        Assert.Same(app.Display, child.Display);
-        Assert.Same(app.Presentation, child.Presentation);
-        Assert.Same(app.Control, child.Control);
+        Assert.Same(app.Gameplay, session.Gameplay);
+        Assert.Same(app.Gameplay, child.Gameplay);
+        Assert.Same(app.View, child.View);
+        Assert.Same(app.Lifetime, child.Lifetime);
         Assert.Same(app.Cancellation, session.Cancellation);
         Assert.Same(app.Cancellation, child.Cancellation);
         Assert.Same(local, child.GetRequired<LocalValue>());
         Assert.NotSame(session.Cancellation, independent.Cancellation);
         Assert.Equal(session.SessionId, independent.SessionId);
         Assert.False(independent.TryGet<LocalValue>(out _));
-        Assert.Same(app.World, independent.GetRequired<IGameWorldAccess>());
-        Assert.Same(app.InputWriter, app.GetRequired<IGameInputWriter>());
-        Assert.Same(app.Input, app.GetRequired<IGameInputReader>());
-        Assert.Same(app.Display, app.GetRequired<IGameDisplayAccess>());
+        Assert.Same(app.Gameplay, independent.GetRequired<IGameplayAccess>());
+        Assert.Same(app.View, app.GetRequired<IGameViewAccess>());
+        Assert.Same(app.Lifetime, app.GetRequired<IApplicationLifetimeAccess>());
+        Assert.False(app.TryGet<EscapeAccess>(out _));
     }
 
     [Fact]
@@ -80,7 +77,7 @@ public sealed class ContextTests
         Assert.Same(local, child.GetRequired<object>());
         Assert.Same(cancellationValue, child.GetRequired<CancellationObject>());
         Assert.Same(originalCancellation, child.Cancellation);
-        Assert.Same(app.Display, child.GetRequired<IGameDisplayAccess>());
+        Assert.Same(app.View, child.GetRequired<IGameViewAccess>());
         var replacement = new LocalValue("child object");
         child.With<object>(replacement);
         Assert.Same(replacement, child.GetRequired<object>());
@@ -99,12 +96,12 @@ public sealed class ContextTests
         using var session = app.CreateSessionContext();
 
         Assert.Equal(EscapeApplicationContext.ApplicationSessionId, app.SessionId);
-        Assert.Equal(EscapeApplicationContext.ApplicationSessionId, app.Session.ActiveSessionId);
+        Assert.Equal(EscapeApplicationContext.ApplicationSessionId, app.View.Snapshot().SessionId);
         Assert.True(session.SessionId > EscapeApplicationContext.ApplicationSessionId);
-        Assert.Equal(MutationStatus.Applied, session.Session.BeginSession(session.SessionId).Status);
-        Assert.Equal(session.SessionId, app.Session.ActiveSessionId);
-        Assert.True(app.Session.GetProgress(app.SessionId).Stopping);
-        Assert.Equal(GameStage.Preparing, session.Session.GetProgress(session.SessionId).Stage);
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
+        Assert.Equal(session.SessionId, app.View.Snapshot().SessionId);
+        Assert.True(app.Gameplay.GetProgress(app.SessionId).Stopping);
+        Assert.Equal(GameStage.Preparing, session.Gameplay.GetProgress(session.SessionId).Stage);
 
         using var sameTarget = session.CreateIndependentContext();
         Assert.Equal(session.SessionId, sameTarget.SessionId);
@@ -117,24 +114,22 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var other = new EscapeApplicationContext();
-        var replacement = new SessionOnlyAccess(other.Session);
-        using var entry = new RefEntry<object>(other.World);
+        var replacement = new LifetimeOnlyAccess(other.Lifetime);
+        using var entry = new RefEntry<object>(other.Gameplay);
 
         Assert.Throws<ArgumentException>(() => app.With<object>(replacement));
-        Assert.Throws<ArgumentException>(() => app.With<object>(other.World));
-        Assert.Throws<ArgumentException>(() => app.With<object>(other.Input));
-        Assert.Throws<ArgumentException>(() => app.With<object>(other.InputWriter));
-        Assert.Throws<ArgumentException>(() => app.With<object>(other.Display));
+        Assert.Throws<ArgumentException>(() => app.With<object>(other.Gameplay));
+        Assert.Throws<ArgumentException>(() => app.With<object>(other.View));
         Assert.Throws<ArgumentException>(() => app.With(entry));
-        Assert.Same(app.Session, app.GetRequired<IGameSessionAccess>());
-        Assert.Same(app.Input, app.GetRequired<IGameInputReader>());
-        Assert.Same(app.InputWriter, app.GetRequired<IGameInputWriter>());
-        using var sessionChild = new FlowContext(app).With<IGameSessionAccess>(replacement);
+        Assert.Same(app.Lifetime, app.GetRequired<IApplicationLifetimeAccess>());
+        Assert.Same(app.Gameplay, app.GetRequired<IGameplayAccess>());
+        Assert.Same(app.View, app.GetRequired<IGameViewAccess>());
+        using var sessionChild = new FlowContext(app).With<IApplicationLifetimeAccess>(replacement);
         using var entryChild = new FlowContext(app).With(entry);
-        Assert.Same(replacement, sessionChild.GetRequired<IGameSessionAccess>());
-        Assert.Same(app.World, sessionChild.GetRequired<IGameWorldAccess>());
-        Assert.Same(other.World, entryChild.GetRequired<IGameWorldAccess>());
-        Assert.Same(app.World, app.GetRequired<IGameWorldAccess>());
+        Assert.Same(replacement, sessionChild.GetRequired<IApplicationLifetimeAccess>());
+        Assert.Same(app.Gameplay, sessionChild.GetRequired<IGameplayAccess>());
+        Assert.Same(other.Gameplay, entryChild.GetRequired<IGameplayAccess>());
+        Assert.Same(app.Gameplay, app.GetRequired<IGameplayAccess>());
     }
 
     [Fact]
@@ -142,19 +137,19 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        var read = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+        var read = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
 
-        Assert.True(app.InputWriter.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.True(app.View.TrySubmit(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await read.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        Assert.Equal(MutationStatus.Applied, session.World.ApplySelection(session.SessionId, GameCommand.Up));
-        var next = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(session.SessionId, GameCommand.Up));
+        var next = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
         app.Cancellation.Cancel();
 
         Assert.Same(app.Cancellation, session.Cancellation);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await next.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        Assert.False(app.InputWriter.TrySubmit(session.SessionId, GameCommand.Confirm));
+        Assert.False(app.View.TrySubmit(session.SessionId, GameCommand.Confirm));
         using var frames = app.CreateIndependentContext();
         Assert.False(frames.Cancellation.IsCancellationRequested);
     }
@@ -168,7 +163,7 @@ public sealed class ContextTests
         using var frames = app.CreateIndependentContext();
         using var session = GameTestSteps.Ready(app);
         var original = app.Cancellation.GetToken();
-        var read = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+        var read = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
         var source = cancelFromSession ? session.Cancellation : app.Cancellation;
 
         source.Cancel();
@@ -181,8 +176,8 @@ public sealed class ContextTests
         Assert.False(session.Cancellation.IsCancellationRequested);
         Assert.False(frames.Cancellation.IsCancellationRequested);
         Assert.NotEqual(original, app.Cancellation.GetToken());
-        var retry = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken());
-        Assert.True(app.InputWriter.TrySubmit(session.SessionId, GameCommand.Up));
+        var retry = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken());
+        Assert.True(app.View.TrySubmit(session.SessionId, GameCommand.Up));
         Assert.Equal(GameCommand.Up, await retry);
     }
 
@@ -192,27 +187,23 @@ public sealed class ContextTests
         using var app = new EscapeApplicationContext();
         using var independent = app.CreateIndependentContext();
         var cancellation = app.Cancellation;
-        var sessionAccess = app.Session;
+        var sessionAccess = app.Gameplay;
 
         app.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => app.Input);
-        Assert.Throws<ObjectDisposedException>(() => app.InputWriter);
-        Assert.Throws<ObjectDisposedException>(() => app.Session);
-        Assert.Throws<ObjectDisposedException>(() => app.World);
-        Assert.Throws<ObjectDisposedException>(() => app.Display);
-        Assert.Throws<ObjectDisposedException>(() => app.Presentation);
-        Assert.Throws<ObjectDisposedException>(() => app.Control);
+        Assert.Throws<ObjectDisposedException>(() => app.Gameplay);
+        Assert.Throws<ObjectDisposedException>(() => app.View);
+        Assert.Throws<ObjectDisposedException>(() => app.Lifetime);
         Assert.Throws<ObjectDisposedException>(() => app.CreateSessionContext());
         Assert.Throws<ObjectDisposedException>(() => app.CreateIndependentContext());
         Assert.Throws<ObjectDisposedException>(() => new EscapeApplicationContext(app));
-        Assert.Throws<ObjectDisposedException>(() => app.GetRequired<IGameDisplayAccess>());
+        Assert.Throws<ObjectDisposedException>(() => app.GetRequired<IGameViewAccess>());
         Assert.Same(cancellation, app.Cancellation);
         Assert.False(cancellation.IsCancellationRequested);
-        Assert.Same(sessionAccess, independent.Session);
-        Assert.False(independent.Session.ShutdownRequested);
+        Assert.Same(sessionAccess, independent.Gameplay);
+        Assert.False(independent.Lifetime.ShutdownRequested);
         using var session = independent.CreateSessionContext();
-        Assert.Equal(MutationStatus.Applied, session.Session.BeginSession(session.SessionId).Status);
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
     }
 
     [Theory]
@@ -231,18 +222,14 @@ public sealed class ContextTests
         Assert.Same(cancellation, surviving.Cancellation);
         Assert.False(cancellation.IsCancellationRequested);
         using var session = surviving.CreateSessionContext();
-        Assert.Equal(MutationStatus.Applied, session.Session.BeginSession(session.SessionId).Status);
-        Assert.Equal(session.SessionId, surviving.Display.Snapshot().SessionId);
-        Assert.False(surviving.Session.ShutdownRequested);
+        Assert.Equal(MutationStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
+        Assert.Equal(session.SessionId, surviving.View.Snapshot().SessionId);
+        Assert.False(surviving.Lifetime.ShutdownRequested);
     }
 
-    private sealed class SessionOnlyAccess(IGameSessionAccess inner) : IGameSessionAccess
+    private sealed class LifetimeOnlyAccess(IApplicationLifetimeAccess inner) : IApplicationLifetimeAccess
     {
-        public long ActiveSessionId => inner.ActiveSessionId;
         public bool ShutdownRequested => inner.ShutdownRequested;
-        public GameProgress GetProgress(long sessionId) => inner.GetProgress(sessionId);
-        public MutationResult BeginSession(long sessionId) => inner.BeginSession(sessionId);
-        public void EndSession(long sessionId) => inner.EndSession(sessionId);
         public void RequestShutdown() => inner.RequestShutdown();
     }
 

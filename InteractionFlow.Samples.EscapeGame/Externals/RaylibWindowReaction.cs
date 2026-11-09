@@ -49,12 +49,12 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     public ReactionEnd Draw(EscapeApplicationContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        var state = context.Display.Snapshot();
+        var state = context.View.Snapshot();
         var presentation = state.Presentation;
         if (presentation is not null)
         {
             var elapsed = previousPresentation == presentation.Key ? RL.GetFrameTime() : 0;
-            presentation = context.Presentation.Advance(presentation.Key, elapsed, previousControlRevision);
+            presentation = context.View.Advance(presentation.Key, elapsed, previousControlRevision);
         }
         previousPresentation = state.Presentation?.Key;
         previousControlRevision = state.ControlRevision;
@@ -73,7 +73,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
         if (presentation is not null
             && (presentation.SkipRequested || presentation.ElapsedSeconds >= presentation.DurationSeconds))
-            context.Presentation.TryComplete(presentation.Key);
+            context.View.TryComplete(presentation.Key);
         return GetEnd();
     }
 

@@ -29,7 +29,7 @@ public sealed class GameCancellationHandling : CancellationHandling
         if (!resetSucceeded)
             failures.Add(waitFailure!);
 
-        try { context.GetRequired<IGameSessionAccess>().RequestShutdown(); }
+        try { context.GetRequired<IApplicationLifetimeAccess>().RequestShutdown(); }
         catch (Exception error)
         {
             failures.Add(error);

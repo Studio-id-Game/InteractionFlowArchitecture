@@ -29,7 +29,7 @@ public sealed class FlowTests
         var canceledAtBoundary = false;
         fixture.Game.AfterBegin = context =>
         {
-            Assert.False(context.Session.ShutdownRequested);
+            Assert.False(context.Lifetime.ShutdownRequested);
             context.Cancellation.Cancel();
             canceledAtBoundary = true;
         };
@@ -82,7 +82,7 @@ public sealed class FlowTests
         Assert.False(end.HasException);
         Assert.Equal("open", fixture.Window.Events[0]);
         Assert.Equal("close", fixture.Window.Events[^1]);
-        Assert.True(fixture.Context.Session.ShutdownRequested);
+        Assert.True(fixture.Context.Lifetime.ShutdownRequested);
         Assert.True(fixture.Session.Ended);
         Assert.False(fixture.Context.Cancellation.HasTask);
     }
@@ -103,7 +103,7 @@ public sealed class FlowTests
             && fixture.Game.Cancellation is { HasTask: false };
         fixture.Input.PollFrame = frames =>
         {
-            if (canceledDuringPresentation || frames.Display.Snapshot().Presentation is null)
+            if (canceledDuringPresentation || frames.View.Snapshot().Presentation is null)
                 return;
             Assert.NotSame(fixture.Context.Cancellation, frames.Cancellation);
             fixture.Context.Cancellation.Cancel();
@@ -126,7 +126,7 @@ public sealed class FlowTests
         if (failStop)
             Assert.True(Contains(end.Exception, stopFailure));
         Assert.Equal("close", fixture.Window.Events[^1]);
-        Assert.True(fixture.Context.Session.ShutdownRequested);
+        Assert.True(fixture.Context.Lifetime.ShutdownRequested);
         Assert.True(requestedToken.IsCancellationRequested);
         Assert.False(fixture.Context.Cancellation.HasTask);
     }
@@ -139,14 +139,14 @@ public sealed class FlowTests
         fixture.Window.CompletePresentations = false;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.Display.Snapshot();
+            var snapshot = context.View.Snapshot();
             if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
                 return;
 
             heldFrames++;
             Assert.Equal(GameStage.Preparing, snapshot.Stage);
             Assert.False(snapshot.AcceptingInput);
-            Assert.False(context.InputWriter.TrySubmit(snapshot.SessionId, GameCommand.Up));
+            Assert.False(context.View.TrySubmit(snapshot.SessionId, GameCommand.Up));
             if (heldFrames >= 5)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
         };
@@ -170,7 +170,7 @@ public sealed class FlowTests
         long secondSession = 0;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.Display.Snapshot();
+            var snapshot = context.View.Snapshot();
             if (snapshot.SessionId == EscapeApplicationContext.ApplicationSessionId)
                 return;
             if (firstSession == 0)
@@ -225,7 +225,7 @@ public sealed class FlowTests
         GameSnapshot? frozen = null;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.Display.Snapshot();
+            var snapshot = context.View.Snapshot();
             var input = context.GetRequired<FrameState>();
             if (phase == 0 && snapshot.AcceptingInput)
             {
@@ -252,7 +252,7 @@ public sealed class FlowTests
                 Assert.Equal(frozen.Stage, snapshot.Stage);
                 Assert.Equal(frozen.Presentation!.Key, snapshot.Presentation!.Key);
                 Assert.Equal(frozen.Presentation.ElapsedSeconds, snapshot.Presentation.ElapsedSeconds);
-                Assert.False(context.InputWriter.TrySubmit(snapshot.SessionId, GameCommand.Confirm));
+                Assert.False(context.View.TrySubmit(snapshot.SessionId, GameCommand.Confirm));
                 if (++pausedFrames == 5)
                 {
                     input.PauseRequested = true;
@@ -278,7 +278,7 @@ public sealed class FlowTests
     public async Task ShutdownBeforeWorkerStartsIsSuccessful()
     {
         using var fixture = new Fixture();
-        fixture.Window.OnOpen = context => context.Session.RequestShutdown();
+        fixture.Window.OnOpen = context => context.Lifetime.RequestShutdown();
 
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
@@ -295,7 +295,7 @@ public sealed class FlowTests
         fixture.Window.CompletePresentations = false;
         fixture.Input.PollFrame = context =>
         {
-            if (context.Display.Snapshot().Presentation is not null)
+            if (context.View.Snapshot().Presentation is not null)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
         };
 
@@ -343,7 +343,7 @@ public sealed class FlowTests
         Assert.True(Contains(end.Exception, previous));
         Assert.True(Contains(end.Exception, canceled));
         Assert.True(ContainsMessage(end.Exception, "Cancellation is not requested."));
-        Assert.True(context.Session.ShutdownRequested);
+        Assert.True(context.Lifetime.ShutdownRequested);
         Assert.False(context.Cancellation.HasTask);
     }
 
@@ -417,7 +417,7 @@ public sealed class FlowTests
             if (timeout.Elapsed > TimeSpan.FromSeconds(10))
                 throw new TimeoutException("The scripted game did not finish.");
             var frame = context.GetRequired<FrameState>();
-            var snapshot = context.Display.Snapshot();
+            var snapshot = context.View.Snapshot();
             frame.SessionId = snapshot.SessionId;
             frame.Command = null;
             frame.PauseRequested = false;
@@ -448,14 +448,14 @@ public sealed class FlowTests
         {
             Record("draw");
             DrawCount++;
-            var snapshot = context.Display.Snapshot();
+            var snapshot = context.View.Snapshot();
             if (snapshot.Presentation is { } presentation)
             {
-                context.Presentation.Advance(presentation.Key, 0, snapshot.ControlRevision);
+                context.View.Advance(presentation.Key, 0, snapshot.ControlRevision);
                 if (CompletePresentations)
                 {
-                    context.Presentation.Advance(presentation.Key, presentation.DurationSeconds, snapshot.ControlRevision);
-                    context.Presentation.TryComplete(presentation.Key);
+                    context.View.Advance(presentation.Key, presentation.DurationSeconds, snapshot.ControlRevision);
+                    context.View.TryComplete(presentation.Key);
                 }
             }
             Thread.Yield();
@@ -485,12 +485,12 @@ public sealed class FlowTests
         {
             if (Failure is not null)
                 throw Failure;
-            context.Session.RequestShutdown();
+            context.Lifetime.RequestShutdown();
             return GetEnd();
         }
         public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
         {
-            context.Session.EndSession(context.SessionId);
+            context.Gameplay.EndSession(context.SessionId);
             Ended = true;
             return GetEnd(previous);
         }

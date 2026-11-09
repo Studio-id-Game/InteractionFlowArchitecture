@@ -15,12 +15,12 @@ public sealed class GameControlReaction : Reaction, IGameControlReaction
         var frame = context.GetRequired<FrameState>();
         if (frame.PauseRequested)
         {
-            var progress = context.Session.GetProgress(frame.SessionId);
-            context.Control.TrySetPaused(frame.SessionId, !progress.Paused);
+            var progress = context.View.GetProgress(frame.SessionId);
+            context.View.TrySetPaused(frame.SessionId, !progress.Paused);
         }
         else if (frame.SkipRequested && frame.Presentation is PresentationKey key)
         {
-            context.Presentation.TrySkip(key);
+            context.View.TrySkip(key);
         }
 
         return GetEnd();

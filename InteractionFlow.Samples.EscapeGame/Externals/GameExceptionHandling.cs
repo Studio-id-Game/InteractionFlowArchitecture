@@ -18,7 +18,7 @@ public sealed class GameExceptionHandling : ExceptionHandling
         if (context.TryGet<Finishing>(out var finishing))
             result = FailureCollector.Append(finishing.Previous, exception);
 
-        try { context.GetRequired<IGameSessionAccess>().RequestShutdown(); }
+        try { context.GetRequired<IApplicationLifetimeAccess>().RequestShutdown(); }
         catch (Exception stopFailure)
         {
             result = FailureCollector.Append(result, stopFailure);

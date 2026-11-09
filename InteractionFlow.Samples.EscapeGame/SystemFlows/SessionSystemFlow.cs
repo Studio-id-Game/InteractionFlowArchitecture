@@ -20,7 +20,7 @@ public sealed class SessionSystemFlow(
         if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
             return end;
 
-        while (context.Session.GetProgress(context.SessionId).Outcome == GameOutcome.Running)
+        while (context.Gameplay.GetProgress(context.SessionId).Outcome == GameOutcome.Running)
         {
             end = await turn.ExecuteAsync(context);
             if (!await GameFlowCheckpoint.CanContinueAsync(context, end))
@@ -32,7 +32,7 @@ public sealed class SessionSystemFlow(
             return end;
 
         // ShowResultが提示と受付開始を完了してから、リトライ入力を待ちます。
-        while (!context.Session.GetProgress(context.SessionId).RetryRequested)
+        while (!context.Gameplay.GetProgress(context.SessionId).RetryRequested)
         {
             end = await select.ExecuteAsync(context);
             if (!await GameFlowCheckpoint.CanContinueAsync(context, end))

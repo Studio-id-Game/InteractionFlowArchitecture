@@ -17,7 +17,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
     public void Poll(EscapeApplicationContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        var snapshot = context.Display.Snapshot();
+        var snapshot = context.View.Snapshot();
         var frame = context.GetRequired<FrameState>();
         frame.SessionId = snapshot.SessionId;
         frame.Presentation = snapshot.Presentation?.Key;

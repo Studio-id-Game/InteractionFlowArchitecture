@@ -38,7 +38,9 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
                 outcome = end.Result;
                 retry = !end.HasException && session.Session.GetProgress(session.SessionId).RetryRequested;
             }
-            catch (OperationCanceledException) when (session.Session.ShutdownRequested)
+            // Interaction間の再開待機も、実行自身へのキャンセルなら通常停止です。
+            catch (OperationCanceledException) when (session.Session.ShutdownRequested
+                || session.Cancellation.IsCancellationRequested)
             {
                 outcome = Result.Success;
             }

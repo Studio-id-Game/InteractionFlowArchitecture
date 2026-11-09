@@ -11,6 +11,52 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class ContextTests
 {
     [Fact]
+    public void DedicatedContextsImplementIFlowContextWithoutInheritingFlowContext()
+    {
+        using var window = new WindowContext();
+        using var game = window.CreateGameContext();
+
+        Assert.IsAssignableFrom<IFlowContext>(window);
+        Assert.IsAssignableFrom<IFlowContext>(game);
+        Assert.False(typeof(FlowContext).IsAssignableFrom(typeof(WindowContext)));
+        Assert.False(typeof(FlowContext).IsAssignableFrom(typeof(EscapeApplicationContext)));
+    }
+
+    [Fact]
+    public void SameKindParentsPreserveObjectValuesAndCancellationValueOverrides()
+    {
+        using var window = new WindowContext();
+        var originalCancellation = window.Cancellation;
+        var windowValue = new LocalValue("window object");
+        var windowCancellationValue = new CancellationObject();
+        window.With(windowCancellationValue).With<object>(windowValue);
+        using var child = new WindowContext(window);
+
+        Assert.Same(windowValue, child.GetRequired<object>());
+        Assert.Same(windowCancellationValue, child.GetRequired<CancellationObject>());
+        Assert.Same(originalCancellation, child.Cancellation);
+        Assert.Same(window.Display, child.GetRequired<IGameDisplayAccess>());
+
+        using var game = window.CreateGameContext();
+        Assert.Same(originalCancellation, game.Cancellation);
+        Assert.Same(originalCancellation, game.GetRequired<CancellationObject>());
+        Assert.NotSame(windowValue, game.GetRequired<object>());
+        var gameValue = new LocalValue("game object");
+        var gameCancellationValue = new CancellationObject();
+        game.With(gameCancellationValue).With<object>(gameValue);
+        using var gameChild = new EscapeApplicationContext(game);
+
+        Assert.Same(gameValue, gameChild.GetRequired<object>());
+        Assert.Same(gameCancellationValue, gameChild.GetRequired<CancellationObject>());
+        Assert.Same(originalCancellation, gameChild.Cancellation);
+        Assert.Same(game.World, gameChild.GetRequired<IGameWorldAccess>());
+        var childValue = new LocalValue("child object");
+        gameChild.With<object>(childValue);
+        Assert.Same(childValue, gameChild.GetRequired<object>());
+        Assert.Same(gameValue, game.GetRequired<object>());
+    }
+
+    [Fact]
     public void WindowAndGameExposeDifferentContracts()
     {
         using var window = new WindowContext();
@@ -70,7 +116,7 @@ public sealed class ContextTests
     }
 
     [Fact]
-    public void WindowValuesAndCancellationDoNotCrossTheGameFactoryBoundary()
+    public void WindowValuesDoNotCrossTheGameFactoryBoundaryWhileCancellationIsShared()
     {
         using var window = new WindowContext();
         var frame = new FrameState();
@@ -80,6 +126,7 @@ public sealed class ContextTests
         using var windowChild = new WindowContext(window);
         using var independentWindow = window.CreateIndependentContext();
         using var game = window.CreateGameContext();
+        Assert.False(game.TryGet<LocalValue>(out _));
         game.With(new LocalValue("game"));
         using var session = game.CreateSessionContext();
         using var gameChild = new EscapeApplicationContext(session);
@@ -90,7 +137,7 @@ public sealed class ContextTests
         Assert.Same(native, windowChild.GetRequired<WindowState>());
         Assert.False(independentWindow.TryGet<FrameState>(out _));
         Assert.NotSame(window.Cancellation, independentWindow.Cancellation);
-        Assert.NotSame(window.Cancellation, game.Cancellation);
+        Assert.Same(window.Cancellation, game.Cancellation);
         Assert.Same(game.Cancellation, session.Cancellation);
         Assert.Same(game.Cancellation, gameChild.Cancellation);
         Assert.NotSame(session.Cancellation, independentGame.Cancellation);
@@ -102,7 +149,7 @@ public sealed class ContextTests
     }
 
     [Fact]
-    public async Task WindowWriterCommunicatesWithGameReaderWithoutSharingCancellation()
+    public async Task WindowCancellationDirectlyCancelsGameReaderWithoutFrameExecution()
     {
         using var window = new WindowContext();
         using var game = window.CreateGameContext();
@@ -111,13 +158,44 @@ public sealed class ContextTests
 
         window.Cancellation.Cancel();
 
-        Assert.False(game.Cancellation.IsCancellationRequested);
-        Assert.False(session.Cancellation.IsCancellationRequested);
-        Assert.False(read.IsCompleted);
-        Assert.True(window.Input.TrySubmit(session.SessionId, GameCommand.Up));
-        Assert.Equal(GameCommand.Up, await read.WaitAsync(
+        Assert.Same(window.Cancellation, game.Cancellation);
+        Assert.True(game.Cancellation.IsCancellationRequested);
+        Assert.True(session.Cancellation.IsCancellationRequested);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await read.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.False(window.Input.TrySubmit(session.SessionId, GameCommand.Up));
         Assert.True(window.Cancellation.IsCancellationRequested);
+        using var frames = window.CreateIndependentContext();
+        Assert.False(frames.Cancellation.IsCancellationRequested);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SharedCancellationRecoveryResetsBothSidesWithoutAffectingIndependentFrames(bool cancelFromGame)
+    {
+        using var window = new WindowContext();
+        using var frames = window.CreateIndependentContext();
+        using var game = window.CreateGameContext();
+        using var session = GameTestSteps.Ready(game, window);
+        var original = window.Cancellation.GetToken();
+        var read = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
+
+        var source = cancelFromGame ? game.Cancellation : window.Cancellation;
+        source.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await read.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.True((await source.WaitForTasksAndResetCancellationAsync()).Try(out _));
+
+        Assert.True(original.IsCancellationRequested);
+        Assert.Same(window.Cancellation, game.Cancellation);
+        Assert.False(window.Cancellation.IsCancellationRequested);
+        Assert.False(game.Cancellation.IsCancellationRequested);
+        Assert.False(frames.Cancellation.IsCancellationRequested);
+        Assert.NotEqual(original, window.Cancellation.GetToken());
+        var nextRead = session.Input.ReadAsync(session.SessionId, session.Cancellation.GetToken());
+        Assert.True(window.Input.TrySubmit(session.SessionId, GameCommand.Up));
+        Assert.Equal(GameCommand.Up, await nextRead);
     }
 
     [Theory]
@@ -129,6 +207,7 @@ public sealed class ContextTests
         using var game = window.CreateGameContext();
         using var session = game.CreateSessionContext();
         var display = window.Display;
+        var cancellation = window.Cancellation;
         if (disposeWindow)
             window.Dispose();
         else
@@ -137,6 +216,8 @@ public sealed class ContextTests
         Assert.Equal(MutationStatus.Applied, session.Session.BeginSession(session.SessionId).Status);
         Assert.Equal(session.SessionId, display.Snapshot().SessionId);
         Assert.False(session.Session.ShutdownRequested);
+        Assert.Same(cancellation, session.Cancellation);
+        Assert.False(cancellation.IsCancellationRequested);
         using var sibling = session.CreateIndependentContext();
         Assert.Same(session.World, sibling.World);
     }
@@ -156,7 +237,7 @@ public sealed class ContextTests
         Assert.Same(app.Input, session.Input);
         Assert.Same(session.Cancellation, game.Cancellation);
         Assert.Same(session.Cancellation, child.Cancellation);
-        Assert.NotSame(app.Cancellation, game.Cancellation);
+        Assert.Same(app.Cancellation, game.Cancellation);
         Assert.NotSame(session.Cancellation, sibling.Cancellation);
         Assert.Equal(session.SessionId, sibling.SessionId);
         Assert.False(game.TryGet<FrameState>(out _));

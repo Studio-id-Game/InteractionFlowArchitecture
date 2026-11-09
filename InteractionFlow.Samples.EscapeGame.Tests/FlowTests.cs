@@ -23,7 +23,56 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class FlowTests
 {
     [Fact]
-    public async Task PreCanceledWindowSkipsOpenAndStillStopsAndCloses()
+    public async Task SharedCancellationAfterSuccessfulReactionIsNormalAtTheNextCheckpoint()
+    {
+        using var fixture = new Fixture();
+        var canceledAtBoundary = false;
+        fixture.Game.AfterBegin = context =>
+        {
+            Assert.False(context.Session.ShutdownRequested);
+            context.Cancellation.Cancel();
+            canceledAtBoundary = true;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(canceledAtBoundary);
+        Assert.False(end.HasException);
+        Assert.True(fixture.Session.Ended);
+        Assert.NotNull(fixture.Game.Cancellation);
+        Assert.False(fixture.Game.Cancellation.HasTask);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UnrequestedOrUnrelatedReactionCancellationRemainsFailure(bool unrelatedToken)
+    {
+        using var fixture = new Fixture();
+        using var unrelated = new CancellationTokenSource();
+        unrelated.Cancel();
+        var failure = unrelatedToken
+            ? new OperationCanceledException("unrelated cancellation", unrelated.Token)
+            : new OperationCanceledException("unrequested cancellation");
+        fixture.Game.AfterBegin = context =>
+        {
+            Assert.False(context.Cancellation.IsCancellationRequested);
+            throw failure;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(end.HasException);
+        Assert.True(Contains(end.Exception, failure));
+        Assert.True(fixture.Session.Ended);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.NotNull(fixture.Game.Cancellation);
+        Assert.False(fixture.Game.Cancellation.HasTask);
+    }
+
+    [Fact]
+    public async Task PreCanceledGameStillOpensAndClosesTheIndependentWindowFrames()
     {
         using var fixture = new Fixture();
         fixture.Context.Cancellation.Cancel();
@@ -31,10 +80,10 @@ public sealed class FlowTests
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
         Assert.False(end.HasException);
-        Assert.DoesNotContain("open", fixture.Window.Events);
-        Assert.Equal(new[] { "close" }, fixture.Window.Events);
+        Assert.Equal("open", fixture.Window.Events[0]);
+        Assert.Equal("close", fixture.Window.Events[^1]);
         Assert.True(fixture.Context.Session.ShutdownRequested);
-        Assert.True(fixture.Context.Cancellation.IsCancellationRequested);
+        Assert.True(fixture.Session.Ended);
         Assert.False(fixture.Context.Cancellation.HasTask);
     }
 
@@ -47,30 +96,38 @@ public sealed class FlowTests
         using var fixture = new Fixture(failStop ? stopFailure : null);
         fixture.Window.CompletePresentations = false;
         var canceledDuringPresentation = false;
+        var gameObservedBeforeTheNextFrame = false;
+        var requestedToken = fixture.Context.Cancellation.GetToken();
         var closeSawJoinedGame = false;
         fixture.Window.BeforeClose = () => closeSawJoinedGame = fixture.Session.Ended
             && fixture.Game.Cancellation is { HasTask: false };
         fixture.Input.PollFrame = frames =>
         {
-            if (frames.Display.Snapshot().Presentation is null)
+            if (canceledDuringPresentation || frames.Display.Snapshot().Presentation is null)
                 return;
             Assert.NotSame(fixture.Context.Cancellation, frames.Cancellation);
             fixture.Context.Cancellation.Cancel();
             canceledDuringPresentation = true;
+            // メイン側がこのフレーム内に留まっていても、ゲーム待機へ通知が届きます。
+            gameObservedBeforeTheNextFrame = SpinWait.SpinUntil(
+                () => fixture.Game.CancellationObserved,
+                TimeSpan.FromSeconds(5));
         };
 
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
         Assert.True(canceledDuringPresentation);
+        Assert.True(gameObservedBeforeTheNextFrame);
         Assert.True(closeSawJoinedGame);
         Assert.NotNull(fixture.Game.Cancellation);
         Assert.False(fixture.Game.Cancellation.HasTask);
+        Assert.Same(fixture.Context.Cancellation, fixture.Game.Cancellation);
         Assert.Equal(failStop, end.HasException);
         if (failStop)
             Assert.True(Contains(end.Exception, stopFailure));
         Assert.Equal("close", fixture.Window.Events[^1]);
         Assert.True(fixture.Context.Session.ShutdownRequested);
-        Assert.True(fixture.Context.Cancellation.IsCancellationRequested);
+        Assert.True(requestedToken.IsCancellationRequested);
         Assert.False(fixture.Context.Cancellation.HasTask);
     }
 
@@ -442,12 +499,25 @@ public sealed class FlowTests
     public sealed class TrackingGameReaction : Reaction, IGameReaction
     {
         private readonly GameReaction inner = new();
+        private volatile bool cancellationObserved;
         public CancellationObject? Cancellation { get; private set; }
+        public bool CancellationObserved => cancellationObserved;
+        public Action<EscapeApplicationContext>? AfterBegin { get; set; }
         public override void ForceResetMemoryState() { }
-        public ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
+        public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
         {
             Cancellation = context.Cancellation;
-            return inner.BeginAsync(context);
+            try
+            {
+                var end = await inner.BeginAsync(context);
+                AfterBegin?.Invoke(context);
+                return end;
+            }
+            catch (OperationCanceledException)
+            {
+                cancellationObserved = true;
+                throw;
+            }
         }
         public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
             => inner.EnableSelectionAsync(context);

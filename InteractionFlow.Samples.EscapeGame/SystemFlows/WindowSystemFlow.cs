@@ -5,7 +5,6 @@ using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Interactions;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
@@ -27,20 +26,15 @@ public sealed class WindowSystemFlow(
         frames.With(input).With(new WindowState());
         var failures = new FailureCollector();
         Task<InteractionEnd>? execution = null;
-        // 呼び出し元のキャンセルは停止要求として観測し、ゲーム側のリセットとは分離します。
-        var token = context.Cancellation.GetToken();
 
         try
         {
-            if (!token.IsCancellationRequested)
+            var opened = open.ExecuteAsync(frames).GetAwaiter().GetResult();
+            failures.Add(opened.Result);
+            if (!opened.HasException)
             {
-                var opened = open.ExecuteAsync(frames).GetAwaiter().GetResult();
-                failures.Add(opened.Result);
-                if (!opened.HasException && !token.IsCancellationRequested)
-                {
-                    execution = Task.Run(() => game.ExecuteAsync(gameContext));
-                    PresentFrames(frames, input, execution, failures, token);
-                }
+                execution = Task.Run(() => game.ExecuteAsync(gameContext));
+                PresentFrames(frames, input, execution, failures);
             }
         }
         catch (Exception error)
@@ -70,10 +64,9 @@ public sealed class WindowSystemFlow(
         WindowContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
-        FailureCollector failures,
-        CancellationToken token)
+        FailureCollector failures)
     {
-        while (!execution.IsCompleted && !frames.Session.ShutdownRequested && !token.IsCancellationRequested)
+        while (!execution.IsCompleted && !frames.Session.ShutdownRequested)
         {
             var shown = frame.ExecuteAsync(frames).GetAwaiter().GetResult();
             failures.Add(shown.Result);

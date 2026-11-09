@@ -90,6 +90,33 @@ WindowSystemFlowは外部キャンセルをフレーム境界等で観測して�
 外部キャンセル時は停止の成功・失敗いずれでも、実ゲーム側のTask登録解放と合流後のCloseを確認している。
 Release簡易計測で通常フレームの488B/回を維持した。実画面での再確認は未実施。
 
+### 再実験：公開範囲とCancellation共有を分離
+
+前段の実験コミット5f12574は比較用に残し、git resetせず差分として再実装した。
+Window→ゲームでCancellationまで独立させる構成は、公開範囲を分ける目的に対して
+WindowSystemFlowのキャンセル中継と起動分岐を増やしたため、今回の構成では採用しない。
+
+サンプル内のEscapeContextはIFlowContextを直接実装し、内部FlowContextへ追加値・探索・検証・破棄を委譲する。
+固定アクセスと同種の親へ探索した後、ルートではCancellationだけを返す接続先へ委譲する。
+Window→ゲームはEscapeAccessとCancellationを共有するが、Windowの追加値を探索しない。
+同種の子Contextは親探索・Cancellationを共有し、独立frame/cleanupは別Cancellationを使う。
+これによりWindowSystemFlowの外部キャンセル監視・起動分岐を削除した。
+ゲーム側Handlerで共有Cancellationがリセットされる動作と、キャンセル済みでもOpenする動作へ戻した。
+Interaction間の待機に取消が入る場合も、GameSystemFlowが実行自身の取消を通常停止へ接続する。
+Handler経由では共有Cancellationをリセットするが、Flow境界での通常停止はリセットしない。
+現在のキャンセル状態は処理経路で異なり、発行済みtokenの取消はリセット後も維持される。
+
+これはライブラリ変更の前に共有・公開契約を検証するサンプル実装であり、汎用APIの採用決定ではない。
+追加値の規則を再実装せず既存FlowContextへ委譲した分、Context生成時の補助オブジェクトと委譲経路は増える。
+通常フレームの実行計測は別途確認し、クラス数・行数の削減だけで改善とは評価しない。
+
+再実験後は全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト445件が成功した。
+型による公開範囲に加え、値探索非共有と取消共有、同種親の追加値優先順、双方向のreset、
+次フレームを待たない通知、Interaction間の取消と無要求・別token例外、合流後の登録解放を確認した。
+Release簡易計測のPresentFrameは488B/回・約229～237nsで、割り当て量を維持した。
+Context生成時の負担は増えており、フレーム計測から生成コストや競合時の性能は保証しない。
+実画面での再確認は未実施。
+
 ## Interaction粒度の見直し
 
 `ShowResult`へ「結果提示を待つ→失敗なら短絡→結果入力を開く」を統合し、

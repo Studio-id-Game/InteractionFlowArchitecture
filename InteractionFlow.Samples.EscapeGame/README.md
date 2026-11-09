@@ -99,17 +99,25 @@ Session / Worldの分離は、同じアクセス管理の呼び分けです。
 今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
 
 `ApplicationSessionId = 0`は、特定のゲームセッションを指さないゲーム実行ルートの固定対象です。
-WindowContext.CreateGameContextはアクセスだけを共有する独立したゲームContextを作り、
-Window側の追加値・Cancellation・親探索を引き継ぎません。ゲーム実行側はこの独立Contextを持ち、
+WindowContext.CreateGameContextはアクセスとCancellationを共有するゲームContextを作り、
+Window側の追加値・親探索を引き継ぎません。ゲーム実行側はこのContextを持ち、
 そこからCreateSessionContextで新規ID・初期状態を割り当てます。
 そのセッションはゲーム側Cancellationを共有し、BeginSessionのReactionで公開されます。
 CreateIndependentContextはアクセスと対象IDだけを共有し、Cancellationと追加値を分離します。
 型付きの親ありContextは、アクセス・対象ID・Cancellationを共有し、追加値を親へ探索します。
 各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
-WindowSystemFlowは呼び出し元のCancellationを起動前・ゲーム開始前・各フレームの境界で観測し、
-停止・ゲーム側Cancellation・合流・Closeの経路へ接続します。Window側のキャンセルをゲーム側へ
-直接共有しないため、Window側で要求されたキャンセル状態はゲーム側のリセットでは解除されません。
-開始前にキャンセル済みならOpenとゲーム開始を省略し、停止・Closeを実行します。
+両Contextの共通基底[EscapeContext](./Entities/Contexts/EscapeContext.cs)はIFlowContextを直接実装します。
+内部のFlowContextへ追加値・Entry解決・破棄確認を委譲し、値探索先とCancellationの共有元を分けます。
+探索順は追加値→自身の固定アクセス→同種の親→ルートのCancellationです。
+Cancellationだけの接続先は元Contextを保持・探索しません。
+
+呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
+WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
+開始前にキャンセル済みでもOpenを実行し、ゲーム側がキャンセルを処理して停止・合流・Closeへ進みます。
+Interaction間の待機で発生した実行自身のキャンセルも、GameSystemFlowで通常停止として扱います。
+このFlow境界での停止はHandlerを通らないため、Cancellationをリセットしません。
+通常停止後の現在のキャンセル状態は処理経路で異なります。キャンセル済みの発行済みtokenはリセット後も取消済みです。
+フレーム・停止・Close用Contextは別Cancellationを使い、ゲーム側のキャンセル中も後始末を実行します。
 
 ## 完了範囲と終了結果
 
@@ -143,13 +151,14 @@ GameReactionTestsは通常の無効選択と内部前提違反、FinishingTests�
 FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
 共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
 
-Context分離後は、EscapeGameの92件と他プロジェクトの445件が成功しています。
+IFlowContext直接実装への再実験後は、EscapeGameの99件と他プロジェクトの445件が成功しています。
 全体ビルドは警告・エラー0件です。ContextTestsでは公開・非公開契約の探索、固定契約の追加拒否、
 親探索とCancellationの境界、破棄の独立性を確認します。FlowTestsでは外部キャンセルと停止失敗時にも、
 ゲーム側のTask登録が解放され、セッション終了・合流後にCloseへ進むことを確認します。
-Release簡易計測はSnapshotが128B・約33～34ns、直接フレームが256B・約139～143ns、
-PresentFrameが488B・約232～242nsでした。測定条件は下記と同じで、割り当て量は維持しています。
-Context分離後の実画面確認は未実施です。
+Release簡易計測はSnapshotが128B・約32～34ns、直接フレームが256B・約138～140ns、
+PresentFrameが488B・約229～237nsでした。測定条件は下記と同じで、割り当て量は維持しています。
+Context生成時の補助オブジェクトは増えます。この計測は生成コストや競合を含む性能保証ではありません。
+再実験後の実画面確認は未実施です。
 
 ## 利用側改修後の確認結果
 

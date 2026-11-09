@@ -49,7 +49,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             circular.Value = circular;
             context.With(circular);
             var error = Assert.Throws<ResultException>(() => context.GetRequired<string>());
-            Assert.IsType<InvalidOperationException>(error.InnerException);
+            Assert.IsType<EntryResolutionLimitException>(error.InnerException);
         }
 
         [Fact]

@@ -10,7 +10,10 @@ namespace InteractionFlow.Core.Entities.Contexts
     /// </remarks>
     public class FlowContext : IFlowContext, IDisposable
     {
-        private sealed class Box<T>(T value) : Entry<T>(value) { }
+        private sealed class Box<T>(T value) : Entry<T>(value), IEntry
+        {
+            bool IEntry.IsContextBox => true;
+        }
 
         private IFlowContext? parentContext;
         private List<IEntry>? values = [];
@@ -72,7 +75,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             var entries = Values;
             for (var i = entries.Count - 1; i >= 0; i--)
             {
-                if (entries[i].TryResolve<T>(false, null, out var found, out var error))
+                if (entries[i].TryResolve<T>(false, out var found, out var error))
                 {
                     value = found;
                     return true;

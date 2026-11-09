@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 
 namespace InteractionFlow.Core.Entities
 {
@@ -12,21 +11,6 @@ namespace InteractionFlow.Core.Entities
     /// <param name="value">初期値。</param>
     public abstract class Entry<TValue>(TValue? value) : IEntry, IDisposable
     {
-        private sealed class EntryReferenceEqualityComparer : IEqualityComparer<IEntry>
-        {
-            public static EntryReferenceEqualityComparer Instance { get; } = new();
-
-            public bool Equals(IEntry? x, IEntry? y)
-            {
-                return ReferenceEquals(x, y);
-            }
-
-            public int GetHashCode(IEntry obj)
-            {
-                return RuntimeHelpers.GetHashCode(obj);
-            }
-        }
-
         /// <summary>
         /// ラップしている値を取得します。
         /// </summary>
@@ -38,51 +22,27 @@ namespace InteractionFlow.Core.Entities
         /// <typeparam name="T">取得する値の型。</typeparam>
         /// <returns>
         /// 保持値が <typeparamref name="T"/> として取得できる場合は成功結果。
-        /// 保持値が Entry の場合は、その Entry を再帰的に解決した結果。
-        /// 保持値がない場合、指定型として取得できない場合、または Entry の循環参照を検出した場合は失敗結果。
+        /// 保持値が Entry の場合は、最大100回の展開で解決した結果。
+        /// 保持値がない場合、指定型として取得できない場合、または展開上限に到達した場合は失敗結果。
         /// </returns>
         public Result<T> Parse<T>()
         {
-            return ((IEntry)this).TryResolve<T>(true, null, out var value, out var error)
+            return ((IEntry)this).TryResolve<T>(true, out var value, out var error)
                 ? value : (Result<T>)error!;
         }
 
-        bool IEntry.TryResolve<T>(bool reportMissing, ISet<IEntry>? visitedEntries,
+        object? IEntry.UntypedValue => Value;
+
+        bool IEntry.TryResolve<T>(bool reportMissing,
             [MaybeNullWhen(false)] out T value, out Exception? error)
         {
-            value = default;
-            error = null;
-            if (Value == null)
+            if (Value is T found)
             {
-                if (reportMissing)
-                    error = new EntryValueNotFoundException($"Entry value is null. Requested type: {typeof(T).FullName}.");
-                return false;
-            }
-            else if (visitedEntries != null && !visitedEntries.Add(this))
-            {
-                error = new InvalidOperationException($"Circular Entry reference was detected. Requested type: {typeof(T).FullName}. Entry type: {GetType().FullName}.");
-                return false;
-            }
-            else if (Value is T t)
-            {
-                value = t;
+                value = found;
+                error = null;
                 return true;
             }
-            else if (Value is IEntry entry)
-            {
-                if (visitedEntries is null)
-                {
-                    visitedEntries = new HashSet<IEntry>(EntryReferenceEqualityComparer.Instance) { this };
-                }
-                return entry.TryResolve(reportMissing, visitedEntries, out value, out error);
-            }
-            else
-            {
-                if (reportMissing)
-                    error = new EntryValueNotFoundException($"Entry value type mismatch. Requested type: {typeof(T).FullName}. Actual type: {Value.GetType().FullName}.");
-                return false;
-            }
-
+            return EntryResolver.TryResolve(this, reportMissing, out value, out error);
         }
 
         /// <summary>

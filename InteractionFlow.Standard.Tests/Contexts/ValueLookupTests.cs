@@ -71,8 +71,8 @@ public sealed class ValueLookupTests
 
         Assert.Same(first, context.GetRequired<RefEntry<object>>());
         Assert.False(first.Parse<string>().Try(out _, out var parsedError));
-        Assert.IsType<InvalidOperationException>(parsedError.InnerException);
+        Assert.IsType<EntryResolutionLimitException>(parsedError.InnerException);
         var error = Assert.Throws<ResultException>(() => context.TryGet<string>(out _));
-        Assert.IsType<InvalidOperationException>(error.InnerException);
+        Assert.IsType<EntryResolutionLimitException>(error.InnerException);
     }
 }

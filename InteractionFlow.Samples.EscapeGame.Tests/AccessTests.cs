@@ -35,11 +35,11 @@ public sealed class AccessTests
         session.Gameplay.ApplySelection(id, GameCommand.Up);
         session.Gameplay.ApplySelection(id, GameCommand.Confirm);
         var token = session.Cancellation.GetToken();
-        Assert.True(session.View.TrySetPaused(id, true));
+        Assert.True(app.View.TrySetPaused(id, true));
         Assert.Equal(MutationStatus.Deferred, session.Gameplay.ApplyPlayer(id).Status);
         Assert.True(session.Gameplay.GetProgress(id).HasConfirmedAction);
         Assert.Equal(0, app.View.Snapshot().Turn);
-        Assert.True(session.View.TrySetPaused(id, false));
+        Assert.True(app.View.TrySetPaused(id, false));
         var applied = session.Gameplay.ApplyPlayer(id);
         Assert.Equal(MutationStatus.Applied, applied.Status);
         Assert.Equal(MutationStatus.Rejected, session.Gameplay.ApplyPlayer(id).Status);
@@ -60,12 +60,12 @@ public sealed class AccessTests
         GameTestSteps.Complete(app, player);
         var enemy = session.Gameplay.ApplyEnemy(id).Presentation!.Value;
         var waiting = session.Gameplay.WaitForPresentationAsync(enemy, TestContext.Current.CancellationToken).AsTask();
-        Assert.False(session.View.TrySkip(player));
-        Assert.False(session.View.TryComplete(player));
-        Assert.False(session.View.TryComplete(enemy with { Version = enemy.Version - 1 }));
+        Assert.False(app.View.TrySkip(player));
+        Assert.False(app.View.TryComplete(player));
+        Assert.False(app.View.TryComplete(enemy with { Version = enemy.Version - 1 }));
         Assert.False(app.View.Snapshot().Presentation!.SkipRequested);
         Assert.False(waiting.IsCompleted);
-        Assert.True(session.View.TrySkip(enemy));
+        Assert.True(app.View.TrySkip(enemy));
         GameTestSteps.Complete(app, enemy);
         Assert.Equal(PresentationCompletion.Completed, await waiting);
         Assert.Equal(1, app.View.Snapshot().Turn);
@@ -77,12 +77,12 @@ public sealed class AccessTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
-        GameTestSteps.PlayTurn(session, GameCommand.Up);
-        GameTestSteps.PlayTurn(session, GameCommand.Right);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Up);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Right);
         var result = session.Gameplay.ShowResult(id).Presentation!.Value;
         Assert.False(app.View.TrySubmit(id, GameCommand.Retry));
         Assert.Equal(MutationStatus.Rejected, session.Gameplay.EnableResultInput(id));
-        Assert.False(session.View.TrySetPaused(id, true));
+        Assert.False(app.View.TrySetPaused(id, true));
         GameTestSteps.Complete(app, result);
         Assert.Equal(MutationStatus.Applied, session.Gameplay.EnableResultInput(id));
         Assert.False(app.View.TrySubmit(id, GameCommand.Retry));
@@ -95,7 +95,7 @@ public sealed class AccessTests
         Assert.NotEqual(id, fresh.SessionId);
         Assert.Equal(0, app.View.Snapshot().Turn);
         Assert.Equal(GameOutcome.Running, app.View.Snapshot().Outcome);
-        Assert.False(session.View.TryComplete(result));
+        Assert.False(app.View.TryComplete(result));
     }
 
     [Fact]
@@ -107,14 +107,14 @@ public sealed class AccessTests
         var read = session.Gameplay.ReadAsync(id, TestContext.Current.CancellationToken);
         Assert.True(app.View.Snapshot().AcceptingInput);
         Assert.True(app.View.TrySubmit(id, GameCommand.Up));
-        Assert.True(session.View.TrySetPaused(id, true));
+        Assert.True(app.View.TrySetPaused(id, true));
         var command = await read;
         var before = app.View.Snapshot();
         Assert.Equal(MutationStatus.Deferred, session.Gameplay.ApplySelection(id, command));
         Assert.False(app.View.TrySubmit(id, GameCommand.Right));
         var checkpoint = session.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
         Assert.False(checkpoint.IsCompleted);
-        Assert.True(session.View.TrySetPaused(id, false));
+        Assert.True(app.View.TrySetPaused(id, false));
         Assert.True(await checkpoint);
         Assert.Equal(MutationStatus.Applied, session.Gameplay.ApplySelection(id, command));
         Assert.Equal(0, app.View.Snapshot().Turn);
@@ -132,21 +132,21 @@ public sealed class AccessTests
         session.Gameplay.ApplySelection(id, GameCommand.Confirm);
         var key = session.Gameplay.ApplyPlayer(id).Presentation!.Value;
         var revision = app.View.Snapshot().ControlRevision;
-        session.View.Advance(key, 10, revision);
+        app.View.Advance(key, 10, revision);
         Assert.Equal(0, app.View.Snapshot().Presentation!.ElapsedSeconds);
-        session.View.Advance(key, .05, revision);
-        Assert.True(session.View.TrySetPaused(id, true));
-        Assert.Equal(.05, session.View.Advance(key, 99, revision)!.ElapsedSeconds);
-        Assert.False(session.View.TryComplete(key));
-        Assert.False(session.View.TrySkip(key));
+        app.View.Advance(key, .05, revision);
+        Assert.True(app.View.TrySetPaused(id, true));
+        Assert.Equal(.05, app.View.Advance(key, 99, revision)!.ElapsedSeconds);
+        Assert.False(app.View.TryComplete(key));
+        Assert.False(app.View.TrySkip(key));
         var wait = session.Gameplay.WaitForPresentationAsync(key, TestContext.Current.CancellationToken).AsTask();
         Assert.False(wait.IsCompleted);
-        Assert.True(session.View.TrySetPaused(id, false));
-        Assert.Equal(.05, session.View.Advance(key, 99, revision)!.ElapsedSeconds);
+        Assert.True(app.View.TrySetPaused(id, false));
+        Assert.Equal(.05, app.View.Advance(key, 99, revision)!.ElapsedSeconds);
         revision = app.View.Snapshot().ControlRevision;
-        session.View.Advance(key, 1, revision);
-        Assert.True(session.View.TryComplete(key));
-        Assert.False(session.View.TryComplete(key));
+        app.View.Advance(key, 1, revision);
+        Assert.True(app.View.TryComplete(key));
+        Assert.False(app.View.TryComplete(key));
         Assert.Equal(PresentationCompletion.Completed, await wait);
         Assert.Equal(1, app.View.Snapshot().Turn);
     }
@@ -158,13 +158,13 @@ public sealed class AccessTests
         using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
         var input = session.Gameplay.ReadAsync(id, TestContext.Current.CancellationToken).AsTask();
-        Assert.True(session.View.TrySetPaused(id, true));
+        Assert.True(app.View.TrySetPaused(id, true));
         var checkpoint = session.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
         app.Lifetime.RequestShutdown();
         Assert.Equal(GameCommand.Stop, await input);
         Assert.False(await checkpoint);
         Assert.True(app.Lifetime.ShutdownRequested);
-        Assert.False(session.View.TrySetPaused(id, false));
+        Assert.False(app.View.TrySetPaused(id, false));
         Assert.Equal(MutationStatus.Stopped, session.Gameplay.ApplyPlayer(id).Status);
         Assert.False(app.View.TrySubmit(id, GameCommand.Up));
     }
@@ -173,18 +173,18 @@ public sealed class AccessTests
     public async Task OldPresentationAndControlCannotAffectRetriedSession()
     {
         using var app = new EscapeApplicationContext();
-        using var old = app.CreateSessionContext();
+        using var old = GameTestSteps.CreateSession(app);
         var oldKey = old.Gameplay.BeginSession(old.SessionId).Presentation!.Value;
         var stoppedWait = old.Gameplay.WaitForPresentationAsync(oldKey, TestContext.Current.CancellationToken).AsTask();
         old.Gameplay.EndSession(old.SessionId);
         Assert.Equal(PresentationCompletion.Stopped, await stoppedWait);
-        using var fresh = app.CreateSessionContext();
+        using var fresh = GameTestSteps.CreateSession(app);
         var freshKey = fresh.Gameplay.BeginSession(fresh.SessionId).Presentation!.Value;
         var freshWait = fresh.Gameplay.WaitForPresentationAsync(freshKey, TestContext.Current.CancellationToken).AsTask();
         Assert.NotEqual(old.SessionId, fresh.SessionId);
-        Assert.False(old.View.TryComplete(oldKey));
-        Assert.False(old.View.TrySkip(oldKey));
-        Assert.False(old.View.TrySetPaused(old.SessionId, true));
+        Assert.False(app.View.TryComplete(oldKey));
+        Assert.False(app.View.TrySkip(oldKey));
+        Assert.False(app.View.TrySetPaused(old.SessionId, true));
         Assert.False(app.View.TrySubmit(old.SessionId, GameCommand.Retry));
         old.Gameplay.EndSession(old.SessionId);
         Assert.False(freshWait.IsCompleted);

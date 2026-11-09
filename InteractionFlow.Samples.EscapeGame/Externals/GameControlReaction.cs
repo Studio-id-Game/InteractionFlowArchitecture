@@ -10,7 +10,7 @@ public sealed class GameControlReaction : Reaction, IGameControlReaction
 {
     public override void ForceResetMemoryState() { }
 
-    public ReactionEnd Change(EscapeApplicationContext context)
+    public ReactionEnd Change(IGameViewContext context)
     {
         var frame = context.GetRequired<FrameState>();
         if (frame.PauseRequested)

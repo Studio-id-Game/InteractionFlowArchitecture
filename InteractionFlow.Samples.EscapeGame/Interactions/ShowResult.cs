@@ -12,9 +12,9 @@ public sealed class ShowResult(
     IGameReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var shown = await reaction.ShowResultAsync(context);
         if (shown.HasException)

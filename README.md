@@ -849,7 +849,7 @@ Interaction Flow Architecture の C# ライブラリでは、アーキテクチ�
 | [Notepad.Core](./InteractionFlow.Samples.Notepad.Core) | Notepad のユーザー体験を実行環境から分離して定義する | Entity / Port / Interaction / System Flow の分割と、通常版・Secure 版で共有する中核設計 |
 | [Notepad](./InteractionFlow.Samples.Notepad) | `Notepad.Core` を通常の Console・ファイル保存で実行する | 新 Console Port、FilePersistence、テキスト Serializer を接続する構成 |
 | [Notepad.Secure](./InteractionFlow.Samples.Notepad.Secure) | 同じ中核設計へ安全なログインと保存処理を統合する | 共通 Flow を維持したログイン Operation・Serializer の差し替え、暗号化、鍵素材の寿命管理 |
-| [EscapeGame](./InteractionFlow.Samples.EscapeGame) | ターン制ゲームと描画を並行実行する | 共有状態と実行スコープ、提示完了待機、ポーズ・再開、停止・合流 |
+| [EscapeGame](./InteractionFlow.Samples.EscapeGame) | ターン制ゲームと描画を並行実行する | 役割別Context契約、共有状態と実行スコープ、提示完了待機、ポーズ・再開、停止・合流 |
 
 初めて読む場合は、最小構成の `HelloDoor` から始めます。Context の拡張は `HelloDoor.Lock`、複数の Interaction の合成は `Parrot`、実行環境との分離や差し替えは `Notepad.Core` と二つの実行サンプルで段階的に確認できます。
 

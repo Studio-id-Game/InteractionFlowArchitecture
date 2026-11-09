@@ -10,21 +10,22 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
 public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession endSession)
-    : SystemFlow<EscapeApplicationContext>(sessionFlow, endSession)
+    : SystemFlow<IGameplayContext>(sessionFlow, endSession)
 {
-    protected override async Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         while (true)
         {
-            EscapeApplicationContext created;
+            GameplayContext created;
             try
             {
-                created = context.CreateSessionContext();
+                var id = context.Gameplay.CreateSession();
+                created = new GameplayContext(context, id, ContextInheritance.All);
             }
             catch (InvalidOperationException) when (context.Lifetime.ShutdownRequested)
             {
                 // ウィンドウ停止とセッション生成が競合した通常終了です。
-                using var stopped = context.CreateIndependentContext();
+                using var stopped = new GameplayContext(context, ContextInheritance.None);
                 stopped.With(new Finishing(FinishingKind.EndSession, Result.Success));
                 return await endSession.ExecuteAsync(stopped);
             }
@@ -50,7 +51,7 @@ public sealed class GameSystemFlow(SessionSystemFlow sessionFlow, EndSession end
             }
 
             // 旧セッションの待機を閉じてから、新しいセッションを作成・公開します。
-            using var cleanup = session.CreateIndependentContext();
+            using var cleanup = new GameplayContext(session, ContextInheritance.None);
             cleanup.With(new Finishing(FinishingKind.EndSession, outcome));
             InteractionEnd ended;
             try { ended = await endSession.ExecuteAsync(cleanup); }

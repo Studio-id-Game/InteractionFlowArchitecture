@@ -34,7 +34,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         messageLines = [];
     }
 
-    public ReactionEnd Open(EscapeApplicationContext context)
+    public ReactionEnd Open(IGameViewContext context)
     {
         var window = context.GetRequired<WindowState>();
         if (window.IsOpen) throw new InvalidOperationException("Window is already open.");
@@ -46,7 +46,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return Draw(context);
     }
 
-    public ReactionEnd Draw(EscapeApplicationContext context)
+    public ReactionEnd Draw(IGameViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
         var state = context.View.Snapshot();
@@ -77,7 +77,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return GetEnd();
     }
 
-    public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+    public ReactionEnd Close(ILifetimeContext context, Result previous)
     {
         try
         {

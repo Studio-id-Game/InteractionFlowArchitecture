@@ -1,12 +1,11 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-// 共有アクセスと実行スコープを提供します。進行・実行管理はSystemFlow、公開はReactionが担当します。
-public sealed class EscapeApplicationContext : FlowContext
+// 共有アクセスを作る全体構成用の入口です。実行先には役割別Contextを構築して渡します。
+public sealed class EscapeApplicationContext : FlowContext, IApplicationContext
 {
     // 0 は特定セッションを指さないアプリのスコープです。実セッションIDは1から始まります。
     public const long ApplicationSessionId = 0;
@@ -18,39 +17,12 @@ public sealed class EscapeApplicationContext : FlowContext
         SessionId = ApplicationSessionId;
     }
 
-    // 同じ対象セッション・アクセス・Cancellationを共有し、追加値を親へ探索する子スコープです。
-    public EscapeApplicationContext(EscapeApplicationContext parent) : base(parent)
-    {
-        access = parent.Access;
-        SessionId = parent.SessionId;
-    }
-    private EscapeApplicationContext(EscapeApplicationContext parent, long sessionId) : base(parent)
-    {
-        access = parent.Access;
-        SessionId = sessionId;
-    }
-    private EscapeApplicationContext(EscapeApplicationContext parent, ContextInheritance inheritance)
-        : base(parent, inheritance)
-    {
-        access = parent.Access;
-        SessionId = parent.SessionId;
-    }
     private EscapeAccess Access => access ?? throw new ObjectDisposedException(nameof(EscapeApplicationContext));
     // 固定された対象ID。アクティブセッションへの自動的な追従は行いません。
     public long SessionId { get; }
     public IGameplayAccess Gameplay => Access;
     public IGameViewAccess View => Access;
     public IApplicationLifetimeAccess Lifetime => Access;
-
-    // ゲーム実行側から呼びます。新規セッションと親のCancellationを共有する子スコープを作ります。
-    // 初期値の割当てだけを行い、公開・提示開始はGameplay.BeginSessionを呼ぶReactionが担当します。
-    public EscapeApplicationContext CreateSessionContext()
-    {
-        var shared = Access;
-        return new EscapeApplicationContext(this, shared.CreateSession());
-    }
-    // 対象IDとアクセスだけを共有する独立ルートです。Cancellationと追加値は共有しません。
-    public EscapeApplicationContext CreateIndependentContext() => new(this, ContextInheritance.None);
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
@@ -67,18 +39,7 @@ public sealed class EscapeApplicationContext : FlowContext
     }
 
     protected override void ValidateAdditionalValue<T>(T value)
-    {
-        if (value is IGameplayAccess or IGameViewAccess or IApplicationLifetimeAccess || IsEntry(value!))
-            throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
-    }
-
-    private static bool IsEntry(object value)
-    {
-        for (var type = value.GetType(); type is not null; type = type.BaseType)
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Entry<>))
-                return true;
-        return false;
-    }
+        => ContextAccessValidation.Validate(value!);
 
     protected override void DisposeCore() => access = null;
 }

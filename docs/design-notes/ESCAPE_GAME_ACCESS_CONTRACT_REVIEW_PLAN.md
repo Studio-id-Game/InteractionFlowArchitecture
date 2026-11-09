@@ -1,17 +1,24 @@
 # EscapeGame Access契約の再分類プラン
 
-状態: 単一Context上で3Accessへの再編を実装済み。後半のContext契約分割は未実装。
+状態: 3Accessへの再編と、後半のContext契約分割を実装済み。
 調査・実装ともサブエージェントは使用していない。
 調査対象は単一EscapeApplicationContextへ戻した40af6fe時点の本番コードと、関連テスト・計測コード。
 Core API、Context型、State、同期境界を変更せず、公開Access契約の分類を先に見直す。
 
 実装結果: Gameplay / View / Lifetimeの3契約へ移行し、旧7契約とActiveSessionIdを削除した。
 待機メソッド名をWaitForPresentationAsyncへ変更し、CreateSessionをGameplay契約へ公開した。
-単一EscapeApplicationContextと既存の生成メソッドは維持し、ノード・PortのContext引数型は変更していない。
+3Access再編の段階では単一EscapeApplicationContextと既存の生成メソッドを維持し、ノード・PortのContext引数型を変更しなかった。
 既存94件にLifetime専用Handler2件とセッション割り当て1件を追加し、EscapeGame97件が成功した。
 全体ビルドは警告・エラー0件、他プロジェクト470件を含む全567件が成功。
 Release簡易計測は通常PresentFrameが488B/回・約227～238nsで、割り当て量を維持した。
 実画面での再確認は未実施。処理手順と同期境界を変えず、非ネイティブ実行で検証した。
+
+後続のContext分割も完了した。4つのContextインターフェースを実行経路の引数へ使い、
+EscapeApplicationContext / GameplayContext / GameViewContextの3具体型とコンストラクターで構成している。
+旧生成メソッドを削除し、具体Contextへのキャストなしで構築する。
+全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件、計569件が成功。
+探索範囲・固定値検証・親探索と取消の分離・破棄・実フローへの限定Context受け渡しを確認した。
+Release簡易計測の通常PresentFrameは488B/回・約231～239ns。実画面の再確認は未実施。
 
 ## 結論
 
@@ -214,7 +221,7 @@ Close / RequestShutdownがLifetimeとなる。描画側とゲーム側の共通�
 結論: Access再分類後なら、ゲーム実行側と画面接続側のContext契約を分ける価値がある。
 旧構成ではSession / Control / Presentationが共通だったが、新構成で共通になるのはLifetimeだけである。
 ただし全体の実行所有者であるWindowSystemFlowは両側を扱うため、片側の契約へ無理に限定しない。
-この節は次段階の提案であり、現在の単一Context実装はまだ変更しない。
+以下の契約を後続段階で実装した。元の単一Context構成とは別の変更として検証する。
 
 ### 契約は2用途、停止用の共通基底、全体用の合成
 
@@ -267,17 +274,17 @@ IGameOperation / ISessionReaction / IWindowReactionの各メソッドは、同�
 
 ### 具体Contextと構築
 
-具体型はApplicationContext / GameplayContext / GameViewContextを候補とする。
+具体型は既存名のEscapeApplicationContextと、新設GameplayContext / GameViewContextを使う。
 すべて通常のFlowContext派生で、対応するインターフェースを実装する。
-内部EscapeAccessを作るのはApplicationContextだけとし、他の具体Contextは親の公開プロパティから必要なAccessを保持する。
+内部EscapeAccessを作るのはEscapeApplicationContextだけとし、他の具体Contextは親の公開プロパティから必要なAccessを保持する。
 生のEscapeAccessを公開するプロパティ、具体Contextへのキャスト、Access実体への別interfaceキャストを使わない。
 
 | 構築箇所 | 構築するContext | 引き継ぎ |
 | --- | --- | --- |
-| Program | ApplicationContext | 新規EscapeAccessとCancellation。SessionIdは非セッションを表す0 |
+| Program | EscapeApplicationContext | 新規EscapeAccessとCancellation。SessionIdは非セッションを表す0 |
 | WindowSystemFlow | GameViewContext(application, None) | View / Lifetimeのみコピーし、親探索・Cancellationは独立 |
 | WindowSystemFlow | GameplayContext(application, Cancellation) | Gameplay / Lifetime / 対象IDをコピー。取消だけ共有し、広い親探索は遮断 |
-| GameSystemFlow | GameplayContext(game, newSessionId) | Gameplay / Lifetimeと新ID。値探索・Cancellationはゲーム側の親からAllで引き継ぐ |
+| GameSystemFlow | GameplayContext(game, newSessionId, All) | Gameplay / Lifetimeと新ID。値探索・Cancellationはゲーム側の親からAllで引き継ぐ |
 | ゲーム側終了処理 | GameplayContext(session, None) | 同じ対象・Access、独立したCancellationと追加値 |
 | 停止・Close用スコープ | GameViewContextの独立 / 親あり構築 | 停止はNone、Closeは同種の親をAllで探索しWindowStateを共有 |
 
@@ -288,7 +295,7 @@ IGameOperation / ISessionReaction / IWindowReactionの各メソッドは、同�
 
 ```csharp
 var sessionId = context.Gameplay.CreateSession();
-using var session = new GameplayContext(context, sessionId);
+using var session = new GameplayContext(context, sessionId, ContextInheritance.All);
 ```
 
 CreateSessionの停止との競合時の例外、初期化・公開の分離、リトライ前のEndSessionは維持する。
@@ -300,7 +307,8 @@ CreateIndependentContext等も具体型のコンストラクターへ置き換�
 インターフェースの引数へ変えただけでは、実体が広いままならTryGetで別Accessを取得できる。
 そのため、WindowSystemFlowから先は上表の限定された具体Contextを渡す。
 GameplayContextはGameplay / Lifetime、GameViewContextはView / LifetimeだけをTryGetCoreで返す。
-両者とも広いApplicationContextの値は探索せず、Cancellation共有はCoreのモードで別途維持する。
+実フローでは両者とも広いApplicationContextの値は探索せず、Cancellation共有はCoreのモードで別途維持する。
+さらにTryGetCoreで反対側の固定Accessを明示的に拒否するため、Allを指定した構築でも隠した契約へ探索が抜けない。
 同種の子・終了スコープのみ親探索を許可し、固定3AccessとEntryの追加による迂回は検証で拒否する。
 
 これにより、通常のプロパティ参照とContext探索の双方で役割を分けられる。

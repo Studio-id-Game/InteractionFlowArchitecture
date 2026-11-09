@@ -24,7 +24,8 @@ public sealed class FrameTests
     public async Task FrameControlRequestsSuppressOrdinaryInputBeforeDrawing(
         bool stop, bool pause, bool skip, int delivered)
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new EscapeApplicationContext();
+        using var context = new GameViewContext(app, ContextInheritance.None);
         context.With(new FrameState());
         var operation = new FrameOperation(frame =>
         {
@@ -54,7 +55,7 @@ public sealed class FrameTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var pending = session.Gameplay.ReadAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
-        using var frames = app.CreateIndependentContext();
+        using var frames = new GameViewContext(app, ContextInheritance.None);
         var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
         frames.With(frame);
         var control = new ChangeControl(new GameControlReaction(),
@@ -92,7 +93,7 @@ public sealed class FrameTests
         var enemy = session.Gameplay.ApplyEnemy(session.SessionId);
         var newKey = Assert.IsType<PresentationKey>(enemy.Presentation);
         Assert.NotEqual(oldKey, newKey);
-        using var frames = app.CreateIndependentContext();
+        using var frames = new GameViewContext(app, ContextInheritance.None);
         frames.With(frame);
         var control = new GameControlReaction();
 
@@ -107,16 +108,16 @@ public sealed class FrameTests
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(EscapeApplicationContext context) => poll(context.GetRequired<FrameState>());
+        public void Poll(IGameViewContext context) => poll(context.GetRequired<FrameState>());
     }
 
     private sealed class RecordedGameOperation : Operation, IGameOperation
     {
         public List<(long, GameCommand)> Commands { get; } = [];
         public override void ForceResetMemoryState() { }
-        public ValueTask<GameCommand> ReadAsync(EscapeApplicationContext context)
+        public ValueTask<GameCommand> ReadAsync(IGameplayContext context)
             => throw new NotSupportedException();
-        public bool Submit(EscapeApplicationContext context, long sessionId, GameCommand command)
+        public bool Submit(IGameViewContext context, long sessionId, GameCommand command)
         {
             Commands.Add((sessionId, command));
             return true;
@@ -127,13 +128,13 @@ public sealed class FrameTests
     {
         public int DrawCount { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Draw(EscapeApplicationContext context)
+        public ReactionEnd Open(IGameViewContext context) => GetEnd();
+        public ReactionEnd Draw(IGameViewContext context)
         {
             onDraw();
             DrawCount++;
             return GetEnd();
         }
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous) => GetEnd(previous);
+        public ReactionEnd Close(ILifetimeContext context, Result previous) => GetEnd(previous);
     }
 }

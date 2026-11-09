@@ -11,7 +11,7 @@ public sealed class GameReaction : Reaction, IGameReaction
 {
     public override void ForceResetMemoryState() { }
 
-    public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> BeginAsync(IGameplayContext context)
     {
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
         var change = context.Gameplay.BeginSession(context.SessionId);
@@ -22,7 +22,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return await PresentAsync(context, change.Presentation!.Value);
     }
 
-    public async ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -37,7 +37,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
+    public async ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -53,7 +53,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -73,7 +73,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -92,7 +92,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -111,7 +111,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+    public async ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
@@ -126,7 +126,7 @@ public sealed class GameReaction : Reaction, IGameReaction
         return GetEnd();
     }
 
-    private static async ValueTask<ReactionEnd> PresentAsync(EscapeApplicationContext context, PresentationKey key)
+    private static async ValueTask<ReactionEnd> PresentAsync(IGameplayContext context, PresentationKey key)
     {
         var token = context.Cancellation.GetToken();
         var completion = await context.Gameplay.WaitForPresentationAsync(key, token);

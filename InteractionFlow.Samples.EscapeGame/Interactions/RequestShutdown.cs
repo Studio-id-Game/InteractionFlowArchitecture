@@ -12,8 +12,8 @@ public sealed class RequestShutdown(
     ISessionReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<ILifetimeContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(ILifetimeContext context)
         => new(reaction.RequestShutdown(context));
 }

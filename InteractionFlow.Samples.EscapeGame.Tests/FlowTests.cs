@@ -376,7 +376,7 @@ public sealed class FlowTests
     {
         private readonly InteractionFlow.Core.Builders.ScopeHandler scope;
         public EscapeApplicationContext Context { get; } = new();
-        public InteractionFlow.Core.Builders.SystemFlowHandler<EscapeApplicationContext> Flow { get; }
+        public InteractionFlow.Core.Builders.SystemFlowHandler<IApplicationContext> Flow { get; }
         public ScriptedWindowOperation Input { get; }
         public HeadlessWindowReaction Window { get; }
         public TrackingGameReaction Game { get; }
@@ -384,6 +384,7 @@ public sealed class FlowTests
 
         public Fixture(Exception? stopFailure = null)
         {
+            Context.With("application-only value");
             var builder = new ScopeBuilder();
             builder.Apply(new EscapeGameProfile())
                 .UseFunction<IWindowOperation, ScriptedWindowOperation>()
@@ -396,7 +397,7 @@ public sealed class FlowTests
             Game = Assert.IsType<TrackingGameReaction>(scope.GetRequiredService<IGameReaction>());
             Session = Assert.IsType<TrackingSessionReaction>(scope.GetRequiredService<ISessionReaction>());
             Session.Failure = stopFailure;
-            Flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
+            Flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         }
 
         public void Dispose()
@@ -410,10 +411,12 @@ public sealed class FlowTests
     public sealed class ScriptedWindowOperation : Operation, IWindowOperation
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
-        public Action<EscapeApplicationContext>? PollFrame { get; set; }
+        public Action<IGameViewContext>? PollFrame { get; set; }
         public override void ForceResetMemoryState() { }
-        public void Poll(EscapeApplicationContext context)
+        public void Poll(IGameViewContext context)
         {
+            Assert.False(context.TryGet<IGameplayAccess>(out _));
+            Assert.False(context.TryGet<string>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(10))
                 throw new TimeoutException("The scripted game did not finish.");
             var frame = context.GetRequired<FrameState>();
@@ -435,16 +438,16 @@ public sealed class FlowTests
         public int DrawCount { get; private set; }
         public bool CompletePresentations { get; set; } = true;
         public Exception? CloseFailure { get; set; }
-        public Action<EscapeApplicationContext>? OnOpen { get; set; }
+        public Action<IGameViewContext>? OnOpen { get; set; }
         public Action? BeforeClose { get; set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context)
+        public ReactionEnd Open(IGameViewContext context)
         {
             Record("open");
             OnOpen?.Invoke(context);
             return GetEnd();
         }
-        public ReactionEnd Draw(EscapeApplicationContext context)
+        public ReactionEnd Draw(IGameViewContext context)
         {
             Record("draw");
             DrawCount++;
@@ -461,7 +464,7 @@ public sealed class FlowTests
             Thread.Yield();
             return GetEnd();
         }
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
             Record("close");
             BeforeClose?.Invoke();
@@ -481,14 +484,14 @@ public sealed class FlowTests
         public Exception? Failure { get; set; }
         public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context)
+        public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
             if (Failure is not null)
                 throw Failure;
             context.Lifetime.RequestShutdown();
             return GetEnd();
         }
-        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
+        public ReactionEnd EndSession(IGameplayContext context, Result previous)
         {
             context.Gameplay.EndSession(context.SessionId);
             Ended = true;
@@ -502,10 +505,12 @@ public sealed class FlowTests
         private volatile bool cancellationObserved;
         public CancellationObject? Cancellation { get; private set; }
         public bool CancellationObserved => cancellationObserved;
-        public Action<EscapeApplicationContext>? AfterBegin { get; set; }
+        public Action<IGameplayContext>? AfterBegin { get; set; }
         public override void ForceResetMemoryState() { }
-        public async ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
+        public async ValueTask<ReactionEnd> BeginAsync(IGameplayContext context)
         {
+            Assert.False(context.TryGet<IGameViewAccess>(out _));
+            Assert.False(context.TryGet<string>(out _));
             Cancellation = context.Cancellation;
             try
             {
@@ -519,24 +524,24 @@ public sealed class FlowTests
                 throw;
             }
         }
-        public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context)
             => inner.EnableSelectionAsync(context);
-        public ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
+        public ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command)
             => inner.SelectAsync(context, command);
-        public ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context)
             => inner.ApplyPlayerAsync(context);
-        public ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context)
             => inner.ApplyEnemyAsync(context);
-        public ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context)
             => inner.ShowResultAsync(context);
-        public ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
             => inner.EnableResultInputAsync(context);
     }
 
     private sealed class CanceledSessionReaction(OperationCanceledException canceled) : Reaction, ISessionReaction
     {
         public override void ForceResetMemoryState() { }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous) => throw canceled;
+        public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
+        public ReactionEnd EndSession(IGameplayContext context, Result previous) => throw canceled;
     }
 }

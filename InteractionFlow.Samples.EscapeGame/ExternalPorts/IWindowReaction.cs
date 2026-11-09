@@ -7,7 +7,7 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
 public interface IWindowReaction : IReactionPort
 {
-    ReactionEnd Open(EscapeApplicationContext context);
-    ReactionEnd Draw(EscapeApplicationContext context);
-    ReactionEnd Close(EscapeApplicationContext context, Result previous);
+    ReactionEnd Open(IGameViewContext context);
+    ReactionEnd Draw(IGameViewContext context);
+    ReactionEnd Close(ILifetimeContext context, Result previous);
 }

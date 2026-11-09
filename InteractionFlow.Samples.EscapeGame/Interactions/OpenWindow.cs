@@ -12,8 +12,8 @@ public sealed class OpenWindow(
     IWindowReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<IGameViewContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameViewContext context)
         => new(reaction.Open(context));
 }

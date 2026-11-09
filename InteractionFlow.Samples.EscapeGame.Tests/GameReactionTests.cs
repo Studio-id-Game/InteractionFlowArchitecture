@@ -117,8 +117,8 @@ public sealed class GameReactionTests
     public async Task ResultInputCannotStartBeforeResultPresentationCompletes()
     {
         using var fixture = new ReactionFixture();
-        GameTestSteps.PlayTurn(fixture.Session, GameCommand.Up);
-        GameTestSteps.PlayTurn(fixture.Session, GameCommand.Right);
+        GameTestSteps.PlayTurn(fixture.Session, fixture.App, GameCommand.Up);
+        GameTestSteps.PlayTurn(fixture.Session, fixture.App, GameCommand.Right);
         var result = fixture.Reaction.ShowResultAsync(fixture.Session).AsTask();
         var snapshot = fixture.App.View.Snapshot();
 
@@ -137,14 +137,14 @@ public sealed class GameReactionTests
         var context = fixture.Session;
         await fixture.Reaction.SelectAsync(context, GameCommand.Up);
         await fixture.Reaction.SelectAsync(context, GameCommand.Confirm);
-        Assert.True(context.View.TrySetPaused(context.SessionId, true));
+        Assert.True(fixture.App.View.TrySetPaused(context.SessionId, true));
 
         var execution = fixture.Reaction.ApplyPlayerAsync(context).AsTask();
 
         Assert.False(execution.IsCompleted);
         Assert.Equal(0, fixture.App.View.Snapshot().Turn);
         Assert.True(context.Gameplay.GetProgress(context.SessionId).HasConfirmedAction);
-        Assert.True(context.View.TrySetPaused(context.SessionId, false));
+        Assert.True(fixture.App.View.TrySetPaused(context.SessionId, false));
         var presentation = await WaitForPresentationAsync(fixture.App);
         Assert.Equal(1, fixture.App.View.Snapshot().Turn);
         GameTestSteps.Complete(fixture.App, presentation.Key);
@@ -160,7 +160,7 @@ public sealed class GameReactionTests
         var context = fixture.Session;
         await fixture.Reaction.SelectAsync(context, GameCommand.Up);
         await fixture.Reaction.SelectAsync(context, GameCommand.Confirm);
-        Assert.True(context.View.TrySetPaused(context.SessionId, true));
+        Assert.True(fixture.App.View.TrySetPaused(context.SessionId, true));
         var execution = fixture.Reaction.ApplyPlayerAsync(context).AsTask();
 
         fixture.App.Lifetime.RequestShutdown();
@@ -227,12 +227,12 @@ public sealed class GameReactionTests
     private sealed class ReactionFixture : IDisposable
     {
         internal EscapeApplicationContext App { get; } = new();
-        internal EscapeApplicationContext Session { get; }
+        internal GameplayContext Session { get; }
         internal GameReaction Reaction { get; } = new();
 
         internal ReactionFixture(bool prepare = true)
         {
-            Session = prepare ? GameTestSteps.Ready(App) : App.CreateSessionContext();
+            Session = prepare ? GameTestSteps.Ready(App) : GameTestSteps.CreateSession(App);
         }
 
         public void Dispose()

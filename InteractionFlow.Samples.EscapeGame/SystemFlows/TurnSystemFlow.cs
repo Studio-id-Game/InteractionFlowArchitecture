@@ -12,9 +12,9 @@ public sealed class TurnSystemFlow(
     SelectAction select,
     ApplyPlayerAction player,
     ApplyEnemyAction enemy)
-    : SystemFlow<EscapeApplicationContext>(enable, select, player, enemy)
+    : SystemFlow<IGameplayContext>(enable, select, player, enemy)
 {
-    protected override async Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var end = await enable.ExecuteAsync(context);
         if (!await GameFlowCheckpoint.CanContinueAsync(context, end))

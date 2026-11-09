@@ -17,14 +17,14 @@ internal static class EscapeFrameMeasurements
     internal static void Run()
     {
         using var root = new EC.EscapeApplicationContext();
-        using var session = root.CreateSessionContext();
+        using var session = new EC.GameplayContext(root, root.Gameplay.CreateSession(), ContextInheritance.Cancellation);
         var initial = session.Gameplay.BeginSession(session.SessionId).Presentation!.Value;
-        session.View.Advance(initial, 0, 0);
-        if (!session.View.TryComplete(initial)
+        root.View.Advance(initial, 0, 0);
+        if (!root.View.TryComplete(initial)
             || session.Gameplay.EnterSelecting(session.SessionId) != E.MutationStatus.Applied)
             throw new InvalidOperationException("Failed to initialize measurement session.");
 
-        using var frames = root.CreateIndependentContext();
+        using var frames = new EC.GameViewContext(root, ContextInheritance.None);
         var window = new E.WindowState();
         window.MarkOpened();
         frames.With(window).With(new E.FrameState());
@@ -47,7 +47,7 @@ internal static class EscapeFrameMeasurements
     private sealed class Polling : Operation, EP.IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void Poll(EC.EscapeApplicationContext context)
+        public void Poll(EC.IGameViewContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
             var state = context.View.Snapshot();
@@ -62,9 +62,9 @@ internal static class EscapeFrameMeasurements
     private sealed class Drawing : Reaction, EP.IWindowReaction
     {
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EC.EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Close(EC.EscapeApplicationContext context, Result previous) => GetEnd(previous);
-        public ReactionEnd Draw(EC.EscapeApplicationContext context)
+        public ReactionEnd Open(EC.IGameViewContext context) => GetEnd();
+        public ReactionEnd Close(EC.ILifetimeContext context, Result previous) => GetEnd(previous);
+        public ReactionEnd Draw(EC.IGameViewContext context)
         {
             context.GetRequired<E.WindowState>().VerifyAccess();
             sink = context.View.Snapshot();

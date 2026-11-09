@@ -17,7 +17,8 @@ public sealed class ResultInteractionTests
     [Fact]
     public async Task ResultPresentationMustCompleteBeforeInputIsEnabled()
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new EscapeApplicationContext();
+        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
         var pending = new TaskCompletionSource<ReactionEnd>(TaskCreationOptions.RunContinuationsAsynchronously);
         var reaction = new ResultReaction { Show = _ => new(pending.Task) };
         var execution = Create(reaction).ExecuteAsync(context);
@@ -33,7 +34,8 @@ public sealed class ResultInteractionTests
     [Fact]
     public async Task PresentationFailureDoesNotOpenInput()
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new EscapeApplicationContext();
+        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
         var failure = new InvalidOperationException("presentation failed");
         var reaction = new ResultReaction { Show = _ => new(ResultReaction.End(failure)) };
         var end = await Create(reaction).ExecuteAsync(context);
@@ -44,7 +46,8 @@ public sealed class ResultInteractionTests
     [Fact]
     public async Task InputEnableFailureUsesExistingExceptionHandling()
     {
-        using var context = new EscapeApplicationContext();
+        using var app = new EscapeApplicationContext();
+        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
         var failure = new InvalidOperationException("enable failed");
         var reaction = new ResultReaction { Enable = _ => throw failure };
         var end = await Create(reaction).ExecuteAsync(context);
@@ -59,7 +62,7 @@ public sealed class ResultInteractionTests
     public async Task StopOrCancellationAfterPresentationDoesNotLeaveAWait(bool cancel)
     {
         using var app = new EscapeApplicationContext();
-        using var context = app.CreateSessionContext();
+        using var context = GameTestSteps.CreateSession(app);
         var actual = new GameReaction();
         var reaction = new ResultReaction
         {
@@ -83,21 +86,21 @@ public sealed class ResultInteractionTests
 
     private sealed class ResultReaction : Reaction, IGameReaction
     {
-        public Func<EscapeApplicationContext, ValueTask<ReactionEnd>> Show { get; init; } = _ => new(End());
-        public Func<EscapeApplicationContext, ValueTask<ReactionEnd>> Enable { get; init; } = _ => new(End());
+        public Func<IGameplayContext, ValueTask<ReactionEnd>> Show { get; init; } = _ => new(End());
+        public Func<IGameplayContext, ValueTask<ReactionEnd>> Enable { get; init; } = _ => new(End());
         public int Enabled { get; private set; }
         public static ReactionEnd End(Exception? failure = null) => GetEnd(failure);
         public override void ForceResetMemoryState() { }
-        public ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context) => Show(context);
-        public ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context) => Show(context);
+        public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
         {
             Enabled++;
             return Enable(context);
         }
-        public ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> BeginAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context) => throw new NotSupportedException();
     }
 }

@@ -76,8 +76,8 @@ public sealed class FinishingTests
         bool earlierFailure)
     {
         using var app = new EscapeApplicationContext();
-        using var window = app.CreateIndependentContext();
-        using var game = new EscapeApplicationContext(app);
+        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("earlier failure");
         Exception current = canceled
@@ -105,8 +105,8 @@ public sealed class FinishingTests
     public async Task FinishingCancellationRetainsRegisteredTaskFailureDuringReset(FinishingKind kind)
     {
         using var app = new EscapeApplicationContext();
-        using var window = app.CreateIndependentContext();
-        using var game = new EscapeApplicationContext(app);
+        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = kind == FinishingKind.CloseWindow ? window : game;
         var previous = new FormatException("prior failure");
         var resetFailure = new InvalidOperationException("registered task failed");
@@ -135,7 +135,7 @@ public sealed class FinishingTests
             .UseFunction<IGameReaction, ObservedGameReaction>()
             .UseFunction<ISessionReaction, ObservedSessionReaction>();
         using var scope = builder.BuildScope();
-        using var flow = scope.BuildSystemFlow<WindowSystemFlow, EscapeApplicationContext>();
+        using var flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         using var context = new EscapeApplicationContext();
 
         var end = await flow.ExecuteAsync(context);
@@ -158,8 +158,8 @@ public sealed class FinishingTests
     public async Task WrongFinishingKindDoesNotInvokeOperation(FinishingKind operation)
     {
         using var app = new EscapeApplicationContext();
-        using var window = app.CreateIndependentContext();
-        using var game = new EscapeApplicationContext(app);
+        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = operation == FinishingKind.CloseWindow ? window : game;
         var wrong = operation == FinishingKind.CloseWindow ? FinishingKind.EndSession : FinishingKind.CloseWindow;
         context.With(new Finishing(wrong, Result.Success));
@@ -175,8 +175,8 @@ public sealed class FinishingTests
     private static Task<InteractionEnd> ExecuteFinishingAsync(
         FinishingKind kind,
         FailingPorts ports,
-        EscapeApplicationContext window,
-        EscapeApplicationContext game)
+        IGameViewContext window,
+        IGameplayContext game)
         => kind == FinishingKind.CloseWindow
             ? new CloseWindow(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(window)
             : new EndSession(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(game);
@@ -215,15 +215,15 @@ public sealed class FinishingTests
     {
         public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Draw(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context) => GetEnd();
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Open(IGameViewContext context) => GetEnd();
+        public ReactionEnd Draw(IGameViewContext context) => GetEnd();
+        public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
+        public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
             Calls++;
             throw error;
         }
-        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
+        public ReactionEnd EndSession(IGameplayContext context, Result previous)
         {
             Calls++;
             throw error;
@@ -244,7 +244,7 @@ public sealed class FinishingTests
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
         public override void ForceResetMemoryState() { }
-        public void Poll(EscapeApplicationContext context)
+        public void Poll(IGameViewContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(5))
@@ -262,18 +262,18 @@ public sealed class FinishingTests
         public bool Opened { get; private set; }
         public bool Closed { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(EscapeApplicationContext context)
+        public ReactionEnd Open(IGameViewContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             Opened = true;
             return GetEnd();
         }
-        public ReactionEnd Draw(EscapeApplicationContext context)
+        public ReactionEnd Draw(IGameViewContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             return GetEnd();
         }
-        public ReactionEnd Close(EscapeApplicationContext context, Result previous)
+        public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
             Assert.Equal(FinishingKind.CloseWindow, context.GetRequired<Finishing>().Kind);
             Closed = true;
@@ -285,14 +285,14 @@ public sealed class FinishingTests
     {
         public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
+        public ReactionEnd EndSession(IGameplayContext context, Result previous)
         {
             Assert.Equal(FinishingKind.EndSession, context.GetRequired<Finishing>().Kind);
             context.Gameplay.EndSession(context.SessionId);
             Ended = true;
             return GetEnd(previous);
         }
-        public ReactionEnd RequestShutdown(EscapeApplicationContext context)
+        public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             context.Lifetime.RequestShutdown();
@@ -305,23 +305,23 @@ public sealed class FinishingTests
         private readonly GameReaction inner = new();
         public bool Began { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> BeginAsync(IGameplayContext context)
         {
             Assert.False(context.TryGet<Finishing>(out _));
             Began = true;
             return inner.BeginAsync(context);
         }
-        public ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context)
             => inner.EnableSelectionAsync(context);
-        public ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command)
+        public ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command)
             => inner.SelectAsync(context, command);
-        public ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context)
             => inner.ApplyPlayerAsync(context);
-        public ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context)
             => inner.ApplyEnemyAsync(context);
-        public ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context)
             => inner.ShowResultAsync(context);
-        public ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context)
+        public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
             => inner.EnableResultInputAsync(context);
     }
 }

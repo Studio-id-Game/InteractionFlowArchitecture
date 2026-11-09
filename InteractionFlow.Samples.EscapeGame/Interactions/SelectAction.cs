@@ -14,9 +14,9 @@ public sealed class SelectAction(
     IGameReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, operation, reaction)
+    : Interaction<IGameplayContext>(exceptionPort, cancellationPort, operation, reaction)
 {
-    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override async ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var command = await operation.ReadAsync(context);
         return await reaction.SelectAsync(context, command);

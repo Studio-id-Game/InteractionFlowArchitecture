@@ -8,11 +8,11 @@ namespace InteractionFlow.Samples.EscapeGame.ExternalPorts;
 
 public interface IGameReaction : IReactionPort
 {
-    ValueTask<ReactionEnd> BeginAsync(EscapeApplicationContext context);
-    ValueTask<ReactionEnd> EnableSelectionAsync(EscapeApplicationContext context);
-    ValueTask<ReactionEnd> SelectAsync(EscapeApplicationContext context, GameCommand command);
-    ValueTask<ReactionEnd> ApplyPlayerAsync(EscapeApplicationContext context);
-    ValueTask<ReactionEnd> ApplyEnemyAsync(EscapeApplicationContext context);
-    ValueTask<ReactionEnd> ShowResultAsync(EscapeApplicationContext context);
-    ValueTask<ReactionEnd> EnableResultInputAsync(EscapeApplicationContext context);
+    ValueTask<ReactionEnd> BeginAsync(IGameplayContext context);
+    ValueTask<ReactionEnd> EnableSelectionAsync(IGameplayContext context);
+    ValueTask<ReactionEnd> SelectAsync(IGameplayContext context, GameCommand command);
+    ValueTask<ReactionEnd> ApplyPlayerAsync(IGameplayContext context);
+    ValueTask<ReactionEnd> ApplyEnemyAsync(IGameplayContext context);
+    ValueTask<ReactionEnd> ShowResultAsync(IGameplayContext context);
+    ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context);
 }

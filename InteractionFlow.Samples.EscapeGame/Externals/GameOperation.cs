@@ -10,9 +10,9 @@ public sealed class GameOperation : Operation, IGameOperation
 {
     public override void ForceResetMemoryState() { }
 
-    public ValueTask<GameCommand> ReadAsync(EscapeApplicationContext context)
+    public ValueTask<GameCommand> ReadAsync(IGameplayContext context)
         => context.Gameplay.ReadAsync(context.SessionId, context.Cancellation.GetToken());
 
-    public bool Submit(EscapeApplicationContext context, long sessionId, GameCommand command)
+    public bool Submit(IGameViewContext context, long sessionId, GameCommand command)
         => context.View.TrySubmit(sessionId, command);
 }

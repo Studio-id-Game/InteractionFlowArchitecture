@@ -40,8 +40,9 @@ raylib の呼び出しはメインスレッドに保ちます。
 `InteractionFlow.Samples.EscapeGame` は、その構成を小さなターン制脱出ゲームへ適用します。
 関心別Stateの整合した更新、SystemFlowによるターン合成と実行寿命管理、提示完了待機、
 プレイ中のポーズ・再開、リトライと終了処理を検証します。
-単一のEscapeApplicationContextから共有EscapeAccessを提供し、セッション・フレーム・終了用スコープを構成します。
-Contextの公開範囲分割はいったん外し、AccessをGameplay・View・Lifetimeの3契約へ整理しています。
+AccessをGameplay・View・Lifetimeの3契約とし、Contextの引数契約も役割別に分けています。
+EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / GameViewContextは公開Accessと探索範囲を限定します。
+Cancellationの共有と親の値探索はContextInheritanceで独立に指定します。
 構成と操作は [Turn-based escape](../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ---

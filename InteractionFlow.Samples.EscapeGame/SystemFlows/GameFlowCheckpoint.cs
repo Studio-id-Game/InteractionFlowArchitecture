@@ -8,7 +8,7 @@ namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 // フロー間の共通方針。状態更新の原子性はAccess側の再確認が担います。
 internal static class GameFlowCheckpoint
 {
-    internal static async ValueTask<bool> CanContinueAsync(EscapeApplicationContext context, InteractionEnd end)
+    internal static async ValueTask<bool> CanContinueAsync(IGameplayContext context, InteractionEnd end)
     {
         if (end.HasException || context.Gameplay.GetProgress(context.SessionId).Stopping)
             return false;

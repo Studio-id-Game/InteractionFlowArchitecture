@@ -12,8 +12,8 @@ public sealed class ApplyEnemyAction(
     IGameReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
         => reaction.ApplyEnemyAsync(context);
 }

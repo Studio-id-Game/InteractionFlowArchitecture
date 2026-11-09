@@ -16,11 +16,12 @@ public sealed class WindowSystemFlow(
     RequestShutdown stop,
     CloseWindow close,
     GameSystemFlow game)
-    : SystemFlow<EscapeApplicationContext>(open, frame, control, stop, close, game)
+    : SystemFlow<IApplicationContext>(open, frame, control, stop, close, game)
 {
-    protected override Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override Task<InteractionEnd> ExecuteCoreAsync(IApplicationContext context)
     {
-        using var frames = context.CreateIndependentContext();
+        using var frames = new GameViewContext(context, ContextInheritance.None);
+        using var gameplay = new GameplayContext(context, ContextInheritance.Cancellation);
         var input = new FrameState();
         frames.With(input).With(new WindowState());
         var failures = new FailureCollector();
@@ -32,7 +33,7 @@ public sealed class WindowSystemFlow(
             failures.Add(opened.Result);
             if (!opened.HasException)
             {
-                execution = Task.Run(() => game.ExecuteAsync(context));
+                execution = Task.Run(() => game.ExecuteAsync(gameplay));
                 PresentFrames(frames, input, execution, failures);
             }
         }
@@ -42,11 +43,11 @@ public sealed class WindowSystemFlow(
         }
         finally
         {
-            StopAndJoin(context, frames, execution, failures);
+            StopAndJoin(gameplay, frames, execution, failures);
         }
 
         // 閉鎖処理まで呼び出し元スレッドで完了させます。ここで await しません。
-        using var shutdown = new EscapeApplicationContext(frames);
+        using var shutdown = new GameViewContext(frames, ContextInheritance.All);
         shutdown.With(new Finishing(FinishingKind.CloseWindow, failures.ToResult()));
         try
         {
@@ -60,7 +61,7 @@ public sealed class WindowSystemFlow(
     }
 
     private void PresentFrames(
-        EscapeApplicationContext frames,
+        IGameViewContext frames,
         FrameState input,
         Task<InteractionEnd> execution,
         FailureCollector failures)
@@ -84,13 +85,13 @@ public sealed class WindowSystemFlow(
     }
 
     private void StopAndJoin(
-        EscapeApplicationContext context,
-        EscapeApplicationContext frames,
+        IGameplayContext context,
+        IGameViewContext frames,
         Task<InteractionEnd>? execution,
         FailureCollector failures)
     {
         // Stop は提示・入力・再開待機を解除します。失敗しても cancel/join/close を続けます。
-        using var stopping = frames.CreateIndependentContext();
+        using var stopping = new GameViewContext(frames, ContextInheritance.None);
         try { failures.Add(stop.ExecuteAsync(stopping).GetAwaiter().GetResult().Result); }
         catch (Exception error) { failures.Add(error); }
 

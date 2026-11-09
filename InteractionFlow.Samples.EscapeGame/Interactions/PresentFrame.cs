@@ -15,9 +15,9 @@ public sealed class PresentFrame(
     IGameOperation game,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<EscapeApplicationContext>(exceptionPort, cancellationPort, operation, reaction, game)
+    : Interaction<IGameViewContext>(exceptionPort, cancellationPort, operation, reaction, game)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameViewContext context)
     {
         operation.Poll(context);
         var input = context.GetRequired<FrameState>();

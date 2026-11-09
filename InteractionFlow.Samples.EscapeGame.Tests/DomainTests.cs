@@ -14,7 +14,7 @@ public sealed class DomainTests
         GameCommand[] commands = [GameCommand.Up, GameCommand.Up, GameCommand.Down, GameCommand.Down,
             GameCommand.Right, GameCommand.Interact, GameCommand.Right, GameCommand.Right, GameCommand.Right,
             GameCommand.Interact, GameCommand.Up, GameCommand.Up];
-        foreach (var command in commands) GameTestSteps.PlayTurn(session, command);
+        foreach (var command in commands) GameTestSteps.PlayTurn(session, app, command);
         var snapshot = app.View.Snapshot();
         Assert.Equal(GameOutcome.Won, snapshot.Outcome);
         Assert.Equal(12, snapshot.Turn);
@@ -53,7 +53,7 @@ public sealed class DomainTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        for (var i = 0; i < 4; i++) GameTestSteps.PlayTurn(session, GameCommand.Right);
+        for (var i = 0; i < 4; i++) GameTestSteps.PlayTurn(session, app, GameCommand.Right);
         var before = app.View.Snapshot();
         Assert.Equal(new GridPosition(5, 3), before.Player);
         Assert.Equal(MutationStatus.Rejected, session.Gameplay.ApplySelection(session.SessionId, GameCommand.Up));
@@ -71,9 +71,9 @@ public sealed class DomainTests
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        if (playerEntersGuard) GameTestSteps.PlayTurn(session, GameCommand.Wait);
-        GameTestSteps.PlayTurn(session, GameCommand.Up);
-        GameTestSteps.PlayTurn(session, GameCommand.Right);
+        if (playerEntersGuard) GameTestSteps.PlayTurn(session, app, GameCommand.Wait);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Up);
+        GameTestSteps.PlayTurn(session, app, GameCommand.Right);
         var snapshot = app.View.Snapshot();
         Assert.Equal(GameOutcome.Lost, snapshot.Outcome);
         Assert.Equal(snapshot.Player, snapshot.Enemy);

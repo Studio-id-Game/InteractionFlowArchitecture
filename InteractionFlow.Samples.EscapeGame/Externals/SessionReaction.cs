@@ -12,7 +12,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
 {
     public override void ForceResetMemoryState() { }
 
-    public ReactionEnd EndSession(EscapeApplicationContext context, Result previous)
+    public ReactionEnd EndSession(IGameplayContext context, Result previous)
     {
         try { context.Gameplay.EndSession(context.SessionId); }
         catch (Exception error)
@@ -23,7 +23,7 @@ public sealed class SessionReaction : Reaction, ISessionReaction
         return GetEnd(previous);
     }
 
-    public ReactionEnd RequestShutdown(EscapeApplicationContext context)
+    public ReactionEnd RequestShutdown(ILifetimeContext context)
     {
         // 停止・入力閉鎖・提示解除・再開待機解除は同じ共有アクセス境界で行います。
         context.Lifetime.RequestShutdown();

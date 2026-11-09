@@ -12,9 +12,9 @@ public sealed class SessionSystemFlow(
     TurnSystemFlow turn,
     ShowResult show,
     SelectAction select)
-    : SystemFlow<EscapeApplicationContext>(begin, turn, show, select)
+    : SystemFlow<IGameplayContext>(begin, turn, show, select)
 {
-    protected override async Task<InteractionEnd> ExecuteCoreAsync(EscapeApplicationContext context)
+    protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         var end = await begin.ExecuteAsync(context);
         if (!await GameFlowCheckpoint.CanContinueAsync(context, end))

@@ -29,3 +29,7 @@ Counter固有の採用例と留保は [サンプルの分析](../../InteractionF
 
 この設計順序を適用した次のゲームのたたき台は、
 [一部屋のターン制脱出ゲーム仕様書案](../specs/TURN_BASED_ESCAPE_GAME.md) にまとめています。内容は未確定です。
+
+サンプル検証から見えた今後の基盤拡張・開発支援の候補と、ReactionEnd<T>に限定する案は、
+[ライブラリの保証拡張と開発支援の検討](../design-notes/LIBRARY_GUARANTEES_AND_DEVELOPMENT_SUPPORT.md) を参照してください。
+こちらは未実装の検討記録で、上記ガイドの現行契約とは区別します。

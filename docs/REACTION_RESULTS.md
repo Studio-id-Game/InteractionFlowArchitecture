@@ -84,3 +84,7 @@ Context が届きます。ReactionEnd / InteractionEnd の生成規則と、例�
 型付き版も汎用版も、同じ実装で Task 登録・解除、キャンセル時の後始末、処理 Port への委譲を行います。
 Context の所有権や Interaction の直接ネストに関する契約は変えません。
 型の関係と反変の扱いは [型付き Interaction の契約](./design-notes/TYPED_INTERACTION_CONTEXT.md) を参照してください。
+
+同期成功時は内部のTaskラッパーを介さず結果を処理しますが、本体開始前のキャンセル登録と
+後始末を含む通知完了・登録解除の契約は共通です。
+計測と改善範囲は [Interaction実行の性能計画](./design-notes/INTERACTION_EXECUTION_PERFORMANCE_PLAN.md) を参照してください。

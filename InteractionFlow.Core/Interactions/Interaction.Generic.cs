@@ -62,7 +62,34 @@ namespace InteractionFlow.Core.Interactions
                 completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 // Reject registration during reset before starting any untracked work.
                 registration = context.Cancellation.AddCancelableTask(completion.Task);
-                end = await ExecuteBodyAndSignalCompletionAsync().ConfigureAwait(false);
+                try
+                {
+                    // Keep synchronous startup errors outside the Task cancellation hook.
+                    var task = ExecuteCoreAsync(context);
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        end = task.GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        try { end = await task.ConfigureAwait(false); }
+                        catch (OperationCanceledException)
+                        {
+                            try { await OnCancellation(context).ConfigureAwait(false); }
+                            catch (Exception error)
+                            {
+                                cleanupFailure = error;
+                                completion.TrySetException(error);
+                            }
+                            throw;
+                        }
+                    }
+                }
+                finally
+                {
+                    // Signal body and cleanup completion before a port can wait for this execution.
+                    completion.TrySetResult(true);
+                }
             }
             catch (OperationCanceledException e)
             {
@@ -80,36 +107,6 @@ namespace InteractionFlow.Core.Interactions
                 registration?.Dispose();
             }
             return GetEnd(end);
-
-            async Task<ReactionEnd> ExecuteBodyAndSignalCompletionAsync()
-            {
-                try
-                {
-                    // Synchronous startup errors bypass OnCancellation, preserving its existing contract.
-                    var task = ExecuteCoreAsync(context);
-                    return await AwaitBodyAndCleanupAsync(task).ConfigureAwait(false);
-                }
-                finally
-                {
-                    // Complete before either port can wait on this execution's notification.
-                    completion!.TrySetResult(true);
-                }
-            }
-
-            async Task<ReactionEnd> AwaitBodyAndCleanupAsync(Task<ReactionEnd> task)
-            {
-                try { return await task.ConfigureAwait(false); }
-                catch (OperationCanceledException)
-                {
-                    try { await OnCancellation(context).ConfigureAwait(false); }
-                    catch (Exception error)
-                    {
-                        cleanupFailure = error;
-                        completion!.TrySetException(error);
-                    }
-                    throw;
-                }
-            }
         }
 
         /// <summary>

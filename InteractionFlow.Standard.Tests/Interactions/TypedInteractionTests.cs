@@ -208,6 +208,52 @@ namespace InteractionFlow.Standard.Tests.Interactions
         private static TaskCompletionSource<bool> Signal()
             => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        [Fact]
+        public async Task SynchronousSuccessKeepsAnotherExecutionRegisteredOnSameInstanceAndContext()
+        {
+            using var context = new SpecializedContext();
+            var pending = new TaskCompletionSource<ReactionEnd>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var calls = 0;
+            var interaction = new Probe(new Errors(), new Cancellations())
+            {
+                Body = current =>
+                {
+                    Assert.True(current.Cancellation.HasTask);
+                    return ++calls == 1 ? pending.Task : Task.FromResult(Ends.Create());
+                }
+            };
+
+            var first = interaction.ExecuteAsync(context);
+            var second = interaction.ExecuteAsync(context);
+            Assert.True(second.IsCompletedSuccessfully);
+            Assert.False((await second).HasException);
+            Assert.False(first.IsCompleted);
+            Assert.True(context.Cancellation.HasTask);
+
+            pending.SetResult(Ends.Create());
+            Assert.False((await first.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).HasException);
+            Assert.False(context.Cancellation.HasTask);
+            Assert.Equal(0, interaction.HookCount);
+        }
+
+        [Fact]
+        public async Task SynchronousStartupFailureAndThrowingPortReturnFaultedTaskAndUnregister()
+        {
+            using var context = new SpecializedContext();
+            var failure = new FormatException("body failed synchronously");
+            var portFailure = new InvalidOperationException("port failed");
+            var interaction = new Probe(new ThrowingErrors(portFailure), new Cancellations())
+            {
+                Body = _ => throw failure
+            };
+
+            // ExecuteAsync itself must not start throwing synchronously after optimization.
+            var execution = interaction.ExecuteAsync(context);
+            Assert.Same(portFailure, await Assert.ThrowsAsync<InvalidOperationException>(() => execution));
+            Assert.False(context.Cancellation.HasTask);
+            Assert.Equal(0, interaction.HookCount);
+        }
+
         private sealed class SpecializedContext : FlowContext
         {
             public string Value => "specialized";
@@ -312,6 +358,13 @@ namespace InteractionFlow.Standard.Tests.Interactions
                 Context = context;
                 return new(GetEnd(exception));
             }
+        }
+
+        private sealed class ThrowingErrors(Exception failure) : ExceptionHandling
+        {
+            public override void ForceResetMemoryState() { }
+            protected override ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
+                => throw failure;
         }
 
         private sealed class Cancellations : CancellationHandling

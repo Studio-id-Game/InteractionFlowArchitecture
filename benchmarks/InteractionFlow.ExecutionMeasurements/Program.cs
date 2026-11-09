@@ -78,6 +78,7 @@ internal static class Program
             sink = reaction.Draw(context);
         });
         Measure("PresentFrame.ExecuteAsync", () => sink = frame.ExecuteAsync(context).GetAwaiter().GetResult());
+        EscapeFrameMeasurements.Run();
         GC.KeepAlive(sink);
     }
 
@@ -101,7 +102,7 @@ internal static class Program
         Console.WriteLine("compiler capture object: not found; skip implementation-specific diagnostic");
     }
 
-    private static void Measure(string name, Action action)
+    internal static void Measure(string name, Action action)
     {
         for (var i = 0; i < 20000; i++) action();
         for (var round = 1; round <= 3; round++)

@@ -1,12 +1,13 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using System;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
+using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 
@@ -16,9 +17,9 @@ public sealed class PresentFrame(
     IGameInputOperation game,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<IGameViewContext>(exceptionPort, cancellationPort, operation, reaction, game)
+    : Interaction<IViewContext>(exceptionPort, cancellationPort, operation, reaction, game)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameViewContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IViewContext context)
     {
         operation.PollFrameInput(context);
         var input = context.GetRequired<FrameState>();

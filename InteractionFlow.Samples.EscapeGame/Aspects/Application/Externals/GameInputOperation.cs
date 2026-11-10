@@ -1,7 +1,7 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Externals;
@@ -13,6 +13,6 @@ public sealed class GameInputOperation : Operation, IGameInputOperation
     public ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context)
         => context.Gameplay.ReadCommandAsync(context.SessionId, context.Cancellation.GetToken());
 
-    public bool TrySubmitCommand(IGameViewContext context, long sessionId, GameCommand command)
+    public bool TrySubmitCommand(IViewContext context, long sessionId, GameCommand command)
         => context.View.TrySubmitCommand(sessionId, command);
 }

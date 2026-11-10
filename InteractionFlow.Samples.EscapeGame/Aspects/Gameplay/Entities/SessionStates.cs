@@ -1,4 +1,6 @@
-namespace InteractionFlow.Samples.EscapeGame.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 
 internal sealed class PlayerState
 {
@@ -33,15 +35,4 @@ internal sealed class SessionProgressState(long id)
     internal bool RetryRequested;
     internal bool ResultInputEnabled;
     internal GameAction? Selection;
-}
-internal sealed class DisplayState
-{
-    internal long Version;
-    internal string Message = "Preparing room";
-
-    internal void SetMessage(string message)
-    {
-        Message = message;
-        Version++;
-    }
 }

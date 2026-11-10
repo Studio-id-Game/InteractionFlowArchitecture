@@ -37,7 +37,16 @@ ExternalPorts / Externals / Interactionsは、Aspects配下にContext依存を�
 GameplayとViewの両方が必要な入力Port / ExternalだけをApplicationへ置きます。
 Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
 IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通Handlerは既存Externals直下です。
-SystemFlows・Entities・Buildersと共通HandlerはAspectsの外に置きます。
+FrameStateとWindowStateはAspects.View.Entitiesへ置きます。
+ゲーム規則のWorldRules・ActionEffectと論理状態5型はAspects.Gameplay.Entitiesへ置きます。
+Context契約4型はShared.Entities.Contexts、具体Contextは各範囲のEntities.Contextsへ置きます。
+3つのAccess契約はAspects.Shared.Entities.Access、共有アクセス管理のEscapeAccessはAspects.Application.Entities.Accessへ置きます。
+partialは本体と、Access契約に対応するGameplay・View・Lifetimeの4ファイルに分けます。
+共有フィールド・補助メソッド・両契約共通のGetSessionProgressと、privateな内部クラス3型は本体へまとめます。
+Aspect間で共有する値型はAspects.Shared.Entitiesへ置き、GameValues・ExecutionMode・PresentationValues・ViewSnapshotに分けます。
+盤面定義・終了情報・失敗収集もShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置きます。
+Applicationは集約・接続・共有状態管理、Sharedは共有契約・値・補助処理を担当します。
+SystemFlows・Buildersと共通HandlerはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
@@ -76,26 +85,26 @@ Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終�
 
 ## Contextとアクセスの所有
 
-[Context契約](./Entities/Contexts/ContextContracts.cs)をSystemFlow・Interaction・Portの引数に使います。
+[Context契約](./Aspects/Shared/Entities/Contexts/IGameplayContext.cs)をSystemFlow・Interaction・Portの引数に使います。
 
 | 契約 | 公開するプロパティ | 用途 |
 | --- | --- | --- |
 | ILifetimeContext | Lifetime | RequestShutdown / CloseWindow |
 | IGameplayContext | Gameplay、Lifetime、SessionId | ゲーム側のFlow・Interaction・Function |
-| IGameViewContext | View、Lifetime | フレーム入力・描画・制御 |
+| IViewContext | View、Lifetime | フレーム入力・描画・制御 |
 | IApplicationContext | ゲーム側と画面側の合成 | WindowSystemFlowの入口 |
 
-Programは[EscapeApplicationContext](./Entities/Contexts/EscapeApplicationContext.cs)を生成します。
-WindowSystemFlowは[GameplayContext](./Entities/Contexts/GameplayContext.cs)と
-[GameViewContext](./Entities/Contexts/GameViewContext.cs)を構築し、役割別の引数として渡します。
+Programは[EscapeApplicationContext](./Aspects/Application/Entities/Contexts/EscapeApplicationContext.cs)を生成します。
+WindowSystemFlowは[GameplayContext](./Aspects/Gameplay/Entities/Contexts/GameplayContext.cs)と
+[ViewContext](./Aspects/View/Entities/Contexts/ViewContext.cs)を構築し、役割別の引数として渡します。
 関心別Stateの協調更新は、すべてが共有する一つのEscapeAccessとgateで行います。
 プロパティとTryGetCoreは同じアクセス契約を提供し、固定契約とEntryの追加は拒否します。
 
 | アクセス | 用途 |
 | --- | --- |
 | Gameplay / IGameplayAccess | セッション割り当て・開始・終了、進行参照、入力待機、ゲーム更新、再開・提示完了待機 |
-| View / IGameViewAccess | 表示取得、入力送信、進行参照、ポーズ変更・省略要求、提示進行・完了通知 |
-| Lifetime / IApplicationLifetimeAccess | アプリ全体の停止要求・参照 |
+| View / IViewAccess | 表示取得、入力送信、進行参照、ポーズ変更・省略要求、提示進行・完了通知 |
+| Lifetime / ILifetimeAccess | アプリ全体の停止要求・参照 |
 
 3契約は同じアクセス管理の呼び分けで、管理オブジェクトやロックを増やしていません。
 GetProgressはゲームの進行判断と画面側のポーズ切替の両方で使うため、GameplayとViewへ公開します。
@@ -115,7 +124,7 @@ WindowSystemFlowはルートからゲーム用ContextをCancellationモード、
 ルートへ追加した値は役割別Contextへ流れません。
 FrameStateとWindowStateは独立したフレームContext、Close用Finishingは終了専用スコープへ置きます。
 探索順は追加値→自身の固定アクセス→親→ルートのCancellationです。
-GameplayContextはView、GameViewContextはGameplayを探索からも除外します。
+GameplayContextはView、ViewContextはGameplayを探索からも除外します。
 Allで親の通常値を引き継ぐ構築を選んだ場合も、反対側の固定Accessは親へ問い合わせません。
 プロパティは必要なAccessだけを保持し、具体ContextやEscapeAccessへのキャストを使いません。
 
@@ -139,9 +148,9 @@ BeginActionSelectionとHandleGameInputは維持しています。選択段階を
 
 [GameFlowCheckpoint](./SystemFlows/GameFlowCheckpoint.cs) はフローの失敗・停止・再開確認を共有します。
 更新側でもポーズを再確認して一括反映するため、チェックポイントだけで原子性を保証する設計ではありません。
-[FailureCollector](./Entities/FailureCollector.cs) は終了時の原因を観測順に保持し、通常のResult連結とは区別します。
+[FailureCollector](./Aspects/Shared/Entities/FailureCollector.cs) は終了時の原因を観測順に保持し、通常のResult連結とは区別します。
 
-Close / EndSessionの専用スコープへは、[CleanupInfo](./Entities/CleanupInfo.cs)で処理種別と先行Resultを渡します。
+Close / EndSessionの専用スコープへは、[CleanupInfo](./Aspects/Shared/Entities/CleanupInfo.cs)で処理種別と先行Resultを渡します。
 通常Contextに無関係なResultがあっても、終了処理中という意味にはなりません。
 終了の送出例外やキャンセルも先行失敗へ合成し、通常停止の回復と終了処理自身の失敗を分けます。
 通常フレームや通常セッションへFinishingを持ち越さず、終了処理のためだけに渡します。

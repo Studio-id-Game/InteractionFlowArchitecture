@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;

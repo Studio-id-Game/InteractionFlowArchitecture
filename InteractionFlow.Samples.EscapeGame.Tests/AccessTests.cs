@@ -1,8 +1,9 @@
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using System;
-using System.Threading;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;

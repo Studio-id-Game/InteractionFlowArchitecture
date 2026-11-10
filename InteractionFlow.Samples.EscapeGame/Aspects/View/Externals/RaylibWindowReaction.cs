@@ -1,13 +1,14 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using Raylib_cs;
-using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System;
 using RL = Raylib_cs.Raylib;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
@@ -34,7 +35,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         messageLines = [];
     }
 
-    public ReactionEnd Open(IGameViewContext context)
+    public ReactionEnd Open(IViewContext context)
     {
         var window = context.GetRequired<WindowState>();
         if (window.IsOpen) throw new InvalidOperationException("Window is already open.");
@@ -46,7 +47,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return DrawFrame(context);
     }
 
-    public ReactionEnd DrawFrame(IGameViewContext context)
+    public ReactionEnd DrawFrame(IViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
         var state = context.View.CaptureSnapshot();
@@ -100,14 +101,14 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         return GetEnd(previous);
     }
 
-    private static void DrawHeader(GameViewSnapshot state)
+    private static void DrawHeader(ViewSnapshot state)
     {
         RL.DrawText("ONE ROOM / ONE WAY OUT", 32, 26, 30, accent);
         RL.DrawText("Find the key. Activate the switch. Unlock the exit.", 32, 70, 19, muted);
         RL.DrawText($"TURN {state.Turn:00}", 784, 30, 26, Color.RayWhite);
     }
 
-    private static void DrawBoard(GameViewSnapshot state, PresentationSnapshot? presentation)
+    private static void DrawBoard(ViewSnapshot state, PresentationSnapshot? presentation)
     {
         for (var y = 0; y < state.Room.Height; y++)
         for (var x = 0; x < state.Room.Width; x++)
@@ -159,7 +160,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         RL.DrawText(text, (int)center.X - RL.MeasureText(text, 17) / 2, (int)center.Y - 9, 17, color);
     }
 
-    private void DrawStatus(GameViewSnapshot state)
+    private void DrawStatus(ViewSnapshot state)
     {
         RL.DrawRectangle(600, 120, 328, 380, new Color(25, 35, 50, 255));
         RL.DrawText("SESSION", 622, 140, 17, muted);
@@ -205,7 +206,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         }
     }
 
-    private static void DrawButtons(GameViewSnapshot state)
+    private static void DrawButtons(ViewSnapshot state)
     {
         var active = state.Mode == ExecutionMode.Active;
         for (var i = 0; i < labels.Length; i++)

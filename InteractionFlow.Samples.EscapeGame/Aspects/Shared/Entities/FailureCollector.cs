@@ -2,7 +2,7 @@ using InteractionFlow.Core.Entities;
 using System;
 using System.Collections.Generic;
 
-namespace InteractionFlow.Samples.EscapeGame.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 
 // 終了時の失敗を観測順に保持します。Result の通常の成功連結とは区別します。
 internal sealed class FailureCollector

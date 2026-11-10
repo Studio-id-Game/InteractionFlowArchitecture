@@ -1,7 +1,7 @@
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using System;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
+using System;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 

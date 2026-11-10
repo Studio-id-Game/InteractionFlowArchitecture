@@ -1,9 +1,15 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using System;
+using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -16,10 +22,10 @@ public sealed class ContextTests
         using var app = new EscapeApplicationContext();
         app.With("inherited");
         using var game = new GameplayContext(app, ContextInheritance.All);
-        using var view = new GameViewContext(app, ContextInheritance.All);
+        using var view = new ViewContext(app, ContextInheritance.All);
         Assert.Equal("inherited", game.GetRequired<string>());
         Assert.Equal("inherited", view.GetRequired<string>());
-        Assert.False(game.TryGet<IGameViewAccess>(out _));
+        Assert.False(game.TryGet<IViewAccess>(out _));
         Assert.False(view.TryGet<IGameplayAccess>(out _));
     }
 
@@ -28,7 +34,7 @@ public sealed class ContextTests
     {
         Assert.Throws<ArgumentNullException>(() => new GameplayContext(null!, ContextInheritance.None));
         Assert.Throws<ArgumentNullException>(() => new GameplayContext(null!, 0, ContextInheritance.All));
-        Assert.Throws<ArgumentNullException>(() => new GameViewContext(null!, ContextInheritance.Cancellation));
+        Assert.Throws<ArgumentNullException>(() => new ViewContext(null!, ContextInheritance.Cancellation));
     }
 
     [Fact]
@@ -36,15 +42,15 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
 
         Assert.Same(app.Gameplay, game.GetRequired<IGameplayAccess>());
-        Assert.Same(app.View, view.GetRequired<IGameViewAccess>());
-        Assert.Same(app.Lifetime, game.GetRequired<IApplicationLifetimeAccess>());
-        Assert.Same(app.Lifetime, view.GetRequired<IApplicationLifetimeAccess>());
+        Assert.Same(app.View, view.GetRequired<IViewAccess>());
+        Assert.Same(app.Lifetime, game.GetRequired<ILifetimeAccess>());
+        Assert.Same(app.Lifetime, view.GetRequired<ILifetimeAccess>());
         Assert.Same(app.Gameplay, app.View);
         Assert.Same(app.Gameplay, app.Lifetime);
-        Assert.False(game.TryGet<IGameViewAccess>(out _));
+        Assert.False(game.TryGet<IViewAccess>(out _));
         Assert.False(view.TryGet<IGameplayAccess>(out _));
         Assert.False(app.TryGet<EscapeAccess>(out _));
         Assert.False(game.TryGet<EscapeAccess>(out _));
@@ -59,11 +65,11 @@ public sealed class ContextTests
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         game.With(new LocalValue("game"));
         using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
-        using var frames = new GameViewContext(app, ContextInheritance.None);
+        using var frames = new ViewContext(app, ContextInheritance.None);
         var frame = new FrameState();
         var window = new WindowState();
         frames.With(frame).With(window);
-        using var close = new GameViewContext(frames, ContextInheritance.All);
+        using var close = new ViewContext(frames, ContextInheritance.All);
         close.With(new CleanupInfo(CleanupKind.CloseWindow, Result.Success));
         using var cleanup = new GameplayContext(session, ContextInheritance.None);
 
@@ -91,7 +97,7 @@ public sealed class ContextTests
         var rootValue = new LocalValue("root");
         app.With<object>(rootValue).With(new CancellationObject());
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
         Assert.NotSame(rootValue, game.GetRequired<object>());
         Assert.Same(app.Cancellation, game.GetRequired<CancellationObject>());
         Assert.Same(view.Cancellation, view.GetRequired<CancellationObject>());
@@ -106,7 +112,7 @@ public sealed class ContextTests
         using var source = new GameplaySource(app);
         using var viewSource = new ViewSource(app);
         using var game = new GameplayContext(source, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(viewSource, ContextInheritance.None);
+        using var view = new ViewContext(viewSource, ContextInheritance.None);
         Assert.Same(source.Gameplay, game.Gameplay);
         Assert.Same(source.Cancellation, game.Cancellation);
         Assert.Equal(source.SessionId, game.SessionId);
@@ -129,7 +135,7 @@ public sealed class ContextTests
         child.With<object>(new LocalValue("child"));
         Assert.Equal("child", ((LocalValue)child.GetRequired<object>()).Name);
         Assert.Same(local, game.GetRequired<LocalValue>());
-        Assert.False(child.TryGet<IGameViewAccess>(out _));
+        Assert.False(child.TryGet<IViewAccess>(out _));
     }
 
     [Fact]
@@ -153,7 +159,7 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
         using var entry = new RefEntry<object>(app.View);
         var lifetime = new LifetimeOnlyAccess(app.Lifetime);
         foreach (var context in new FlowContext[] { app, game, view })
@@ -163,9 +169,9 @@ public sealed class ContextTests
             Assert.Throws<ArgumentException>(() => context.With<object>(lifetime));
             Assert.Throws<ArgumentException>(() => context.With(entry));
         }
-        using var ordinaryChild = new FlowContext(game).With<IApplicationLifetimeAccess>(lifetime);
-        Assert.Same(lifetime, ordinaryChild.GetRequired<IApplicationLifetimeAccess>());
-        Assert.Same(game.Lifetime, game.GetRequired<IApplicationLifetimeAccess>());
+        using var ordinaryChild = new FlowContext(game).With<ILifetimeAccess>(lifetime);
+        Assert.Same(lifetime, ordinaryChild.GetRequired<ILifetimeAccess>());
+        Assert.Same(game.Lifetime, game.GetRequired<ILifetimeAccess>());
     }
 
     [Fact]
@@ -173,7 +179,7 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
         using var session = GameTestSteps.Ready(app);
         var read = session.Gameplay.ReadCommandAsync(session.SessionId, session.Cancellation.GetToken());
         Assert.True(view.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
@@ -200,7 +206,7 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
         var gameplay = game.Gameplay;
         var lifetime = game.Lifetime;
         if (disposeSource) app.Dispose();
@@ -217,7 +223,7 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var view = new GameViewContext(app, ContextInheritance.None);
+        using var view = new ViewContext(app, ContextInheritance.None);
         app.Dispose();
         game.Dispose();
         view.Dispose();
@@ -231,26 +237,26 @@ public sealed class ContextTests
         foreach (var context in new FlowContext[] { app, game, view })
         {
             Assert.Throws<ObjectDisposedException>(() => context.With("value"));
-            Assert.Throws<ObjectDisposedException>(() => context.TryGet<IApplicationLifetimeAccess>(out _));
+            Assert.Throws<ObjectDisposedException>(() => context.TryGet<ILifetimeAccess>(out _));
         }
         Assert.Throws<ObjectDisposedException>(() => new GameplayContext(game, ContextInheritance.None));
-        Assert.Throws<ObjectDisposedException>(() => new GameViewContext(view, ContextInheritance.None));
+        Assert.Throws<ObjectDisposedException>(() => new ViewContext(view, ContextInheritance.None));
     }
 
     private sealed class GameplaySource(IGameplayContext parent) : FlowContext, IGameplayContext
     {
         public long SessionId => parent.SessionId;
         public IGameplayAccess Gameplay => parent.Gameplay;
-        public IApplicationLifetimeAccess Lifetime => parent.Lifetime;
+        public ILifetimeAccess Lifetime => parent.Lifetime;
     }
 
-    private sealed class ViewSource(IGameViewContext parent) : FlowContext, IGameViewContext
+    private sealed class ViewSource(IViewContext parent) : FlowContext, IViewContext
     {
-        public IGameViewAccess View => parent.View;
-        public IApplicationLifetimeAccess Lifetime => parent.Lifetime;
+        public IViewAccess View => parent.View;
+        public ILifetimeAccess Lifetime => parent.Lifetime;
     }
 
-    private sealed class LifetimeOnlyAccess(IApplicationLifetimeAccess inner) : IApplicationLifetimeAccess
+    private sealed class LifetimeOnlyAccess(ILifetimeAccess inner) : ILifetimeAccess
     {
         public bool ShutdownRequested => inner.ShutdownRequested;
         public void RequestShutdown() => inner.RequestShutdown();

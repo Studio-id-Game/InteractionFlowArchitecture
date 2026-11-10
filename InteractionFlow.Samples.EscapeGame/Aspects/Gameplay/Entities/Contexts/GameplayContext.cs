@@ -1,13 +1,16 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
-using System;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Diagnostics.CodeAnalysis;
+using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 
 public sealed class GameplayContext : FlowContext, IGameplayContext
 {
     private IGameplayAccess? gameplay;
-    private IApplicationLifetimeAccess? lifetime;
+    private ILifetimeAccess? lifetime;
 
     // アプリからはCancellationのみ、同じ役割の子はAll、後始末はNoneを指定します。
     public GameplayContext(IGameplayContext parent, ContextInheritance inheritance)
@@ -23,19 +26,19 @@ public sealed class GameplayContext : FlowContext, IGameplayContext
 
     public long SessionId { get; }
     public IGameplayAccess Gameplay => gameplay ?? throw new ObjectDisposedException(nameof(GameplayContext));
-    public IApplicationLifetimeAccess Lifetime => lifetime ?? throw new ObjectDisposedException(nameof(GameplayContext));
+    public ILifetimeAccess Lifetime => lifetime ?? throw new ObjectDisposedException(nameof(GameplayContext));
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
         object? provided = typeof(T) == typeof(IGameplayAccess) ? Gameplay
-            : typeof(T) == typeof(IApplicationLifetimeAccess) ? Lifetime : null;
+            : typeof(T) == typeof(ILifetimeAccess) ? Lifetime : null;
         if (provided is T found)
         {
             value = found;
             return true;
         }
         // 親の値探索を選んだ場合も、別の役割の固定Accessは公開しません。
-        if (typeof(T) == typeof(IGameViewAccess))
+        if (typeof(T) == typeof(IViewAccess))
         {
             value = default;
             return false;

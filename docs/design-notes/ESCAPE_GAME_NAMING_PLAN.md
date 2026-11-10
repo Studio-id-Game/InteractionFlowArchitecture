@@ -57,17 +57,17 @@ EscapeAccessのpartialクラス名はそのまま。内部ファイルを公開3
 | IGameplayAccess / EscapeAccess | CreateSession | AllocateSession | 未公開セッションのID・初期状態を割り当てる。開始・提示とは区別 |
 | ゲーム入力Port / External、IGameplayAccess / EscapeAccess | ReadAsync | ReadCommandAsync | 待機して得る値がGameCommandであることを明示 |
 | ゲーム入力Port / External | Submit | TrySubmitCommand | boolによる受付成功・拒否を名前へ反映 |
-| IGameViewAccess / EscapeAccess | TrySubmit | TrySubmitCommand | Portと同じ入力配送を表す |
+| IViewAccess / EscapeAccess | TrySubmit | TrySubmitCommand | Portと同じ入力配送を表す |
 | IGameplayAccess / EscapeAccess / WorldRules | ApplySelection | ApplyInputCommand | Result段階のRetryも含む入力反映を表す |
 | IGameplayAccess / EscapeAccess | ApplyPlayer / ApplyEnemy | ApplyPlayerAction / ApplyEnemyAction | 人物そのものではなく行動を適用する |
 | IGameplayAccess / EscapeAccess | EnterSelecting | BeginActionSelection | 行動選択段階への遷移を明示 |
 | IGameplayAccess / EscapeAccess | ShowResult | BeginResultPresentation | 結果段階へ移り提示を開始する。描画や提示完了待機は行わない |
 | IGameplayAccess / EscapeAccess | WaitForPresentationAsync | WaitForPresentationCompletionAsync | 提示の存在ではなく、その完了通知を待つ |
 | 両Access / EscapeAccess | GetProgress | GetSessionProgress | 対象IDのセッション進行を取得する |
-| IGameViewAccess / EscapeAccess | Snapshot | CaptureSnapshot | 画面接続用の一貫したスナップショットを作る |
-| IGameViewAccess / EscapeAccess | Advance | AdvancePresentation | 演出の経過時間を進める対象を明示 |
-| IGameViewAccess / EscapeAccess | TryComplete | TryCompletePresentation | 提示完了を通知する対象を明示 |
-| IGameViewAccess / EscapeAccess | TrySkip | TryRequestPresentationSkip | 省略要求を立てるだけで、完了通知は別途必要なことを示す |
+| IViewAccess / EscapeAccess | Snapshot | CaptureSnapshot | 画面接続用の一貫したスナップショットを作る |
+| IViewAccess / EscapeAccess | Advance | AdvancePresentation | 演出の経過時間を進める対象を明示 |
+| IViewAccess / EscapeAccess | TryComplete | TryCompletePresentation | 提示完了を通知する対象を明示 |
+| IViewAccess / EscapeAccess | TrySkip | TryRequestPresentationSkip | 省略要求を立てるだけで、完了通知は別途必要なことを示す |
 | ゲーム応答Port / External | BeginAsync | BeginSessionAsync | BeginSession Interactionとの対応を明示 |
 | ゲーム応答Port / External | EnableSelectionAsync | BeginActionSelectionAsync | 選択段階への遷移と一致させる |
 | ゲーム応答Port / External | SelectAsync | HandleCommandAsync | 確定・取消・リトライも含む応答を表す |
@@ -129,7 +129,7 @@ viewContext.View.TryCompletePresentation(key);
 | GameMutationValidation | GameUpdateValidation | 上記の更新結果型と語彙を合わせる |
 | GameProgress | SessionProgress | SessionIdを指定して読む進行情報であることを明示 |
 | SessionState | SessionProgressState | SessionRuntime.Progressが保持する、進行・選択・公開状態の可変Stateであることを示す |
-| GameSnapshot | GameViewSnapshot | ゲーム全状態のコピーではなく、画面の表示・操作可能性のためのスナップショット |
+| GameSnapshot | ViewSnapshot | ゲーム全状態のコピーではなく、画面の表示・操作可能性のためのスナップショット |
 | Finishing / FinishingKind | CleanupInfo / CleanupKind | Close・EndSession専用スコープの後始末情報であることを示す |
 | Finishing.Previous | CleanupInfo.PreviousResult | 先行する終了結果を明示 |
 | EscapeApplicationContext.ApplicationSessionId | NoSessionId | 0が実在するアプリセッションIDではなく、非セッションを表すことを明示 |
@@ -160,9 +160,9 @@ ActionEffectも、勝敗を表すGameOutcomeと混同するActionOutcomeへは�
 
 ## 維持する名前
 
-- IGameplayAccess / IGameViewAccess / IApplicationLifetimeAccessと、対応するGameplay / View / Lifetimeプロパティ。
-- ILifetimeContext / IGameplayContext / IGameViewContext / IApplicationContext。
-- GameplayContext / GameViewContext / EscapeApplicationContext。契約と具体型の対応は現在十分明確。
+- IGameplayAccess / IViewAccess / ILifetimeAccessと、対応するGameplay / View / Lifetimeプロパティ。
+- ILifetimeContext / IGameplayContext / IViewContext / IApplicationContext。
+- GameplayContext / ViewContext / EscapeApplicationContext。契約と具体型の対応は現在十分明確。
 - WindowSystemFlow / SessionSystemFlow / TurnSystemFlow。役割の大きさと単位を維持する。
 - OpenWindow / CloseWindow / PresentFrame / BeginSession / EndSession / RequestShutdown / ApplyPlayerAction / ApplyEnemyAction。
 - GameControlReaction / IGameControlReaction。ポーズ・再開・省略という制御の役割は適切。

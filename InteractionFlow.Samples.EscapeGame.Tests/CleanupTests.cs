@@ -1,24 +1,28 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Builders;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Builders;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Externals;
 using InteractionFlow.Samples.EscapeGame.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -79,7 +83,7 @@ public sealed class CleanupTests
         bool earlierFailure)
     {
         using var app = new EscapeApplicationContext();
-        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var window = new ViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = kind == CleanupKind.CloseWindow ? window : game;
         var previous = new FormatException("earlier failure");
@@ -108,7 +112,7 @@ public sealed class CleanupTests
     public async Task FinishingCancellationRetainsRegisteredTaskFailureDuringReset(CleanupKind kind)
     {
         using var app = new EscapeApplicationContext();
-        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var window = new ViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = kind == CleanupKind.CloseWindow ? window : game;
         var previous = new FormatException("prior failure");
@@ -161,7 +165,7 @@ public sealed class CleanupTests
     public async Task WrongFinishingKindDoesNotInvokeOperation(CleanupKind operation)
     {
         using var app = new EscapeApplicationContext();
-        using var window = new GameViewContext(app, ContextInheritance.None);
+        using var window = new ViewContext(app, ContextInheritance.None);
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         FlowContext context = operation == CleanupKind.CloseWindow ? window : game;
         var wrong = operation == CleanupKind.CloseWindow ? CleanupKind.EndSession : CleanupKind.CloseWindow;
@@ -178,7 +182,7 @@ public sealed class CleanupTests
     private static Task<InteractionEnd> ExecuteFinishingAsync(
         CleanupKind kind,
         FailingPorts ports,
-        IGameViewContext window,
+        IViewContext window,
         IGameplayContext game)
         => kind == CleanupKind.CloseWindow
             ? new CloseWindow(ports, new GameExceptionHandling(), new GameCancellationHandling()).ExecuteAsync(window)
@@ -218,8 +222,8 @@ public sealed class CleanupTests
     {
         public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(IGameViewContext context) => GetEnd();
-        public ReactionEnd DrawFrame(IGameViewContext context) => GetEnd();
+        public ReactionEnd Open(IViewContext context) => GetEnd();
+        public ReactionEnd DrawFrame(IViewContext context) => GetEnd();
         public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
         public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
@@ -247,7 +251,7 @@ public sealed class CleanupTests
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
         public override void ForceResetMemoryState() { }
-        public void PollFrameInput(IGameViewContext context)
+        public void PollFrameInput(IViewContext context)
         {
             Assert.False(context.TryGet<CleanupInfo>(out _));
             if (timeout.Elapsed > TimeSpan.FromSeconds(5))
@@ -265,13 +269,13 @@ public sealed class CleanupTests
         public bool Opened { get; private set; }
         public bool Closed { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(IGameViewContext context)
+        public ReactionEnd Open(IViewContext context)
         {
             Assert.False(context.TryGet<CleanupInfo>(out _));
             Opened = true;
             return GetEnd();
         }
-        public ReactionEnd DrawFrame(IGameViewContext context)
+        public ReactionEnd DrawFrame(IViewContext context)
         {
             Assert.False(context.TryGet<CleanupInfo>(out _));
             return GetEnd();

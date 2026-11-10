@@ -1,6 +1,7 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -21,7 +22,7 @@ internal static class GameTestSteps
         return session;
     }
 
-    internal static void Complete(IGameViewContext context, PresentationKey key)
+    internal static void Complete(IViewContext context, PresentationKey key)
     {
         var revision = context.View.CaptureSnapshot().ControlRevision;
         var first = context.View.AdvancePresentation(key, 0, revision);
@@ -30,7 +31,7 @@ internal static class GameTestSteps
         Assert.True(context.View.TryCompletePresentation(key));
     }
 
-    internal static void PlayTurn(IGameplayContext session, IGameViewContext view, GameCommand command)
+    internal static void PlayTurn(IGameplayContext session, IViewContext view, GameCommand command)
     {
         var id = session.SessionId;
         Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));

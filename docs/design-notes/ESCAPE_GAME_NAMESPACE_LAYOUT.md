@@ -2,14 +2,15 @@
 
 ExternalPorts / Externals / Interactionsは、Aspects配下でContext契約の範囲を先、レイヤーを後に配置する。
 「依存を完全に含む最も狭い範囲へ所属する」を共通ルールとする。
-SystemFlows、Entities、Buildersの配置は今回変更しない。
+SystemFlowsとBuildersは既存位置に置き、共有EntitiesはAspects.Sharedへまとめる。View専用の状態はAspects.View.Entitiesへ置く。
 
 | 範囲 | 所属条件 |
 | --- | --- |
 | Lifetime | ILifetimeContextだけを必要とする |
 | Gameplay | IGameplayContextで足りる。Lifetimeも含む |
-| View | IGameViewContextで足りる。Lifetimeも含む |
-| Application | GameplayとViewの両方が必要で、どちらか一方には収まらない |
+| View | IViewContextで足りる。Lifetimeも含む |
+| Application | GameplayとViewを集約・接続し、共有状態を管理する機能・実装 |
+| Shared | Aspect間で共有する契約・値・共通補助処理 |
 
 Lifetimeは両用途の基底、Applicationは集約である。
 例: InteractionのEndSessionはGameplay、RequestShutdownとCloseWindowはLifetime。
@@ -24,17 +25,39 @@ IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / Rayl
 | Aspects.Gameplay.ExternalPorts | IGameplayReaction、IGameLifetimeReaction |
 | Aspects.Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
 | Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
+| Aspects.Gameplay.Entities | WorldRules、ActionEffect、PlayerState、InventoryState、MechanismState、EnemyState、SessionProgressState |
 | Aspects.View.ExternalPorts | IWindowOperation、IGameControlReaction、IWindowReaction |
 | Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
 | Aspects.View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
+| Aspects.View.Entities | FrameState、WindowState |
 | Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
 | Aspects.Application.ExternalPorts | IGameInputOperation |
 | Aspects.Application.Externals | GameInputOperation |
+| Aspects.Shared.Entities | RoomDefinition、CleanupKind、CleanupInfo、FailureCollector、GameValues.csのゲーム値型、ExecutionMode、PresentationValues.csの提示値型、ViewSnapshot |
+| Aspects.Gameplay.Entities.Contexts | GameplayContext |
+| Aspects.View.Entities.Contexts | ViewContext |
+| Aspects.Application.Entities.Contexts | EscapeApplicationContext |
+| Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
+| Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
+| Aspects.Application.Entities.Access | EscapeAccess（4つのpartialファイルとprivateなSessionRuntime・DisplayState・PresentationRuntime） |
 | Externals（既存位置） | GameExceptionHandling、GameCancellationHandling |
 
 各名前空間はInteractionFlow.Samples.EscapeGameを先頭とする。ディレクトリーも同じ順に揃える。
 Aspectsは範囲別の機能をまとめる配置上の階層であり、新しい依存範囲やレイヤーではない。
-SystemFlows、Entities、Buildersと分類外の共通HandlerはAspectsへ移さず、既存位置に置く。
+SystemFlows、Buildersと分類外の共通Handlerは既存位置に置く。ルートのEntitiesはShared.Entitiesへ移す。
+FrameStateとWindowStateは画面側で扱う状態としてAspects.View.Entitiesへまとめる。
+ゲーム規則と内部の論理状態7型はAspects.Gameplay.Entitiesへ置く。
+これらはApplicationのEscapeAccessとSessionRuntimeから利用する。
+Context契約は共有の引数契約としてShared.Entities.Contextsへ置き、具体Contextは対応する範囲のEntities.Contextsへ置く。
+契約の配置にかかわらず、各機能は必要な依存を含む最も狭いContext契約を受け取る。
+3つのAccess契約は共有状態への操作契約としてShared.Entities.Accessへまとめる。
+全Access契約を実装するEscapeAccessは、Contextが提供する値としてApplication.Entities.Accessへ置く。
+partialは本体と、IGameplayAccess・IViewAccess・ILifetimeAccessに対応するGameplay・View・Lifetimeの4ファイルとする。
+共有フィールド・補助メソッド・内部クラス3型は本体へ集約する。
+GetSessionProgressはGameplayとViewの両契約に共通するため、本体に一つの実装を置く。
+Aspect間の共有契約・値はSharedへ置き、集約・接続・共有状態管理の実装はApplicationへ置く。
+旧GameValues.csの型はすべてAspects.Shared.Entitiesへ移し、GameValues.cs、ExecutionMode.cs、PresentationValues.cs、ViewSnapshot.csへ分ける。
+RoomDefinition・終了情報・失敗収集はShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置く。
 要素のないレイヤーは作らない。複数範囲を扱う既存Port / Externalを、配置のためだけに分割しない。
 専用ヘルパーは補助対象に従い、GameUpdateValidationはGameplay、RaylibLayoutはViewへ置く。
 IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契約を入口にしない共通処理として既存位置に残す。

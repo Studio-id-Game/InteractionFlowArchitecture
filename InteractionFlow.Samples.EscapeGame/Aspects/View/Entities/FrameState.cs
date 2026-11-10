@@ -1,4 +1,6 @@
-namespace InteractionFlow.Samples.EscapeGame.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+
+namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 
 public sealed class FrameState
 {

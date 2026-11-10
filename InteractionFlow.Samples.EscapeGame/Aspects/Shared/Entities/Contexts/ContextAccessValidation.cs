@@ -1,13 +1,14 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 
 internal static class ContextAccessValidation
 {
     internal static void Validate(object value)
     {
-        if (value is IGameplayAccess or IGameViewAccess or IApplicationLifetimeAccess || IsEntry(value))
+        if (value is IGameplayAccess or IViewAccess or ILifetimeAccess || IsEntry(value))
             throw new ArgumentException("Fixed game access contracts and Entry values cannot be added.", nameof(value));
     }
 

@@ -1,10 +1,12 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Externals;
-using System;
 using System.Threading.Tasks;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -17,9 +19,9 @@ public sealed class LifetimeAccessTests
     public async Task CommonHandlersOnlyRequireLifetimeAccess(bool cancellation)
     {
         var lifetime = new Lifetime();
-        using var context = new FlowContext().With<IApplicationLifetimeAccess>(lifetime);
+        using var context = new FlowContext().With<ILifetimeAccess>(lifetime);
         Assert.False(context.TryGet<IGameplayAccess>(out _));
-        Assert.False(context.TryGet<IGameViewAccess>(out _));
+        Assert.False(context.TryGet<IViewAccess>(out _));
         var failure = new InvalidOperationException("original failure");
         var interaction = new FailingInteraction(failure);
         if (cancellation)
@@ -58,7 +60,7 @@ public sealed class LifetimeAccessTests
         Assert.True(app.Gameplay.GetSessionProgress(second).Stopping);
     }
 
-    private sealed class Lifetime : IApplicationLifetimeAccess
+    private sealed class Lifetime : ILifetimeAccess
     {
         public bool ShutdownRequested { get; private set; }
         public int StopCalls { get; private set; }

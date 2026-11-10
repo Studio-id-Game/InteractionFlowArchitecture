@@ -1,10 +1,11 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using System;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Threading.Tasks;
+using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Externals;
 
@@ -29,7 +30,7 @@ public sealed class GameCancellationHandling : CancellationHandling
         if (!resetSucceeded)
             failures.Add(waitFailure!);
 
-        try { context.GetRequired<IApplicationLifetimeAccess>().RequestShutdown(); }
+        try { context.GetRequired<ILifetimeAccess>().RequestShutdown(); }
         catch (Exception error)
         {
             failures.Add(error);

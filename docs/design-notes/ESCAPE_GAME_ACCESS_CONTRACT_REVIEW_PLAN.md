@@ -15,7 +15,7 @@ Release簡易計測は通常PresentFrameが488B/回・約227～238nsで、割り
 実画面での再確認は未実施。処理手順と同期境界を変えず、非ネイティブ実行で検証した。
 
 後続のContext分割も完了した。4つのContextインターフェースを実行経路の引数へ使い、
-EscapeApplicationContext / GameplayContext / GameViewContextの3具体型とコンストラクターで構成している。
+EscapeApplicationContext / GameplayContext / ViewContextの3具体型とコンストラクターで構成している。
 旧生成メソッドを削除し、具体Contextへのキャストなしで構築する。
 全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件、計569件が成功。
 探索範囲・固定値検証・親探索と取消の分離・破棄・実フローへの限定Context受け渡しを確認した。
@@ -24,7 +24,7 @@ Release簡易計測の通常PresentFrameは488B/回・約231～239ns。実画面
 ## 結論
 
 現在の7契約を、ゲーム実行・画面接続・アプリ寿命の3契約へ再編する案を推奨する。
-命名候補はIGameplayAccess / IGameViewAccess / IApplicationLifetimeAccess。
+命名候補はIGameplayAccess / IViewAccess / ILifetimeAccess。
 内部のEscapeAccessと一つのgateは共有したままにする。
 
 目標は、契約数の最小化だけでなく、利用側が必要な協調操作を少ない契約から取得できること。
@@ -84,12 +84,12 @@ EscapeAccessが3契約を直接実装し、旧7契約は移行完了後に削除
 | IGameplayAccess | EnterSelecting / ShowResult / EnableResultInput | World |
 | IGameplayAccess | WaitForActiveAsync | Control |
 | IGameplayAccess | WaitForPresentationAsync | Presentation.WaitAsyncを用途が分かる名前へ変更 |
-| IGameViewAccess | Snapshot | Display |
-| IGameViewAccess | TrySubmit | InputWriter |
-| IGameViewAccess | Advance / TryComplete / TrySkip | Presentation |
-| IGameViewAccess | TrySetPaused | Control |
-| IGameViewAccess | GetProgress | Session。ポーズ変更時の現在値参照 |
-| IApplicationLifetimeAccess | ShutdownRequested / RequestShutdown | Session |
+| IViewAccess | Snapshot | Display |
+| IViewAccess | TrySubmit | InputWriter |
+| IViewAccess | Advance / TryComplete / TrySkip | Presentation |
+| IViewAccess | TrySetPaused | Control |
+| IViewAccess | GetProgress | Session。ポーズ変更時の現在値参照 |
+| ILifetimeAccess | ShutdownRequested / RequestShutdown | Session |
 
 ゲーム実行側13メンバー、画面接続側7メンバー、全体寿命2メンバー。
 GetProgressは両方へ公開するが、実装とロック取得は一つのまま。
@@ -198,7 +198,7 @@ Close / RequestShutdownがLifetimeとなる。描画側とゲーム側の共通�
 1. 現単一Contextの状態を基準に、3つの契約を定義する。旧契約の恒久的な互換階層は作らない。
 2. EscapeAccessの実装宣言とWaitAsyncの名前を移行する。メソッド本体・gate・Stateの更新順は維持する。
 3. Contextの3プロパティ・TryGetCore・ValidateAdditionalValueを変更し、本番呼び出しを上表に従って移行する。
-4. HandlerをIApplicationLifetimeAccessへ変更する。停止と先行失敗保持の挙動を維持する。
+4. HandlerをILifetimeAccessへ変更する。停止と先行失敗保持の挙動を維持する。
 5. テスト・計測を移行し、旧7契約と不要になったActiveSessionIdを削除する。
 6. READMEと本書へ実際の改善・残る共通依存を記録する。検証後、契約再編を一まとまりとしてコミットする。
 
@@ -229,7 +229,7 @@ Close / RequestShutdownがLifetimeとなる。描画側とゲーム側の共通�
 ```csharp
 public interface ILifetimeContext : IFlowContext
 {
-    IApplicationLifetimeAccess Lifetime { get; }
+    ILifetimeAccess Lifetime { get; }
 }
 
 public interface IGameplayContext : ILifetimeContext
@@ -238,12 +238,12 @@ public interface IGameplayContext : ILifetimeContext
     IGameplayAccess Gameplay { get; }
 }
 
-public interface IGameViewContext : ILifetimeContext
+public interface IViewContext : ILifetimeContext
 {
-    IGameViewAccess View { get; }
+    IViewAccess View { get; }
 }
 
-public interface IApplicationContext : IGameplayContext, IGameViewContext
+public interface IApplicationContext : IGameplayContext, IViewContext
 {
 }
 ```
@@ -261,12 +261,12 @@ Lifetimeを両側へ別々に宣言せず共通基底へ置くことで、合成
 | WindowSystemFlow | IApplicationContext | 画面側とゲーム側の起動・停止・合流の所有者 |
 | Game / Session / TurnSystemFlow、GameFlowCheckpoint | IGameplayContext | 進行参照・待機と共通停止で完結する |
 | BeginSession / EnableSelection / SelectAction / ApplyPlayerAction / ApplyEnemyAction / ShowResult / EndSession | IGameplayContext | ゲーム側Functionと共通Handlerに必要な契約を提供 |
-| OpenWindow / PresentFrame / ChangeControl | IGameViewContext | 画面側Functionと共通Handlerに必要な契約を提供 |
+| OpenWindow / PresentFrame / ChangeControl | IViewContext | 画面側Functionと共通Handlerに必要な契約を提供 |
 | RequestShutdown / CloseWindow | ILifetimeContext | 全体停止のみ。CloseのWindowState / Finishingはスコープ値から取得 |
 | IGameOperation.ReadAsync、IGameReaction、ISessionReaction.EndSession | IGameplayContext | SessionIdとGameplayを直接取得 |
-| IGameOperation.Submit、IWindowOperation、IWindowReaction.Open / Draw、IGameControlReaction | IGameViewContext | Viewを直接取得 |
+| IGameOperation.Submit、IWindowOperation、IWindowReaction.Open / Draw、IGameControlReaction | IViewContext | Viewを直接取得 |
 | ISessionReaction.RequestShutdown、IWindowReaction.Close | ILifetimeContext | 通常処理か共通HandlerでLifetimeを使用 |
-| 共通例外・取消Handler | IFlowContextを維持 | 基盤契約に従いIApplicationLifetimeAccessだけを汎用取得 |
+| 共通例外・取消Handler | IFlowContextを維持 | 基盤契約に従いILifetimeAccessだけを汎用取得 |
 
 FrameState / WindowState / Finishingは現状の実行スコープへの追加を維持する。
 それらを固定プロパティへ変えるかは別の判断とし、今回は生成手順を増やさない。
@@ -275,7 +275,7 @@ IGameOperation / ISessionReaction / IWindowReactionの各メソッドは、同�
 
 ### 具体Contextと構築
 
-具体型は既存名のEscapeApplicationContextと、新設GameplayContext / GameViewContextを使う。
+具体型は既存名のEscapeApplicationContextと、新設GameplayContext / ViewContextを使う。
 すべて通常のFlowContext派生で、対応するインターフェースを実装する。
 内部EscapeAccessを作るのはEscapeApplicationContextだけとし、他の具体Contextは親の公開プロパティから必要なAccessを保持する。
 生のEscapeAccessを公開するプロパティ、具体Contextへのキャスト、Access実体への別interfaceキャストを使わない。
@@ -283,11 +283,11 @@ IGameOperation / ISessionReaction / IWindowReactionの各メソッドは、同�
 | 構築箇所 | 構築するContext | 引き継ぎ |
 | --- | --- | --- |
 | Program | EscapeApplicationContext | 新規EscapeAccessとCancellation。SessionIdは非セッションを表す0 |
-| WindowSystemFlow | GameViewContext(application, None) | View / Lifetimeのみコピーし、親探索・Cancellationは独立 |
+| WindowSystemFlow | ViewContext(application, None) | View / Lifetimeのみコピーし、親探索・Cancellationは独立 |
 | WindowSystemFlow | GameplayContext(application, Cancellation) | Gameplay / Lifetime / 対象IDをコピー。取消だけ共有し、広い親探索は遮断 |
 | GameSystemFlow | GameplayContext(game, newSessionId, All) | Gameplay / Lifetimeと新ID。値探索・Cancellationはゲーム側の親からAllで引き継ぐ |
 | ゲーム側終了処理 | GameplayContext(session, None) | 同じ対象・Access、独立したCancellationと追加値 |
-| 停止・Close用スコープ | GameViewContextの独立 / 親あり構築 | 停止はNone、Closeは同種の親をAllで探索しWindowStateを共有 |
+| 停止・Close用スコープ | ViewContextの独立 / 親あり構築 | 停止はNone、Closeは同種の親をAllで探索しWindowStateを共有 |
 
 上表のAccessのコピーは参照の保持であり、Stateの複製・別ロック・別管理オブジェクトの生成ではない。
 親の実装型が何であっても、宣言したContext契約だけで構築できることを条件にする。
@@ -307,7 +307,7 @@ CreateIndependentContext等も具体型のコンストラクターへ置き換�
 
 インターフェースの引数へ変えただけでは、実体が広いままならTryGetで別Accessを取得できる。
 そのため、WindowSystemFlowから先は上表の限定された具体Contextを渡す。
-GameplayContextはGameplay / Lifetime、GameViewContextはView / LifetimeだけをTryGetCoreで返す。
+GameplayContextはGameplay / Lifetime、ViewContextはView / LifetimeだけをTryGetCoreで返す。
 実フローでは両者とも広いApplicationContextの値は探索せず、Cancellation共有はCoreのモードで別途維持する。
 さらにTryGetCoreで反対側の固定Accessを明示的に拒否するため、Allを指定した構築でも隠した契約へ探索が抜けない。
 同種の子・終了スコープのみ親探索を許可し、固定3AccessとEntryの追加による迂回は検証で拒否する。

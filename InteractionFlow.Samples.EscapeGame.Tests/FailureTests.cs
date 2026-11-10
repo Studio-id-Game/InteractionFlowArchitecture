@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System;
 using Xunit;
 

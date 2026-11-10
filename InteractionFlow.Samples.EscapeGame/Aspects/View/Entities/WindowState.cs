@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 
 public sealed class WindowState
 {

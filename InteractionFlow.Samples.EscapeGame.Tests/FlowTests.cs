@@ -1,24 +1,27 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Builders;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Builders;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Externals;
 using InteractionFlow.Samples.EscapeGame.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -168,7 +171,7 @@ public sealed class FlowTests
     {
         using var fixture = new Fixture();
         var commands = new Queue<GameCommand>(Solution.SelectMany(command => new[] { command, GameCommand.Confirm }));
-        GameViewSnapshot? won = null;
+        ViewSnapshot? won = null;
         long firstSession = 0;
         long secondSession = 0;
         fixture.Input.PollFrame = context =>
@@ -225,7 +228,7 @@ public sealed class FlowTests
         using var fixture = new Fixture();
         var phase = 0;
         var pausedFrames = 0;
-        GameViewSnapshot? frozen = null;
+        ViewSnapshot? frozen = null;
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.CaptureSnapshot();
@@ -414,9 +417,9 @@ public sealed class FlowTests
     public sealed class ScriptedWindowOperation : Operation, IWindowOperation
     {
         private readonly Stopwatch timeout = Stopwatch.StartNew();
-        public Action<IGameViewContext>? PollFrame { get; set; }
+        public Action<IViewContext>? PollFrame { get; set; }
         public override void ForceResetMemoryState() { }
-        public void PollFrameInput(IGameViewContext context)
+        public void PollFrameInput(IViewContext context)
         {
             Assert.False(context.TryGet<IGameplayAccess>(out _));
             Assert.False(context.TryGet<string>(out _));
@@ -441,16 +444,16 @@ public sealed class FlowTests
         public int DrawCount { get; private set; }
         public bool CompletePresentations { get; set; } = true;
         public Exception? CloseFailure { get; set; }
-        public Action<IGameViewContext>? OnOpen { get; set; }
+        public Action<IViewContext>? OnOpen { get; set; }
         public Action? BeforeClose { get; set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(IGameViewContext context)
+        public ReactionEnd Open(IViewContext context)
         {
             Record("open");
             OnOpen?.Invoke(context);
             return GetEnd();
         }
-        public ReactionEnd DrawFrame(IGameViewContext context)
+        public ReactionEnd DrawFrame(IViewContext context)
         {
             Record("draw");
             DrawCount++;
@@ -512,7 +515,7 @@ public sealed class FlowTests
         public override void ForceResetMemoryState() { }
         public async ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
         {
-            Assert.False(context.TryGet<IGameViewAccess>(out _));
+            Assert.False(context.TryGet<IViewAccess>(out _));
             Assert.False(context.TryGet<string>(out _));
             Cancellation = context.Cancellation;
             try

@@ -41,9 +41,10 @@ raylib の呼び出しはメインスレッドに保ちます。
 関心別Stateの整合した更新、SystemFlowによるターン合成と実行寿命管理、提示完了待機、
 プレイ中のポーズ・再開、リトライと終了処理を検証します。
 AccessをGameplay・View・Lifetimeの3契約とし、Contextの引数契約も役割別に分けています。
-EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / GameViewContextは公開Accessと探索範囲を限定します。
+EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / ViewContextは公開Accessと探索範囲を限定します。
 Cancellationの共有と親の値探索はContextInheritanceで独立に指定します。
 Port・External・Interactionは依存を含む範囲を先に置き、Aspects.Gameplay.Interactions等の名前空間で配置します。
+共有契約・値・共通補助処理はAspects.Sharedへ、集約・接続・共有状態管理はAspects.Applicationへ置きます。
 構成と操作は [Turn-based escape](../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ---

@@ -1,16 +1,19 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
-using System;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Externals;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -27,7 +30,7 @@ public sealed class FrameTests
         bool stop, bool pause, bool skip, int delivered)
     {
         using var app = new EscapeApplicationContext();
-        using var context = new GameViewContext(app, ContextInheritance.None);
+        using var context = new ViewContext(app, ContextInheritance.None);
         context.With(new FrameState());
         var operation = new FrameOperation(frame =>
         {
@@ -57,7 +60,7 @@ public sealed class FrameTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var pending = session.Gameplay.ReadCommandAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
-        using var frames = new GameViewContext(app, ContextInheritance.None);
+        using var frames = new ViewContext(app, ContextInheritance.None);
         var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
         frames.With(frame);
         var control = new HandleControlInput(new GameControlReaction(),
@@ -95,7 +98,7 @@ public sealed class FrameTests
         var enemy = session.Gameplay.ApplyEnemyAction(session.SessionId);
         var newKey = Assert.IsType<PresentationKey>(enemy.Presentation);
         Assert.NotEqual(oldKey, newKey);
-        using var frames = new GameViewContext(app, ContextInheritance.None);
+        using var frames = new ViewContext(app, ContextInheritance.None);
         frames.With(frame);
         var control = new GameControlReaction();
 
@@ -110,7 +113,7 @@ public sealed class FrameTests
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation
     {
         public override void ForceResetMemoryState() { }
-        public void PollFrameInput(IGameViewContext context) => poll(context.GetRequired<FrameState>());
+        public void PollFrameInput(IViewContext context) => poll(context.GetRequired<FrameState>());
     }
 
     private sealed class RecordedGameInputOperation : Operation, IGameInputOperation
@@ -119,7 +122,7 @@ public sealed class FrameTests
         public override void ForceResetMemoryState() { }
         public ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context)
             => throw new NotSupportedException();
-        public bool TrySubmitCommand(IGameViewContext context, long sessionId, GameCommand command)
+        public bool TrySubmitCommand(IViewContext context, long sessionId, GameCommand command)
         {
             Commands.Add((sessionId, command));
             return true;
@@ -130,8 +133,8 @@ public sealed class FrameTests
     {
         public int DrawCount { get; private set; }
         public override void ForceResetMemoryState() { }
-        public ReactionEnd Open(IGameViewContext context) => GetEnd();
-        public ReactionEnd DrawFrame(IGameViewContext context)
+        public ReactionEnd Open(IViewContext context) => GetEnd();
+        public ReactionEnd DrawFrame(IViewContext context)
         {
             onDraw();
             DrawCount++;

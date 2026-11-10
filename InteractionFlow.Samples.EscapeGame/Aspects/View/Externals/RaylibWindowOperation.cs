@@ -1,8 +1,9 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Entities;
-using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using Raylib_cs;
 using RL = Raylib_cs.Raylib;
 
@@ -14,7 +15,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
 
     public override void ForceResetMemoryState() { }
 
-    public void PollFrameInput(IGameViewContext context)
+    public void PollFrameInput(IViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
         var snapshot = context.View.CaptureSnapshot();

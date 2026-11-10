@@ -2,7 +2,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;

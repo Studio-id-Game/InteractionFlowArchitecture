@@ -3,7 +3,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 
 public interface IGameLifetimeReaction : IReactionPort
 {

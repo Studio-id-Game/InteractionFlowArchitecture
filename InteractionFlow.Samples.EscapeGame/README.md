@@ -34,11 +34,12 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 ExternalPorts / Externals / Interactionsは、Aspects配下にContext依存を含む最も狭い範囲、その中にレイヤーを配置します。
 例えばAspects.Gameplay.Interactions、Aspects.View.Externals、Aspects.Lifetime.Interactions、Aspects.Application.ExternalPortsです。
-GameplayとViewの両方が必要な入力Port / ExternalだけをApplicationへ置きます。
+入力の接続実装はApplicationへ、複数Aspectが利用するPort契約はShared.ExternalPortsへ置きます。
 Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
-IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通HandlerはShared.Externalsへ置きます。
+IWindowReaction・IGameLifetimeReaction・IGameInputOperationはShared.ExternalPortsへ置きます。
+実装はそれぞれView・Gameplay・Applicationに置き、共通HandlerはShared.Externalsへ置きます。
 FrameStateとWindowStateはAspects.View.Entitiesへ置きます。
-ゲーム規則のWorldRules・ActionEffectと論理状態5型はAspects.Gameplay.Entitiesへ置きます。
+EscapeAccessだけが利用するWorldRules・ActionEffectと論理状態5型はAspects.Application.Entitiesへ置きます。
 Context契約4型はShared.Entities.Contexts、具体Contextは各範囲のEntities.Contextsへ置きます。
 3つの具体ContextはLifetime.Entities.ContextsのLifetimeContextを継承し、Lifetimeの保持・取得・参照解放を共有します。
 基底は共有Accessを停止・破棄せず、固有Accessの提供・探索制限・追加値検証は各派生Contextが担当します。
@@ -48,6 +49,7 @@ partialは本体と、Access契約に対応するGameplay・View・Lifetimeの4�
 Aspect間で共有する値型はAspects.Shared.Entitiesへ置き、GameValues・ExecutionMode・PresentationValues・ViewSnapshotに分けます。
 盤面定義・終了情報・失敗収集もShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置きます。
 Applicationは集約・接続・共有状態管理、Sharedは共有契約・値・補助処理を担当します。
+各AspectはSharedと自身の要素を参照し、基底となるLifetimeへの依存も許容します。それ以外のAspectへの直接参照は持ちません。
 SystemFlowsと全体合成用BuildersはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 

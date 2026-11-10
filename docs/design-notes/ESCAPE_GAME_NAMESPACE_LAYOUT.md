@@ -16,22 +16,22 @@ Lifetimeは両用途の基底、Applicationは集約である。
 例: InteractionのEndSessionはGameplay、RequestShutdownとCloseWindowはLifetime。
 GameplayとLifetimeの和はGameplay、ViewとLifetimeの和はViewになる。
 型名が複数あるだけではApplicationへ広げない。GameplayとViewの和だけがApplicationになる。
-IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / RaylibWindowReactionはViewへ置く。
+共有Port契約はSharedへ置く。GameLifetimeReactionはGameplay、RaylibWindowReactionはViewへ置く。
 
 ## 配置
 
 | 名前空間の末尾 | 要素 |
 | --- | --- |
-| Aspects.Gameplay.ExternalPorts | IGameplayReaction、IGameLifetimeReaction |
+| Aspects.Gameplay.ExternalPorts | IGameplayReaction |
 | Aspects.Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
 | Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
-| Aspects.Gameplay.Entities | WorldRules、ActionEffect、PlayerState、InventoryState、MechanismState、EnemyState、SessionProgressState |
-| Aspects.View.ExternalPorts | IWindowOperation、IGameControlReaction、IWindowReaction |
+| Aspects.Application.Entities | WorldRules、ActionEffect、PlayerState、InventoryState、MechanismState、EnemyState、SessionProgressState |
+| Aspects.View.ExternalPorts | IWindowOperation、IGameControlReaction |
 | Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
 | Aspects.View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
 | Aspects.View.Entities | FrameState、WindowState |
 | Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
-| Aspects.Application.ExternalPorts | IGameInputOperation |
+| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction、IWindowReaction |
 | Aspects.Application.Externals | GameInputOperation |
 | Aspects.Shared.Entities | RoomDefinition、CleanupKind、CleanupInfo、FailureCollector、GameValues.csのゲーム値型、ExecutionMode、PresentationValues.csの提示値型、ViewSnapshot |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
@@ -56,8 +56,7 @@ EscapeGameProfileはShared・Application・Gameplay・View・Lifetimeの各Profi
 ゲーム進行の3つのSystemFlowは全体構成としてEscapeGameProfile自身が登録する。
 各Profileは他Aspectを再適用せず、自身の登録だけを担当する。全体合成後に依存を解決し、従来どおり後続登録でPortを差し替えられる。
 FrameStateとWindowStateは画面側で扱う状態としてAspects.View.Entitiesへまとめる。
-ゲーム規則と内部の論理状態7型はAspects.Gameplay.Entitiesへ置く。
-これらはApplicationのEscapeAccessとSessionRuntimeから利用する。
+ゲーム規則と内部の論理状態7型は、唯一の利用先であるEscapeAccessに合わせてAspects.Application.Entitiesへ置く。
 Context契約は共有の引数契約としてShared.Entities.Contextsへ置き、具体Contextは対応する範囲のEntities.Contextsへ置く。
 具体Context3型はLifetimeContextを継承する。基底はLifetimeの保持・破棄確認付き取得・型探索と参照解放だけを共有し、Accessの所有権は取得しない。
 派生ContextのDisposeCoreは固有参照を解放してからbase.DisposeCoreを呼ぶ。役割別の探索制限と追加値検証は派生側に残す。
@@ -76,18 +75,24 @@ IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契
 
 ## 依存の意味
 
-この分類はContextの範囲と役割を示し、役割間の参照を一方向に限定するものではない。
-Aspects.Gameplay.Interactions.HandleGameInputはAspects.Application.ExternalPorts.IGameInputOperationを使用する。
-Aspects.View.Interactions.PresentFrameもAspects.Application.ExternalPorts.IGameInputOperationを使用する。
-利用する入口のContext範囲で判定し、集約されたPortの名前空間をそのまま呼び出し元の必要範囲とはしない。
-Aspects.View.Interactions.OpenWindowはAspects.View.ExternalPorts.IWindowReactionを使用する。
-包含関係を、そのままプロジェクトやレイヤーの参照方向と解釈しない。
+Sharedは各Aspectが共有する契約・値・補助処理を置き、具体Aspectへは依存しない。
+Shared以外の各Aspectは自身とSharedを参照でき、基底としてのLifetimeへの依存も許容する。
+それ以外のAspectへの直接依存は持たない。全体の合成はルートのSystemFlowsとBuildersが担当する。
+HandleGameInputとPresentFrameはShared.ExternalPorts.IGameInputOperationを使用する。
+CloseWindowとViewの実装はShared.ExternalPorts.IWindowReactionを使用する。
+RequestShutdownとGameplayの実装はShared.ExternalPorts.IGameLifetimeReactionを使用する。
+各Profileは実装の所属Aspectに残し、共有Port契約と自身の実装を対応付ける。
 
 既存Analyzerは名前空間の各要素からExternalPorts / Externals / Interactions等を探すため、
 今回の順序でも従来のレイヤー依存規則が適用される。Analyzerのコード・設定は変更しない。
-この確認は役割間の参照制約を新たに保証するものではない。
+Aspect間の上記依存制約は今回の配置方針であり、Analyzerによる自動保証は追加していない。
 
 ## 確認
+
+分類間依存の整理後、Shared以外のAspectを跨ぐ参照はLifetimeContextへの継承3件だけになった。
+Shared自身から具体Aspectへの依存もない。今回の確認はimport・参照の点検であり、自動検査ルールは追加していない。
+サンプルの名前空間・usingを除くコードトークンの集合は移動前と一致し、処理内容は変更していない。
+全体・計測プロジェクトのビルドは警告・エラー0件、全570テストが成功した。
 
 Aspects階層の追加後は、構成説明・配置表・ソースへのリンクを更新した。
 テスト・計測コードに残っていた旧名前空間のusingも更新した。

@@ -1,6 +1,6 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities;
 
 internal static class WorldRules
 {

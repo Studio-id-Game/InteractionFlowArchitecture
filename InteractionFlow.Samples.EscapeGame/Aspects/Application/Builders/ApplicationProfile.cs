@@ -1,5 +1,5 @@
 using InteractionFlow.Core.Builders;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Externals;
 using InteractionFlow.Standard.Builders;
 

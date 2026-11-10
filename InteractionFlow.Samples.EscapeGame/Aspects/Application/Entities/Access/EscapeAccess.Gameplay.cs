@@ -1,5 +1,5 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

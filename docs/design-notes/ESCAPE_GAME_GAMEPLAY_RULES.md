@@ -49,7 +49,9 @@ Applicationは通常更新をPaused中にDeferredにし、制御用更新はallo
 
 ## ゲーム状態から表示へ
 
-GameFeedbackはゲーム上の結果・拒否理由、GameEventは発生した出来事と位置・識別子を表す。
+InputFeedbackは取消・無効選択・使用可能な仕掛けなし・受付段階外の4種類の操作結果を表す。
+GameState.FeedbackはInputFeedback?で、通常進行時はnullとなる。
+GameEventは発生した出来事と位置・識別子を表す。
 表示文字列・ボタン表示はRaylibWindowReaction、秒数と経過時間はその内部のPresentationClockが決定する。
 Reactionが不変GameStateの参照・文言・折り返し結果を記憶するため、表示用Snapshotへの変換は不要。
 
@@ -107,3 +109,13 @@ LifetimeContextが固定AccessとEntryの追加を拒否し、具象Contextと�
 役割別の探索制限、Cancellationの共有、共有Accessを所有しない寿命の契約は維持している。
 各AspectのProfileも責務分離として維持した。
 実装内容と検証結果は[簡素化プランの実績](./ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照する。
+
+## Feedbackの保持と表示への変換
+
+通常の文言はViewがEvent、Selection、Confirmed、RetryRequested、Outcome等から導出する。
+ゲーム規則はPlayerActed・EnemyMoved・Result等の進行通知を重複保持しない。
+取消・拒否の操作結果は現在状態だけから復元できないため、Feedbackに保持し、Viewはこれを優先する。
+ポーズ・再開、入力待機の開始・完了、提示完了通知、更新の前提条件違反では既存の結果を消さない。
+有効な選択・確定・リトライ、選択段階開始、新しいイベントの提示開始でFeedbackをnullに戻す。
+新しいイベントによる解除はWorldRules.Presentでまとめて行う。
+表示文字列・表示履歴・タイマーをGameplayや共有アクセスへ追加しない。

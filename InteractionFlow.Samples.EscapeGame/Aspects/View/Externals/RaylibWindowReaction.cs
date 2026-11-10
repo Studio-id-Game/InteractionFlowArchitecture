@@ -90,28 +90,25 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         clock.Update(state, deltaSeconds);
     }
 
-    private static string FormatMessage(GameState state) => state.Feedback switch
+    // 操作結果を優先し、それ以外は同じ不変状態のイベント・選択から導出します。
+    private static string FormatMessage(GameState state) => state switch
     {
-        GameFeedback.Preparing => "Preparing room",
-        GameFeedback.SessionStarted => "Find the key, activate the switch, unlock the door",
-        GameFeedback.Selected => state.Selection is { } action ? "Selected " + action.Kind + "; Enter to confirm"
-            : "Choose an action, then confirm",
-        GameFeedback.SelectionCanceled => "Selection canceled",
-        GameFeedback.InvalidSelection => "That action is not valid",
-        GameFeedback.NoUsableMechanism => "No usable mechanism (switch and key are required for door)",
-        GameFeedback.ActionConfirmed => "Action confirmed",
-        GameFeedback.StageDoesNotAcceptSelection => "This stage does not accept selection",
-        GameFeedback.PlayerActed => "Player: " + (state.Event?.Kind switch
-        {
-            GameEventKind.PlayerMove => ActionKind.Move,
-            GameEventKind.Switch => ActionKind.Switch,
-            GameEventKind.Unlock => ActionKind.Unlock,
-            _ => ActionKind.Wait
-        }),
-        GameFeedback.EnemyMoved => "Guard moves",
-        GameFeedback.Result => state.Outcome == GameOutcome.Won ? "Escaped! R to retry" : "Caught! R to retry",
-        GameFeedback.Retrying => "Retrying",
-        _ => ""
+        { Feedback: InputFeedback.SelectionCanceled } => "Selection canceled",
+        { Feedback: InputFeedback.InvalidSelection } => "That action is not valid",
+        { Feedback: InputFeedback.NoUsableMechanism } => "No usable mechanism (switch and key are required for door)",
+        { Feedback: InputFeedback.StageDoesNotAcceptSelection } => "This stage does not accept selection",
+        { RetryRequested: true } => "Retrying",
+        { Confirmed: true } => "Action confirmed",
+        { Event.Kind: GameEventKind.Initial } => "Find the key, activate the switch, unlock the door",
+        { Event.Kind: GameEventKind.PlayerMove } => "Player: Move",
+        { Event.Kind: GameEventKind.Switch } => "Player: Switch",
+        { Event.Kind: GameEventKind.Unlock } => "Player: Unlock",
+        { Event.Kind: GameEventKind.Wait } => "Player: Wait",
+        { Event.Kind: GameEventKind.EnemyMove } => "Guard moves",
+        { Event.Kind: GameEventKind.Result } => state.Outcome == GameOutcome.Won ? "Escaped! R to retry" : "Caught! R to retry",
+        { Selection: { } action } => "Selected " + action.Kind + "; Enter to confirm",
+        { Stage: GameStage.Selecting or GameStage.Stopping } => "Choose an action, then confirm",
+        _ => "Preparing room"
     };
 
     public ReactionEnd Close(ILifetimeContext context, Result previous)

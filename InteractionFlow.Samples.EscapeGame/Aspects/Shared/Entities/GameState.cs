@@ -19,7 +19,8 @@ public sealed record GameState(long SessionId)
     public bool Confirmed { get; init; }
     public bool RetryRequested { get; init; }
     public bool ResultInputEnabled { get; init; }
-    public GameFeedback Feedback { get; init; }
+    // 現在の状態から復元できない直前の操作結果だけを保持します。
+    public InputFeedback? Feedback { get; init; }
     public ExecutionMode Mode { get; init; }
     public long ControlRevision { get; init; }
     public bool WaitingForInput { get; init; }
@@ -28,8 +29,7 @@ public sealed record GameState(long SessionId)
     public bool SkipRequested { get; init; }
 }
 
-public enum GameFeedback
+public enum InputFeedback
 {
-    Preparing, SessionStarted, Selected, SelectionCanceled, InvalidSelection,
-    NoUsableMechanism, ActionConfirmed, StageDoesNotAcceptSelection, PlayerActed, EnemyMoved, Result, Retrying
+    SelectionCanceled, InvalidSelection, NoUsableMechanism, StageDoesNotAcceptSelection
 }

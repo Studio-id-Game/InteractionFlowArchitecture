@@ -76,7 +76,9 @@ IGameplayRules、受付条件のビット集合、入力待機ID、ルールのD
 ## Viewでの変換
 
 [RaylibWindowReaction](./Aspects/View/Externals/RaylibWindowReaction.cs)がGameStateを読み、
-GameFeedbackやGameEventから表示文言・位置・ボタン状態を導きます。
+GameEvent・選択・確定状態などから通常の表示文言・位置・ボタン状態を導きます。
+Feedbackは取消・拒否など、現在の状態だけでは復元できない4種類の操作結果に限定しています。
+操作結果はポーズや入力待機・提示完了通知を通じて保持し、次の有効操作や提示開始で解除します。
 ViewSnapshot / PresentationSnapshot / ViewProjectionは不要になり、表示用DTOを毎フレーム生成しません。
 文言はゲーム状態の参照が変わったときに組み立て、同じ文言の折り返し結果も再利用します。
 
@@ -149,3 +151,8 @@ Contextの追加値検証はLifetimeContextへ、更新結果の検証はGamepla
 全体ビルドは警告・エラー0件、全579テスト成功。実画面で選択・取消・ターン進行、
 ポーズ・再開、敗北・リトライ、Exit終了を確認し、描画なし計測の割り当て量も維持しました。
 詳細な範囲・計測条件・確認の限界は[簡素化プランの実績](../docs/design-notes/ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照してください。
+
+Feedback整理後は、操作結果の保持・解除と状態からの文言導出を検証する6ケースを追加し、
+EscapeGame115件と他470件の全585テストが成功しました。全体ビルドは警告・エラー0件です。
+実画面で拒否文言、ポーズ・再開での保持、有効選択による置換、取消、確定後のターン進行、Exit終了を確認しました。
+既存の描画なし計測では、直接フレーム0B・PresentFrame232Bの割り当て量を維持しています。

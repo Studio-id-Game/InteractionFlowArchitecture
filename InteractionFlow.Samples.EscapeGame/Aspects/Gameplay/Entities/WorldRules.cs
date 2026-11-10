@@ -5,7 +5,7 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 public static class WorldRules
 {
     public static GameUpdateResult BeginSession(GameState state)
-        => Present(state with { Feedback = GameFeedback.SessionStarted }, GameEventKind.Initial, state.Player, state.Player);
+        => Present(state, GameEventKind.Initial, state.Player, state.Player);
 
     public static GameUpdateResult BeginActionSelection(GameState state)
     {
@@ -13,22 +13,22 @@ public static class WorldRules
             || state.Outcome != GameOutcome.Running || !state.PresentationCompleted)
             return Rejected(state);
         return Changed(state with { Stage = GameStage.Selecting, Selection = null, Confirmed = false,
-            Event = null, Feedback = GameFeedback.Selected });
+            Event = null, Feedback = null });
     }
 
     public static GameUpdateResult ApplyInputCommand(GameState state, GameCommand command)
     {
         if (state.Stage == GameStage.Result && state.ResultInputEnabled && command == GameCommand.Retry)
-            return Changed(state with { RetryRequested = true, Feedback = GameFeedback.Retrying });
+            return Changed(state with { RetryRequested = true, Feedback = null });
         if (state.Stage != GameStage.Selecting || state.Outcome != GameOutcome.Running || state.Confirmed)
-            return Rejected(state with { Feedback = GameFeedback.StageDoesNotAcceptSelection });
+            return Rejected(state with { Feedback = InputFeedback.StageDoesNotAcceptSelection });
         if (command == GameCommand.CancelSelection)
-            return Changed(state with { Selection = null, Feedback = GameFeedback.SelectionCanceled });
+            return Changed(state with { Selection = null, Feedback = InputFeedback.SelectionCanceled });
         if (command == GameCommand.Confirm)
         {
             if (state.Selection is not { } action || !IsValid(state, action))
-                return Rejected(state with { Selection = null, Feedback = GameFeedback.InvalidSelection });
-            return Changed(state with { Confirmed = true, Feedback = GameFeedback.ActionConfirmed });
+                return Rejected(state with { Selection = null, Feedback = InputFeedback.InvalidSelection });
+            return Changed(state with { Confirmed = true, Feedback = null });
         }
         var position = state.Player;
         GameAction? selected = command switch
@@ -45,9 +45,9 @@ public static class WorldRules
             _ => null
         };
         return selected is { } proposed && IsValid(state, proposed)
-            ? Changed(state with { Selection = proposed, Feedback = GameFeedback.Selected })
+            ? Changed(state with { Selection = proposed, Feedback = null })
             : Rejected(state with { Selection = null, Feedback = command == GameCommand.Interact
-                ? GameFeedback.NoUsableMechanism : GameFeedback.InvalidSelection });
+                ? InputFeedback.NoUsableMechanism : InputFeedback.InvalidSelection });
     }
 
     public static GameUpdateResult ApplyPlayer(GameState state)
@@ -75,7 +75,7 @@ public static class WorldRules
                 break;
         }
         state = state with { Turn = state.Turn + 1, Selection = null, Confirmed = false,
-            Stage = GameStage.PlayerPresenting, Feedback = GameFeedback.PlayerActed };
+            Stage = GameStage.PlayerPresenting };
         return Present(EvaluateOutcome(state), kind, from, state.Player);
     }
 
@@ -86,7 +86,7 @@ public static class WorldRules
             return Rejected(state);
         var from = state.Room.PatrolAt(state.EnemyPatrolIndex);
         state = state with { EnemyPatrolIndex = (state.EnemyPatrolIndex + 1) % state.Room.PatrolLength,
-            Stage = GameStage.EnemyPresenting, Feedback = GameFeedback.EnemyMoved };
+            Stage = GameStage.EnemyPresenting };
         return Present(EvaluateOutcome(state), GameEventKind.EnemyMove, from, state.Room.PatrolAt(state.EnemyPatrolIndex));
     }
 
@@ -94,7 +94,7 @@ public static class WorldRules
     {
         if (state.Outcome == GameOutcome.Running || !state.PresentationCompleted || state.Stage == GameStage.Result)
             return Rejected(state);
-        return Present(state with { Stage = GameStage.Result, Feedback = GameFeedback.Result },
+        return Present(state with { Stage = GameStage.Result },
             GameEventKind.Result, state.Player, state.Player);
     }
 
@@ -135,7 +135,9 @@ public static class WorldRules
     private static GameUpdateResult Present(GameState state, GameEventKind kind, GridPosition from, GridPosition to)
     {
         var key = new PresentationKey(state.SessionId, state.Version + 1, state.Version + 1);
-        return Changed(state with { Event = new(key, kind, from, to), PresentationCompleted = false, SkipRequested = false });
+        // 新しい提示は直前の操作結果を置き換えます。通常の文言はViewが状態から導きます。
+        return Changed(state with { Event = new(key, kind, from, to), PresentationCompleted = false,
+            SkipRequested = false, Feedback = null });
     }
 
     private static GameUpdateResult Changed(GameState state)

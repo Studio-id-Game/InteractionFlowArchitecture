@@ -1,7 +1,10 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -16,8 +19,7 @@ public sealed class WindowReactionStateTests
             Version = 1,
             Stage = GameStage.Selecting,
             WaitingForInput = true,
-            Selection = new(ActionKind.Wait, new(1, 3)),
-            Feedback = GameFeedback.Selected
+            Selection = new(ActionKind.Wait, new(1, 3))
         };
         var reaction = new RaylibWindowReaction();
         reaction.PrepareFrame(state, 0);
@@ -39,6 +41,113 @@ public sealed class WindowReactionStateTests
         // 同じSessionId/Versionでも、再利用先の状態から表示を作り直します。
         reaction.PrepareFrame(state with { Selection = new(ActionKind.Move, new(1, 2)) }, 0);
         Assert.Equal("Selected Move; Enter to confirm", reaction.Message);
+    }
+
+    [Theory]
+    [InlineData(GameCommand.CancelSelection, "Selection canceled")]
+    [InlineData(GameCommand.Left, "That action is not valid")]
+    [InlineData(GameCommand.Confirm, "That action is not valid")]
+    [InlineData(GameCommand.Interact, "No usable mechanism (switch and key are required for door)")]
+    public async Task InputFeedbackSurvivesInputWaitAndPauseUntilTheNextValidSelection(
+        GameCommand command, string expected)
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var id = session.SessionId;
+        var reaction = new RaylibWindowReaction();
+        if (command == GameCommand.CancelSelection)
+            app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+        app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, command));
+        var input = app.Gameplay.ReadCommandAsync(id, session.Cancellation.GetToken()).AsTask();
+        reaction.PrepareFrame(app.View.ReadGameState(), 0);
+        Assert.Equal(expected, reaction.Message);
+        Assert.Equal(0, app.View.ReadGameState().Turn);
+
+        Assert.True(app.Gameplay.SetPaused(id, true));
+        reaction.PrepareFrame(app.View.ReadGameState(), 0);
+        Assert.Equal(expected, reaction.Message);
+        Assert.True(app.Gameplay.SetPaused(id, false));
+        reaction.PrepareFrame(app.View.ReadGameState(), 0);
+        Assert.Equal(expected, reaction.Message);
+
+        Assert.True(app.View.TrySubmitCommand(id, GameCommand.Up));
+        var next = await input;
+        app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, next));
+        reaction.PrepareFrame(app.View.ReadGameState(), 0);
+        Assert.Null(app.View.ReadGameState().Feedback);
+        Assert.Equal("Selected Move; Enter to confirm", reaction.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProgressMessagesFollowTheGameAndResultUntilRetry(bool win)
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.CreateSessionContext(app);
+        var id = session.SessionId;
+        var reaction = new RaylibWindowReaction();
+        void Show(string expected)
+        {
+            reaction.PrepareFrame(app.View.ReadGameState(), 0);
+            Assert.Equal(expected, reaction.Message);
+        }
+
+        Show("Preparing room");
+        var initial = app.Gameplay.BeginSession(id, WorldRules.BeginSession);
+        Show("Find the key, activate the switch, unlock the door");
+        GameTestSteps.Complete(app, initial.Presentation!.Value);
+        Show("Find the key, activate the switch, unlock the door");
+        app.Gameplay.UpdateGameState(id, WorldRules.BeginActionSelection);
+        Show("Choose an action, then confirm");
+
+        GameCommand[] commands = win
+            ? [GameCommand.Up, GameCommand.Up, GameCommand.Down, GameCommand.Down,
+                GameCommand.Right, GameCommand.Interact, GameCommand.Right, GameCommand.Right, GameCommand.Right,
+                GameCommand.Interact, GameCommand.Up, GameCommand.Up]
+            : [GameCommand.Right, GameCommand.Up];
+        foreach (var command in commands)
+        {
+            app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, command));
+            var action = app.View.ReadGameState().Selection!.Value;
+            Show("Selected " + action.Kind + "; Enter to confirm");
+            app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
+            Show("Action confirmed");
+            var player = app.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer);
+            Show("Player: " + action.Kind);
+
+            // 段階外の入力結果はイベント文言より優先し、描画完了通知でも消えません。
+            app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+            Show("This stage does not accept selection");
+            GameTestSteps.Complete(app, player.Presentation!.Value);
+            Show("This stage does not accept selection");
+            if (app.View.ReadGameState().Outcome != GameOutcome.Running)
+                break;
+
+            var enemy = app.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy);
+            Show("Guard moves");
+            GameTestSteps.Complete(app, enemy.Presentation!.Value);
+            if (app.View.ReadGameState().Outcome != GameOutcome.Running)
+                break;
+            app.Gameplay.UpdateGameState(id, WorldRules.BeginActionSelection);
+            Show("Choose an action, then confirm");
+        }
+
+        Assert.Equal(win ? GameOutcome.Won : GameOutcome.Lost, app.View.ReadGameState().Outcome);
+        var result = app.Gameplay.UpdateGameState(id, WorldRules.BeginResultPresentation);
+        var message = win ? "Escaped! R to retry" : "Caught! R to retry";
+        Show(message);
+        Assert.Null(app.View.ReadGameState().Feedback);
+        GameTestSteps.Complete(app, result.Presentation!.Value);
+        app.Gameplay.UpdateGameState(id, WorldRules.EnableResultInput);
+        Show(message);
+        app.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Retry));
+        Show("Retrying");
+        app.Gameplay.EndSession(id);
+        Show("Retrying");
+        using var retry = GameTestSteps.Ready(app);
+        Show("Choose an action, then confirm");
+        Assert.Null(app.View.ReadGameState().Feedback);
     }
 
     [Fact]

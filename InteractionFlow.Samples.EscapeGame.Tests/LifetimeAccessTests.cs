@@ -53,12 +53,47 @@ public sealed class LifetimeAccessTests
         Assert.Equal(EscapeApplicationContext.NoSessionId, app.View.ReadGameState().SessionId);
         Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(first, WorldRules.BeginSession).Status);
         Assert.Equal(first, app.View.ReadGameState().SessionId);
+        Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(first,
+            _ => throw new InvalidOperationException("A published session must not be initialized again.")).Status);
         Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Gameplay.EndSession(first);
         Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Lifetime.RequestShutdown();
         Assert.Throws<InvalidOperationException>(() => app.Gameplay.AllocateSession());
         Assert.Equal(ExecutionMode.Stopping, app.Gameplay.ReadGameState(second).Mode);
+    }
+
+    [Fact]
+    public async Task StoppedSessionCannotResumeOrBeRepublishedAndDoesNotBlockTheNextSession()
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var id = session.SessionId;
+        var input = app.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken).AsTask();
+        Assert.True(app.Gameplay.SetPaused(id, true));
+        var resume = app.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
+
+        var stopped = app.Gameplay.UpdateGameState(id,
+            state => new(GameUpdateStatus.Applied, state with { Mode = ExecutionMode.Stopping }), allowWhilePaused: true);
+
+        Assert.Equal(GameUpdateStatus.Applied, stopped.Status);
+        Assert.Equal(GameCommand.Stop, await input);
+        Assert.False(await resume);
+        Assert.False(app.Lifetime.ShutdownRequested);
+        Assert.Equal(GameUpdateStatus.Stopped, app.Gameplay.BeginSession(id,
+            _ => throw new InvalidOperationException("A stopped session must not be initialized again.")).Status);
+        Assert.Equal(GameUpdateStatus.Stopped, app.Gameplay.UpdateGameState(id,
+            _ => throw new InvalidOperationException("A stopped session must not receive updates."), allowWhilePaused: true).Status);
+        Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
+        Assert.False(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
+
+        // 停止したセッションが辞書に残っていても次を公開でき、旧セッションの終了と干渉しません。
+        using var next = GameTestSteps.Ready(app);
+        var current = app.View.ReadGameState();
+        app.Gameplay.EndSession(id);
+        Assert.Same(current, app.View.ReadGameState());
+        Assert.Equal(next.SessionId, current.SessionId);
+        Assert.Equal(ExecutionMode.Active, current.Mode);
     }
 
     private sealed class Lifetime : ILifetimeAccess

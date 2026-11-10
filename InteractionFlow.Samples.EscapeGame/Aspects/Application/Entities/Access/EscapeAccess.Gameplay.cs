@@ -22,15 +22,16 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Retired)
+            if (shutdown || !sessions.TryGetValue(sessionId, out var session)
+                || session.State.Mode == ExecutionMode.Stopping)
                 return new(GameUpdateStatus.Stopped);
-            if (session.Published || active is { Retired: false })
+            // 公開済みで停止していないセッションは必ずactiveが指しています。
+            if (active is { State.Mode: not ExecutionMode.Stopping })
                 return new(GameUpdateStatus.Rejected);
             var change = initialize(session.State);
             if (change.Status != GameUpdateStatus.Applied) return change;
             change = session.Commit(change);
             active = session;
-            session.Published = true;
             return change;
         }
     }
@@ -58,7 +59,7 @@ internal sealed partial class EscapeAccess
         lock (gate)
         {
             var session = FindActiveSession(sessionId);
-            if (session is null || session.State.Mode == ExecutionMode.Stopping)
+            if (session is null)
                 return new(GameUpdateStatus.Stopped);
             if (!allowWhilePaused && session.State.Mode == ExecutionMode.Paused)
                 return new(GameUpdateStatus.Deferred);
@@ -87,13 +88,11 @@ internal sealed partial class EscapeAccess
         {
             lock (gate)
             {
-                if (ReferenceEquals(session.Input, source))
-                {
-                    session.Input = null;
-                    session.InputToken = default;
-                    if (session.State.WaitingForInput)
-                        session.State = session.State with { WaitingForInput = false };
-                }
+                // 次の待機はInputがnullになるまで登録できず、この待機を置き換える経路もありません。
+                session.Input = null;
+                session.InputToken = default;
+                if (session.State.WaitingForInput)
+                    session.State = session.State with { WaitingForInput = false };
             }
         }
     }
@@ -118,7 +117,7 @@ internal sealed partial class EscapeAccess
             {
                 token.ThrowIfCancellationRequested();
                 var session = FindActiveSession(sessionId);
-                if (session is null || session.State.Mode == ExecutionMode.Stopping) return false;
+                if (session is null) return false;
                 if (session.State.Mode != ExecutionMode.Paused) return true;
                 resume = session.Resume!.Task;
             }

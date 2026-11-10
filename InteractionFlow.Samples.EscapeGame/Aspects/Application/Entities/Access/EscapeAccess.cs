@@ -17,13 +17,12 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
     private bool shutdown;
 
     private SessionRuntime? FindActiveSession(long id)
-        => !shutdown && active is { Retired: false } current && current.State.SessionId == id ? current : null;
+        => !shutdown && active is { State.Mode: not ExecutionMode.Stopping } current
+            && current.State.SessionId == id ? current : null;
 
     private sealed class SessionRuntime(long id)
     {
         internal GameState State = new(id);
-        internal bool Published;
-        internal bool Retired;
         internal TaskCompletionSource<GameCommand>? Input;
         internal CancellationToken InputToken;
         internal TaskCompletionSource<bool>? Resume;
@@ -32,7 +31,6 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
         // 同期は呼び出し元のEscapeAccess.gateで行います。
         internal void StopSession()
         {
-            Retired = true;
             State = State with { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping,
                 WaitingForInput = false, ControlRevision = State.ControlRevision + 1 };
             Input?.TrySetResult(GameCommand.Stop);

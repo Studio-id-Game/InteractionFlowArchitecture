@@ -12,6 +12,29 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class SharedGameStateTests
 {
     [Fact]
+    public async Task ASecondInputWaitCannotReplaceTheCurrentReceiver()
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var id = session.SessionId;
+        var first = app.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken).AsTask();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => app.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken).AsTask());
+
+        Assert.False(first.IsCompleted);
+        Assert.True(app.View.ReadGameState().WaitingForInput);
+        Assert.True(app.View.TrySubmitCommand(id, GameCommand.Up));
+        Assert.Equal(GameCommand.Up, await first);
+        Assert.False(app.View.ReadGameState().WaitingForInput);
+
+        var next = app.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken).AsTask();
+        Assert.True(app.View.TrySubmitCommand(id, GameCommand.Wait));
+        Assert.Equal(GameCommand.Wait, await next);
+        Assert.False(app.View.ReadGameState().WaitingForInput);
+    }
+
+    [Fact]
     public void PreviouslyReadStateIsStableAndFailedUpdateDoesNotPublishAnything()
     {
         using var app = new EscapeApplicationContext();

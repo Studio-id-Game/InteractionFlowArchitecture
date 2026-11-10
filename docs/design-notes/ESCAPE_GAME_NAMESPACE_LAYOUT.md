@@ -1,6 +1,6 @@
 # EscapeGameの名前空間と配置
 
-ExternalPorts / Externals / Interactionsは、Context契約の範囲を先、レイヤーを後に配置する。
+ExternalPorts / Externals / Interactionsは、Aspects配下でContext契約の範囲を先、レイヤーを後に配置する。
 「依存を完全に含む最も狭い範囲へ所属する」を共通ルールとする。
 SystemFlows、Entities、Buildersの配置は今回変更しない。
 
@@ -21,18 +21,20 @@ IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / Rayl
 
 | 名前空間の末尾 | 要素 |
 | --- | --- |
-| Gameplay.ExternalPorts | IGameplayReaction、IGameLifetimeReaction |
-| Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
-| Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
-| View.ExternalPorts | IWindowOperation、IGameControlReaction、IWindowReaction |
-| View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
-| View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
-| Lifetime.Interactions | RequestShutdown、CloseWindow |
-| Application.ExternalPorts | IGameInputOperation |
-| Application.Externals | GameInputOperation |
+| Aspects.Gameplay.ExternalPorts | IGameplayReaction、IGameLifetimeReaction |
+| Aspects.Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
+| Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
+| Aspects.View.ExternalPorts | IWindowOperation、IGameControlReaction、IWindowReaction |
+| Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
+| Aspects.View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
+| Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
+| Aspects.Application.ExternalPorts | IGameInputOperation |
+| Aspects.Application.Externals | GameInputOperation |
 | Externals（既存位置） | GameExceptionHandling、GameCancellationHandling |
 
 各名前空間はInteractionFlow.Samples.EscapeGameを先頭とする。ディレクトリーも同じ順に揃える。
+Aspectsは範囲別の機能をまとめる配置上の階層であり、新しい依存範囲やレイヤーではない。
+SystemFlows、Entities、Buildersと分類外の共通HandlerはAspectsへ移さず、既存位置に置く。
 要素のないレイヤーは作らない。複数範囲を扱う既存Port / Externalを、配置のためだけに分割しない。
 専用ヘルパーは補助対象に従い、GameUpdateValidationはGameplay、RaylibLayoutはViewへ置く。
 IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契約を入口にしない共通処理として既存位置に残す。
@@ -40,10 +42,10 @@ IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契
 ## 依存の意味
 
 この分類はContextの範囲と役割を示し、役割間の参照を一方向に限定するものではない。
-Gameplay.Interactions.HandleGameInputはApplication.ExternalPorts.IGameInputOperationを使用する。
-View.Interactions.PresentFrameもApplication.ExternalPorts.IGameInputOperationを使用する。
+Aspects.Gameplay.Interactions.HandleGameInputはAspects.Application.ExternalPorts.IGameInputOperationを使用する。
+Aspects.View.Interactions.PresentFrameもAspects.Application.ExternalPorts.IGameInputOperationを使用する。
 利用する入口のContext範囲で判定し、集約されたPortの名前空間をそのまま呼び出し元の必要範囲とはしない。
-View.Interactions.OpenWindowはView.ExternalPorts.IWindowReactionを使用する。
+Aspects.View.Interactions.OpenWindowはAspects.View.ExternalPorts.IWindowReactionを使用する。
 包含関係を、そのままプロジェクトやレイヤーの参照方向と解釈しない。
 
 既存Analyzerは名前空間の各要素からExternalPorts / Externals / Interactions等を探すため、
@@ -51,6 +53,12 @@ View.Interactions.OpenWindowはView.ExternalPorts.IWindowReactionを使用する
 この確認は役割間の参照制約を新たに保証するものではない。
 
 ## 確認
+
+Aspects階層の追加後は、構成説明・配置表・ソースへのリンクを更新した。
+テスト・計測コードに残っていた旧名前空間のusingも更新した。
+全体と計測プロジェクトのビルドは警告・エラー0件、全569テストが成功した。
+
+### Aspects追加前の確認記録
 
 26型を移動し、Builder・SystemFlow・テスト・計測コードと文書リンクを更新した。
 その後、全28要素（26型と共通Handler2型）を包含関係で再点検した。

@@ -32,11 +32,12 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 ## 構成の読み方
 
-ExternalPorts / Externals / Interactionsは、Context依存を含む最も狭い範囲を先に配置します。
-例えばGameplay.Interactions、View.Externals、Lifetime.Interactions、Application.ExternalPortsです。
+ExternalPorts / Externals / Interactionsは、Aspects配下にContext依存を含む最も狭い範囲、その中にレイヤーを配置します。
+例えばAspects.Gameplay.Interactions、Aspects.View.Externals、Aspects.Lifetime.Interactions、Aspects.Application.ExternalPortsです。
 GameplayとViewの両方が必要な入力Port / ExternalだけをApplicationへ置きます。
 Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
 IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通Handlerは既存Externals直下です。
+SystemFlows・Entities・Buildersと共通HandlerはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
@@ -59,13 +60,13 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
 
 ## 一操作をコードから追う
 
-1. [RaylibWindowOperation](View/Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
-   [PresentFrame](View/Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
-2. [HandleGameInput](Gameplay/Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
-   [GameplayReaction.HandleCommandAsync](Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
+1. [RaylibWindowOperation](Aspects/View/Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
+   [PresentFrame](Aspects/View/Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
+2. [HandleGameInput](Aspects/Gameplay/Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
+   [GameplayReaction.HandleCommandAsync](Aspects/Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
 3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
-4. [RaylibWindowReaction](View/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
+4. [RaylibWindowReaction](Aspects/View/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
    フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
 
 ゲーム上の無効な選択は、理由を表示する正常なRejectedです。
@@ -128,7 +129,7 @@ Interaction間の待機で発生した実行自身のキャンセルも、Sessio
 
 ## 完了範囲と終了結果
 
-[PresentResult](Gameplay/Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
+[PresentResult](Aspects/Gameplay/Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
 提示Reactionの失敗時は短絡し、受付開始へ進みません。間にフロー選択はなく、結果段階はポーズ対象外です。
 停止との競合は受付更新側で再確認します。独立したEnableResultInput Interactionは削除しました。
 

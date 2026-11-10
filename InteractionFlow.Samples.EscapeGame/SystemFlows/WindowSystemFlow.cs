@@ -1,10 +1,10 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Lifetime.Interactions;
-using InteractionFlow.Samples.EscapeGame.View.Interactions;
 using System;
 using System.Threading.Tasks;
 

@@ -43,7 +43,7 @@ raylib の呼び出しはメインスレッドに保ちます。
 AccessをGameplay・View・Lifetimeの3契約とし、Contextの引数契約も役割別に分けています。
 EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / GameViewContextは公開Accessと探索範囲を限定します。
 Cancellationの共有と親の値探索はContextInheritanceで独立に指定します。
-Port・External・Interactionは依存を含む範囲を先に置き、Gameplay.Interactions等の名前空間で配置します。
+Port・External・Interactionは依存を含む範囲を先に置き、Aspects.Gameplay.Interactions等の名前空間で配置します。
 構成と操作は [Turn-based escape](../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ---

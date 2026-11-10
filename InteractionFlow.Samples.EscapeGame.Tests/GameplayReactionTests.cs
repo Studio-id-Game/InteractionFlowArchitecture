@@ -1,6 +1,6 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Gameplay.Externals;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;

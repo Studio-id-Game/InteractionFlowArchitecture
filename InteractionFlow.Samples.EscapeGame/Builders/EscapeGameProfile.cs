@@ -1,16 +1,16 @@
 using InteractionFlow.Core.Builders;
 using InteractionFlow.Core.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Application.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 using InteractionFlow.Samples.EscapeGame.Externals;
-using InteractionFlow.Samples.EscapeGame.Gameplay.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Gameplay.Externals;
-using InteractionFlow.Samples.EscapeGame.Gameplay.Interactions;
-using InteractionFlow.Samples.EscapeGame.Lifetime.Interactions;
 using InteractionFlow.Samples.EscapeGame.SystemFlows;
-using InteractionFlow.Samples.EscapeGame.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.View.Externals;
-using InteractionFlow.Samples.EscapeGame.View.Interactions;
 using InteractionFlow.Standard.Builders;
 using System;
 

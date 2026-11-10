@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Externals;
-using InteractionFlow.Samples.EscapeGame.Gameplay.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Gameplay.Externals;
-using InteractionFlow.Samples.EscapeGame.Gameplay.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using System;
 using System.Threading.Tasks;
 using Xunit;

@@ -1,0 +1,12 @@
+using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
+
+public interface IGameLifetimeReaction : IReactionPort
+{
+    ReactionEnd EndSession(IGameplayContext context, Result previous);
+    ReactionEnd RequestShutdown(ILifetimeContext context);
+}

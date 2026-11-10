@@ -1,12 +1,13 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
-using System.Threading.Tasks;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -49,12 +50,12 @@ public sealed class LifetimeAccessTests
         var second = app.Gameplay.AllocateSession();
         Assert.True(first > EscapeApplicationContext.NoSessionId);
         Assert.True(second > first);
-        Assert.Equal(EscapeApplicationContext.NoSessionId, app.View.CaptureSnapshot().SessionId);
-        Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(first).Status);
-        Assert.Equal(first, app.View.CaptureSnapshot().SessionId);
-        Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(second).Status);
+        Assert.Equal(EscapeApplicationContext.NoSessionId, app.View.ReadGameState().SessionId);
+        Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(first, WorldRules.BeginSession).Status);
+        Assert.Equal(first, app.View.ReadGameState().SessionId);
+        Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Gameplay.EndSession(first);
-        Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(second).Status);
+        Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Lifetime.RequestShutdown();
         Assert.Throws<InvalidOperationException>(() => app.Gameplay.AllocateSession());
         Assert.True(app.Gameplay.GetSessionProgress(second).Stopping);

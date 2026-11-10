@@ -1,19 +1,22 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -55,59 +58,43 @@ public sealed class FrameTests
     }
 
     [Fact]
-    public async Task PauseAndResumeControlDoesNotReplaceExistingInputWait()
+    public async Task ControlIsOnlyInputUntilGameplayConsumesIt()
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        var pending = session.Gameplay.ReadCommandAsync(session.SessionId, session.Cancellation.GetToken()).AsTask();
-        using var frames = new ViewContext(app, ContextInheritance.None);
-        var frame = new FrameState { SessionId = session.SessionId, PauseRequested = true };
-        frames.With(frame);
-        var control = new HandleControlInput(new GameControlReaction(),
-            new GameExceptionHandling(), new GameCancellationHandling());
-
-        Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.True(session.Gameplay.GetSessionProgress(session.SessionId).Paused);
+        var id = session.SessionId;
+        var pending = session.Gameplay.ReadCommandAsync(id, session.Cancellation.GetToken()).AsTask();
+        var control = new HandleControlInput(new GameplayReaction(), new GameExceptionHandling(), new GameCancellationHandling());
+        Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
+        Assert.Equal(ExecutionMode.Active, app.View.ReadGameState().Mode);
+        Assert.False((await control.ExecuteAsync(session)).HasException);
+        Assert.Equal(ExecutionMode.Paused, app.View.ReadGameState().Mode);
         Assert.False(pending.IsCompleted);
-        Assert.False(app.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
-
-        Assert.False((await control.ExecuteAsync(frames)).HasException);
-        Assert.False(session.Gameplay.GetSessionProgress(session.SessionId).Paused);
-        Assert.False(pending.IsCompleted);
-        Assert.True(app.View.TrySubmitCommand(session.SessionId, GameCommand.Up));
-        Assert.Equal(GameCommand.Up, await pending.WaitAsync(
-            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
+        Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
+        Assert.False((await control.ExecuteAsync(session)).HasException);
+        Assert.True(app.View.TrySubmitCommand(id, GameCommand.Up));
+        Assert.Equal(GameCommand.Up, await pending.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void SkipCapturedForPreviousPresentationDoesNotSkipTheNextOne()
+    public void GameplayRejectsSkipForPreviousPresentation()
     {
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Up));
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Confirm));
-        var player = session.Gameplay.ApplyPlayerAction(session.SessionId);
-        var oldKey = Assert.IsType<PresentationKey>(player.Presentation);
-        var frame = new FrameState
-        {
-            SessionId = session.SessionId,
-            SkipRequested = true,
-            Presentation = oldKey
-        };
-        GameTestSteps.Complete(app, oldKey);
-        var enemy = session.Gameplay.ApplyEnemyAction(session.SessionId);
-        var newKey = Assert.IsType<PresentationKey>(enemy.Presentation);
-        Assert.NotEqual(oldKey, newKey);
-        using var frames = new ViewContext(app, ContextInheritance.None);
-        frames.With(frame);
-        var control = new GameControlReaction();
-
-        Assert.False(control.ApplyControlRequest(frames).HasException);
-        Assert.False(app.View.CaptureSnapshot().Presentation!.SkipRequested);
-
-        frame.Presentation = newKey;
-        Assert.False(control.ApplyControlRequest(frames).HasException);
-        Assert.True(app.View.CaptureSnapshot().Presentation!.SkipRequested);
+        var id = session.SessionId;
+        session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+        session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
+        var player = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer).Presentation!.Value;
+        GameTestSteps.Complete(app, player);
+        var enemy = session.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy).Presentation!.Value;
+        var control = new GameplayReaction();
+        Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.Skip, player)));
+        Assert.False(control.ApplyControlRequest(session).HasException);
+        Assert.False(app.View.ReadGameState().SkipRequested);
+        Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.Skip, enemy)));
+        Assert.False(control.ApplyControlRequest(session).HasException);
+        Assert.True(app.View.ReadGameState().SkipRequested);
     }
 
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation
@@ -119,6 +106,7 @@ public sealed class FrameTests
     private sealed class RecordedGameInputOperation : Operation, IGameInputOperation
     {
         public List<(long, GameCommand)> Commands { get; } = [];
+        public bool TrySubmitControl(IViewContext context, GameControlInput input) => true;
         public override void ForceResetMemoryState() { }
         public ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context)
             => throw new NotSupportedException();

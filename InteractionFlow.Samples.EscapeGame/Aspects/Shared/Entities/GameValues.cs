@@ -17,7 +17,10 @@ public enum ActionKind { Move, Switch, Unlock, Wait }
 
 public readonly record struct GameAction(ActionKind Kind, GridPosition Target);
 
-public readonly record struct GameUpdateResult(GameUpdateStatus Status, PresentationKey? Presentation = null);
+public readonly record struct GameUpdateResult(GameUpdateStatus Status, GameState? State = null)
+{
+    public PresentationKey? Presentation => State?.Event?.Key;
+}
 
 public readonly record struct SessionProgress(GameStage Stage, GameOutcome Outcome, bool HasConfirmedAction,
     bool RetryRequested, bool Stopping, bool Paused);

@@ -1,9 +1,9 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using Raylib_cs;
 using RL = Raylib_cs.Raylib;
 
@@ -18,10 +18,10 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
     public void PollFrameInput(IViewContext context)
     {
         context.GetRequired<WindowState>().VerifyAccess();
-        var snapshot = context.View.CaptureSnapshot();
+        var snapshot = context.View.ReadGameState();
         var frame = context.GetRequired<FrameState>();
         frame.SessionId = snapshot.SessionId;
-        frame.Presentation = snapshot.Presentation?.Key;
+        frame.Presentation = snapshot.Event?.Key;
         frame.Command = null;
         frame.PauseRequested = false;
         frame.SkipRequested = false;

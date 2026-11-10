@@ -1,6 +1,6 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,119 +10,62 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access
 internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILifetimeAccess
 {
     private readonly object gate = new();
-
     private readonly Dictionary<long, SessionRuntime> sessions = new();
-
     private SessionRuntime? active;
-
+    private GameControlInput? controlInput;
     private long nextSession;
-
     private bool shutdown;
 
-    private static RoomDefinition Room => RoomDefinition.Default;
-
-    public SessionProgress GetSessionProgress(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            return session is null
-                ? new(GameStage.Stopping, GameOutcome.Running, false, false, true, false)
-                : new(session.Progress.Stage, session.Progress.Outcome, session.Progress.Confirmed,
-                    session.Progress.RetryRequested, false, IsPaused(session));
-        }
-    }
+    private SessionRuntime? FindActiveSession(long id)
+        => !shutdown && active is { Retired: false } current && current.State.SessionId == id ? current : null;
 
     private static void StopSession(SessionRuntime session)
     {
-        session.Progress.Retired = true;
-        session.Progress.Stage = GameStage.Stopping;
-        session.Mode = ExecutionMode.Stopping;
-        session.ControlRevision++;
+        session.Retired = true;
+        session.State = session.State with { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping,
+            WaitingForInput = false, ControlRevision = session.State.ControlRevision + 1 };
         session.Input?.TrySetResult(GameCommand.Stop);
         session.Resume?.TrySetResult(false);
-        session.Presentation?.Completion.TrySetResult(PresentationCompletion.Stopped);
+        session.Presentation?.TrySetResult(PresentationCompletion.Stopped);
     }
 
-    private SessionRuntime? FindActiveSession(long id)
-        => !shutdown && active is { } current && current.Progress.Id == id && !current.Progress.Retired
-            ? current : null;
+    private static GameUpdateResult Commit(SessionRuntime session, GameUpdateResult change)
+    {
+        var next = change.State ?? throw new InvalidOperationException("An update must return game state.");
+        if (next.SessionId != session.State.SessionId || next.Event is { } e && e.Key.SessionId != next.SessionId)
+            throw new InvalidOperationException("An update cannot change its session identity.");
+        var previous = session.State;
+        if (next.Version != previous.Version + 1)
+            next = next with { Version = previous.Version + 1 };
+        session.State = next;
+        if (previous.Event?.Key != next.Event?.Key)
+        {
+            session.Presentation?.TrySetResult(PresentationCompletion.Stopped);
+            session.Presentation = next.Event is null ? null : new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        if (previous.Mode != next.Mode)
+        {
+            if (next.Mode == ExecutionMode.Paused)
+                session.Resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            else
+            {
+                session.Resume?.TrySetResult(next.Mode == ExecutionMode.Active);
+                session.Resume = null;
+            }
+        }
+        if (next.Mode == ExecutionMode.Stopping)
+            StopSession(session);
+        return change with { State = session.State };
+    }
 
-    private static bool IsPaused(SessionRuntime session) => session.Mode == ExecutionMode.Paused;
-
-    private static GameUpdateStatus GetUpdateStatus(SessionRuntime? session)
-        => session is null || session.Mode == ExecutionMode.Stopping ? GameUpdateStatus.Stopped
-            : IsPaused(session) ? GameUpdateStatus.Deferred : GameUpdateStatus.Applied;
-
-    // すべて EscapeAccess の同期境界内で扱います。State と通知の寿命をまとめる内部補助です。
     private sealed class SessionRuntime(long id)
     {
-        internal readonly SessionProgressState Progress = new(id);
-        internal readonly PlayerState Player = new();
-        internal readonly InventoryState Inventory = new();
-        internal readonly MechanismState Mechanisms = new();
-        internal readonly EnemyState Enemy = new();
-        internal readonly DisplayState Display = new();
-        internal ExecutionMode Mode;
-        internal long ControlRevision;
+        internal GameState State = new(id);
+        internal bool Published;
+        internal bool Retired;
         internal TaskCompletionSource<GameCommand>? Input;
         internal CancellationToken InputToken;
         internal TaskCompletionSource<bool>? Resume;
-        internal PresentationRuntime? Presentation;
-        internal long NextPresentation;
-    }
-
-    private sealed class DisplayState
-    {
-        internal long Version;
-        internal string Message = "Preparing room";
-
-        internal void SetMessage(string message)
-        {
-            Message = message;
-            Version++;
-        }
-    }
-
-    private GameUpdateResult PublishEffect(SessionRuntime session, ActionEffect? effect)
-    {
-        if (effect is not { } value)
-            return new(GameUpdateStatus.Rejected);
-        session.Display.SetMessage(value.Message);
-        return BeginPresentation(session, value.Kind, value.From, value.To, value.DurationSeconds);
-    }
-
-    private static bool StageAllowsInput(SessionRuntime session)
-    {
-        var state = session.Progress;
-        return state.Stage == GameStage.Selecting && !state.Confirmed && state.Outcome == GameOutcome.Running
-            || state.Stage == GameStage.Result && state.ResultInputEnabled && !state.RetryRequested;
-    }
-
-    private static bool CanAcceptInput(SessionRuntime session)
-    {
-        return !session.Progress.Retired && session.Mode == ExecutionMode.Active && StageAllowsInput(session)
-            && session.Input is { Task.IsCompleted: false } && !session.InputToken.IsCancellationRequested;
-    }
-
-    private static bool IsPresentationComplete(SessionRuntime session)
-        => session.Presentation?.Completion.Task.IsCompletedSuccessfully == true
-            && session.Presentation.Completion.Task.Result == PresentationCompletion.Completed;
-
-    private GameUpdateResult BeginPresentation(
-        SessionRuntime session, PresentationKind kind, GridPosition from, GridPosition to, double duration)
-    {
-        var key = new PresentationKey(session.Progress.Id, ++session.NextPresentation, session.Display.Version);
-        session.Presentation = new(new(key, kind, from, to, duration, 0, false));
-        return new(GameUpdateStatus.Applied, key);
-    }
-
-    // EscapeAccessの同期境界内で、提示の進行と完了通知を保持します。
-    private sealed class PresentationRuntime(PresentationSnapshot snapshot)
-    {
-        internal PresentationSnapshot Snapshot = snapshot;
-        internal bool Started;
-        internal readonly TaskCompletionSource<PresentationCompletion> Completion =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource<PresentationCompletion>? Presentation;
     }
 }

@@ -1,16 +1,16 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
-using System.Threading.Tasks;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -81,7 +81,7 @@ public sealed class ResultInteractionTests
             .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.False(end.HasException);
         Assert.False(context.Cancellation.HasTask);
-        Assert.False(app.View.CaptureSnapshot().AcceptingInput);
+        Assert.False(app.View.ReadGameState().WaitingForInput);
     }
 
     private static PresentResult Create(IGameplayReaction reaction)
@@ -89,6 +89,7 @@ public sealed class ResultInteractionTests
 
     private sealed class ResultReaction : Reaction, IGameplayReaction
     {
+        public ReactionEnd ApplyControlRequest(IGameplayContext context) => GetEnd();
         public Func<IGameplayContext, ValueTask<ReactionEnd>> Show { get; init; } = _ => new(End());
         public Func<IGameplayContext, ValueTask<ReactionEnd>> Enable { get; init; } = _ => new(End());
         public int Enabled { get; private set; }

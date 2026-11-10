@@ -19,6 +19,7 @@ internal sealed partial class EscapeAccess
         {
             if (shutdown) return;
             shutdown = true;
+            controlInput = null;
             foreach (var session in sessions.Values) StopSession(session);
             sessions.Clear();
         }

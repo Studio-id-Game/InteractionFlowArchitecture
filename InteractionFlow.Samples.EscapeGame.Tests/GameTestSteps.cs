@@ -1,12 +1,14 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
 
-// 公開アクセスを操作する共通の準備手順です。ゲーム規則や描画計算は複製しません。
 internal static class GameTestSteps
 {
     internal static GameplayContext CreateSessionContext(IGameplayContext app)
@@ -15,38 +17,42 @@ internal static class GameTestSteps
     internal static GameplayContext Ready(IApplicationContext app)
     {
         var session = CreateSessionContext(app);
-        var begin = session.Gameplay.BeginSession(session.SessionId);
+        var begin = session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession);
         Assert.Equal(GameUpdateStatus.Applied, begin.Status);
-        Complete(app, Assert.IsType<PresentationKey>(begin.Presentation));
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginActionSelection(session.SessionId));
+        Complete(app, begin.Presentation!.Value);
+        Assert.Equal(GameUpdateStatus.Applied,
+            session.Gameplay.UpdateGameState(session.SessionId, WorldRules.BeginActionSelection).Status);
         return session;
     }
 
     internal static void Complete(IViewContext context, PresentationKey key)
-    {
-        var revision = context.View.CaptureSnapshot().ControlRevision;
-        var first = context.View.AdvancePresentation(key, 0, revision);
-        Assert.NotNull(first);
-        context.View.AdvancePresentation(key, first.DurationSeconds, revision);
-        Assert.True(context.View.TryCompletePresentation(key));
-    }
+        => Assert.True(context.View.TryCompletePresentation(key));
+
+    internal static bool SetPaused(this IGameplayAccess access, long id, bool paused)
+        => access.UpdateGameState(id, state => state.Mode == (paused ? ExecutionMode.Paused : ExecutionMode.Active)
+            ? new(GameUpdateStatus.Rejected, State: state)
+            : WorldRules.ApplyControl(state, new(id, GameControlCommand.TogglePause)), allowWhilePaused: true)
+            .Status == GameUpdateStatus.Applied;
+
+    internal static bool RequestSkip(this IGameplayAccess access, PresentationKey key)
+        => access.UpdateGameState(key.SessionId, state => WorldRules.ApplyControl(state,
+            new(key.SessionId, GameControlCommand.Skip, key)), allowWhilePaused: true).Status == GameUpdateStatus.Applied;
 
     internal static void PlayTurn(IGameplayContext session, IViewContext view, GameCommand command)
     {
         var id = session.SessionId;
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, command));
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, GameCommand.Confirm));
-
-        var player = session.Gameplay.ApplyPlayerAction(id);
+        Assert.Equal(GameUpdateStatus.Applied,
+            session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, command)).Status);
+        Assert.Equal(GameUpdateStatus.Applied,
+            session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm)).Status);
+        var player = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer);
         Assert.Equal(GameUpdateStatus.Applied, player.Status);
-        Complete(view, Assert.IsType<PresentationKey>(player.Presentation));
-        if (session.Gameplay.GetSessionProgress(id).Outcome != GameOutcome.Running)
-            return;
-
-        var enemy = session.Gameplay.ApplyEnemyAction(id);
+        Complete(view, player.Presentation!.Value);
+        if (session.Gameplay.GetSessionProgress(id).Outcome != GameOutcome.Running) return;
+        var enemy = session.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy);
         Assert.Equal(GameUpdateStatus.Applied, enemy.Status);
-        Complete(view, Assert.IsType<PresentationKey>(enemy.Presentation));
+        Complete(view, enemy.Presentation!.Value);
         if (session.Gameplay.GetSessionProgress(id).Outcome == GameOutcome.Running)
-            Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginActionSelection(id));
+            Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, WorldRules.BeginActionSelection).Status);
     }
 }

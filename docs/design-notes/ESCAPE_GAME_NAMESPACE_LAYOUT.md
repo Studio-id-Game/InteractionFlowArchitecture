@@ -1,93 +1,60 @@
 # EscapeGameの名前空間と配置
 
-ExternalPorts / Externals / Interactionsは、Aspects配下でContext契約の範囲を先、レイヤーを後に配置する。
-「依存を完全に含む最も狭い範囲へ所属する」を共通ルールとする。
-SystemFlowsとBuildersは既存位置に置き、共有EntitiesはAspects.Sharedへまとめる。View専用の状態はAspects.View.Entitiesへ置く。
-
-| 範囲 | 所属条件 |
-| --- | --- |
-| Lifetime | ILifetimeContextだけを必要とする |
-| Gameplay | IGameplayContextで足りる。Lifetimeも含む |
-| View | IViewContextで足りる。Lifetimeも含む |
-| Application | GameplayとViewを集約・接続し、共有状態を管理する機能・実装 |
-| Shared | Aspect間で共有する契約・値・共通補助処理 |
-
-Lifetimeは両用途の基底、Applicationは集約である。
-例: InteractionのEndSessionはGameplay、RequestShutdownとCloseWindowはLifetime。
-GameplayとLifetimeの和はGameplay、ViewとLifetimeの和はViewになる。
-型名が複数あるだけではApplicationへ広げない。GameplayとViewの和だけがApplicationになる。
-共有Port契約はSharedへ置く。GameLifetimeReactionはGameplay、RaylibWindowReactionはViewへ置く。
-
-## 配置
+Aspectsは関心→レイヤーの順に置く。現在の責務は、Viewが表示変換と入力、Gameplayがゲームの判断、
+Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約・値・共通補助処理、Lifetimeが共通基底と終了処理である。
 
 | 名前空間の末尾 | 要素 |
 | --- | --- |
+| Aspects.Gameplay.Entities | WorldRules |
 | Aspects.Gameplay.ExternalPorts | IGameplayReaction |
 | Aspects.Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
-| Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
-| Aspects.Application.Entities | WorldRules、ActionEffect、PlayerState、InventoryState、MechanismState、EnemyState、SessionProgressState |
-| Aspects.View.ExternalPorts | IWindowOperation、IGameControlReaction |
-| Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
-| Aspects.View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
-| Aspects.View.Entities | FrameState、WindowState |
-| Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
-| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction、IWindowReaction |
-| Aspects.Application.Externals | GameInputOperation |
-| Aspects.Shared.Entities | RoomDefinition、CleanupKind、CleanupInfo、FailureCollector、GameValues.csのゲーム値型、ExecutionMode、PresentationValues.csの提示値型、ViewSnapshot |
+| Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、HandleControlInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
+| Aspects.View.Entities | FrameState、WindowState、PresentationClock |
+| Aspects.View.ExternalPorts | IWindowOperation |
+| Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、RaylibLayout |
+| Aspects.View.Interactions | OpenWindow、PresentFrame |
 | Aspects.View.Entities.Contexts | ViewContext |
-| Aspects.Lifetime.Entities.Contexts | LifetimeContext（抽象基底） |
+| Aspects.Application.Entities.Access | EscapeAccess（本体・Gameplay・View・Lifetimeの4ファイルとprivateなSessionRuntime） |
 | Aspects.Application.Entities.Contexts | EscapeApplicationContext |
+| Aspects.Application.Externals | GameInputOperation |
+| Aspects.Lifetime.Entities.Contexts | LifetimeContext（抽象基底） |
+| Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
+| Aspects.Shared.Entities | GameState、GameFeedback、GameEvent、GameControlInput、RoomDefinition、CleanupInfo、FailureCollector、その他の共有値 |
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
-| Aspects.Application.Entities.Access | EscapeAccess（4つのpartialファイルとprivateなSessionRuntime・DisplayState・PresentationRuntime） |
+| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction、IWindowReaction |
 | Aspects.Shared.Externals | GameExceptionHandling、GameCancellationHandling |
-| Aspects.Gameplay.Builders | GameplayProfile（Reaction・Interactionを登録） |
-| Aspects.View.Builders | ViewProfile |
-| Aspects.Lifetime.Builders | LifetimeProfile |
-| Aspects.Application.Builders | ApplicationProfile（入力接続を登録） |
-| Aspects.Shared.Builders | SharedProfile（Shared.Externalsの共通Handlerを登録） |
+| Aspects.各範囲.Builders | GameplayProfile、ViewProfile、ApplicationProfile、LifetimeProfile、SharedProfile |
 
-各名前空間はInteractionFlow.Samples.EscapeGameを先頭とする。ディレクトリーも同じ順に揃える。
-Aspectsは範囲別の機能をまとめる配置上の階層であり、新しい依存範囲やレイヤーではない。
-SystemFlowsと全体合成用Buildersは既存位置に置く。ルートのEntitiesはShared.Entities、共通HandlerはShared.Externalsへ移す。
-ルートBuildersには全体合成のEscapeGameProfileを残し、各Aspectの登録はその配下のBuildersへ分ける。
-EscapeGameProfileはShared・Application・Gameplay・View・Lifetimeの各ProfileをApplyする。
-ゲーム進行の3つのSystemFlowは全体構成としてEscapeGameProfile自身が登録する。
-各Profileは他Aspectを再適用せず、自身の登録だけを担当する。全体合成後に依存を解決し、従来どおり後続登録でPortを差し替えられる。
-FrameStateとWindowStateは画面側で扱う状態としてAspects.View.Entitiesへまとめる。
-ゲーム規則と内部の論理状態7型は、唯一の利用先であるEscapeAccessに合わせてAspects.Application.Entitiesへ置く。
-Context契約は共有の引数契約としてShared.Entities.Contextsへ置き、具体Contextは対応する範囲のEntities.Contextsへ置く。
-具体Context3型はLifetimeContextを継承する。基底はLifetimeの保持・破棄確認付き取得・型探索と参照解放だけを共有し、Accessの所有権は取得しない。
-派生ContextのDisposeCoreは固有参照を解放してからbase.DisposeCoreを呼ぶ。役割別の探索制限と追加値検証は派生側に残す。
-契約の配置にかかわらず、各機能は必要な依存を含む最も狭いContext契約を受け取る。
-3つのAccess契約は共有状態への操作契約としてShared.Entities.Accessへまとめる。
-全Access契約を実装するEscapeAccessは、Contextが提供する値としてApplication.Entities.Accessへ置く。
-partialは本体と、IGameplayAccess・IViewAccess・ILifetimeAccessに対応するGameplay・View・Lifetimeの4ファイルとする。
-共有フィールド・補助メソッド・内部クラス3型は本体へ集約する。
-GetSessionProgressはGameplayとViewの両契約に共通するため、本体に一つの実装を置く。
-Aspect間の共有契約・値はSharedへ置き、集約・接続・共有状態管理の実装はApplicationへ置く。
-旧GameValues.csの型はすべてAspects.Shared.Entitiesへ移し、GameValues.cs、ExecutionMode.cs、PresentationValues.cs、ViewSnapshot.csへ分ける。
-RoomDefinition・終了情報・失敗収集はShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置く。
-要素のないレイヤーは作らない。複数範囲を扱う既存Port / Externalを、配置のためだけに分割しない。
-専用ヘルパーは補助対象に従い、GameUpdateValidationはGameplay、RaylibLayoutはViewへ置く。
-IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契約を入口にしない共通処理としてShared.Externalsへ置く。
+各名前空間はInteractionFlow.Samples.EscapeGameを先頭とし、ディレクトリーも同じ順に揃える。
+要素のない階層は作らない。
+ルートのBuilders/EscapeGameProfileは各ProfileをApplyし、ゲーム進行のSystemFlowを自身で登録する。
+SystemFlowsとProgramはルートのまま、全体合成と実行寿命を扱う。
 
-## 依存の意味
+## 依存と責務
 
-Sharedは各Aspectが共有する契約・値・補助処理を置き、具体Aspectへは依存しない。
-Shared以外の各Aspectは自身とSharedを参照でき、基底としてのLifetimeへの依存も許容する。
-それ以外のAspectへの直接依存は持たない。全体の合成はルートのSystemFlowsとBuildersが担当する。
-HandleGameInputとPresentFrameはShared.ExternalPorts.IGameInputOperationを使用する。
-CloseWindowとViewの実装はShared.ExternalPorts.IWindowReactionを使用する。
-RequestShutdownとGameplayの実装はShared.ExternalPorts.IGameLifetimeReactionを使用する。
-各Profileは実装の所属Aspectに残し、共有Port契約と自身の実装を対応付ける。
+Sharedは具体Aspectへ依存しない。各Aspectは自身とSharedを参照し、基底としてのLifetimeへの依存も許容する。
+具体Context3型はLifetimeContextを継承し、Lifetimeの保持・取得・参照解放を共有する。
+Context契約の所属にかかわらず、各機能は必要な最も狭いContextを受け取る。
+全体を跨ぐ実行はルートのSystemFlowが合成する。
 
-既存Analyzerは名前空間の各要素からExternalPorts / Externals / Interactions等を探すため、
-今回の順序でも従来のレイヤー依存規則が適用される。Analyzerのコード・設定は変更しない。
-Aspect間の上記依存制約は今回の配置方針であり、Analyzerによる自動保証は追加していない。
+共有Portは機能の契約、各AspectのExternalはその実装である。
+WorldRulesは外部環境を使わない通常の計算としてGameplay.Entitiesに置く。
+Applicationはロック内で渡された同期更新関数を実行するだけで、WorldRulesやゲーム段階の条件を参照しない。
+ゲーム状態からの文言・表示・演出指定の変換はViewに閉じる。
+GameControlReaction / IGameControlReactionは廃止し、制御要求の解釈をGameplayReactionへまとめた。
+HandleControlInputもGameplayへ所属し、Viewの入力を独立した制御経路で処理する。
+
+既存Analyzerは名前空間中のExternalPorts / Externals / Interactions等を使い、従来のレイヤー規則を適用する。
+Aspect間の上記配置方針に対する新しいAnalyzerは追加しない。
 
 ## 確認
+
+単純なデータ共有モデルのビルド・テスト・実画面・計測結果は[サンプルREADME](../../InteractionFlow.Samples.EscapeGame/README.md)を参照する。
+旧ルール注入・受付ポリシー・待機ID方式は撤回し、[ゲーム状態と入力の共有](./ESCAPE_GAME_GAMEPLAY_RULES.md)へ置き換えた。
+
+### ルール分離前の確認記録
 
 分類間依存の整理後、Shared以外のAspectを跨ぐ参照はLifetimeContextへの継承3件だけになった。
 Shared自身から具体Aspectへの依存もない。今回の確認はimport・参照の点検であり、自動検査ルールは追加していない。

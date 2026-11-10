@@ -158,27 +158,20 @@ Preparing / Resultではポーズを受理せず、Stoppingから再開はでき
 待機をキャンセルして最初から起動し直す方法や、CancellationObjectのリセットによる代用はしません。
 ポーズ中の終了・実行障害は通常の停止経路へ移り、再開を待たずに終了待機を解除します。
 
-### 2.7 Contextと提供するアクセス
+### 2.7 Contextと共有するデータ
 
-EscapeApplicationContextは、Input / World / Display / Presentation / Controlの用途別アクセスを提供します。
-ポーズの制御状態と協調待機へのアクセスも提供しますが、Context自身がフローを停止・再開する処理は持ちません。
-Worldは複数Stateを整合して更新する入口で、生の共有可変Stateや可変コレクションを外へ返しません。
-Displayのスナップショットには、盤面・位置・仕掛け・段階・選択・メッセージ・版を一貫した形で含めます。
-色・ピクセル座標・ネイティブハンドルは含めず、表示の意味と描画実装を分けます。
-Contextは値へのアクセス・スコープを管理し、Task起動やフローの進行を担当しません。
+実装はGameplay / View / Lifetimeの3つのAccess契約を用い、専用Contextが公開範囲を限定します。
+EscapeAccessが扱うのは入力と不変のGameStateです。Context自身はゲーム進行や表示変換を担当しません。
+Gameplayは入力を読み、WorldRulesで次のGameStateを生成し、同期更新関数の戻り値として一括反映します。
+ViewはGameStateを読み、文言・ボタン状態・演出時間を自身で算出して描画します。
+制御要求と描画後の完了通知も入力として渡し、ゲーム上の可否はGameplayが判断します。
 
-| スコープ | 共有するもの | 独立させるもの |
-| --- | --- | --- |
-| アプリ | 部屋定義、アクティブセッションへの安全なアクセス、終了意図 | ウィンドウ用とゲーム実行用のCancellation |
-| セッション | 論理State、表示、入力受付、提示通知管理 | セッションID、全可変状態。リトライでは新規作成 |
-| 一回の行動 | セッションのアクセス、ゲーム側Cancellation | 仮選択・確定した行動の情報 |
-| フレーム | アクティブセッションの表示・入力接続 | フレーム入力、WindowStateはメインスレッド限定 |
+通常入力は待機中の一件へ配送し、処理中の操作を次ターンへ蓄積しません。
+制御入力は最新一件を保持します。停止では入力・再開・提示完了の待機を解除します。
+ゲーム状態は不変なので、取得後に将来の更新で変化せず、ロック外で読めます。
+ContextのDisposeは共有状態やCancellationの所有を意味せず、実行の停止・合流はSystemFlowが担当します。
 
-アクティブセッションの差し替えは専用アクセス管理で行い、実行中のContext.Withの書き換えで表現しません。
-旧セッションの待機を閉じてから新セッションを公開します。各入力・提示通知は取得時のセッションIDを付けます。
-Contextを破棄する前に、そのContextを使う実行と待機が完了していることを実行所有者が確認します。
-固定アクセスのプロパティとTryGetCoreは同じ対象を返し、破棄後の新規取得は拒否します。
-Withによる固定アクセスの隠蔽とEntry経由の差し替えも、Context固有の検証で拒否する案とします。
+共有モデルの契約と検証は[ゲーム状態と入力の共有](../design-notes/ESCAPE_GAME_GAMEPLAY_RULES.md)を参照してください。
 
 ## 3. SystemFlow設計
 
@@ -193,7 +186,7 @@ Program
        │         └─ GameSessionSystemFlow（開始済みセッションのターン反復→結果提示・入力）
        │              └─ GameTurnSystemFlow（選択反復→プレイヤー行動→敵行動）
        ├─ PresentFrameを反復（ゲーム側の入力・提示待ち・ポーズ中も継続）
-       │    └─ フレーム結果の制御要求を受け、ChangeControlを実行
+       │    └─ フレーム結果の制御要求を受け、HandleControlInputを実行
        └─ 終了要求の適用→キャンセル→GamePlaySystemFlowの合流→CloseWindow
 ```
 
@@ -217,7 +210,7 @@ SystemFlowは状態・結果から経路を選び、ユーザー向けの状態�
 
 ### 3.3 Flow全体の協調的なポーズ制御
 
-WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け、ChangeControl Interactionを実行します。
+WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け、HandleControlInput Interactionを実行します。
 この制御経路は通常のゲーム入力Operationや演出完了待機から独立させ、
 ゲーム側がそのどちらを待っていても操作できます。Interaction同士を直接ネストしません。
 ポーズ表示の適用は次の描画で確認できます。
@@ -247,7 +240,7 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 1. 独立した停止用Contextで終了Reactionを実行し、終了意図を保持して通常入力を閉じる。
 2. 提示管理を停止し、未完了の提示通知を解除する。以後の提示要求は直ちに停止結果になる。
 3. ゲーム用Cancellationへ通知し、入力待ち・演出待ちを終了させる。
-4. GameSystemFlowを待ち、後始末と失敗を集約する。この時点でゲームは次フレームに依存しない。
+4. GamePlaySystemFlowを待ち、後始末と失敗を集約する。この時点でゲームは次フレームに依存しない。
 5. CloseのReactionがネイティブ資源を解放し、先行失敗とClose・通知の失敗を保持して終了する。
 
 停止Reactionの実行失敗時もキャンセル・合流・Closeを試みます。
@@ -268,7 +261,7 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 | ApplyEnemyAction | 敵行動Reaction | 移動・捕獲判定・状態更新・提示完了まで |
 | ShowResult | 結果Reaction | 結果段階の設定と結果画面の提示まで |
 | SelectAction（結果段階でも共用） | 結果入力Operation→応答Reaction | リトライの意図を記録するまで。終了は独立した制御経路 |
-| ChangeControl | 制御Reaction | 可能な段階でPaused/Active、または現在の提示の省略を適用するまで。再開待機は行わない |
+| HandleControlInput | 制御Reaction | 可能な段階でPaused/Active、または現在の提示の省略を適用するまで。再開待機は行わない |
 | EnableSelection / EnableResultInput | 受付開始Reaction | 必要な提示完了後、段階と受付可能性を更新するまで |
 | EndSession / RequestShutdown | 寿命終了・停止Reaction | 入力・提示の閉鎖と必要な応答まで。Task合流はSystemFlowの責務 |
 
@@ -283,11 +276,11 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 | Port | 分類 | 契約の要点 |
 | --- | --- | --- |
 | IWindowOperation | Operation | フレーム入力・閉じる要求を同期取得し、毎フレーム全項目を上書き |
-| IGameOperation | Operation | セッションID付き入力を受理・配送。ゲーム側は非同期に一件待機 |
-| IWindowReaction | Reaction | Open / Draw / Close。Drawは一貫した表示を取得し描画後に提示進行を報告 |
-| IGameReaction | Reaction | 初期化・選択・プレイヤー行動・敵行動・結果表示を、状態更新と提示待機へ接続 |
-| ISessionReaction | Reaction | セッション終了・アプリ停止の意図を適用し、入力と提示を閉じる |
-| IGameControlReaction | Reaction | ポーズ・再開を同期適用。状態更新と提示制御を共通の境界で行い、描画を待たない |
+| IGameInputOperation | Operation | セッションID付き入力を受理・配送。ゲーム側は非同期に一件待機 |
+| IWindowReaction | Reaction | Open / Draw / Close。Drawは不変ゲーム状態を表示へ変換し、描画後に提示完了を報告 |
+| IGameplayReaction | Reaction | 初期化・選択・プレイヤー行動・敵行動・結果表示を、状態更新と提示待機へ接続 |
+| IGameLifetimeReaction | Reaction | セッション終了・アプリ停止の意図を適用し、入力と提示を閉じる |
+
 | 共通例外・キャンセルPort | Reaction | 実行障害の保持、後始末、キャンセル結果の処理 |
 
 ゲーム入力は、そのセッションで対応するOperationの待機が有効な場合だけ受理し、先行入力を蓄積しません。
@@ -295,7 +288,7 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 セーブや文脈から独立した記録はないため、初版ではStorageを追加しません。
 単にraylibを呼ぶという理由でSilentExternalへ分割しません。
 独立した役割のないWindow/View/Lifetime/Outcomeサービスを追加せず、内部補助として構造化します。
-Portは専用Contextを受け取り、Input / World / Display / Presentationを介して実行します。
+Portは専用Contextを受け取り、Gameplay / View / LifetimeのAccessを介して実行します。
 共通HandlerはIFlowContextのままでもよく、必要なアクセスをGetRequiredで取得します。
 
 ### 5.2 提示要求と演出

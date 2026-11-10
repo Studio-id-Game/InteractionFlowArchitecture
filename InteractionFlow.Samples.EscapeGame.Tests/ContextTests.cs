@@ -1,16 +1,17 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using System.Threading.Tasks;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -147,9 +148,9 @@ public sealed class ContextTests
         using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.Equal(0, app.View.CaptureSnapshot().SessionId);
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginSession(session.SessionId).Status);
-        Assert.Equal(session.SessionId, app.View.CaptureSnapshot().SessionId);
+        Assert.Equal(0, app.View.ReadGameState().SessionId);
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession).Status);
+        Assert.Equal(session.SessionId, app.View.ReadGameState().SessionId);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
         Assert.True(game.Gameplay.GetSessionProgress(game.SessionId).Stopping);
@@ -213,8 +214,8 @@ public sealed class ContextTests
         if (disposeSource) app.Dispose();
         else game.Dispose();
         var id = gameplay.AllocateSession();
-        Assert.Equal(GameUpdateStatus.Applied, gameplay.BeginSession(id).Status);
-        Assert.Equal(id, view.View.CaptureSnapshot().SessionId);
+        Assert.Equal(GameUpdateStatus.Applied, gameplay.BeginSession(id, WorldRules.BeginSession).Status);
+        Assert.Equal(id, view.View.ReadGameState().SessionId);
         Assert.False(lifetime.ShutdownRequested);
         Assert.False(game.Cancellation.IsCancellationRequested);
     }

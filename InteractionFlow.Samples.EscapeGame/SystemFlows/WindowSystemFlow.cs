@@ -1,15 +1,16 @@
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using System.Threading.Tasks;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 using System;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
@@ -26,6 +27,7 @@ public sealed class WindowSystemFlow(
     {
         using var frames = new ViewContext(context, ContextInheritance.None);
         using var gameplay = new GameplayContext(context, ContextInheritance.Cancellation);
+        using var controls = new GameplayContext(context, ContextInheritance.None);
         var input = new FrameState();
         frames.With(input).With(new WindowState());
         var failures = new FailureCollector();
@@ -38,7 +40,7 @@ public sealed class WindowSystemFlow(
             if (!opened.HasException)
             {
                 execution = Task.Run(() => game.ExecuteAsync(gameplay));
-                RunFrameLoop(frames, input, execution, failures);
+                RunFrameLoop(frames, controls, input, execution, failures);
             }
         }
         catch (Exception error)
@@ -66,6 +68,7 @@ public sealed class WindowSystemFlow(
 
     private void RunFrameLoop(
         IViewContext frames,
+        IGameplayContext gameplay,
         FrameState input,
         Task<InteractionEnd> execution,
         FailureCollector failures)
@@ -80,7 +83,7 @@ public sealed class WindowSystemFlow(
             // ゲーム入力/提示待機から独立した制御経路です。通常入力は同フレームで配送しません。
             if (input.PauseRequested || input.SkipRequested)
             {
-                var changed = control.ExecuteAsync(frames).GetAwaiter().GetResult();
+                var changed = control.ExecuteAsync(gameplay).GetAwaiter().GetResult();
                 failures.Add(changed.Result);
                 if (changed.HasException)
                     break;

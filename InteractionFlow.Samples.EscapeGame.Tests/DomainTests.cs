@@ -1,5 +1,6 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using Xunit;
 
@@ -16,7 +17,7 @@ public sealed class DomainTests
             GameCommand.Right, GameCommand.Interact, GameCommand.Right, GameCommand.Right, GameCommand.Right,
             GameCommand.Interact, GameCommand.Up, GameCommand.Up];
         foreach (var command in commands) GameTestSteps.PlayTurn(session, app, command);
-        var snapshot = app.View.CaptureSnapshot();
+        var snapshot = app.View.ReadGameState();
         Assert.Equal(GameOutcome.Won, snapshot.Outcome);
         Assert.Equal(12, snapshot.Turn);
         Assert.Equal(snapshot.Room.Exit, snapshot.Player);
@@ -25,7 +26,7 @@ public sealed class DomainTests
         Assert.True(snapshot.SwitchActivated);
         Assert.True(snapshot.DoorUnlocked);
         Assert.Equal(3, snapshot.EnemyPatrolIndex);
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyEnemyAction(session.SessionId).Status);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(session.SessionId, WorldRules.ApplyEnemy).Status);
     }
 
     [Fact]
@@ -34,17 +35,17 @@ public sealed class DomainTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
-        var initial = app.View.CaptureSnapshot();
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, GameCommand.Up));
-        Assert.NotNull(app.View.CaptureSnapshot().Selection);
-        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.ApplyInputCommand(id, GameCommand.CancelSelection));
-        Assert.Null(app.View.CaptureSnapshot().Selection);
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyInputCommand(id, GameCommand.Left));
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyInputCommand(id, GameCommand.Confirm));
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyPlayerAction(id).Status);
-        var current = app.View.CaptureSnapshot();
+        var initial = app.View.ReadGameState();
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Up)).Status);
+        Assert.NotNull(app.View.ReadGameState().Selection);
+        Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.CancelSelection)).Status);
+        Assert.Null(app.View.ReadGameState().Selection);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Left)).Status);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm)).Status);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer).Status);
+        var current = app.View.ReadGameState();
         Assert.Equal(initial.Player, current.Player);
-        Assert.Equal(initial.Enemy, current.Enemy);
+        Assert.Equal(initial.EnemyPatrolIndex, current.EnemyPatrolIndex);
         Assert.Equal(0, current.Turn);
         Assert.False(current.KeyCollected);
     }
@@ -55,14 +56,14 @@ public sealed class DomainTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         for (var i = 0; i < 4; i++) GameTestSteps.PlayTurn(session, app, GameCommand.Right);
-        var before = app.View.CaptureSnapshot();
+        var before = app.View.ReadGameState();
         Assert.Equal(new GridPosition(5, 3), before.Player);
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Up));
-        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.ApplyInputCommand(session.SessionId, GameCommand.Interact));
-        var after = app.View.CaptureSnapshot();
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(session.SessionId, state => WorldRules.ApplyInputCommand(state, GameCommand.Up)).Status);
+        Assert.Equal(GameUpdateStatus.Rejected, session.Gameplay.UpdateGameState(session.SessionId, state => WorldRules.ApplyInputCommand(state, GameCommand.Interact)).Status);
+        var after = app.View.ReadGameState();
         Assert.False(after.DoorUnlocked);
         Assert.Equal(before.Turn, after.Turn);
-        Assert.Equal(before.Enemy, after.Enemy);
+        Assert.Equal(before.EnemyPatrolIndex, after.EnemyPatrolIndex);
     }
 
     [Theory]
@@ -75,9 +76,9 @@ public sealed class DomainTests
         if (playerEntersGuard) GameTestSteps.PlayTurn(session, app, GameCommand.Wait);
         GameTestSteps.PlayTurn(session, app, GameCommand.Up);
         GameTestSteps.PlayTurn(session, app, GameCommand.Right);
-        var snapshot = app.View.CaptureSnapshot();
+        var snapshot = app.View.ReadGameState();
         Assert.Equal(GameOutcome.Lost, snapshot.Outcome);
-        Assert.Equal(snapshot.Player, snapshot.Enemy);
+        Assert.Equal(snapshot.Player, snapshot.Room.PatrolAt(snapshot.EnemyPatrolIndex));
         Assert.Equal(playerEntersGuard ? GameStage.PlayerPresenting : GameStage.EnemyPresenting, snapshot.Stage);
     }
 }

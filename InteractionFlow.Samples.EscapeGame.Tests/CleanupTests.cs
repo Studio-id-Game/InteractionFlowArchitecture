@@ -1,7 +1,5 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
@@ -11,19 +9,21 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Builders;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
@@ -261,7 +261,7 @@ public sealed class CleanupTests
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
-            frame.ShutdownRequested = context.View.CaptureSnapshot().SessionId != 0;
+            frame.ShutdownRequested = context.View.ReadGameState().SessionId != 0;
         }
     }
 
@@ -310,6 +310,7 @@ public sealed class CleanupTests
 
     public sealed class ObservedGameplayReaction : Reaction, IGameplayReaction
     {
+        public ReactionEnd ApplyControlRequest(IGameplayContext context) => inner.ApplyControlRequest(context);
         private readonly GameplayReaction inner = new();
         public bool Began { get; private set; }
         public override void ForceResetMemoryState() { }

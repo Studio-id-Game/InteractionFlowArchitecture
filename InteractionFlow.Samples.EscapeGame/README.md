@@ -32,228 +32,110 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 ## 構成の読み方
 
-ExternalPorts / Externals / Interactionsは、Aspects配下にContext依存を含む最も狭い範囲、その中にレイヤーを配置します。
-例えばAspects.Gameplay.Interactions、Aspects.View.Externals、Aspects.Lifetime.Interactions、Aspects.Application.ExternalPortsです。
-入力の接続実装はApplicationへ、複数Aspectが利用するPort契約はShared.ExternalPortsへ置きます。
-Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
-IWindowReaction・IGameLifetimeReaction・IGameInputOperationはShared.ExternalPortsへ置きます。
-実装はそれぞれView・Gameplay・Applicationに置き、共通HandlerはShared.Externalsへ置きます。
-FrameStateとWindowStateはAspects.View.Entitiesへ置きます。
-EscapeAccessだけが利用するWorldRules・ActionEffectと論理状態5型はAspects.Application.Entitiesへ置きます。
-Context契約4型はShared.Entities.Contexts、具体Contextは各範囲のEntities.Contextsへ置きます。
-3つの具体ContextはLifetime.Entities.ContextsのLifetimeContextを継承し、Lifetimeの保持・取得・参照解放を共有します。
-基底は共有Accessを停止・破棄せず、固有Accessの提供・探索制限・追加値検証は各派生Contextが担当します。
-3つのAccess契約はAspects.Shared.Entities.Access、共有アクセス管理のEscapeAccessはAspects.Application.Entities.Accessへ置きます。
-partialは本体と、Access契約に対応するGameplay・View・Lifetimeの4ファイルに分けます。
-共有フィールド・補助メソッド・両契約共通のGetSessionProgressと、privateな内部クラス3型は本体へまとめます。
-Aspect間で共有する値型はAspects.Shared.Entitiesへ置き、GameValues・ExecutionMode・PresentationValues・ViewSnapshotに分けます。
-盤面定義・終了情報・失敗収集もShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置きます。
-Applicationは集約・接続・共有状態管理、Sharedは共有契約・値・補助処理を担当します。
-各AspectはSharedと自身の要素を参照し、基底となるLifetimeへの依存も許容します。それ以外のAspectへの直接参照は持ちません。
-SystemFlowsと全体合成用BuildersはAspectsの外に置きます。
-分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
-
-各AspectのBuildersに登録用Profileを置き、EscapeGameProfileが5つのProfileをApplyして全体を構成します。
-ゲーム進行の3つのSystemFlowはEscapeGameProfile自身で登録し、SharedProfileは共通例外・取消Handlerを登録します。
-各Profileは自身の要素だけを登録し、他Aspectの依存は全体の合成時に満たします。
-
-Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
-GamePlaySystemFlowはセッションの割り当て・開始・終了とリトライを管理します。
-GameSessionSystemFlowは開始済みセッションのターン反復・結果提示・リトライ入力待機を担当し、GameTurnSystemFlowが一ターンを合成します。
-ゲーム側は演出提示の完了を非同期に待ちますが、フレーム側はその間も描画・制御入力を継続します。
-
-Entitiesは描画環境から独立した状態と安全なアクセス管理を提供します。
-専用Contextは用途別アクセスを提供し、ゲームの進行やTaskの起動は担当しません。
-ポーズは状態更新の同期境界とフローの再開待機で協調的に行い、キャンセルやセッション再作成で代用しません。
-アプリ終了はポーズより優先し、提示待ち・入力待ち・再開待ちを解除してからゲーム終了を待ち、Closeへ進みます。
-
-入力・描画はネイティブPort、ゲームの状態更新・応答はゲームPortに分けます。
-画面依存の配置・色・描画の補助はExternals内部に置きます。
-表示スナップショットと提示IDを使い、状態更新・画面提示・演出完了を区別します。
-
-提示を最初に取得したフレームの経過時間は0とします。
-ポーズ・再開の制御版が前フレームから変わった場合、その境界をまたぐdeltaは保守的に破棄します。
-ポーズ中の実時間を加算しない代わりに、最大一フレーム分の動作時間を捨てる場合があります。
-提示完了・演出省略はセッションIDと提示ID・版を検証し、古いフレームの要求を次の提示へ適用しません。
-
-## 一操作をコードから追う
-
-1. [RaylibWindowOperation](Aspects/View/Externals/RaylibWindowOperation.cs) が押下をFrameStateへ記録し、
-   [PresentFrame](Aspects/View/Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
-2. [HandleGameInput](Aspects/Gameplay/Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
-   [GameplayReaction.HandleCommandAsync](Aspects/Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
-3. [GameTurnSystemFlow](./SystemFlows/GameTurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
-   ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
-4. [RaylibWindowReaction](Aspects/View/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
-   フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
-
-ゲーム上の無効な選択は、理由を表示する正常なRejectedです。
-確定なしの行動、未完了提示を飛ばす段階更新などの内部前提違反は、失敗ReactionEndとして返します。
-Deferredは同じ仕事を保持して再開後に再検証し、Stoppedは終了として扱います。
-初期化は未公開セッションを公開する明示的な経路で、公開前の再開待機は要求しません。
-
-## Contextとアクセスの所有
-
-[Context契約](./Aspects/Shared/Entities/Contexts/IGameplayContext.cs)をSystemFlow・Interaction・Portの引数に使います。
-
-| 契約 | 公開するプロパティ | 用途 |
-| --- | --- | --- |
-| ILifetimeContext | Lifetime | RequestShutdown / CloseWindow |
-| IGameplayContext | Gameplay、Lifetime、SessionId | ゲーム側のFlow・Interaction・Function |
-| IViewContext | View、Lifetime | フレーム入力・描画・制御 |
-| IApplicationContext | ゲーム側と画面側の合成 | WindowSystemFlowの入口 |
-
-Programは[EscapeApplicationContext](./Aspects/Application/Entities/Contexts/EscapeApplicationContext.cs)を生成します。
-WindowSystemFlowは[GameplayContext](./Aspects/Gameplay/Entities/Contexts/GameplayContext.cs)と
-[ViewContext](./Aspects/View/Entities/Contexts/ViewContext.cs)を構築し、役割別の引数として渡します。
-関心別Stateの協調更新は、すべてが共有する一つのEscapeAccessとgateで行います。
-プロパティとTryGetCoreは同じアクセス契約を提供し、固定契約とEntryの追加は拒否します。
-
-| アクセス | 用途 |
+| 分類 | 責務 |
 | --- | --- |
-| Gameplay / IGameplayAccess | セッション割り当て・開始・終了、進行参照、入力待機、ゲーム更新、再開・提示完了待機 |
-| View / IViewAccess | 表示取得、入力送信、進行参照、ポーズ変更・省略要求、提示進行・完了通知 |
-| Lifetime / ILifetimeAccess | アプリ全体の停止要求・参照 |
+| View | ゲーム状態から文言・ボタン状態・表示・演出時間を作る。操作と描画後の完了を入力として送る |
+| Gameplay | 入力の意味を解釈し、ゲーム規則を適用して次のゲーム状態を作る |
+| Application | 入力とゲーム状態の共有、排他、一括反映、待機・通知、セッションの寿命を管理する |
+| Shared | 不変のGameState、入力内容、Context・Access・Port契約と共通Handler |
+| Lifetime | 共通Context基底と停止・閉鎖の相互作用 |
 
-3契約は同じアクセス管理の呼び分けで、管理オブジェクトやロックを増やしていません。
-GetProgressはゲームの進行判断と画面側のポーズ切替の両方で使うため、GameplayとViewへ公開します。
-共通の例外・取消HandlerはLifetimeだけを要求します。
-CreateSessionは初期状態の割り当て、BeginSessionはReactionによる公開・提示開始で、役割は維持しています。
-今回の利用側改修ではCore / Standard / Analyzerのコードと公開契約を変更していません。
+Aspectsは範囲→レイヤーの順です。共有契約以外は、各Aspect内と基底Lifetimeへの依存に限定します。
+配置表は[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
+各AspectのProfileは自身のFunction・Interactionを登録し、EscapeGameProfileがApplyします。
+ゲーム進行のSystemFlowはEscapeGameProfile自身で登録します。
 
-`NoSessionId = 0`は、特定のゲームセッションを指さないアプリの固定対象です。
-WindowSystemFlowはルートからゲーム用ContextをCancellationモード、画面用ContextをNoneモードで構築します。
-ゲーム用ContextはルートのCancellationを共有しますが、ルートの値を探索しません。
-セッションIDはGameplay.CreateSessionで割り当て、GameplayContextのコンストラクターへ渡します。
-セッションはゲーム用ContextからAllで構築し、ゲーム側の値とCancellationを引き継ぎます。
-セッションの公開はBeginSessionのReactionが担当します。
-終了用の独立ContextはNoneで構築し、Accessと対象IDだけを引き継ぎます。
-生成操作はContextインターフェースへ加えず、SystemFlowが具体Contextのコンストラクターで構成します。
-各実行の所有者がTaskの終了を待ち、ContextのDisposeで停止や合流を代用しません。
-ルートへ追加した値は役割別Contextへ流れません。
-FrameStateとWindowStateは独立したフレームContext、Close用Finishingは終了専用スコープへ置きます。
-探索順は追加値→自身の固定アクセス→親→ルートのCancellationです。
-GameplayContextはView、ViewContextはGameplayを探索からも除外します。
-Allで親の通常値を引き継ぐ構築を選んだ場合も、反対側の固定Accessは親へ問い合わせません。
-プロパティは必要なAccessだけを保持し、具体ContextやEscapeAccessへのキャストを使いません。
+## 入力・ゲーム状態・表示の流れ
 
-呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
-WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
-開始前にキャンセル済みでもOpenを実行し、ゲーム側がキャンセルを処理して停止・合流・Closeへ進みます。
-Interaction間の待機で発生した実行自身のキャンセルも、GamePlaySystemFlowで通常停止として扱います。
-このFlow境界での停止はHandlerを通らないため、Cancellationをリセットしません。
-通常停止後の現在のキャンセル状態は処理経路で異なります。キャンセル済みの発行済みtokenはリセット後も取消済みです。
-フレーム・停止・Close用Contextは別Cancellationを使い、ゲーム側のキャンセル中も後始末を実行します。
+```text
+Viewの入力取得 → EscapeAccessに操作を渡す → Gameplayが入力を読む
+GameplayのWorldRules → 次のGameState → EscapeAccessが一括反映
+EscapeAccessのGameState → RaylibWindowReaction（表示の記憶・変換）→ 描画
+```
 
-## 完了範囲と終了結果
+[GameState](./Aspects/Shared/Entities/GameState.cs)は不変のrecordです。
+取得した状態はロック外でも安全に読め、後からゲームが進んでも変化しません。
+[EscapeAccess](./Aspects/Application/Entities/Access/EscapeAccess.cs)は表示用Snapshot、文字列、演出時間を保持しません。
 
-[PresentResult](Aspects/Gameplay/Interactions/PresentResult.cs) は「結果提示の完了を待つ→結果入力を開く」を一つの相互作用として扱います。
-提示Reactionの失敗時は短絡し、受付開始へ進みません。間にフロー選択はなく、結果段階はポーズ対象外です。
-停止との競合は受付更新側で再確認します。独立したEnableResultInput Interactionは削除しました。
+[GameplayReaction](./Aspects/Gameplay/Externals/GameplayReaction.cs)は、例えば次のように更新します。
 
-BeginActionSelectionとHandleGameInputは維持しています。選択段階を開く境界と、一件の入力へ応答して反復する境界は別で、
-その間と各反復にはフローの再開・停止確認があります。HandleGameInputは結果段階のリトライ入力にも使います。
-プレイヤー・敵行動の間にも勝敗の選択があるため、薄いという理由だけで相互作用を一律にまとめていません。
+```csharp
+var change = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.ApplyPlayer);
+```
 
-[GameFlowCheckpoint](./SystemFlows/GameFlowCheckpoint.cs) はフローの失敗・停止・再開確認を共有します。
-更新側でもポーズを再確認して一括反映するため、チェックポイントだけで原子性を保証する設計ではありません。
-[FailureCollector](./Aspects/Shared/Entities/FailureCollector.cs) は終了時の原因を観測順に保持し、通常のResult連結とは区別します。
+更新関数はロック内で現在のGameStateを受け取り、次の不変状態を返します。
+[WorldRules](./Aspects/Gameplay/Entities/WorldRules.cs)はゲーム規則だけを扱い、外部I/Oや待機を行いません。
+更新関数が例外を送出した場合は、返却前の状態を公開しません。同期処理は短く保ちます。
+IGameplayRules、受付条件のビット集合、入力待機ID、ルールのDI登録はありません。
 
-Close / EndSessionの専用スコープへは、[CleanupInfo](./Aspects/Shared/Entities/CleanupInfo.cs)で処理種別と先行Resultを渡します。
-通常Contextに無関係なResultがあっても、終了処理中という意味にはなりません。
-終了の送出例外やキャンセルも先行失敗へ合成し、通常停止の回復と終了処理自身の失敗を分けます。
-通常フレームや通常セッションへFinishingを持ち越さず、終了処理のためだけに渡します。
+入力は、待機中の通常入力一件と、最新の制御要求を扱います。
+通常入力の待機がない間に送られた操作は配送せず、次ターンへ溜めません。
+入力のゲーム上の有効性はGameplayで判断します。Viewのボタン表示は受理を保証しません。
+セッションIDが異なる古い入力・制御要求は次セッションへ適用しません。
 
-状態更新、描画提出、演出完了は異なる範囲です。ゲーム側Reactionは必要な提示の通知まで待ちますが、
-ユーザーが実際に認識したことまでは保証しません。全体の合流・停止・資源解放はWindowSystemFlowが調整します。
-改修の判断と対象外は [利用側改善プランと実装結果](../docs/design-notes/ESCAPE_GAME_APPLICATION_REFACTOR_PLAN.md) を参照してください。
+## Viewでの変換
+
+[RaylibWindowReaction](./Aspects/View/Externals/RaylibWindowReaction.cs)がGameStateを読み、
+GameFeedbackやGameEventから表示文言・位置・ボタン状態を導きます。
+ViewSnapshot / PresentationSnapshot / ViewProjectionは不要になり、表示用DTOを毎フレーム生成しません。
+文言はゲーム状態の参照が変わったときに組み立て、同じ文言の折り返し結果も再利用します。
+
+[PresentationClock](./Aspects/View/Entities/PresentationClock.cs)はReaction内部で演出時間を保持するヘルパーです。
+更新ごとにSnapshotを返さず、自身の経過時間・所要時間・完了状態を更新します。
+移動は0.15秒、スイッチ・解錠は0.2秒といった指定はView側にあります。
+共有GameEventは何が起きたかと位置・識別子だけを持ち、秒数や表示文言を含みません。
+ポーズ中は時計を進めず、ポーズ・再開の版を跨いだdeltaは破棄します。
+
+[RaylibWindowReaction](./Aspects/View/Externals/RaylibWindowReaction.cs)は描画を提出してから提示完了を通知します。
+EscapeAccessは現行イベントの完了通知を待機へ配送し、時間や描画内容の妥当性は判断しません。
+実際に画面へ提出したことはViewの責務です。通知だけでユーザーの認識まで保証するものではありません。
+
+## SystemFlowとポーズ
+
+WindowSystemFlowはメインスレッドのフレーム反復と、背景のGamePlaySystemFlowの寿命を所有します。
+GamePlaySystemFlowはセッションの生成・BeginSession・EndSession・リトライを管理します。
+GameSessionSystemFlowはターン反復と結果提示・入力、GameTurnSystemFlowは一ターンを合成します。
+
+ポーズ・省略要求はPresentFrameが入力として送り、GameplayのHandleControlInputが解釈します。
+WindowSystemFlowがフレームごとにこの独立した制御経路を実行するため、
+通常進行が入力・提示・再開を待っていても制御要求を処理できます。追加の背景Taskは作りません。
+制御用GameplayContextは独立Cancellationを使い、通常進行のキャンセルやリセットと干渉させません。
+
+ポーズの可否とModeの変更はWorldRules、変更後の待機通知はEscapeAccessが担当します。
+確定済みのゲーム状態は巻き戻さず、再開後に提示や処理の続きを行います。
+
+## Contextと終了処理
+
+EscapeApplicationContextが共有EscapeAccessを生成します。
+GameplayContext / ViewContextは同じアクセス管理を使い、公開契約と探索範囲を限定します。
+LifetimeContextはLifetimeの保持・取得・参照解放を共通化し、共有値の所有権を取得しません。
+ContextInheritanceで親の値探索とCancellation共有を独立に指定します。
+固定AccessとEntryによる差し替えはContext固有の検証で拒否します。
+
+更新中のゲーム状態、表示変換、Taskの起動や合流をContext自身の責務にはしません。
+停止・終了では入力・提示・再開待機を解除し、ゲーム実行を合流してからCloseへ進みます。
+CleanupInfoで先行結果と終了種別を渡し、終了処理自身の失敗を失わない構成を維持しています。
 
 ## 検証
 
-役割→レイヤー順の配置変更後も全体ビルドは警告・エラー0件、全569件成功です。
-名前空間・using・参照名を除いたメソッド本体、画面文字列、ゲーム規則は変更していません。
-Release簡易計測の通常PresentFrameは488B/回・約221〜234ns。実画面での再確認は未実施です。
+全体・計測プロジェクトのビルドは警告・エラー0件、EscapeGame109件と他470件の全579テストが成功しました。
+ゲームの解法・勝敗・リトライ、ポーズ・キャンセル・終了の競合、古い提示への通知に加え、
+不変Snapshot、並行更新の取りこぼし防止、失敗した更新の非公開、Viewでの表示変換・時計を検証します。
+旧案固有の受付ポリシー・待機IDテストは廃止し、現在のデータ境界を検証するテストへ置き換えました。
 
-命名整理後も全体ビルドは警告・エラー0件、全569件成功です。
-Release簡易計測の通常PresentFrameは488B/回・約228〜233nsで、割り当て量を維持しています。
-識別子・コメント・空白以外のコードと画面文字列は変更していません。実画面の再確認は未実施です。
-旧名からの対応と整理方針は[命名整理プランと結果](../docs/design-notes/ESCAPE_GAME_NAMING_PLAN.md)を参照してください。
+実画面でW/Dによる選択、Enter確定、ターン進行、ポーズ・Pでの再開、敗北表示、Rでのリトライ、Exit終了を確認しました。
 
-`InteractionFlow.Samples.EscapeGame.Tests`は画面を開かず、Portや提示通知を差し替えて検証します。
-操作と確定の分離、鍵と解錠の整合性、勝敗、ポーズ境界、古い通知、リトライ、失敗・終了待機を確認します。
-実画面では描画継続、補間、入力、ポーズ・再開、結果表示と終了を確認します。
-GameplayReactionTestsは通常の無効選択と内部前提違反、FinishingTestsは明示終了情報、
-FailureTestsは原因の同一性・集約順序、ResultInteractionTestsは提示から受付への短絡・停止を検証します。
-共通の初期化・提示完了手順はGameTestStepsに置き、ゲーム規則そのものは複製しません。
-
-Context契約分割後は、全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功しています。
-ContextTestsで契約別の取得範囲、固定契約注入の拒否、共有・独立Cancellation、親の値探索、破棄の非所有を検証します。
-本番フローのテストでも、画面側からGameplay、ゲーム側からViewとアプリ固有の追加値が取得できないことを確認します。
-Release簡易計測の通常PresentFrameは488B/回・約231～239nsでした。実画面での再確認は未実施です。
-
-### 参考：3Access再編時点
-
-全体ビルドが警告・エラー0件、EscapeGame97件と他プロジェクト470件が成功しました。
-Lifetime専用Contextでの共通Handler実行、Gameplay経由の未公開セッション割り当てを追加検証しました。
-Release簡易計測の通常PresentFrameは488B/回・約227～238nsで、割り当て量を維持しました。
-実画面での再確認は未実施です。再編の根拠とContext契約の次段階は
-[Access契約の再分類プラン](../docs/design-notes/ESCAPE_GAME_ACCESS_CONTRACT_REVIEW_PLAN.md)を参照してください。
-
-### 参考：単一Contextへ戻した時点
-
-全体ビルドが警告・エラー0件、EscapeGame94件と他プロジェクト470件が成功しました。
-分割専用のテストは統合し、ルート値の親探索と独立フレーム・終了スコープの分離を検証しています。
-Release簡易計測の通常PresentFrameは488B/回・約245～249nsで、割り当て量を維持しました。
-実画面での再確認は未実施です。
-
-### 参考：Context分割時の検証
-
-ContextInheritance採用時点では全体ビルドが警告・エラー0件、EscapeGame99件と他プロジェクト470件が成功しました。
-Release簡易計測の通常PresentFrameは488B/回・約232～241nsで、割り当て量を維持しました。
-実画面での再確認は未実施です。
-
-IFlowContext直接実装への再実験時点では、EscapeGameの99件と他プロジェクトの445件が成功しました。
-全体ビルドは警告・エラー0件です。ContextTestsでは公開・非公開契約の探索、固定契約の追加拒否、
-親探索とCancellationの境界、破棄の独立性を確認します。FlowTestsでは外部キャンセルと停止失敗時にも、
-ゲーム側のTask登録が解放され、セッション終了・合流後にCloseへ進むことを確認します。
-Release簡易計測はSnapshotが128B・約32～34ns、直接フレームが256B・約138～140ns、
-PresentFrameが488B・約229～237nsでした。測定条件は下記と同じで、割り当て量は維持しています。
-これは直接実装時点の記録です。ContextInheritanceへの移行では生成時の接続用オブジェクトを削除しています。
-この計測は生成コストや競合を含む性能保証ではありません。
-再実験後の実画面確認は未実施です。
-
-## 参考：利用側改修後の確認結果
-
-全体ビルドは警告・エラー0件、全体テストは527件成功しました。
-同じ条件のRelease簡易計測では、フレームの割り当て量は初版から増えていません。
+.NET 10.0.14 / x64、TieredCompilation=0、20,000回ウォームアップ、200,000回×3の描画なし簡易計測は次のとおりです。
 
 | 対象 | 割り当て | 時間の目安 |
 | --- | ---: | ---: |
-| 表示スナップショット一件 | 128B | 約34～37ns |
-| 入力・表示の本体を直接実行（スナップショット二件） | 256B | 約140～151ns |
-| PresentFrameを一回実行 | 488B | 約239～247ns |
+| 不変GameStateの取得 | 0B | 約14〜15ns |
+| 直接フレーム（取得2回・ローカル時計） | 0B | 約99ns |
+| PresentFrame一回 | 232B | 約186〜193ns |
 
-時間は簡易計測時の観測値であり、初版と同じ速度やゲーム全体の性能を保証するものではありません。
-今回の利用側改修後には、実画面での再確認は行っていません。以下の実画面記録は初版時点のものです。
-
-## 参考：初版の確認結果
-
-自動テストでは12ターンの解法による脱出とリトライ、状態の整合性、ポーズ・再開、
-提示の保留、古い通知、正常終了の競合、終了・通知の失敗保持を確認しています。
-実画面では移動の選択・確定、敵移動、入力待ちからのポーズ、停止中の入力破棄、再開、
-敗北表示、リトライ、再開せずに終了できることを確認しました。
-
-描画をfakeへ差し替えたReleaseの簡易計測（.NET 10.0.14/x64、段階的JIT無効、
-20,000回ウォームアップ後200,000回×3）では、入力待ち相当の一フレームは以下でした。
-
-| 対象 | 割り当て | 時間の目安 |
-| --- | ---: | ---: |
-| 表示スナップショット一件 | 128B | 約36ns |
-| 入力・表示の本体を直接実行（スナップショット二件） | 256B | 約131～136ns |
-| PresentFrameを一回実行 | 488B | 約215～218ns |
-
-通常フレームはPresentFrame一回で、制御操作がある場合はChangeControlも実行します。
-演出中は提示スナップショットの更新、ターン進行ではゲーム側のInteraction・待機通知等が追加されます。
-ネイティブ入力・文字列整形・描画・GPU待ち・スレッド競合・実フレーム時間はこの計測に含めていません。
-ゲーム全体や演出中の性能保証として扱いません。
-再実行は [計測プロジェクト](../benchmarks/InteractionFlow.ExecutionMeasurements/README.md) を参照してください。
+表示DTOがあった版の直接フレーム128B / PresentFrame360Bから、それぞれ128B減りました。
+計測用ReactionはGameStateの保持と時計更新だけを行い、実描画・文言組み立て・折り返しを含みません。
+実描画時の補間文字列や、ゲーム更新・入力通知時の不変状態生成には割り当てがあります。
+上の計測はネイティブ描画、ゲーム更新、入力・制御の競合を含むゲーム全体の性能保証ではありません。
+再実行は[計測プロジェクト](../benchmarks/InteractionFlow.ExecutionMeasurements/README.md)を参照してください。
+設計上の境界と変更理由は[ゲーム状態と入力の共有](../docs/design-notes/ESCAPE_GAME_GAMEPLAY_RULES.md)に記録しています。

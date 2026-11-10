@@ -1,19 +1,19 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using System.Threading.Tasks;
 using System;
+using System.Threading.Tasks;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 
 public sealed class HandleControlInput(
-    IGameControlReaction reaction,
+    IGameplayReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
-    : Interaction<IViewContext>(exceptionPort, cancellationPort, reaction)
+    : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)
 {
-    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IViewContext context)
+    protected override ValueTask<ReactionEnd> ExecuteCoreAsync(IGameplayContext context)
         => new(reaction.ApplyControlRequest(context));
 }

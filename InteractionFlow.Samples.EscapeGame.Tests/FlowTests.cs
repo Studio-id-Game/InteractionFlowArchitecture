@@ -1,34 +1,65 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Builders;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.SystemFlows;
 using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Threading;
-using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
 
 public sealed class FlowTests
 {
+    [Fact]
+    public async Task FrameDrivenGameplayControlUsesIndependentCancellation()
+    {
+        using var fixture = new Fixture();
+        var requested = false;
+        fixture.Input.PollFrame = frames =>
+        {
+            var state = frames.View.ReadGameState();
+            var frame = frames.GetRequired<FrameState>();
+            if (!requested && state.WaitingForInput)
+            {
+                requested = true;
+                frame.PauseRequested = true;
+            }
+            else if (fixture.Game.ControlCancellation is not null)
+            {
+                fixture.Context.Cancellation.Cancel();
+                frame.ShutdownRequested = true;
+            }
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.True(requested);
+        Assert.NotNull(fixture.Game.ControlCancellation);
+        Assert.NotSame(fixture.Context.Cancellation, fixture.Game.ControlCancellation);
+        Assert.False(fixture.Game.ControlCancellation.IsCancellationRequested);
+        Assert.True(fixture.Session.Ended);
+    }
+
     [Fact]
     public async Task SharedCancellationAfterSuccessfulReactionIsNormalAtTheNextCheckpoint()
     {
@@ -112,7 +143,7 @@ public sealed class FlowTests
             && fixture.Game.Cancellation is { HasTask: false };
         fixture.Input.PollFrame = frames =>
         {
-            if (canceledDuringPresentation || frames.View.CaptureSnapshot().Presentation is null)
+            if (canceledDuringPresentation || frames.View.ReadGameState().Event is null)
                 return;
             Assert.NotSame(fixture.Context.Cancellation, frames.Cancellation);
             fixture.Context.Cancellation.Cancel();
@@ -148,13 +179,13 @@ public sealed class FlowTests
         fixture.Window.CompletePresentations = false;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.View.CaptureSnapshot();
+            var snapshot = context.View.ReadGameState();
             if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
 
             heldFrames++;
             Assert.Equal(GameStage.Preparing, snapshot.Stage);
-            Assert.False(snapshot.AcceptingInput);
+            Assert.False(snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active);
             Assert.False(context.View.TrySubmitCommand(snapshot.SessionId, GameCommand.Up));
             if (heldFrames >= 5)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
@@ -174,18 +205,20 @@ public sealed class FlowTests
     {
         using var fixture = new Fixture();
         var commands = new Queue<GameCommand>(Solution.SelectMany(command => new[] { command, GameCommand.Confirm }));
-        ViewSnapshot? won = null;
+        GameState? won = null;
         long firstSession = 0;
         long secondSession = 0;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.View.CaptureSnapshot();
+            var snapshot = context.View.ReadGameState();
             if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
             if (firstSession == 0)
                 firstSession = snapshot.SessionId;
 
             var input = context.GetRequired<FrameState>();
+            input.SessionId = snapshot.SessionId;
+
             if (snapshot.SessionId != firstSession)
             {
                 secondSession = snapshot.SessionId;
@@ -197,7 +230,7 @@ public sealed class FlowTests
                 return;
             }
 
-            if (!snapshot.AcceptingInput)
+            if (!(snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
                 return;
             if (commands.TryDequeue(out var command))
             {
@@ -231,17 +264,19 @@ public sealed class FlowTests
         using var fixture = new Fixture();
         var phase = 0;
         var pausedFrames = 0;
-        ViewSnapshot? frozen = null;
+        GameState? frozen = null;
         fixture.Input.PollFrame = context =>
         {
-            var snapshot = context.View.CaptureSnapshot();
+            var snapshot = context.View.ReadGameState();
             var input = context.GetRequired<FrameState>();
-            if (phase == 0 && snapshot.AcceptingInput)
+            input.SessionId = snapshot.SessionId;
+
+            if (phase == 0 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
             {
                 input.Command = GameCommand.Up;
                 phase = 1;
             }
-            else if (phase == 1 && snapshot.AcceptingInput)
+            else if (phase == 1 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
             {
                 input.Command = GameCommand.Confirm;
                 phase = 2;
@@ -256,11 +291,10 @@ public sealed class FlowTests
             {
                 frozen ??= snapshot;
                 Assert.Equal(frozen.Player, snapshot.Player);
-                Assert.Equal(frozen.Enemy, snapshot.Enemy);
+                Assert.Equal(frozen.EnemyPatrolIndex, snapshot.EnemyPatrolIndex);
                 Assert.Equal(frozen.Turn, snapshot.Turn);
                 Assert.Equal(frozen.Stage, snapshot.Stage);
-                Assert.Equal(frozen.Presentation!.Key, snapshot.Presentation!.Key);
-                Assert.Equal(frozen.Presentation.ElapsedSeconds, snapshot.Presentation.ElapsedSeconds);
+                Assert.Equal(frozen.Event!.Key, snapshot.Event!.Key);
                 Assert.False(context.View.TrySubmitCommand(snapshot.SessionId, GameCommand.Confirm));
                 if (++pausedFrames == 5)
                 {
@@ -269,7 +303,7 @@ public sealed class FlowTests
                     fixture.Window.CompletePresentations = true;
                 }
             }
-            else if (phase == 4 && snapshot.AcceptingInput)
+            else if (phase == 4 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
             {
                 Assert.Equal(1, snapshot.Turn);
                 input.ShutdownRequested = true;
@@ -304,7 +338,7 @@ public sealed class FlowTests
         fixture.Window.CompletePresentations = false;
         fixture.Input.PollFrame = context =>
         {
-            if (context.View.CaptureSnapshot().Presentation is not null)
+            if (context.View.ReadGameState().Event is not null)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
         };
 
@@ -384,7 +418,7 @@ public sealed class FlowTests
     private sealed class Fixture : IDisposable
     {
         private readonly InteractionFlow.Core.Builders.ScopeHandler scope;
-        public EscapeApplicationContext Context { get; } = new();
+        public EscapeApplicationContext Context { get; }
         public InteractionFlow.Core.Builders.SystemFlowHandler<IApplicationContext> Flow { get; }
         public ScriptedWindowOperation Input { get; }
         public HeadlessWindowReaction Window { get; }
@@ -393,7 +427,6 @@ public sealed class FlowTests
 
         public Fixture(Exception? stopFailure = null)
         {
-            Context.With("application-only value");
             var builder = new ScopeBuilder();
             builder.Apply(new EscapeGameProfile())
                 .UseFunction<IWindowOperation, ScriptedWindowOperation>()
@@ -401,6 +434,8 @@ public sealed class FlowTests
                 .UseFunction<IGameplayReaction, TrackingGameplayReaction>()
                 .UseFunction<IGameLifetimeReaction, TrackingGameLifetimeReaction>();
             scope = builder.BuildScope();
+            Context = new EscapeApplicationContext();
+            Context.With("application-only value");
             Input = Assert.IsType<ScriptedWindowOperation>(scope.GetRequiredService<IWindowOperation>());
             Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
             Game = Assert.IsType<TrackingGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
@@ -429,19 +464,21 @@ public sealed class FlowTests
             if (timeout.Elapsed > TimeSpan.FromSeconds(10))
                 throw new TimeoutException("The scripted game did not finish.");
             var frame = context.GetRequired<FrameState>();
-            var snapshot = context.View.CaptureSnapshot();
+            var snapshot = context.View.ReadGameState();
             frame.SessionId = snapshot.SessionId;
+
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
             frame.ShutdownRequested = false;
-            frame.Presentation = snapshot.Presentation?.Key;
+            frame.Presentation = snapshot.Event?.Key;
             PollFrame?.Invoke(context);
         }
     }
 
     public sealed class HeadlessWindowReaction : Reaction, IWindowReaction
     {
+        private readonly PresentationClock clock = new();
         public List<string> Events { get; } = [];
         public List<int> Threads { get; } = [];
         public int DrawCount { get; private set; }
@@ -460,15 +497,12 @@ public sealed class FlowTests
         {
             Record("draw");
             DrawCount++;
-            var snapshot = context.View.CaptureSnapshot();
-            if (snapshot.Presentation is { } presentation)
+            var snapshot = context.View.ReadGameState();
+            if (snapshot.Event is { } presentation)
             {
-                context.View.AdvancePresentation(presentation.Key, 0, snapshot.ControlRevision);
-                if (CompletePresentations)
-                {
-                    context.View.AdvancePresentation(presentation.Key, presentation.DurationSeconds, snapshot.ControlRevision);
-                    context.View.TryCompletePresentation(presentation.Key);
-                }
+                var frame = clock.Update(context.View.ReadGameState(), 1);
+                if (CompletePresentations && frame is not null && clock.IsComplete)
+                    context.View.TryCompletePresentation(frame.Key);
             }
             Thread.Yield();
             return GetEnd();
@@ -510,6 +544,12 @@ public sealed class FlowTests
 
     public sealed class TrackingGameplayReaction : Reaction, IGameplayReaction
     {
+        public ReactionEnd ApplyControlRequest(IGameplayContext context)
+        {
+            ControlCancellation = context.Cancellation;
+            return inner.ApplyControlRequest(context);
+        }
+        public CancellationObject? ControlCancellation { get; private set; }
         private readonly GameplayReaction inner = new();
         private volatile bool cancellationObserved;
         public CancellationObject? Cancellation { get; private set; }

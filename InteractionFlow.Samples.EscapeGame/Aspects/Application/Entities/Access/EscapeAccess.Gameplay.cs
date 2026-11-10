@@ -1,5 +1,4 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,26 +11,27 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            if (shutdown)
-                throw new InvalidOperationException("The application is stopping.");
+            if (shutdown) throw new InvalidOperationException("The application is stopping.");
             var id = ++nextSession;
             sessions.Add(id, new SessionRuntime(id));
             return id;
         }
     }
 
-    public GameUpdateResult BeginSession(long sessionId)
+    public GameUpdateResult BeginSession(long sessionId, Func<GameState, GameUpdateResult> initialize)
     {
         lock (gate)
         {
-            if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Progress.Retired)
+            if (shutdown || !sessions.TryGetValue(sessionId, out var session) || session.Retired)
                 return new(GameUpdateStatus.Stopped);
-            if (session.Progress.Published || active is { Progress.Retired: false })
+            if (session.Published || active is { Retired: false })
                 return new(GameUpdateStatus.Rejected);
+            var change = initialize(session.State);
+            if (change.Status != GameUpdateStatus.Applied) return change;
+            change = Commit(session, change);
             active = session;
-            session.Progress.Published = true;
-            session.Display.SetMessage("Find the key, activate the switch, unlock the door");
-            return BeginPresentation(session, PresentationKind.Initial, session.Player.Position, session.Player.Position, 0);
+            session.Published = true;
+            return change;
         }
     }
 
@@ -39,102 +39,38 @@ internal sealed partial class EscapeAccess
     {
         lock (gate)
         {
-            if (!sessions.TryGetValue(sessionId, out var session)) return;
+            if (!sessions.Remove(sessionId, out var session)) return;
             StopSession(session);
-            sessions.Remove(sessionId);
+            if (controlInput?.SessionId == sessionId) controlInput = null;
         }
     }
 
-    public GameUpdateStatus ApplyInputCommand(long sessionId, GameCommand command)
+    public GameState ReadGameState(long sessionId)
+    {
+        lock (gate)
+            return FindActiveSession(sessionId)?.State
+                ?? new GameState(sessionId) { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping };
+    }
+
+    public SessionProgress GetSessionProgress(long sessionId)
+    {
+        var state = ReadGameState(sessionId);
+        return new(state.Stage, state.Outcome, state.Confirmed, state.RetryRequested,
+            state.Mode == ExecutionMode.Stopping, state.Mode == ExecutionMode.Paused);
+    }
+
+    public GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameUpdateResult> update,
+        bool allowWhilePaused = false)
     {
         lock (gate)
         {
             var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return status;
-            var applied = WorldRules.ApplyInputCommand(command, session!.Progress, session.Player,
-                session.Inventory, session.Mechanisms, out var message);
-            session.Display.SetMessage(message);
-            return applied;
-        }
-    }
-
-    public GameUpdateResult ApplyPlayerAction(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return new(status);
-            var effect = WorldRules.ApplyPlayer(session!.Progress, session.Player,
-                session.Inventory, session.Mechanisms, session.Enemy);
-            return PublishEffect(session, effect);
-        }
-    }
-
-    public GameUpdateResult ApplyEnemyAction(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return new(status);
-            if (!IsPresentationComplete(session!))
-                return new(GameUpdateStatus.Rejected);
-            return PublishEffect(session!, WorldRules.ApplyEnemy(session!.Progress, session.Player, session.Enemy));
-        }
-    }
-
-    public GameUpdateStatus BeginActionSelection(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return status;
-            if (session!.Progress.Stage is not (GameStage.Preparing or GameStage.EnemyPresenting)
-                || session.Progress.Outcome != GameOutcome.Running || !IsPresentationComplete(session)) return GameUpdateStatus.Rejected;
-            session.Progress.Stage = GameStage.Selecting;
-            session.Progress.Selection = null;
-            session.Progress.Confirmed = false;
-            session.Presentation = null;
-            session.Display.SetMessage("Choose an action, then confirm");
-            return GameUpdateStatus.Applied;
-        }
-    }
-
-    public GameUpdateResult BeginResultPresentation(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return new(status);
-            if (session!.Progress.Outcome == GameOutcome.Running || !IsPresentationComplete(session)
-                || session.Progress.Stage == GameStage.Result) return new(GameUpdateStatus.Rejected);
-            session.Progress.Stage = GameStage.Result;
-            session.Display.SetMessage(session.Progress.Outcome == GameOutcome.Won ? "Escaped! R to retry" : "Caught! R to retry");
-            return BeginPresentation(session, PresentationKind.Result, session.Player.Position, session.Player.Position, 0);
-        }
-    }
-
-    public GameUpdateStatus EnableResultInput(long sessionId)
-    {
-        lock (gate)
-        {
-            var session = FindActiveSession(sessionId);
-            var status = GetUpdateStatus(session);
-            if (status != GameUpdateStatus.Applied)
-                return status;
-            if (session!.Progress.Stage != GameStage.Result || !IsPresentationComplete(session))
-                return GameUpdateStatus.Rejected;
-            session.Progress.ResultInputEnabled = true;
-            return GameUpdateStatus.Applied;
+            if (session is null || session.State.Mode == ExecutionMode.Stopping)
+                return new(GameUpdateStatus.Stopped);
+            if (!allowWhilePaused && session.State.Mode == ExecutionMode.Paused)
+                return new(GameUpdateStatus.Deferred);
+            // 更新関数は短い同期処理。外部I/Oやawaitをせず、不変の次状態を返します。
+            return Commit(session, update(session.State));
         }
     }
 
@@ -146,15 +82,12 @@ internal sealed partial class EscapeAccess
         {
             token.ThrowIfCancellationRequested();
             session = FindActiveSession(sessionId)!;
-            if (session is null)
-                return GameCommand.Stop;
-            if (session.Input is not null)
-                throw new InvalidOperationException("Only one input wait is supported.");
-            if (!StageAllowsInput(session))
-                throw new InvalidOperationException("This stage does not accept game input.");
+            if (session is null) return GameCommand.Stop;
+            if (session.Input is not null) throw new InvalidOperationException("Only one input wait is supported.");
             source = new(TaskCreationOptions.RunContinuationsAsynchronously);
             session.Input = source;
             session.InputToken = token;
+            session.State = session.State with { WaitingForInput = true };
         }
         try { return await source.Task.WaitAsync(token).ConfigureAwait(false); }
         finally
@@ -165,8 +98,21 @@ internal sealed partial class EscapeAccess
                 {
                     session.Input = null;
                     session.InputToken = default;
+                    if (session.State.WaitingForInput)
+                        session.State = session.State with { WaitingForInput = false };
                 }
             }
+        }
+    }
+
+    public bool TryReadControlInput(out GameControlInput input)
+    {
+        lock (gate)
+        {
+            if (controlInput is not { } pending) { input = default; return false; }
+            input = pending;
+            controlInput = null;
+            return true;
         }
     }
 
@@ -179,14 +125,11 @@ internal sealed partial class EscapeAccess
             {
                 token.ThrowIfCancellationRequested();
                 var session = FindActiveSession(sessionId);
-                if (session is null || session.Mode == ExecutionMode.Stopping)
-                    return false;
-                if (!IsPaused(session))
-                    return true;
+                if (session is null || session.State.Mode == ExecutionMode.Stopping) return false;
+                if (session.State.Mode != ExecutionMode.Paused) return true;
                 resume = session.Resume!.Task;
             }
-            if (!await resume.WaitAsync(token).ConfigureAwait(false))
-                return false;
+            if (!await resume.WaitAsync(token).ConfigureAwait(false)) return false;
         }
     }
 
@@ -198,9 +141,9 @@ internal sealed partial class EscapeAccess
         {
             token.ThrowIfCancellationRequested();
             var session = FindActiveSession(key.SessionId);
-            if (session?.Presentation is not { } presentation || presentation.Snapshot.Key != key)
+            if (session?.State.Event?.Key != key || session.Presentation is null)
                 return PresentationCompletion.Stopped;
-            task = presentation.Completion.Task;
+            task = session.Presentation.Task;
         }
         return await task.WaitAsync(token).ConfigureAwait(false);
     }

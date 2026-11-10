@@ -1,0 +1,245 @@
+# EscapeGameの実装簡素化プラン
+
+作成日: 2026-11-10。状態: 調査・計画のみ。ゲーム実装は変更していない。
+
+## 結論
+
+現在の動作とMVVM的な責務分担を保った削減は可能である。
+まず登録用Profileの集約、SessionProgressの廃止、Contextの追加値検証の共通化、
+更新結果検証の集約を行い、その後にGameplayReactionの提示付き更新を共通化する。
+推奨案全体の見込みは、クラス6個・record struct 1個・メソッド実装9個の純減である。
+共通化で増える補助メソッド1個も差し引いた値で、実装後に再集計する。
+
+Interactionの一行委譲には例外・キャンセル処理の境界としての役割がある。
+これを一律に消す方法や、全段階をenumで切り替える汎用Interactionは採用しない。
+進行はSystemFlow、規則はGameplay、描画・表示変換はView、共有と同期はApplicationに維持する。
+
+## 調査対象と基準
+
+- 対象: InteractionFlow.Samples.EscapeGame.csprojと、その配下の手書きC#全66ファイル。
+- 関連確認: EscapeGame.Tests、フレーム計測コード、CoreのInteraction基底、Standardの登録API。
+- 作業ツリーには既存の未コミット変更が多数ある。HEADとの差分ではなく、現在のファイルを基準にした。
+- 現状規模: 2,407行、クラス46、interface 12、record/record struct 9、enum 11、合計78型。
+- 集計はbin/objを除き、partial classは同一型として数えた。生成メンバーは含めない。
+- 既存テストの再実行: 合格109、失敗0、スキップ0。依存プロジェクトを含むビルドも成功した。
+- 今回は実画面操作、全ソリューションのテスト、性能計測は実施していない。
+
+プロジェクトファイル自体は、net10.0・Raylib-cs・Standard・Analyzerとテスト向け内部公開だけで、
+冗長な構成は見当たらない。主な改善対象はC#側の分割粒度である。
+
+## 維持する構造と流れ
+
+ここでいうMVVM的構造は、厳密なWPF式のViewModelクラス追加ではなく、
+ゲームの規則・状態と、操作の解釈・進行と、表示・描画を分ける現在の構造を指す。
+
+| 責務 | 現在の担当 | 計画後 |
+| --- | --- | --- |
+| ゲーム状態・規則 | GameState、WorldRules | 維持 |
+| 操作と反応の接続 | Interaction、Operation/Reaction | 維持 |
+| 表示値の導出・演出・描画 | RaylibWindowReaction、PresentationClock | 維持 |
+| 状態の一括反映・待機と通知 | EscapeAccess | 維持 |
+| 状態とアクセスの提供 | 役割別Context/Access契約 | 維持 |
+| 進行・並行実行・終了合流 | SystemFlow | 維持 |
+
+読み進める順序は次のままにする。
+
+```text
+Program → EscapeGameProfile → WindowSystemFlow
+  ├─ フレーム: PresentFrame → 入力配送・描画 → HandleControlInput
+  └─ ゲーム: GamePlaySystemFlow → BeginSession
+       → GameSessionSystemFlow
+           → GameTurnSystemFlow
+               → 選択開始 → 入力反復 → プレイヤー行動 → 敵行動
+           → 結果提示 → リトライ入力
+       → EndSession → 次セッションまたは終了
+  → 停止要求 → ゲーム合流 → CloseWindow
+```
+
+## 削減候補
+
+### A. 登録用ProfileをEscapeGameProfileへ集約する【優先度: 高】
+
+対象: [EscapeGameProfile](../../InteractionFlow.Samples.EscapeGame/Builders/EscapeGameProfile.cs)と
+各AspectのApplicationProfile / GameplayProfile / ViewProfile / LifetimeProfile / SharedProfile。
+
+5個のProfileは、それぞれ1〜10件程度の登録だけを行う。これらの参照は本体ではEscapeGameProfileに集約され、
+既存テストもEscapeGameProfileから登録したPortを上書きしている。
+この規模では一つの登録一覧の方が構成と差し替え先を追いやすい。
+
+- 5個のConfigureの登録列を、順序とscoped登録を変えずEscapeGameProfile.Configureへ移す。
+- 共通Handler、入力、Gameplay、View、Lifetime、SystemFlowを空行と短いコメントで区切る。
+- 代替のRegisterGameplay等の補助関数は増やさない。
+- 削減: クラス5、メソッド実装5、ファイル5。
+
+これは現在の「各Aspectが自身のProfileを持つ」配置方針を、サンプルの構成規模に合わせて変更する判断である。
+実装・契約のAspect分類は保つ。実装時はサンプルREADMEと名前空間配置文書も同時に更新する。
+将来、Aspect単位で複数構成から再利用する必要が生じた場合にProfileを再分割する。
+
+### B. SessionProgressをGameStateの直接参照へ置き換える【優先度: 高】
+
+対象: [GameValues](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/GameValues.cs)、
+[EscapeAccess.Gameplay](../../InteractionFlow.Samples.EscapeGame/Aspects/Application/Entities/Access/EscapeAccess.Gameplay.cs)、
+IGameplayAccess、4個のゲーム用SystemFlow/Checkpointと関連テスト。
+
+GetSessionProgressはReadGameStateから6項目を詰め直すだけで、同期境界も追加しない。
+呼び出し側は既に同じ契約でGameStateを取得できる。共有する不変状態が一つになった現在は、
+この別DTOを維持する効果が小さい。
+
+| 現在の参照 | 置き換え |
+| --- | --- |
+| GetSessionProgress(id).HasConfirmedAction | ReadGameState(id).Confirmed |
+| GetSessionProgress(id).Outcome / RetryRequested | ReadGameState(id).Outcome / RetryRequested |
+| GetSessionProgress(id).Stopping | ReadGameState(id).Mode == ExecutionMode.Stopping |
+| Paused / Stage | DTO廃止時に削除。必要ならGameStateから読む |
+
+- SessionProgressとGetSessionProgressの実装・interface宣言を削除する。
+- 同一判断で複数項目を使うなら、一度取得した不変状態をローカル変数に置く。
+- awaitやInteraction実行を跨いだ状態の再利用はしない。更新後の再取得位置を維持する。
+- 停止済み・未公開IDでReadGameStateが返すStopping状態も維持する。
+- 削減: record struct 1、メソッド実装1、契約宣言1。
+
+DTOは値型なので、この削減によるヒープ割り当て削減は主張しない。目的は参照経路と契約数の削減である。
+
+### C. Contextの同一検証をLifetimeContextへ移す【優先度: 高】
+
+対象: EscapeApplicationContext、GameplayContext、ViewContextのValidateAdditionalValueと
+[LifetimeContext](../../InteractionFlow.Samples.EscapeGame/Aspects/Lifetime/Entities/Contexts/LifetimeContext.cs)。
+
+3個のoverrideはすべてContextAccessValidation.Validate(value!)への同一委譲である。
+これをLifetimeContextのoverride一つへ移し、具象側のoverrideを削除する。
+ContextAccessValidation自体は共有契約に置いたままでよい。
+
+- 削減: メソッド実装2。クラスの追加なし。
+- 役割別TryGetCore、親の探索遮断、Dispose、Cancellationの共有方法は維持する。
+- 基底を直接使う派生Contextにも固定Access/Entry注入禁止が適用される点を明示する。
+  現行3具象型の挙動は同じだが、公開基底の拡張時の契約は狭まるため、ContextTestsで確認する。
+
+### D. 更新結果の検証をGameplayReaction内の2関数にまとめる【優先度: 高】
+
+対象: [GameUpdateValidation](../../InteractionFlow.Samples.EscapeGame/Aspects/Gameplay/Externals/GameUpdateValidation.cs)。
+
+実行時の利用者はGameplayReactionだけで、4関数のうちSelectionとRequiredTransitionの違いは
+Rejectedを成功扱いするかどうかである。Unexpectedは例外生成だけである。
+
+- GameplayReaction内にValidateUpdate(status, operation, allowRejected: false)を置く。
+- Selectionの利用箇所だけallowRejected: trueを明示する。
+- PresentationはValidatePresentation(change, operation)として残し、上の関数と提示キーの検証を使う。
+- Unexpectedの例外生成をValidateUpdate内に直接記述する。
+- GameUpdateValidationクラスを削除する。
+- 削減: クラス1、メソッド実装2、ファイル1。
+
+Applied / Rejected / Stoppedの許容差、未知のenum値の拒否、提示キー欠落の失敗を維持する。
+この2関数は既存テストから直接確認できるinternalでもよい。
+直接テストの参照先を移すだけで、失敗ケースの検証は減らさない。
+
+### E. GameplayReactionの提示付き更新3本を共通化する【優先度: 中】
+
+対象: [GameplayReaction](../../InteractionFlow.Samples.EscapeGame/Aspects/Gameplay/Externals/GameplayReaction.cs)の
+ApplyPlayerActionAsync / ApplyEnemyActionAsync / PresentResultAsync。
+
+3本とも、再開待機 → 更新 → Deferredなら再試行 → 結果・提示キー検証 → 提示と再開待機、
+というほぼ同一の実装で、違うのはWorldRulesの関数と診断用の操作名だけである。
+
+- 目的を限定したUpdateAndPresentAsync(context, update, operation)一つへ共通部分を移す。
+- 既存の3メソッドは、対応するWorldRules関数と自身のnameofを渡す短い委譲にする。
+- WaitForPresentationAndResumeAsyncはBeginSessionAsyncとも共有するため維持する。
+- 通常の選択更新や制御更新まで含む汎用ディスパッチャへ広げない。
+- 増減: メソッド実装1増。クラスは増えない。重複した非同期制御を一か所にする効果を優先する。
+
+以下の違いは残す。
+
+| 処理 | 共通化しない理由 |
+| --- | --- |
+| BeginSessionAsync | 未公開セッションを初期化・公開してから待つ。通常更新の再開待機を適用できない |
+| HandleCommandAsync | Rejectedが無効操作の通常応答になる |
+| BeginActionSelectionAsync / EnableResultInputAsync | 提示を新たに発生させない |
+| ApplyControlRequest | ポーズ中も更新し、通常進行と独立した経路から呼ばれる |
+
+再開確認後にもポーズ可能なので、ロック内更新のDeferred判定と再試行は必須である。
+GameplayReactionは通常進行と制御で並行利用され得るため、updateやcontextを可変フィールドに保存しない。
+既存のメソッドグループを使い、毎フレーム用の新規クロージャや独自スケジューラーを導入しない。
+
+## 小さな整理と見送り候補
+
+| 対象 | 判断 |
+| --- | --- |
+| RaylibWindowOperation / Reactionの空の明示コンストラクタ | 暗黙のpublic引数なしコンストラクタに任せられる。2定義削減。メソッド削減数とは別集計 |
+| EscapeAccessのpartial 4ファイル | 同じクラスなのでファイル結合だけでは型・関数は減らない。同期管理の役割別閲覧に利点があり維持 |
+| GameFlowCheckpoint | 再開・停止・終了時キャンセルの共通方針を持つ。各フローへ展開すると重複が増えるため維持 |
+| 役割別ContextとAccess interface | アクセス制限とCancellationの寿命が異なる。全体Context一つに統合しない |
+| GameInputOperation | 薄い委譲だが入力Port差し替えの境界。Accessを直接使う方式へ変更しない |
+| PresentationClock / WindowState / FrameState | 演出時間、ネイティブ資源所有、フレーム受け渡しで寿命・利用者が異なるため維持 |
+| GameLifetimeReaction | GameplayReactionへの統合で1クラス減らせるが、終了結果の集約と通常更新の関心が混在する。今回の推奨案に含めない |
+| PresentationKeyのPresentationIdとVersion | 現在の生成では同じ値だが、古いキーの識別契約に関係する。型の定義数も減らないため見送る |
+| WorldRulesとCommitのVersion更新 | 冗長に見えるが、規則単体の次状態生成と共有境界での版の正規化に役割がある。イベントキーとの整合を崩さないよう維持 |
+| Viewの各Draw関数・座標ヘルパー | 画面の構成単位として読みやすさに寄与する。インライン化で巨大なDrawFrameにしない |
+| PresentationClock.Updateの戻り値 | 本体は未使用でもFlowTestsが使用している。戻り型変更では定義数も減らないため維持 |
+
+## 薄いInteractionを維持する理由
+
+BeginSession / BeginActionSelection / ApplyPlayerAction / ApplyEnemyAction / HandleControlInput /
+OpenWindow / RequestShutdownは、見た目としては一行委譲である。
+ただしInteraction基底が、キャンセル登録、例外Port・CancellationPortへの委譲、
+ReactionEndからInteractionEndへの変換を担当する。
+
+SystemFlowからReactionを直接呼ぶとこれらの動作を失う。
+一つの汎用Interactionにまとめても、段階識別enum・設定・インスタンス生成・依存列挙が新たに必要になり、
+既存の型ベースDIでは段階別インスタンスの構成も変わる。
+別のInteractionをInteractionから呼ぶ方式や、プレイヤー・敵の進行合成をReactionへ移す方式も採用しない。
+
+現在の4段階のゲーム用FlowとWindowSystemFlowは、ターン、セッション、リトライ、画面寿命を表している。
+GameTurnSystemFlowをセッションへ展開して型を1個減らす案も、ターン単位の読みやすさを失うため推奨しない。
+
+## 実装順と削減見込み
+
+| 段階 | 内容 | 型の純減 | メソッド実装の純減 |
+| --- | --- | ---: | ---: |
+| 1 | A: 登録の集約 | 5 | 5 |
+| 2 | B・C: 派生DTOと同一overrideの削除 | 1 | 3 |
+| 3 | D・E: 検証の集約と提示付き更新の共通化 | 1 | 1 |
+| 合計 | 推奨案 | 7 | 9 |
+
+段階3の内訳は、検証4→2で2減、共通更新関数追加で1増である。
+interfaceのメソッド宣言1個と、空コンストラクタ2個の削減は上の9個に含めない。
+型数は78→71、クラスは46→40、record類は9→8、C#ファイルは66→60となる見込み。
+新しい汎用基底・戦略interface・ヘルパー型は追加しない。
+
+実装する際は各段階を独立した差分とし、既存の未コミット変更を巻き戻さない。
+削減数のためにテストや例外の識別情報を落とさない。
+
+## 動作を維持するための確認
+
+各段階でEscapeGame.Testsを実行する。新規テストは不足する契約がある場合だけ追加し、
+既存109ケースの意味を維持する。段階2ではDTO参照先の置換によってStopping判定などが反転しないことを確認する。
+
+| 確認する契約 | 主な既存テスト |
+| --- | --- |
+| 12ターン解法、勝利後に敵を動かさない、敗北・無効操作 | DomainTests、FlowTests |
+| 入力一件配送、処理中入力を蓄積しない、古いセッションの拒否 | SharedGameStateTests、AccessTests、FrameTests |
+| 不変状態、並行更新、例外発生時に次状態を公開しない | SharedGameStateTests |
+| ポーズ直後の更新を延期し、再開後に一回だけ適用 | GameplayReactionTests、AccessTests、FlowTests |
+| 提示完了後に進行・結果入力を開始、古い提示キーを拒否 | GameplayReactionTests、ResultInteractionTests、AccessTests |
+| Contextの探索制限、Dispose、値/Cancellationの継承 | ContextTests、LifetimeAccessTests |
+| 停止・キャンセル・先行失敗・終了処理失敗の保持と合流 | CleanupTests、FailureTests、FlowTests |
+| 文言・ボタン表示、ポーズ境界時間の破棄、演出省略 | WindowReactionStateTests |
+
+実装完了時にはAGENTS.mdに従い、昇格付きで次を確認する。
+
+```powershell
+dotnet build InteractionFlow.slnx
+dotnet test InteractionFlow.slnx
+dotnet build benchmarks/InteractionFlow.ExecutionMeasurements/InteractionFlow.ExecutionMeasurements.csproj
+```
+
+実画面で、移動の仮選択・取消・確定、演出中のP/F、勝敗、Rによるリトライ、Exit・ウィンドウ閉鎖を確認する。
+ゲーム待機中も描画が継続し、再開・終了で待機が残らないことを確認する。
+性能向上は今回の主目標にせず、現行計測と同条件でPresentFrame等の割り当てが悪化していないことを確かめる。
+現在の計測値は実描画を含まないため、全体の高速化率は算出しない。
+
+実装時に更新する文書は、サンプルREADME、ESCAPE_GAME_NAMESPACE_LAYOUT.md、
+本プランの実績欄を中心とする。共有状態の契約が変わる箇所はESCAPE_GAME_GAMEPLAY_RULES.mdにも反映する。
+本プランは未実装であり、現在の配置説明や過去の検証記録を先に書き換えない。
+
+関連: [現在の配置](./ESCAPE_GAME_NAMESPACE_LAYOUT.md)、
+[共有状態と同期契約](./ESCAPE_GAME_GAMEPLAY_RULES.md)、
+[利用設計指針](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。

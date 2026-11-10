@@ -38,10 +38,12 @@ raylib の呼び出しはメインスレッドに保ちます。
 構成と実行方法は [Raylib counter](../InteractionFlow.Samples.Raylib/README.md) を参照してください。
 
 `InteractionFlow.Samples.EscapeGame` は、その構成を小さなターン制脱出ゲームへ適用します。
-関心別Stateの整合した更新、SystemFlowによるターン合成と実行寿命管理、提示完了待機、
+不変GameStateの整合した更新、SystemFlowによるターン合成と実行寿命管理、提示完了待機、
 プレイ中のポーズ・再開、リトライと終了処理を検証します。
 AccessをGameplay・View・Lifetimeの3契約とし、Contextの引数契約も役割別に分けています。
 EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / ViewContextは公開Accessと探索範囲を限定します。
+ゲーム規則はGameplayのWorldRulesが定義し、EscapeAccessは入力と不変ゲーム状態を同期します。
+ゲーム状態から文言・表示・演出時間への変換はRaylibWindowReactionと、その内部のPresentationClockが担当します。
 Cancellationの共有と親の値探索はContextInheritanceで独立に指定します。
 Port・External・Interactionは依存を含む範囲を先に置き、Aspects.Gameplay.Interactions等の名前空間で配置します。
 共有契約・値・共通補助処理はAspects.Sharedへ、集約・接続・共有状態管理はAspects.Applicationへ置きます。

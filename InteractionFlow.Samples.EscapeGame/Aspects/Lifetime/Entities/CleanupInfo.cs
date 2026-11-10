@@ -1,6 +1,6 @@
 using InteractionFlow.Core.Entities;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 
 public enum CleanupKind
 {

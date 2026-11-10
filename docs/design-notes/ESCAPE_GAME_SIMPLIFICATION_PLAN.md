@@ -95,7 +95,7 @@ DTOは値型なので、この削減によるヒープ割り当て削減は主�
 
 3個のoverrideはすべてContextAccessValidation.Validate(value!)への同一委譲である。
 これをLifetimeContextのoverride一つへ移し、具象側のoverrideを削除する。
-ContextAccessValidation自体は共有契約に置いたままでよい。
+この段階ではContextAccessValidation自体を共有契約に残した。その後の配置整理でLifetimeContextと同じ名前空間へ移した。
 
 - 削減: メソッド実装2。クラスの追加なし。
 - 役割別TryGetCore、親の探索遮断、Dispose、Cancellationの共有方法は維持する。

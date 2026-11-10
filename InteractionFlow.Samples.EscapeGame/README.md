@@ -37,22 +37,22 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 | View | ウィンドウの生成・描画・閉鎖を扱う。ゲーム状態から表示・演出時間を作り、操作と描画後の完了を入力として送る |
 | Gameplay | 入力の意味を解釈し、ゲーム規則を適用して次のゲーム状態を作る |
 | Application | 入力とゲーム状態の共有、排他、一括反映、待機・通知、セッションの寿命を管理する |
-| Shared | 不変のGameState、GameInfo<T>と用途別の付帯情報、入力内容、Context・Access・Port契約と共通Handler |
-| Lifetime | 共通Context基底と全体停止要求の相互作用 |
+| Shared | Game・Sessionに分類した共有データ、GameInfo<T>、入力内容、Context・Access・Port契約 |
+| Lifetime | 共通Context基底、全体停止、終了結果の集約と例外・キャンセル時の停止方針 |
 
 Aspectsは範囲→レイヤーの順です。共有契約以外は、各Aspect内と基底Lifetimeへの依存に限定します。
 配置表は[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 各AspectのProfileは自身のFunction・Interactionを登録し、EscapeGameProfileがApplyします。
 ゲーム進行のSystemFlowはEscapeGameProfile自身で登録します。
 IWindowReactionとOpenWindow / PresentFrame / CloseWindowはViewにまとめ、ViewProfileが登録します。
-LifetimeProfileはIShutdownReaction / ShutdownReactionとRequestShutdownを登録します。
+LifetimeProfileはIShutdownReaction / ShutdownReaction、RequestShutdown、例外・キャンセルHandlerを登録します。
 ウィンドウ閉鎖もRaylibWindowReactionが担います。
 
 入力待機はGameplayのIGameInputOperation / GameInputOperation、入力配送はViewの
 IGameInputSubmissionOperation / GameInputSubmissionOperationが担当します。
 セッション終了はGameplayのIGameSessionReaction / GameSessionReactionへ分けています。
 各Profileが自身のPort・実装を登録し、Sharedには共通の状態・Access・Context契約を残します。
-ApplicationProfileは構成の入口として維持しますが、現在はサービス登録を持ちません。
+ApplicationProfileとSharedProfileは構成の入口として維持しますが、現在はサービス登録を持ちません。
 
 ## 入力・ゲーム状態・表示の流れ
 

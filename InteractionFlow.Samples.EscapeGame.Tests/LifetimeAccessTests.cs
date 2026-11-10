@@ -6,7 +6,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Externals;
 using System;
 using System.Threading.Tasks;
 using Xunit;

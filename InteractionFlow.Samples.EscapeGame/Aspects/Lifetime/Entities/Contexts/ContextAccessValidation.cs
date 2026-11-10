@@ -2,7 +2,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 
 internal static class ContextAccessValidation
 {

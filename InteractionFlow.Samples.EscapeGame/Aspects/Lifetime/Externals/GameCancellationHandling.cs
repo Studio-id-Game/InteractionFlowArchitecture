@@ -1,13 +1,13 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Threading.Tasks;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Externals;
 
 public sealed class GameCancellationHandling : CancellationHandling
 {

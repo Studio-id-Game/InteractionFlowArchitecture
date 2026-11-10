@@ -12,6 +12,7 @@ public sealed class ViewProfile : IScopeProfile
     {
         services.UseFunction<IWindowOperation, RaylibWindowOperation>()
             .UseFunction<IWindowReaction, RaylibWindowReaction>()
+            .UseFunction<IGameInputSubmissionOperation, GameInputSubmissionOperation>()
             .UseInteraction<OpenWindow>()
             .UseInteraction<PresentFrame>()
             .UseInteraction<CloseWindow>();

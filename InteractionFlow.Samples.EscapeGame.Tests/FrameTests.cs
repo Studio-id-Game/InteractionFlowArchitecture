@@ -7,7 +7,6 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
@@ -43,7 +42,7 @@ public sealed class FrameTests
             frame.PauseRequested = pause;
             frame.SkipRequested = skip;
         });
-        var game = new RecordedGameInputOperation();
+        var game = new RecordedGameInputSubmissionOperation();
         var window = new FrameReaction(() => Assert.Equal(delivered, game.Commands.Count));
         var interaction = new PresentFrame(operation, window, game,
             new GameExceptionHandling(), new GameCancellationHandling());
@@ -103,13 +102,11 @@ public sealed class FrameTests
         public void PollFrameInput(IViewContext context) => poll(context.GetRequired<FrameState>());
     }
 
-    private sealed class RecordedGameInputOperation : Operation, IGameInputOperation
+    private sealed class RecordedGameInputSubmissionOperation : Operation, IGameInputSubmissionOperation
     {
         public List<(long, GameCommand)> Commands { get; } = [];
         public bool TrySubmitControl(IViewContext context, GameControlInput input) => true;
         public override void ForceResetMemoryState() { }
-        public ValueTask<GameCommand> ReadCommandAsync(IGameplayContext context)
-            => throw new NotSupportedException();
         public bool TrySubmitCommand(IViewContext context, long sessionId, GameCommand command)
         {
             Commands.Add((sessionId, command));

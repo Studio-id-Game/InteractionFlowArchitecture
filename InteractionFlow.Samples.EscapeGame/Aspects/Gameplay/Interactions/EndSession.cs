@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
@@ -10,7 +10,7 @@ using System;
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 
 public sealed class EndSession(
-    IGameLifetimeReaction reaction,
+    IGameSessionReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IGameplayContext>(exceptionPort, cancellationPort, reaction)

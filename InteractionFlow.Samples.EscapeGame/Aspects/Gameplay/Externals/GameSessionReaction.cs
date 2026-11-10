@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
@@ -8,7 +8,7 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 
-public sealed class GameLifetimeReaction : Reaction, IGameLifetimeReaction
+public sealed class GameSessionReaction : Reaction, IGameSessionReaction
 {
     public override void ForceResetMemoryState() { }
 
@@ -21,12 +21,5 @@ public sealed class GameLifetimeReaction : Reaction, IGameLifetimeReaction
         }
 
         return GetEnd(previous);
-    }
-
-    public ReactionEnd RequestShutdown(ILifetimeContext context)
-    {
-        // 停止・入力閉鎖・提示解除・再開待機解除は同じ共有アクセス境界で行います。
-        context.Lifetime.RequestShutdown();
-        return GetEnd();
     }
 }

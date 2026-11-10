@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
@@ -10,7 +11,6 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
@@ -141,7 +141,8 @@ public sealed class CleanupTests
             .UseFunction<IWindowOperation, ObservedWindowOperation>()
             .UseFunction<IWindowReaction, ObservedWindowReaction>()
             .UseFunction<IGameplayReaction, ObservedGameplayReaction>()
-            .UseFunction<IGameLifetimeReaction, ObservedGameLifetimeReaction>();
+            .UseFunction<IGameSessionReaction, ObservedGameSessionReaction>()
+            .UseFunction<IShutdownReaction, ObservedShutdownReaction>();
         using var scope = builder.BuildScope();
         using var flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         using var context = new EscapeApplicationContext();
@@ -152,7 +153,7 @@ public sealed class CleanupTests
         Assert.False(context.TryGet<CleanupInfo>(out _));
         var window = Assert.IsType<ObservedWindowReaction>(scope.GetRequiredService<IWindowReaction>());
         var game = Assert.IsType<ObservedGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
-        var session = Assert.IsType<ObservedGameLifetimeReaction>(scope.GetRequiredService<IGameLifetimeReaction>());
+        var session = Assert.IsType<ObservedGameSessionReaction>(scope.GetRequiredService<IGameSessionReaction>());
         Assert.True(window.Opened);
         Assert.True(window.Closed);
         Assert.True(game.Began);
@@ -219,13 +220,12 @@ public sealed class CleanupTests
         }
     }
 
-    private sealed class FailingPorts(Exception error) : Reaction, IWindowReaction, IGameLifetimeReaction
+    private sealed class FailingPorts(Exception error) : Reaction, IWindowReaction, IGameSessionReaction
     {
         public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd Open(IViewContext context) => GetEnd();
         public ReactionEnd DrawFrame(IViewContext context) => GetEnd();
-        public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
         public ReactionEnd Close(ILifetimeContext context, Result previous)
         {
             Calls++;
@@ -289,7 +289,7 @@ public sealed class CleanupTests
         }
     }
 
-    public sealed class ObservedGameLifetimeReaction : Reaction, IGameLifetimeReaction
+    public sealed class ObservedGameSessionReaction : Reaction, IGameSessionReaction
     {
         public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
@@ -300,6 +300,11 @@ public sealed class CleanupTests
             Ended = true;
             return GetEnd(previous);
         }
+    }
+
+    public sealed class ObservedShutdownReaction : Reaction, IShutdownReaction
+    {
+        public override void ForceResetMemoryState() { }
         public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
             Assert.False(context.TryGet<CleanupInfo>(out _));

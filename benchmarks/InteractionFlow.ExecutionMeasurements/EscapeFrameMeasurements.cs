@@ -2,12 +2,11 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Application.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
@@ -40,7 +39,7 @@ internal static class EscapeFrameMeasurements
         frames.With(window).With(new VE.FrameState());
         var poll = new Polling();
         var draw = new Drawing();
-        var frame = new PresentFrame(poll, draw, new GameInputOperation(),
+        var frame = new PresentFrame(poll, draw, new GameInputSubmissionOperation(),
             new GameExceptionHandling(), new GameCancellationHandling());
 
         Program.Measure("Escape game state read", () => sink = root.View.ReadGameState());

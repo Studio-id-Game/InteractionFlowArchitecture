@@ -276,10 +276,12 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 | Port | 分類 | 契約の要点 |
 | --- | --- | --- |
 | IWindowOperation | Operation | フレーム入力・閉じる要求を同期取得し、毎フレーム全項目を上書き |
-| IGameInputOperation | Operation | セッションID付き入力を受理・配送。ゲーム側は非同期に一件待機 |
+| IGameInputOperation | Operation | Gameplay側でセッションID付き入力を非同期に一件待機 |
+| IGameInputSubmissionOperation | Operation | View側でセッションID付き通常入力・制御入力を配送 |
 | IWindowReaction | Reaction | Open / Draw / Close。Drawは不変ゲーム状態を表示へ変換し、描画後に提示完了を報告 |
 | IGameplayReaction | Reaction | 初期化・選択・プレイヤー行動・敵行動・結果表示を、状態更新と提示待機へ接続 |
-| IGameLifetimeReaction | Reaction | セッション終了・アプリ停止の意図を適用し、入力と提示を閉じる |
+| IGameSessionReaction | Reaction | Gameplay側でセッションを終了し、先行結果と終了処理の失敗を保持 |
+| IShutdownReaction | Reaction | Lifetime側でアプリ全体の停止を要求し、入力・提示・再開待機を解除 |
 
 | 共通例外・キャンセルPort | Reaction | 実行障害の保持、後始末、キャンセル結果の処理 |
 

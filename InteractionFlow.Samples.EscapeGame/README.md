@@ -45,7 +45,14 @@ Aspectsは範囲→レイヤーの順です。共有契約以外は、各Aspect�
 各AspectのProfileは自身のFunction・Interactionを登録し、EscapeGameProfileがApplyします。
 ゲーム進行のSystemFlowはEscapeGameProfile自身で登録します。
 IWindowReactionとOpenWindow / PresentFrame / CloseWindowはViewにまとめ、ViewProfileが登録します。
-LifetimeProfileはRequestShutdownを登録します。ウィンドウ閉鎖もRaylibWindowReactionが担います。
+LifetimeProfileはIShutdownReaction / ShutdownReactionとRequestShutdownを登録します。
+ウィンドウ閉鎖もRaylibWindowReactionが担います。
+
+入力待機はGameplayのIGameInputOperation / GameInputOperation、入力配送はViewの
+IGameInputSubmissionOperation / GameInputSubmissionOperationが担当します。
+セッション終了はGameplayのIGameSessionReaction / GameSessionReactionへ分けています。
+各Profileが自身のPort・実装を登録し、Sharedには共通の状態・Access・Context契約を残します。
+ApplicationProfileは構成の入口として維持しますが、現在はサービス登録を持ちません。
 
 ## 入力・ゲーム状態・表示の流れ
 
@@ -158,3 +165,8 @@ Feedback整理後は、操作結果の保持・解除と状態からの文言導
 EscapeGame115件と他470件の全585テストが成功しました。全体ビルドは警告・エラー0件です。
 実画面で拒否文言、ポーズ・再開での保持、有効選択による置換、取消、確定後のターン進行、Exit終了を確認しました。
 既存の描画なし計測では、直接フレーム0B・PresentFrame232Bの割り当て量を維持しています。
+
+入力・終了PortのAspect別分割後も全体ビルドは警告・エラー0件、全585テストが成功しました。
+分割した入力待機・通常入力配送・制御入力配送・セッション終了・全体停止の5メソッドは処理内容を維持しています。
+計測プロジェクトもReleaseビルド・実行に成功し、直接フレーム0B・PresentFrame232Bを維持しました。
+今回のPort分割後には実画面操作を繰り返していません。

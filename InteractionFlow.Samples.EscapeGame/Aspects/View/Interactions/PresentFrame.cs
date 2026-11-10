@@ -3,7 +3,6 @@ using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using System;
@@ -14,7 +13,7 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 public sealed class PresentFrame(
     IWindowOperation operation,
     IWindowReaction reaction,
-    IGameInputOperation game,
+    IGameInputSubmissionOperation game,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<IViewContext>(exceptionPort, cancellationPort, operation, reaction, game)

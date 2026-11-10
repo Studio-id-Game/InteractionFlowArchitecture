@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
@@ -9,7 +9,7 @@ using System;
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
 
 public sealed class RequestShutdown(
-    IGameLifetimeReaction reaction,
+    IShutdownReaction reaction,
     IExceptionPort<Exception> exceptionPort,
     ICancellationPort cancellationPort)
     : Interaction<ILifetimeContext>(exceptionPort, cancellationPort, reaction)

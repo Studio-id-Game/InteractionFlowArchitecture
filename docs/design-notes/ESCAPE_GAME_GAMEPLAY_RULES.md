@@ -91,9 +91,9 @@ ForceResetMemoryStateは状態参照・文言・行キャッシュ・時計を�
 | --- | --- |
 | RaylibWindowOperation / FrameState | FrameStateはOperation・Interaction・SystemFlow間の受け渡し値。Operation内部へ隠さない |
 | WindowState | Operation / Reactionが共用するネイティブ資源の状態・スレッド所有権。Contextに残す |
-| GameInputOperation | 入力の配送は別機能・別スレッドとの協調。内部キューや待機を持つとEscapeAccessと同期境界が重複する |
+| GameInputOperation / GameInputSubmissionOperation | 入力の配送は別機能・別スレッドとの協調。内部キューや待機を持つとEscapeAccessと同期境界が重複する |
 | GameplayReaction | ゲーム状態はViewやFlowも読む。入力・制御引数は呼び出し固有なので、可変フィールドへ移さない |
-| GameLifetimeReaction / Close | 先行結果・後始末の失敗は呼び出し単位の値。フィールドにすると再利用時の残留や並行呼び出しの混線を招く |
+| GameSessionReaction / ShutdownReaction / Close | 先行結果・後始末の失敗は呼び出し単位の値。フィールドにすると再利用時の残留や並行呼び出しの混線を招く |
 | 演出完了・ポーズ解除の待機 | View / Gameplay間の通知なのでEscapeAccessに残す。ローカルの演出時計とは所有者が異なる |
 
 Function内部への集約は「そのFunctionだけで閉じる記憶」に限る。
@@ -119,3 +119,14 @@ LifetimeContextが固定AccessとEntryの追加を拒否し、具象Contextと�
 有効な選択・確定・リトライ、選択段階開始、新しいイベントの提示開始でFeedbackをnullに戻す。
 新しいイベントによる解除はWorldRules.Presentでまとめて行う。
 表示文字列・表示履歴・タイマーをGameplayや共有アクセスへ追加しない。
+
+## AspectごとのPortと実装
+
+入力待機はGameplayのIGameInputOperation / GameInputOperation、Viewからの配送は
+IGameInputSubmissionOperation / GameInputSubmissionOperationへ分離した。
+セッション終了はGameplayのIGameSessionReaction / GameSessionReaction、全体停止は
+LifetimeのIShutdownReaction / ShutdownReactionへ分離した。
+Portごとに対応するAspectのProfileが登録し、各Interactionは自身に必要な契約だけを受け取る。
+入力先・セッション・提示・再開待機の共有と排他は従来どおりEscapeAccessが所有する。
+独立したキュー・待機・可変状態や、Aspect間の直接呼び出しは追加していない。
+ApplicationProfileは構成の入口として維持し、現在は登録処理を持たない。

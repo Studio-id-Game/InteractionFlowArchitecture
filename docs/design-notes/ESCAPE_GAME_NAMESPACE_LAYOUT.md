@@ -6,24 +6,24 @@ Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約
 | 名前空間の末尾 | 要素 |
 | --- | --- |
 | Aspects.Gameplay.Entities | WorldRules |
-| Aspects.Gameplay.ExternalPorts | IGameplayReaction |
-| Aspects.Gameplay.Externals | GameplayReaction（更新結果検証を含む）、GameLifetimeReaction |
+| Aspects.Gameplay.ExternalPorts | IGameplayReaction、IGameInputOperation、IGameSessionReaction |
+| Aspects.Gameplay.Externals | GameplayReaction（更新結果検証を含む）、GameInputOperation、GameSessionReaction |
 | Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、HandleControlInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
 | Aspects.View.Entities | FrameState、WindowState、PresentationClock |
-| Aspects.View.ExternalPorts | IWindowOperation、IWindowReaction |
-| Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、RaylibLayout |
+| Aspects.View.ExternalPorts | IWindowOperation、IWindowReaction、IGameInputSubmissionOperation |
+| Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameInputSubmissionOperation、RaylibLayout |
 | Aspects.View.Interactions | OpenWindow、PresentFrame、CloseWindow |
 | Aspects.View.Entities.Contexts | ViewContext |
 | Aspects.Application.Entities.Access | EscapeAccess（本体・Gameplay・View・Lifetimeの4ファイルとprivateなSessionRuntime） |
 | Aspects.Application.Entities.Contexts | EscapeApplicationContext |
-| Aspects.Application.Externals | GameInputOperation |
 | Aspects.Lifetime.Entities.Contexts | LifetimeContext（抽象基底） |
+| Aspects.Lifetime.ExternalPorts | IShutdownReaction |
+| Aspects.Lifetime.Externals | ShutdownReaction |
 | Aspects.Lifetime.Interactions | RequestShutdown |
 | Aspects.Shared.Entities | GameState、InputFeedback、GameEvent、GameControlInput、RoomDefinition、CleanupInfo、FailureCollector、その他の共有値 |
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
-| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction |
 | Aspects.Shared.Externals | GameExceptionHandling、GameCancellationHandling |
 | Aspects.各範囲.Builders | GameplayProfile、ViewProfile、ApplicationProfile、LifetimeProfile、SharedProfile |
 
@@ -41,7 +41,10 @@ Context契約の所属にかかわらず、各機能は必要な最も狭いCont
 
 複数Aspectが利用するPortはSharedに置き、単一Aspectの機能契約と実装はそのAspectへまとめる。
 IWindowReactionとCloseWindowはViewに所属し、Open・DrawFrame・Closeを同じRaylibWindowReactionが実装する。
-CloseWindowの登録はViewProfile、全体停止要求の登録はLifetimeProfileが担当する。
+入力待機はGameplayのIGameInputOperation / GameInputOperation、入力配送はViewのIGameInputSubmissionOperation / GameInputSubmissionOperationに分ける。
+セッション終了はGameplayのIGameSessionReaction / GameSessionReaction、全体停止はLifetimeのIShutdownReaction / ShutdownReactionが担当する。
+各Portと実装は自身のAspectのProfileで登録する。ApplicationProfileも構成の入口として維持するが、現在の登録対象はない。
+Shared.ExternalPortsは不要になり、共有する状態・Access・Context契約はShared.Entitiesに残す。
 Closeが必要とする引数は引き続きILifetimeContextであり、WindowStateとCleanupInfoはContextから取得する。
 WorldRulesは外部環境を使わない通常の計算としてGameplay.Entitiesに置く。
 Applicationはロック内で渡された同期更新関数を実行するだけで、WorldRulesやゲーム段階の条件を参照しない。

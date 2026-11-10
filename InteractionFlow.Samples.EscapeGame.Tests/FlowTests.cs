@@ -1,4 +1,5 @@
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
@@ -8,7 +9,6 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
@@ -377,7 +377,7 @@ public sealed class FlowTests
         var canceled = new OperationCanceledException("end session canceled");
         using var context = new EscapeApplicationContext();
         context.With(new CleanupInfo(CleanupKind.EndSession, previous));
-        var port = new CanceledGameLifetimeReaction(canceled);
+        var port = new CanceledGameSessionReaction(canceled);
         var interaction = new EndSession(port, new GameExceptionHandling(), new GameCancellationHandling());
 
         var end = await interaction.ExecuteAsync(context);
@@ -423,7 +423,7 @@ public sealed class FlowTests
         public ScriptedWindowOperation Input { get; }
         public HeadlessWindowReaction Window { get; }
         public TrackingGameplayReaction Game { get; }
-        public TrackingGameLifetimeReaction Session { get; }
+        public TrackingGameSessionReaction Session { get; }
 
         public Fixture(Exception? stopFailure = null)
         {
@@ -432,15 +432,16 @@ public sealed class FlowTests
                 .UseFunction<IWindowOperation, ScriptedWindowOperation>()
                 .UseFunction<IWindowReaction, HeadlessWindowReaction>()
                 .UseFunction<IGameplayReaction, TrackingGameplayReaction>()
-                .UseFunction<IGameLifetimeReaction, TrackingGameLifetimeReaction>();
+                .UseFunction<IGameSessionReaction, TrackingGameSessionReaction>()
+                .UseFunction<IShutdownReaction, TrackingShutdownReaction>();
             scope = builder.BuildScope();
             Context = new EscapeApplicationContext();
             Context.With("application-only value");
             Input = Assert.IsType<ScriptedWindowOperation>(scope.GetRequiredService<IWindowOperation>());
             Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
             Game = Assert.IsType<TrackingGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
-            Session = Assert.IsType<TrackingGameLifetimeReaction>(scope.GetRequiredService<IGameLifetimeReaction>());
-            Session.Failure = stopFailure;
+            Session = Assert.IsType<TrackingGameSessionReaction>(scope.GetRequiredService<IGameSessionReaction>());
+            Assert.IsType<TrackingShutdownReaction>(scope.GetRequiredService<IShutdownReaction>()).Failure = stopFailure;
             Flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         }
 
@@ -522,10 +523,21 @@ public sealed class FlowTests
         }
     }
 
-    public sealed class TrackingGameLifetimeReaction : Reaction, IGameLifetimeReaction
+    public sealed class TrackingGameSessionReaction : Reaction, IGameSessionReaction
+    {
+        public bool Ended { get; private set; }
+        public override void ForceResetMemoryState() { }
+        public ReactionEnd EndSession(IGameplayContext context, Result previous)
+        {
+            context.Gameplay.EndSession(context.SessionId);
+            Ended = true;
+            return GetEnd(previous);
+        }
+    }
+
+    public sealed class TrackingShutdownReaction : Reaction, IShutdownReaction
     {
         public Exception? Failure { get; set; }
-        public bool Ended { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
@@ -533,12 +545,6 @@ public sealed class FlowTests
                 throw Failure;
             context.Lifetime.RequestShutdown();
             return GetEnd();
-        }
-        public ReactionEnd EndSession(IGameplayContext context, Result previous)
-        {
-            context.Gameplay.EndSession(context.SessionId);
-            Ended = true;
-            return GetEnd(previous);
         }
     }
 
@@ -591,10 +597,9 @@ public sealed class FlowTests
             => inner.EnableResultInputAsync(context);
     }
 
-    private sealed class CanceledGameLifetimeReaction(OperationCanceledException canceled) : Reaction, IGameLifetimeReaction
+    private sealed class CanceledGameSessionReaction(OperationCanceledException canceled) : Reaction, IGameSessionReaction
     {
         public override void ForceResetMemoryState() { }
-        public ReactionEnd RequestShutdown(ILifetimeContext context) => GetEnd();
         public ReactionEnd EndSession(IGameplayContext context, Result previous) => throw canceled;
     }
 }

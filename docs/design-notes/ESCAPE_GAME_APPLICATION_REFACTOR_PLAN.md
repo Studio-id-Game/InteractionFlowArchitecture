@@ -43,7 +43,7 @@ ContextやAccessの差し替え口は増やしていない。通常経路の検�
 
 ## 段階3：進行確認と失敗保持を共有
 
-Turn / SessionSystemFlowの共通方針を`GameFlowCheckpoint`へ抽出した。
+Turn / GameSessionSystemFlowの共通方針を`GameFlowCheckpoint`へ抽出した。
 失敗・停止を確認し、ポーズ中は再開を待ち、待機後も停止を再確認する。
 Access側のActive再確認と一括更新は残しており、フロー側の確認だけで原子性を保証しない。
 
@@ -74,7 +74,7 @@ Contextがすべての契約を提供するため、Portが最小権限になっ
 
 ### 後続改善：SystemFlowの範囲に応じたContext分離
 
-WindowSystemFlowにはWindowContext、Game / Session / TurnSystemFlowにはEscapeApplicationContextを渡す。
+WindowSystemFlowにはWindowContext、Game / Session / GameTurnSystemFlowにはEscapeApplicationContextを渡す。
 どちらも同じEscapeAccessを共有するが、Window側はWorld、ゲーム側はDisplayを提供しない。
 入力契約もIGameInputWriterとIGameInputReaderに分け、各ContextのプロパティとTryGetCoreで同じ範囲を提供する。
 Session / Presentation / Controlは共通の契約を維持し、メソッド単位の最小権限化までは行わない。

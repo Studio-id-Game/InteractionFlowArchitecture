@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class SessionSystemFlow(
-    TurnSystemFlow turn,
+public sealed class GameSessionSystemFlow(
+    GameTurnSystemFlow turn,
     PresentResult show,
     HandleGameInput select)
     : SystemFlow<IGameplayContext>(turn, show, select)

@@ -18,7 +18,7 @@ Core / Standardの公開APIと他サンプルは対象外。サブエージェ�
 
 | 現在の名前 | 実際の役割と問題 |
 | --- | --- |
-| GameSystemFlow | セッションを実行し、リトライ時に新セッションを生成するループ。SessionSystemFlowとの差が名前から弱い |
+| GameSystemFlow | セッションを実行し、リトライ時に新セッションを生成するループ。GameSessionSystemFlowとの差が名前から弱い |
 | SelectAction / GameReaction.SelectAsync | 選択だけでなく取消・確定・結果画面のリトライ入力も処理する |
 | EnableSelection / EnterSelecting | 単一操作の有効化ではなく、提示終了を確認して行動選択段階へ移る |
 | CreateSession / BeginSession | 前者は未公開のID・初期状態割り当て、後者は公開と初期提示開始。違いを強調したい |
@@ -37,7 +37,7 @@ Core / Standardの公開APIと他サンプルは対象外。サブエージェ�
 
 | 現在 | 提案 | 理由 |
 | --- | --- | --- |
-| GameSystemFlow | SessionLoopSystemFlow | セッションの生成・終了・リトライ反復を担当することが分かる |
+| GameSystemFlow | GamePlaySystemFlow | セッションの生成・終了・リトライ反復を担当することが分かる |
 | GameOperation / IGameOperation | GameInputOperation / IGameInputOperation | 入力待機とコマンド配送の機能であることを示す |
 | GameReaction / IGameReaction | GameplayReaction / IGameplayReaction | Gameplay Accessと同じゲーム実行側の応答であることを示す |
 | SessionReaction / ISessionReaction | GameLifetimeReaction / IGameLifetimeReaction | セッション終了と全体停止の両方を扱うことを表す |
@@ -92,10 +92,10 @@ PresentResult Interactionの入力受付開始はEnableResultInputAsyncとして
 ```text
 WindowSystemFlow
   ├─ PresentFrame / HandleControlInput
-  └─ SessionLoopSystemFlow
-       └─ SessionSystemFlow
+  └─ GamePlaySystemFlow
+       └─ GameSessionSystemFlow
             ├─ BeginSession
-            ├─ TurnSystemFlow
+            ├─ GameTurnSystemFlow
             │    ├─ BeginActionSelection
             │    ├─ HandleGameInput（確定まで反復）
             │    ├─ ApplyPlayerAction
@@ -163,7 +163,7 @@ ActionEffectも、勝敗を表すGameOutcomeと混同するActionOutcomeへは�
 - IGameplayAccess / IViewAccess / ILifetimeAccessと、対応するGameplay / View / Lifetimeプロパティ。
 - ILifetimeContext / IGameplayContext / IViewContext / IApplicationContext。
 - GameplayContext / ViewContext / EscapeApplicationContext。契約と具体型の対応は現在十分明確。
-- WindowSystemFlow / SessionSystemFlow / TurnSystemFlow。役割の大きさと単位を維持する。
+- WindowSystemFlow / GameSessionSystemFlow / GameTurnSystemFlow。役割の大きさと単位を維持する。
 - OpenWindow / CloseWindow / PresentFrame / BeginSession / EndSession / RequestShutdown / ApplyPlayerAction / ApplyEnemyAction。
 - GameControlReaction / IGameControlReaction。ポーズ・再開・省略という制御の役割は適切。
 - EscapeAccess、WorldRules、RoomDefinition、WindowState、FrameState、FailureCollector。

@@ -19,7 +19,7 @@ public sealed class WindowSystemFlow(
     HandleControlInput control,
     RequestShutdown stop,
     CloseWindow close,
-    SessionLoopSystemFlow game)
+    GamePlaySystemFlow game)
     : SystemFlow<IApplicationContext>(open, frame, control, stop, close, game)
 {
     protected override Task<InteractionEnd> ExecuteCoreAsync(IApplicationContext context)

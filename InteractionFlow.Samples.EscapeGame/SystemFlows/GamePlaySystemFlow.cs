@@ -10,7 +10,7 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class SessionLoopSystemFlow(BeginSession begin, SessionSystemFlow sessionFlow, EndSession endSession)
+public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow sessionFlow, EndSession endSession)
     : SystemFlow<IGameplayContext>(begin, sessionFlow, endSession)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)

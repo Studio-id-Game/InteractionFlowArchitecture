@@ -44,7 +44,7 @@ Contextインターフェースや別Context型を同時に増やさず、分類
 | GameReaction.SelectAsync / EnableSelectionAsync / EnableResultInputAsync | Control.WaitForActiveAsync、Worldの対応更新 | 実行可能性を確認し、同じ更新をDeferred後も保持する |
 | GameReaction.ApplyPlayerAsync / ApplyEnemyAsync / ShowResultAsync | Control.WaitForActiveAsync、Worldの対応更新、Presentation.WaitAsync | 論理更新と、その提示完了までの応答 |
 | GameFlowCheckpoint | Session.GetProgress / ShutdownRequested、Control.WaitForActiveAsync | フローの停止・再開判断 |
-| TurnSystemFlow / SessionSystemFlow | Session.GetProgress | 確定・勝敗・リトライから次の相互作用を選ぶ |
+| GameTurnSystemFlow / GameSessionSystemFlow | Session.GetProgress | 確定・勝敗・リトライから次の相互作用を選ぶ |
 | GameSystemFlow | Session.GetProgress / ShutdownRequested、Contextのセッション生成 | セッションの反復と終了方針 |
 | RaylibWindowOperation.Poll | Display.Snapshot | 操作可能性と提示対象を読み、FrameStateへ入力を記録する |
 | RaylibWindowReaction.Draw | Display.Snapshot、Presentation.Advance / TryComplete | 一貫した表示を読み、描画後に提示完了を通知する |
@@ -137,7 +137,7 @@ Stateや提示・入力の内部ヘルパーは、公開契約を統合しても
 | --- | --- |
 | GameOperation.ReadAsync、GameReaction、EndSession | Gameplay |
 | GameOperation.Submit、RaylibWindowOperation / Reaction、GameControlReaction | View |
-| Turn / SessionSystemFlow | 直接はGameplay。GameFlowCheckpointを含めるとGameplayとLifetime |
+| Turn / GameSessionSystemFlow | 直接はGameplay。GameFlowCheckpointを含めるとGameplayとLifetime |
 | GameSystemFlow / GameFlowCheckpoint | GameplayとLifetime |
 | WindowSystemFlow、RequestShutdown、共通Handler | Lifetime |
 
@@ -173,7 +173,7 @@ SystemFlowの依存ノードは引き続きInteraction / SystemFlow、Interactio
 | --- | --- | --- |
 | WindowSystemFlow | Lifetime。ほかにContext生成・Cancellation・FrameState・結果集約 | View、Gameplay、Lifetime |
 | GameSystemFlow | Gameplay、Lifetime。ほかにContext生成・Cancellation・Finishing | Gameplay、Lifetime |
-| SessionSystemFlow / TurnSystemFlow | 直接はGameplay、Checkpoint経由でLifetimeも必要 | Gameplay、Lifetime |
+| GameSessionSystemFlow / GameTurnSystemFlow | 直接はGameplay、Checkpoint経由でLifetimeも必要 | Gameplay、Lifetime |
 
 Interaction本体の多くはAccessを直接操作せず、Function Portを呼ぶ。
 以下はFunctionまで含めてInteractionの実行に必要なAccessである。
@@ -259,7 +259,7 @@ Lifetimeを両側へ別々に宣言せず共通基底へ置くことで、合成
 | 対象 | 引数契約 | 理由 |
 | --- | --- | --- |
 | WindowSystemFlow | IApplicationContext | 画面側とゲーム側の起動・停止・合流の所有者 |
-| Game / Session / TurnSystemFlow、GameFlowCheckpoint | IGameplayContext | 進行参照・待機と共通停止で完結する |
+| Game / Session / GameTurnSystemFlow、GameFlowCheckpoint | IGameplayContext | 進行参照・待機と共通停止で完結する |
 | BeginSession / EnableSelection / SelectAction / ApplyPlayerAction / ApplyEnemyAction / ShowResult / EndSession | IGameplayContext | ゲーム側Functionと共通Handlerに必要な契約を提供 |
 | OpenWindow / PresentFrame / ChangeControl | IViewContext | 画面側Functionと共通Handlerに必要な契約を提供 |
 | RequestShutdown / CloseWindow | ILifetimeContext | 全体停止のみ。CloseのWindowState / Finishingはスコープ値から取得 |

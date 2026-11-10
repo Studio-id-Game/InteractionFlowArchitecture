@@ -40,8 +40,8 @@ public sealed class EscapeGameProfile : IScopeProfile
             .UseInteraction<ApplyPlayerAction>()
             .UseInteraction<ApplyEnemyAction>()
             .UseInteraction<PresentResult>()
-            .UseSystemFlow<TurnSystemFlow>()
-            .UseSystemFlow<SessionSystemFlow>()
-            .UseSystemFlow<SessionLoopSystemFlow>();
+            .UseSystemFlow<GameTurnSystemFlow>()
+            .UseSystemFlow<GameSessionSystemFlow>()
+            .UseSystemFlow<GamePlaySystemFlow>();
     }
 }

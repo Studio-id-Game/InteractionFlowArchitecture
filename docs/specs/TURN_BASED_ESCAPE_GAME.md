@@ -188,17 +188,17 @@ Withによる固定アクセスの隠蔽とEntry経由の差し替えも、Conte
 Program
   └─ WindowSystemFlow（メインスレッド、アプリ全体の実行所有者）
        ├─ OpenWindow
-       ├─ SessionLoopSystemFlow（Task.Runで一度起動、セッション割り当て・開始・終了・リトライ）
-       │    └─ BeginSession→開始結果の確認→SessionSystemFlow→EndSessionを反復
-       │         └─ SessionSystemFlow（開始済みセッションのターン反復→結果提示・入力）
-       │              └─ TurnSystemFlow（選択反復→プレイヤー行動→敵行動）
+       ├─ GamePlaySystemFlow（Task.Runで一度起動、セッション割り当て・開始・終了・リトライ）
+       │    └─ BeginSession→開始結果の確認→GameSessionSystemFlow→EndSessionを反復
+       │         └─ GameSessionSystemFlow（開始済みセッションのターン反復→結果提示・入力）
+       │              └─ GameTurnSystemFlow（選択反復→プレイヤー行動→敵行動）
        ├─ PresentFrameを反復（ゲーム側の入力・提示待ち・ポーズ中も継続）
        │    └─ フレーム結果の制御要求を受け、ChangeControlを実行
-       └─ 終了要求の適用→キャンセル→SessionLoopSystemFlowの合流→CloseWindow
+       └─ 終了要求の適用→キャンセル→GamePlaySystemFlowの合流→CloseWindow
 ```
 
 SystemFlowは実行方針を構成し、Taskや描画環境が実行機構を担います。
-SessionLoopSystemFlowは同時に一つだけ起動します。敵行動はターン内で逐次合成し、敵ごとのTaskは作りません。
+GamePlaySystemFlowは同時に一つだけ起動します。敵行動はターン内で逐次合成し、敵ごとのTaskは作りません。
 ゲーム側はraylibを呼ばず、フレーム側は非同期の提示完了を同期的に待ちません。
 
 ### 3.2 ターンとセッションの進行
@@ -224,7 +224,7 @@ WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け�
 制御要求もセッションIDを持ち、対象の段階とセッションを適用時に再確認します。
 同じフレームでリトライ等により対象が変わっても、新しいセッションへ古いポーズを適用しません。
 
-Game/Session/TurnSystemFlowは、次の相互作用や段階へ進む境界で再開待機を行います。
+Game/Session/GameTurnSystemFlowは、次の相互作用や段階へ進む境界で再開待機を行います。
 待機済み入力や提示結果の受領と、次のゲーム処理への適用も分けます。
 ただしSystemFlow側での事前確認だけでは、確認直後のポーズと競合します。
 アクセス管理の行動確定・段階更新も、Pausedかどうかの確認と一括更新を同じ同期境界で行います。

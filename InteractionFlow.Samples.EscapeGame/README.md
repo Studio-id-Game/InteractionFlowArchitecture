@@ -52,8 +52,8 @@ SystemFlows・Buildersと共通HandlerはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
-SessionLoopSystemFlowはセッションの割り当て・開始・終了とリトライを管理します。
-SessionSystemFlowは開始済みセッションのターン反復・結果提示・リトライ入力待機を担当し、TurnSystemFlowが一ターンを合成します。
+GamePlaySystemFlowはセッションの割り当て・開始・終了とリトライを管理します。
+GameSessionSystemFlowは開始済みセッションのターン反復・結果提示・リトライ入力待機を担当し、GameTurnSystemFlowが一ターンを合成します。
 ゲーム側は演出提示の完了を非同期に待ちますが、フレーム側はその間も描画・制御入力を継続します。
 
 Entitiesは描画環境から独立した状態と安全なアクセス管理を提供します。
@@ -76,7 +76,7 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
    [PresentFrame](Aspects/View/Interactions/PresentFrame.cs) が優先順位を確認してGameInputOperationへ配送します。
 2. [HandleGameInput](Aspects/Gameplay/Interactions/HandleGameInput.cs) が入力Operationを一件待ち、
    [GameplayReaction.HandleCommandAsync](Aspects/Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
-3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
+3. [GameTurnSystemFlow](./SystemFlows/GameTurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
 4. [RaylibWindowReaction](Aspects/View/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
    フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
@@ -134,7 +134,7 @@ Allで親の通常値を引き継ぐ構築を選んだ場合も、反対側の�
 呼び出し元のキャンセルは共有Cancellationを通じてゲーム側の待機へ届き、通常のHandlerが停止・リセットします。
 WindowSystemFlowのフレーム境界でキャンセルを中継する処理は不要です。
 開始前にキャンセル済みでもOpenを実行し、ゲーム側がキャンセルを処理して停止・合流・Closeへ進みます。
-Interaction間の待機で発生した実行自身のキャンセルも、SessionLoopSystemFlowで通常停止として扱います。
+Interaction間の待機で発生した実行自身のキャンセルも、GamePlaySystemFlowで通常停止として扱います。
 このFlow境界での停止はHandlerを通らないため、Cancellationをリセットしません。
 通常停止後の現在のキャンセル状態は処理経路で異なります。キャンセル済みの発行済みtokenはリセット後も取消済みです。
 フレーム・停止・Close用Contextは別Cancellationを使い、ゲーム側のキャンセル中も後始末を実行します。

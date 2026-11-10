@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class TurnSystemFlow(
+public sealed class GameTurnSystemFlow(
     BeginActionSelection enable,
     HandleGameInput select,
     ApplyPlayerAction player,

@@ -19,45 +19,6 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
     private SessionRuntime? FindActiveSession(long id)
         => !shutdown && active is { Retired: false } current && current.State.SessionId == id ? current : null;
 
-    private static void StopSession(SessionRuntime session)
-    {
-        session.Retired = true;
-        session.State = session.State with { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping,
-            WaitingForInput = false, ControlRevision = session.State.ControlRevision + 1 };
-        session.Input?.TrySetResult(GameCommand.Stop);
-        session.Resume?.TrySetResult(false);
-        session.Presentation?.TrySetResult(PresentationCompletion.Stopped);
-    }
-
-    private static GameUpdateResult Commit(SessionRuntime session, GameUpdateResult change)
-    {
-        var next = change.State ?? throw new InvalidOperationException("An update must return game state.");
-        if (next.SessionId != session.State.SessionId || next.Event is { } e && e.Key.SessionId != next.SessionId)
-            throw new InvalidOperationException("An update cannot change its session identity.");
-        var previous = session.State;
-        if (next.Version != previous.Version + 1)
-            next = next with { Version = previous.Version + 1 };
-        session.State = next;
-        if (previous.Event?.Key != next.Event?.Key)
-        {
-            session.Presentation?.TrySetResult(PresentationCompletion.Stopped);
-            session.Presentation = next.Event is null ? null : new(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
-        if (previous.Mode != next.Mode)
-        {
-            if (next.Mode == ExecutionMode.Paused)
-                session.Resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            else
-            {
-                session.Resume?.TrySetResult(next.Mode == ExecutionMode.Active);
-                session.Resume = null;
-            }
-        }
-        if (next.Mode == ExecutionMode.Stopping)
-            StopSession(session);
-        return change with { State = session.State };
-    }
-
     private sealed class SessionRuntime(long id)
     {
         internal GameState State = new(id);
@@ -67,5 +28,45 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
         internal CancellationToken InputToken;
         internal TaskCompletionSource<bool>? Resume;
         internal TaskCompletionSource<PresentationCompletion>? Presentation;
+
+        // 同期は呼び出し元のEscapeAccess.gateで行います。
+        internal void StopSession()
+        {
+            Retired = true;
+            State = State with { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping,
+                WaitingForInput = false, ControlRevision = State.ControlRevision + 1 };
+            Input?.TrySetResult(GameCommand.Stop);
+            Resume?.TrySetResult(false);
+            Presentation?.TrySetResult(PresentationCompletion.Stopped);
+        }
+
+        internal GameUpdateResult Commit(GameUpdateResult change)
+        {
+            var next = change.State ?? throw new InvalidOperationException("An update must return game state.");
+            if (next.SessionId != State.SessionId || next.Event is { } e && e.Key.SessionId != next.SessionId)
+                throw new InvalidOperationException("An update cannot change its session identity.");
+            var previous = State;
+            if (next.Version != previous.Version + 1)
+                next = next with { Version = previous.Version + 1 };
+            State = next;
+            if (previous.Event?.Key != next.Event?.Key)
+            {
+                Presentation?.TrySetResult(PresentationCompletion.Stopped);
+                Presentation = next.Event is null ? null : new(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+            if (previous.Mode != next.Mode)
+            {
+                if (next.Mode == ExecutionMode.Paused)
+                    Resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                else
+                {
+                    Resume?.TrySetResult(next.Mode == ExecutionMode.Active);
+                    Resume = null;
+                }
+            }
+            if (next.Mode == ExecutionMode.Stopping)
+                StopSession();
+            return change with { State = State };
+        }
     }
 }

@@ -28,7 +28,7 @@ internal sealed partial class EscapeAccess
                 return new(GameUpdateStatus.Rejected);
             var change = initialize(session.State);
             if (change.Status != GameUpdateStatus.Applied) return change;
-            change = Commit(session, change);
+            change = session.Commit(change);
             active = session;
             session.Published = true;
             return change;
@@ -40,7 +40,7 @@ internal sealed partial class EscapeAccess
         lock (gate)
         {
             if (!sessions.Remove(sessionId, out var session)) return;
-            StopSession(session);
+            session.StopSession();
             if (controlInput?.SessionId == sessionId) controlInput = null;
         }
     }
@@ -63,7 +63,7 @@ internal sealed partial class EscapeAccess
             if (!allowWhilePaused && session.State.Mode == ExecutionMode.Paused)
                 return new(GameUpdateStatus.Deferred);
             // 更新関数は短い同期処理。外部I/Oやawaitをせず、不変の次状態を返します。
-            return Commit(session, update(session.State));
+            return session.Commit(update(session.State));
         }
     }
 

@@ -34,7 +34,9 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 ExternalPorts / Externals / Interactionsは、Context依存を含む最も狭い範囲を先に配置します。
 例えばGameplay.Interactions、View.Externals、Lifetime.Interactions、Application.ExternalPortsです。
-複数範囲を扱うPort / ExternalはApplication、共通Handlerは既存Externals直下に置きます。
+GameplayとViewの両方が必要な入力Port / ExternalだけをApplicationへ置きます。
+Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
+IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通Handlerは既存Externals直下です。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
@@ -63,7 +65,7 @@ Entitiesは描画環境から独立した状態と安全なアクセス管理を
    [GameplayReaction.HandleCommandAsync](Gameplay/Externals/GameplayReaction.cs) がGameplayへ選択・取消・確定を要求します。
 3. [TurnSystemFlow](./SystemFlows/TurnSystemFlow.cs) がGameplayの進行参照から確定を確認し、
    ApplyPlayerActionを選びます。Reactionは論理状態を更新して提示通知を待ちます。
-4. [RaylibWindowReaction](Application/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
+4. [RaylibWindowReaction](View/Externals/RaylibWindowReaction.cs) が表示を取得し、提示を描画した後に完了を報告します。
    フローは再開・停止を確認し、勝敗が未確定なら敵行動へ進みます。
 
 ゲーム上の無効な選択は、理由を表示する正常なRejectedです。

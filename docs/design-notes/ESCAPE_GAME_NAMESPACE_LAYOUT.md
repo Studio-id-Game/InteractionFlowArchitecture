@@ -9,25 +9,27 @@ SystemFlows、Entities、Buildersの配置は今回変更しない。
 | Lifetime | ILifetimeContextだけを必要とする |
 | Gameplay | IGameplayContextで足りる。Lifetimeも含む |
 | View | IGameViewContextで足りる。Lifetimeも含む |
-| Application | Gameplay / View、または各範囲にまたがる複数の入口をまとめる |
+| Application | GameplayとViewの両方が必要で、どちらか一方には収まらない |
 
 Lifetimeは両用途の基底、Applicationは集約である。
 例: InteractionのEndSessionはGameplay、RequestShutdownとCloseWindowはLifetime。
-両操作をまとめるIGameLifetimeReactionとGameLifetimeReactionはApplicationへ置く。
+GameplayとLifetimeの和はGameplay、ViewとLifetimeの和はViewになる。
+型名が複数あるだけではApplicationへ広げない。GameplayとViewの和だけがApplicationになる。
+IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / RaylibWindowReactionはViewへ置く。
 
 ## 配置
 
 | 名前空間の末尾 | 要素 |
 | --- | --- |
-| Gameplay.ExternalPorts | IGameplayReaction |
-| Gameplay.Externals | GameplayReaction、GameUpdateValidation |
+| Gameplay.ExternalPorts | IGameplayReaction、IGameLifetimeReaction |
+| Gameplay.Externals | GameplayReaction、GameLifetimeReaction、GameUpdateValidation |
 | Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
-| View.ExternalPorts | IWindowOperation、IGameControlReaction |
-| View.Externals | RaylibWindowOperation、GameControlReaction、RaylibLayout |
+| View.ExternalPorts | IWindowOperation、IGameControlReaction、IWindowReaction |
+| View.Externals | RaylibWindowOperation、RaylibWindowReaction、GameControlReaction、RaylibLayout |
 | View.Interactions | OpenWindow、PresentFrame、HandleControlInput |
 | Lifetime.Interactions | RequestShutdown、CloseWindow |
-| Application.ExternalPorts | IGameInputOperation、IGameLifetimeReaction、IWindowReaction |
-| Application.Externals | GameInputOperation、GameLifetimeReaction、RaylibWindowReaction |
+| Application.ExternalPorts | IGameInputOperation |
+| Application.Externals | GameInputOperation |
 | Externals（既存位置） | GameExceptionHandling、GameCancellationHandling |
 
 各名前空間はInteractionFlow.Samples.EscapeGameを先頭とする。ディレクトリーも同じ順に揃える。
@@ -39,8 +41,9 @@ IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契
 
 この分類はContextの範囲と役割を示し、役割間の参照を一方向に限定するものではない。
 Gameplay.Interactions.HandleGameInputはApplication.ExternalPorts.IGameInputOperationを使用する。
-View.Interactions.OpenWindowはApplication.ExternalPorts.IWindowReactionを使用する。
-Application.Externals.RaylibWindowReactionはView.Externals.RaylibLayoutを使用する。
+View.Interactions.PresentFrameもApplication.ExternalPorts.IGameInputOperationを使用する。
+利用する入口のContext範囲で判定し、集約されたPortの名前空間をそのまま呼び出し元の必要範囲とはしない。
+View.Interactions.OpenWindowはView.ExternalPorts.IWindowReactionを使用する。
 包含関係を、そのままプロジェクトやレイヤーの参照方向と解釈しない。
 
 既存Analyzerは名前空間の各要素からExternalPorts / Externals / Interactions等を探すため、
@@ -50,11 +53,14 @@ Application.Externals.RaylibWindowReactionはView.Externals.RaylibLayoutを使�
 ## 確認
 
 26型を移動し、Builder・SystemFlow・テスト・計測コードと文書リンクを更新した。
+その後、全28要素（26型と共通Handler2型）を包含関係で再点検した。
+Lifetimeを基底として展開すると、WindowReaction系2型とGameLifetimeReaction系2型がApplicationでは広すぎたため再配置した。
+他の型・専用ヘルパー・分類外Handlerには同じ誤りはなかった。
 メソッド本体・契約・ゲーム規則・描画・Cancellation共有・状態の同期境界は変更していない。
 名前空間・using・参照名を除いたC#66ファイルのトークン比較で差分なし。
 全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件、計569件が成功。
-最終のusing整理後も全体ビルドと関連99件が成功した。
-Release簡易計測の通常PresentFrameは488B/回・約221〜234nsで、割り当て量を維持している。
+今回の4型の再配置後も全体ビルドと全569件が成功した。
+初回整理時のRelease簡易計測では、通常PresentFrameは488B/回・約221〜234nsで、割り当て量を維持している。今回の再配置では計測を繰り返していない。
 実画面での再確認は未実施。サブエージェントは使用していない。
 
 関連: [ContextとAccessの分類](./ESCAPE_GAME_ACCESS_CONTRACT_REVIEW_PLAN.md)、

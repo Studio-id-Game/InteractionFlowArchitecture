@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
-using InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Gameplay.ExternalPorts;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Application.Externals;
+namespace InteractionFlow.Samples.EscapeGame.Gameplay.Externals;
 
 public sealed class GameLifetimeReaction : Reaction, IGameLifetimeReaction
 {

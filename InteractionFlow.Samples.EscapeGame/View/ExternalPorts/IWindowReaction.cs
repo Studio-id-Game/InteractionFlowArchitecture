@@ -3,7 +3,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
 
-namespace InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
+namespace InteractionFlow.Samples.EscapeGame.View.ExternalPorts;
 
 public interface IWindowReaction : IReactionPort
 {

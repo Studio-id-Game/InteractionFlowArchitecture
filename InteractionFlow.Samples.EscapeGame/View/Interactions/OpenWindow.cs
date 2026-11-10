@@ -1,8 +1,8 @@
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
-using InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.View.ExternalPorts;
 using System;
 using System.Threading.Tasks;
 

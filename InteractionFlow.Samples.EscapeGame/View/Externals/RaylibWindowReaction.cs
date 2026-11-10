@@ -1,17 +1,16 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
-using InteractionFlow.Samples.EscapeGame.Application.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Entities;
 using InteractionFlow.Samples.EscapeGame.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.View.Externals;
+using InteractionFlow.Samples.EscapeGame.View.ExternalPorts;
 using Raylib_cs;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using RL = Raylib_cs.Raylib;
 
-namespace InteractionFlow.Samples.EscapeGame.Application.Externals;
+namespace InteractionFlow.Samples.EscapeGame.View.Externals;
 
 internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 {

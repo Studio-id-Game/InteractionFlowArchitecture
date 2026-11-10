@@ -31,8 +31,10 @@ GameStateは不変recordで、内部に共有可変オブジェクトを持た�
 共有の可変Stateを呼び出し元へ貸し出す方法や、Snapshot取得時に全状態をコピーする方法は使わない。
 セッションの公開・退役、入力・再開・提示完了の待機はprivateなSessionRuntimeへ閉じる。
 SessionRuntimeは自身のCommit / StopSessionで更新と停止通知を行い、排他は呼び出し元のEscapeAccess.gateが担う。
-入力待機の登録・解除・配送、提示完了の判定と通知もSessionRuntimeが扱う。
-Stateは外側から取得できるがsetterはprivateとし、入力待機先・入力Token・再開待機先・提示待機先はprivateにする。
+SessionRuntimeは入力待機や提示完了に伴うStateの更新を担い、通知処理はEscapeAccess直下のprivate classへ分ける。
+InputWaitは入力受信先と取消判定用Token、ResumeWaitはポーズからの再開通知、
+PresentationWaitは提示キーと完了・停止通知を管理する。各クラスはセッションごとに一つ作成する。
+Stateのsetterと各通知先はprivateとし、3クラスの操作も同じEscapeAccess.gateで保護する。
 EscapeAccessはロック内で対象セッションを選択して処理を呼び、取得したTaskをロック外でawaitする。
 SessionRuntimeはTaskCompletionSourceを外側へ公開せず、待機に必要なTaskだけを返す。
 公開中のセッションはactiveが指し、停止済みかどうかはGameState.Modeで判断する。Published / Retiredの別フラグは持たない。

@@ -12,6 +12,49 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class SharedGameStateTests
 {
     [Fact]
+    public void RejectedRuleStillPublishesFeedbackWhileDeferredUpdateDoesNotRunTheRule()
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var before = app.View.ReadGameState();
+        var change = WorldRules.ApplyInputCommand(before, GameCommand.Left);
+
+        Assert.False(change.Accepted);
+        Assert.Equal(InputFeedback.InvalidSelection, change.State.Feedback);
+        Assert.Null(before.Feedback);
+
+        var result = app.Gameplay.UpdateGameState(session.SessionId, _ => change);
+        Assert.Equal(GameUpdateStatus.Rejected, result.Status);
+        Assert.Equal(change.State.Feedback, app.View.ReadGameState().Feedback);
+        Assert.Equal(change.State.Event?.Key, result.Presentation);
+
+        Assert.True(app.Gameplay.SetPaused(session.SessionId, true));
+        var paused = app.View.ReadGameState();
+        var deferred = app.Gameplay.UpdateGameState(session.SessionId,
+            _ => throw new InvalidOperationException("A deferred update must not evaluate the rule."));
+        Assert.Equal(GameUpdateStatus.Deferred, deferred.Status);
+        Assert.Null(deferred.Presentation);
+        Assert.Same(paused, app.View.ReadGameState());
+    }
+
+    [Fact]
+    public void RejectedInitializationDoesNotPublishAndCanBeRetried()
+    {
+        using var app = new EscapeApplicationContext();
+        var id = app.Gameplay.AllocateSession();
+        var before = app.View.ReadGameState();
+
+        var rejected = app.Gameplay.BeginSession(id, state => new(false, state with { Turn = 123 }));
+
+        Assert.Equal(GameUpdateStatus.Rejected, rejected.Status);
+        Assert.Same(before, app.View.ReadGameState());
+        var applied = app.Gameplay.BeginSession(id, WorldRules.BeginSession);
+        Assert.Equal(GameUpdateStatus.Applied, applied.Status);
+        Assert.Equal(0, app.View.ReadGameState().Turn);
+        Assert.Equal(app.View.ReadGameState().Event!.Key, applied.Presentation);
+    }
+
+    [Fact]
     public async Task ASecondInputWaitCannotReplaceTheCurrentReceiver()
     {
         using var app = new EscapeApplicationContext();
@@ -65,7 +108,7 @@ public sealed class SharedGameStateTests
         {
             for (var i = 0; i < 100; i++)
                 Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.UpdateGameState(session.SessionId,
-                    state => new(GameUpdateStatus.Applied, state with { Turn = state.Turn + 1 })).Status);
+                    state => new(true, state with { Turn = state.Turn + 1 })).Status);
         }, TestContext.Current.CancellationToken)));
         Assert.Equal(800, app.View.ReadGameState().Turn);
         Assert.Equal(initialVersion + 800, app.View.ReadGameState().Version);
@@ -111,7 +154,7 @@ public sealed class SharedGameStateTests
         using var session = GameTestSteps.Ready(app);
         var before = app.View.ReadGameState();
         Assert.Throws<InvalidOperationException>(() => app.Gameplay.UpdateGameState(session.SessionId,
-            state => new(GameUpdateStatus.Applied, state with { SessionId = state.SessionId + 1 })));
+            state => new(true, state with { SessionId = state.SessionId + 1 })));
         Assert.Same(before, app.View.ReadGameState());
     }
 }

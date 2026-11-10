@@ -74,7 +74,7 @@ public sealed class LifetimeAccessTests
         var resume = app.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
 
         var stopped = app.Gameplay.UpdateGameState(id,
-            state => new(GameUpdateStatus.Applied, state with { Mode = ExecutionMode.Stopping }), allowWhilePaused: true);
+            state => new(true, state with { Mode = ExecutionMode.Stopping }), allowWhilePaused: true);
 
         Assert.Equal(GameUpdateStatus.Applied, stopped.Status);
         Assert.Equal(GameCommand.Stop, await input);

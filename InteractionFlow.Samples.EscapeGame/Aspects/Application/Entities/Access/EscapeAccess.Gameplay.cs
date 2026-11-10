@@ -18,7 +18,7 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public GameUpdateResult BeginSession(long sessionId, Func<GameState, GameUpdateResult> initialize)
+    public GameUpdateResult BeginSession(long sessionId, Func<GameState, GameStateChange> initialize)
     {
         lock (gate)
         {
@@ -29,10 +29,10 @@ internal sealed partial class EscapeAccess
             if (active is { State.Mode: not ExecutionMode.Stopping })
                 return new(GameUpdateStatus.Rejected);
             var change = initialize(session.State);
-            if (change.Status != GameUpdateStatus.Applied) return change;
-            change = session.Commit(change);
+            if (!change.Accepted) return new(GameUpdateStatus.Rejected, change.State.Event?.Key);
+            var result = session.Commit(change);
             active = session;
-            return change;
+            return result;
         }
     }
 
@@ -53,7 +53,7 @@ internal sealed partial class EscapeAccess
                 ?? new GameState(sessionId) { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping };
     }
 
-    public GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameUpdateResult> update,
+    public GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameStateChange> update,
         bool allowWhilePaused = false)
     {
         lock (gate)

@@ -13,10 +13,10 @@ public interface IGameplayAccess
     long AllocateSession();
 
     /// <summary>
-    /// 確保済みセッションを同期的に初期化し、結果がAppliedの場合だけ状態を反映して公開します。
+    /// 初期化関数が操作の成立可否と次状態を返し、Acceptedがtrueの場合だけ状態を反映して公開します。
     /// 対象が存在しないか停止済みならStopped、停止していない公開済みセッションがある場合はRejectedを返します。
     /// </summary>
-    GameUpdateResult BeginSession(long sessionId, Func<GameState, GameUpdateResult> initialize);
+    GameUpdateResult BeginSession(long sessionId, Func<GameState, GameStateChange> initialize);
 
     /// <summary>
     /// 対象セッションを管理対象から取り除いて停止し、入力・再開・提示完了の待機を解除します。
@@ -33,10 +33,11 @@ public interface IGameplayAccess
     /// <summary>
     /// 現在状態の取得から更新関数の同期実行・次状態の一括反映までを、同じ排他制御内で行います。
     /// 対象が有効でなければStopped、ポーズ中は原則Deferredを返します。
-    /// <paramref name="allowWhilePaused"/>がtrueならポーズ中も更新し、Rejectedの結果でも返された状態を反映します。
+    /// 更新関数は操作の成立可否と次状態を返し、AcceptedがfalseでもFeedback等の状態を反映してRejectedを返します。
+    /// <paramref name="allowWhilePaused"/>がtrueならポーズ中も更新します。結果には状態ではなく提示キーを含めます。
     /// 更新関数は短い計算に限定し、外部I/Oや待機、Accessへの再入呼び出しを行わないでください。
     /// </summary>
-    GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameUpdateResult> update,
+    GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameStateChange> update,
         bool allowWhilePaused = false);
 
     /// <summary>

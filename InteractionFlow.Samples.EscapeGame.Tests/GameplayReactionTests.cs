@@ -202,8 +202,7 @@ public sealed class GameplayReactionTests
         Assert.Contains("presentation key", missing.Message);
         Assert.Null(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop"));
         Assert.Null(GameplayReaction.ValidatePresentation(
-            new(GameUpdateStatus.Applied, new GameState(1)
-            { Event = new(new PresentationKey(1, 1, 1), GameEventKind.Initial, default, default) }), "apply"));
+            new(GameUpdateStatus.Applied, new PresentationKey(1, 1, 1)), "apply"));
     }
 
     [Fact]

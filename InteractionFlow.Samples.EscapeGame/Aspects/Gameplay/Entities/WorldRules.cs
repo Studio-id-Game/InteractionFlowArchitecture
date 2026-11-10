@@ -2,12 +2,15 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 
+/// <summary>
+/// ゲーム規則を評価し、操作の成立可否と次状態を返します。保留・停止等の受付判断は共有アクセスが担います。
+/// </summary>
 public static class WorldRules
 {
-    public static GameUpdateResult BeginSession(GameState state)
+    public static GameStateChange BeginSession(GameState state)
         => Present(state, GameEventKind.Initial, state.Player, state.Player);
 
-    public static GameUpdateResult BeginActionSelection(GameState state)
+    public static GameStateChange BeginActionSelection(GameState state)
     {
         if (state.Stage is not (GameStage.Preparing or GameStage.EnemyPresenting)
             || state.Outcome != GameOutcome.Running || !state.PresentationCompleted)
@@ -16,7 +19,7 @@ public static class WorldRules
             Event = null, Feedback = null });
     }
 
-    public static GameUpdateResult ApplyInputCommand(GameState state, GameCommand command)
+    public static GameStateChange ApplyInputCommand(GameState state, GameCommand command)
     {
         if (state.Stage == GameStage.Result && state.ResultInputEnabled && command == GameCommand.Retry)
             return Changed(state with { RetryRequested = true, Feedback = null });
@@ -50,7 +53,7 @@ public static class WorldRules
                 ? InputFeedback.NoUsableMechanism : InputFeedback.InvalidSelection });
     }
 
-    public static GameUpdateResult ApplyPlayer(GameState state)
+    public static GameStateChange ApplyPlayer(GameState state)
     {
         if (state.Stage != GameStage.Selecting || !state.Confirmed || state.Selection is not { } action
             || !IsValid(state, action))
@@ -79,7 +82,7 @@ public static class WorldRules
         return Present(EvaluateOutcome(state), kind, from, state.Player);
     }
 
-    public static GameUpdateResult ApplyEnemy(GameState state)
+    public static GameStateChange ApplyEnemy(GameState state)
     {
         if (state.Stage != GameStage.PlayerPresenting || state.Outcome != GameOutcome.Running
             || !state.PresentationCompleted)
@@ -90,7 +93,7 @@ public static class WorldRules
         return Present(EvaluateOutcome(state), GameEventKind.EnemyMove, from, state.Room.PatrolAt(state.EnemyPatrolIndex));
     }
 
-    public static GameUpdateResult BeginResultPresentation(GameState state)
+    public static GameStateChange BeginResultPresentation(GameState state)
     {
         if (state.Outcome == GameOutcome.Running || !state.PresentationCompleted || state.Stage == GameStage.Result)
             return Rejected(state);
@@ -98,11 +101,11 @@ public static class WorldRules
             GameEventKind.Result, state.Player, state.Player);
     }
 
-    public static GameUpdateResult EnableResultInput(GameState state)
+    public static GameStateChange EnableResultInput(GameState state)
         => state.Stage == GameStage.Result && state.PresentationCompleted
             ? Changed(state with { ResultInputEnabled = true }) : Rejected(state);
 
-    public static GameUpdateResult ApplyControl(GameState state, GameControlInput input)
+    public static GameStateChange ApplyControl(GameState state, GameControlInput input)
     {
         if (input.Command == GameControlCommand.TogglePause
             && state.Stage is GameStage.Selecting or GameStage.PlayerPresenting or GameStage.EnemyPresenting)
@@ -132,7 +135,8 @@ public static class WorldRules
             : state.Player == state.Room.PatrolAt(state.EnemyPatrolIndex) ? state with { Outcome = GameOutcome.Lost }
             : state.Player == state.Room.Exit ? state with { Outcome = GameOutcome.Won } : state;
 
-    private static GameUpdateResult Present(GameState state, GameEventKind kind, GridPosition from, GridPosition to)
+    private static GameStateChange Present(
+        GameState state, GameEventKind kind, GridPosition from, GridPosition to)
     {
         var key = new PresentationKey(state.SessionId, state.Version + 1, state.Version + 1);
         // 新しい提示は直前の操作結果を置き換えます。通常の文言はViewが状態から導きます。
@@ -140,12 +144,12 @@ public static class WorldRules
             SkipRequested = false, Feedback = null });
     }
 
-    private static GameUpdateResult Changed(GameState state)
+    private static GameStateChange Changed(GameState state)
     {
         state = state with { Version = state.Version + 1 };
-        return new(GameUpdateStatus.Applied, state);
+        return new(true, state);
     }
 
-    private static GameUpdateResult Rejected(GameState state)
-        => new(GameUpdateStatus.Rejected, State: state with { Version = state.Version + 1 });
+    private static GameStateChange Rejected(GameState state)
+        => new(false, state with { Version = state.Version + 1 });
 }

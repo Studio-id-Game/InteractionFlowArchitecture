@@ -129,9 +129,9 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
         /// <summary>
         /// セッションとイベントのIDを検証し、次状態のVersionを直前の版に一つ加えた値へ揃えて反映します。
         /// 提示の置換とモード変更に応じて通知先を更新し、Stoppingへの変更では停止通知も行います。
-        /// 引数のStatusを保ったまま、反映後の状態を含む更新結果を返します。
+        /// 操作の成立・拒否を共有アクセスのStatusへ変換し、反映後の提示キーとともに返します。
         /// </summary>
-        internal GameUpdateResult Commit(GameUpdateResult change)
+        internal GameUpdateResult Commit(GameStateChange change)
         {
             var next = change.State ?? throw new InvalidOperationException("An update must return game state.");
 
@@ -153,7 +153,7 @@ internal sealed partial class EscapeAccess : IGameplayAccess, IViewAccess, ILife
             if (next.Mode == ExecutionMode.Stopping)
                 StopSession();
 
-            return change with { State = State };
+            return new(change.Accepted ? GameUpdateStatus.Applied : GameUpdateStatus.Rejected, State.Event?.Key);
         }
     }
 

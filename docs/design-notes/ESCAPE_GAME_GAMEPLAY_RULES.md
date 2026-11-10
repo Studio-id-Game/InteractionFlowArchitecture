@@ -21,7 +21,12 @@ var shown = projection.Create(state, clock.Update(state, deltaSeconds));
 ```
 
 UpdateGameStateはロック内で現在の不変状態を更新関数へ渡し、返却された次状態を一括反映する。
-GameUpdateResultは更新状況と次のGameStateを持つ。提示キーは次状態のGameEventから取得する。
+WorldRulesはGameStateChange(bool Accepted, GameState State)で操作の成立可否と次状態を返す。
+保留・停止等の受付判断は行わず、GameUpdateStatusは使わない。
+EscapeAccessは通常更新ではAcceptedがfalseでもFeedback等の次状態を反映し、Rejectedへ変換する。
+BeginSessionではAcceptedがtrueの場合だけ反映・公開する。
+GameUpdateResultはEscapeAccessからの結果としてStatusとPresentationだけを持ち、GameState全体は返さない。
+提示キーはロック内で反映した状態のGameEventから取得するため、待機対象を別の状態取得で探す必要がない。
 更新関数が投げた場合、元の状態はそのまま保持する。他セッションの状態やイベントは反映しない。
 更新関数は短い同期処理とし、外部I/O、待機、Accessの再入呼び出しや外部への副作用は行わない。
 外部副作用やクロージャで別途変更した値までロールバックする仕組みではない。

@@ -30,7 +30,7 @@ internal static class GameTestSteps
 
     internal static bool SetPaused(this IGameplayAccess access, long id, bool paused)
         => access.UpdateGameState(id, state => state.Mode == (paused ? ExecutionMode.Paused : ExecutionMode.Active)
-            ? new(GameUpdateStatus.Rejected, State: state)
+            ? new(false, state)
             : WorldRules.ApplyControl(state, new(id, GameControlCommand.TogglePause)), allowWhilePaused: true)
             .Status == GameUpdateStatus.Applied;
 

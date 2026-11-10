@@ -107,7 +107,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     }
 
     private static async ValueTask<ReactionEnd> UpdateAndPresentAsync(
-        IGameplayContext context, Func<GameState, GameUpdateResult> update, string operation)
+        IGameplayContext context, Func<GameState, GameStateChange> update, string operation)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))

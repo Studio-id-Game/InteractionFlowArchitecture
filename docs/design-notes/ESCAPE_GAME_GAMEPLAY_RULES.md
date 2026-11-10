@@ -31,6 +31,10 @@ GameStateは不変recordで、内部に共有可変オブジェクトを持た�
 共有の可変Stateを呼び出し元へ貸し出す方法や、Snapshot取得時に全状態をコピーする方法は使わない。
 セッションの公開・退役、入力・再開・提示完了の待機はprivateなSessionRuntimeへ閉じる。
 SessionRuntimeは自身のCommit / StopSessionで更新と停止通知を行い、排他は呼び出し元のEscapeAccess.gateが担う。
+入力待機の登録・解除・配送、提示完了の判定と通知もSessionRuntimeが扱う。
+Stateは外側から取得できるがsetterはprivateとし、入力待機先・入力Token・再開待機先・提示待機先はprivateにする。
+EscapeAccessはロック内で対象セッションを選択して処理を呼び、取得したTaskをロック外でawaitする。
+SessionRuntimeはTaskCompletionSourceを外側へ公開せず、待機に必要なTaskだけを返す。
 公開中のセッションはactiveが指し、停止済みかどうかはGameState.Modeで判断する。Published / Retiredの別フラグは持たない。
 停止していない公開済みセッションが存在する間はBeginSessionを拒否し、停止済みセッションの再公開も拒否する。
 停止済みの除外はFindActiveSessionへ集約する。複数の未公開セッションを確保する契約は維持する。
@@ -38,8 +42,8 @@ SessionRuntimeは自身のCommit / StopSessionで更新と停止通知を行い�
 ## 入力と制御
 
 通常入力は未完了の待機先一件へ配送し、待機先がない間は蓄積しない。
-Inputが非nullの間は二件目の待機登録を拒否する。停止・配送・キャンセルで受信先を置換せず、
-登録した待機自身のfinallyだけがInputをnullへ戻すため、後始末時の受信先の同一性確認は不要とする。
+入力待機先が非nullの間は二件目の待機登録を拒否する。停止・配送・キャンセルで受信先を置換せず、
+登録した待機自身のfinallyからEndInputWaitを呼んで解除するため、後始末時の受信先の同一性確認は不要とする。
 後始末は登録時に取得したSessionRuntimeに対して行い、次セッションの入力先を変更しない。
 EscapeAccessは対象セッション・実行モード・待機先・取消状態を確認するが、ゲーム段階や行動の妥当性は判断しない。
 Retry等を受理する段階か、移動や解錠が成立するかはGameplayで判断する。

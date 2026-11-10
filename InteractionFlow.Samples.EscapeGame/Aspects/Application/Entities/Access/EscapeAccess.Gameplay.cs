@@ -71,29 +71,19 @@ internal sealed partial class EscapeAccess
     public async ValueTask<GameCommand> ReadCommandAsync(long sessionId, CancellationToken token)
     {
         SessionRuntime session;
-        TaskCompletionSource<GameCommand> source;
+        Task<GameCommand> task;
         lock (gate)
         {
             token.ThrowIfCancellationRequested();
             session = FindActiveSession(sessionId)!;
             if (session is null) return GameCommand.Stop;
-            if (session.Input is not null) throw new InvalidOperationException("Only one input wait is supported.");
-            source = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            session.Input = source;
-            session.InputToken = token;
-            session.State = session.State with { WaitingForInput = true };
+            task = session.BeginInputWait(token);
         }
-        try { return await source.Task.WaitAsync(token).ConfigureAwait(false); }
+        try { return await task.WaitAsync(token).ConfigureAwait(false); }
         finally
         {
             lock (gate)
-            {
-                // 次の待機はInputがnullになるまで登録できず、この待機を置き換える経路もありません。
-                session.Input = null;
-                session.InputToken = default;
-                if (session.State.WaitingForInput)
-                    session.State = session.State with { WaitingForInput = false };
-            }
+                session.EndInputWait();
         }
     }
 
@@ -118,8 +108,9 @@ internal sealed partial class EscapeAccess
                 token.ThrowIfCancellationRequested();
                 var session = FindActiveSession(sessionId);
                 if (session is null) return false;
-                if (session.State.Mode != ExecutionMode.Paused) return true;
-                resume = session.Resume!.Task;
+                var pending = session.GetResumeTask();
+                if (pending is null) return true;
+                resume = pending;
             }
             if (!await resume.WaitAsync(token).ConfigureAwait(false)) return false;
         }
@@ -132,10 +123,10 @@ internal sealed partial class EscapeAccess
         lock (gate)
         {
             token.ThrowIfCancellationRequested();
-            var session = FindActiveSession(key.SessionId);
-            if (session?.State.Event?.Key != key || session.Presentation is null)
+            var pending = FindActiveSession(key.SessionId)?.GetPresentationTask(key);
+            if (pending is null)
                 return PresentationCompletion.Stopped;
-            task = session.Presentation.Task;
+            task = pending;
         }
         return await task.WaitAsync(token).ConfigureAwait(false);
     }

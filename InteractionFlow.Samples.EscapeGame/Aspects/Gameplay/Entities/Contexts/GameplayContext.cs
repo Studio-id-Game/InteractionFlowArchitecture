@@ -43,8 +43,6 @@ public sealed class GameplayContext : LifetimeContext, IGameplayContext
         return base.TryGetCore(out value);
     }
 
-    protected override void ValidateAdditionalValue<T>(T value) => ContextAccessValidation.Validate(value!);
-
     protected override void DisposeCore()
     {
         gameplay = null;

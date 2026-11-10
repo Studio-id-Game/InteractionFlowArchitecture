@@ -110,7 +110,7 @@ EscapeApplicationContextが共有EscapeAccessを生成します。
 GameplayContext / ViewContextは同じアクセス管理を使い、公開契約と探索範囲を限定します。
 LifetimeContextはLifetimeの保持・取得・参照解放を共通化し、共有値の所有権を取得しません。
 ContextInheritanceで親の値探索とCancellation共有を独立に指定します。
-固定AccessとEntryによる差し替えはContext固有の検証で拒否します。
+固定AccessとEntryによる差し替えはLifetimeContextの共通検証で拒否します。
 
 更新中のゲーム状態、表示変換、Taskの起動や合流をContext自身の責務にはしません。
 停止・終了では入力・提示・再開待機を解除し、ゲーム実行を合流してからCloseへ進みます。
@@ -139,3 +139,13 @@ CleanupInfoで先行結果と終了種別を渡し、終了処理自身の失敗
 上の計測はネイティブ描画、ゲーム更新、入力・制御の競合を含むゲーム全体の性能保証ではありません。
 再実行は[計測プロジェクト](../benchmarks/InteractionFlow.ExecutionMeasurements/README.md)を参照してください。
 設計上の境界と変更理由は[ゲーム状態と入力の共有](../docs/design-notes/ESCAPE_GAME_GAMEPLAY_RULES.md)に記録しています。
+
+## 実装の簡素化
+
+各AspectのProfileによる責務分離を保ち、進行確認用のSessionProgressをGameStateの直接参照へ置き換えました。
+Contextの追加値検証はLifetimeContextへ、更新結果の検証はGameplayReactionへ集約し、
+プレイヤー行動・敵行動・結果提示の待機と更新処理を共通化しました。
+クラス1個・record struct 1個・メソッド実装4個・空コンストラクタ2個を削減しています。
+全体ビルドは警告・エラー0件、全579テスト成功。実画面で選択・取消・ターン進行、
+ポーズ・再開、敗北・リトライ、Exit終了を確認し、描画なし計測の割り当て量も維持しました。
+詳細な範囲・計測条件・確認の限界は[簡素化プランの実績](../docs/design-notes/ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照してください。

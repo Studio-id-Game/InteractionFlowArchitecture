@@ -48,11 +48,11 @@ internal static class GameTestSteps
         var player = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer);
         Assert.Equal(GameUpdateStatus.Applied, player.Status);
         Complete(view, player.Presentation!.Value);
-        if (session.Gameplay.GetSessionProgress(id).Outcome != GameOutcome.Running) return;
+        if (session.Gameplay.ReadGameState(id).Outcome != GameOutcome.Running) return;
         var enemy = session.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy);
         Assert.Equal(GameUpdateStatus.Applied, enemy.Status);
         Complete(view, enemy.Presentation!.Value);
-        if (session.Gameplay.GetSessionProgress(id).Outcome == GameOutcome.Running)
+        if (session.Gameplay.ReadGameState(id).Outcome == GameOutcome.Running)
             Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, WorldRules.BeginActionSelection).Status);
     }
 }

@@ -36,8 +36,6 @@ public sealed class ViewContext : LifetimeContext, IViewContext
         return base.TryGetCore(out value);
     }
 
-    protected override void ValidateAdditionalValue<T>(T value) => ContextAccessValidation.Validate(value!);
-
     protected override void DisposeCore()
     {
         view = null;

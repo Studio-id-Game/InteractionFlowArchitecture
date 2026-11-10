@@ -20,7 +20,7 @@ public sealed class GameTurnSystemFlow(
         if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        while (!context.Gameplay.GetSessionProgress(context.SessionId).HasConfirmedAction)
+        while (!context.Gameplay.ReadGameState(context.SessionId).Confirmed)
         {
             end = await select.ExecuteAsync(context);
             if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
@@ -29,7 +29,7 @@ public sealed class GameTurnSystemFlow(
 
         end = await player.ExecuteAsync(context);
         if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end)
-            || context.Gameplay.GetSessionProgress(context.SessionId).Outcome != GameOutcome.Running)
+            || context.Gameplay.ReadGameState(context.SessionId).Outcome != GameOutcome.Running)
         {
             return end;
         }

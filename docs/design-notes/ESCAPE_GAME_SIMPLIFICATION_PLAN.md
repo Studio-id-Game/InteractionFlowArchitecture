@@ -1,28 +1,28 @@
 # EscapeGameの実装簡素化プラン
 
-作成日: 2026-11-10。状態: 調査・計画のみ。ゲーム実装は変更していない。
+作成・実装日: 2026-11-10。状態: B〜Eと空コンストラクタ削除を実施済み。Aは利用者の方針により不採用。
 
 ## 結論
 
-現在の動作とMVVM的な責務分担を保った削減は可能である。
-まず登録用Profileの集約、SessionProgressの廃止、Contextの追加値検証の共通化、
-更新結果検証の集約を行い、その後にGameplayReactionの提示付き更新を共通化する。
-推奨案全体の見込みは、クラス6個・record struct 1個・メソッド実装9個の純減である。
-共通化で増える補助メソッド1個も差し引いた値で、実装後に再集計する。
+登録用Profileは責務分離を表すため維持した。
+SessionProgressの廃止、Contextの追加値検証の共通化、更新結果検証の集約、
+GameplayReactionの提示付き更新の共通化を実施した。
+実績はクラス1個・record struct 1個・メソッド実装4個の純減となった。
+共通化で増えた補助メソッド1個も差し引いた値である。
 
 Interactionの一行委譲には例外・キャンセル処理の境界としての役割がある。
 これを一律に消す方法や、全段階をenumで切り替える汎用Interactionは採用しない。
 進行はSystemFlow、規則はGameplay、描画・表示変換はView、共有と同期はApplicationに維持する。
 
-## 調査対象と基準
+## 調査時の対象と基準
 
 - 対象: InteractionFlow.Samples.EscapeGame.csprojと、その配下の手書きC#全66ファイル。
 - 関連確認: EscapeGame.Tests、フレーム計測コード、CoreのInteraction基底、Standardの登録API。
-- 作業ツリーには既存の未コミット変更が多数ある。HEADとの差分ではなく、現在のファイルを基準にした。
-- 現状規模: 2,407行、クラス46、interface 12、record/record struct 9、enum 11、合計78型。
+- 初回調査は当時の未コミット変更を含む作業ツリーを基準にした。実装開始時はクリーンであることを確認した。
+- 調査時規模: 2,407行、クラス46、interface 12、record/record struct 9、enum 11、合計78型。
 - 集計はbin/objを除き、partial classは同一型として数えた。生成メンバーは含めない。
 - 既存テストの再実行: 合格109、失敗0、スキップ0。依存プロジェクトを含むビルドも成功した。
-- 今回は実画面操作、全ソリューションのテスト、性能計測は実施していない。
+- 調査時は実画面操作、全ソリューションのテスト、性能計測を実施していない。実装後の結果は末尾に記載する。
 
 プロジェクトファイル自体は、net10.0・Raylib-cs・Standard・Analyzerとテスト向け内部公開だけで、
 冗長な構成は見当たらない。主な改善対象はC#側の分割粒度である。
@@ -57,25 +57,13 @@ Program → EscapeGameProfile → WindowSystemFlow
 
 ## 削減候補
 
-### A. 登録用ProfileをEscapeGameProfileへ集約する【優先度: 高】
+### A. 登録用Profileの集約【不採用】
 
-対象: [EscapeGameProfile](../../InteractionFlow.Samples.EscapeGame/Builders/EscapeGameProfile.cs)と
-各AspectのApplicationProfile / GameplayProfile / ViewProfile / LifetimeProfile / SharedProfile。
+各AspectのProfileは責務分離を表すため、利用者の指示に従い維持した。
+EscapeGameProfileも各ProfileをApplyする現在の構成を保つ。
+この案で見込んだクラス5個・Configure 5個の削減は実績に含めない。
 
-5個のProfileは、それぞれ1〜10件程度の登録だけを行う。これらの参照は本体ではEscapeGameProfileに集約され、
-既存テストもEscapeGameProfileから登録したPortを上書きしている。
-この規模では一つの登録一覧の方が構成と差し替え先を追いやすい。
-
-- 5個のConfigureの登録列を、順序とscoped登録を変えずEscapeGameProfile.Configureへ移す。
-- 共通Handler、入力、Gameplay、View、Lifetime、SystemFlowを空行と短いコメントで区切る。
-- 代替のRegisterGameplay等の補助関数は増やさない。
-- 削減: クラス5、メソッド実装5、ファイル5。
-
-これは現在の「各Aspectが自身のProfileを持つ」配置方針を、サンプルの構成規模に合わせて変更する判断である。
-実装・契約のAspect分類は保つ。実装時はサンプルREADMEと名前空間配置文書も同時に更新する。
-将来、Aspect単位で複数構成から再利用する必要が生じた場合にProfileを再分割する。
-
-### B. SessionProgressをGameStateの直接参照へ置き換える【優先度: 高】
+### B. SessionProgressをGameStateの直接参照へ置き換える【実施済み】
 
 対象: [GameValues](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/GameValues.cs)、
 [EscapeAccess.Gameplay](../../InteractionFlow.Samples.EscapeGame/Aspects/Application/Entities/Access/EscapeAccess.Gameplay.cs)、
@@ -100,7 +88,7 @@ GetSessionProgressはReadGameStateから6項目を詰め直すだけで、同期
 
 DTOは値型なので、この削減によるヒープ割り当て削減は主張しない。目的は参照経路と契約数の削減である。
 
-### C. Contextの同一検証をLifetimeContextへ移す【優先度: 高】
+### C. Contextの同一検証をLifetimeContextへ移す【実施済み】
 
 対象: EscapeApplicationContext、GameplayContext、ViewContextのValidateAdditionalValueと
 [LifetimeContext](../../InteractionFlow.Samples.EscapeGame/Aspects/Lifetime/Entities/Contexts/LifetimeContext.cs)。
@@ -114,9 +102,9 @@ ContextAccessValidation自体は共有契約に置いたままでよい。
 - 基底を直接使う派生Contextにも固定Access/Entry注入禁止が適用される点を明示する。
   現行3具象型の挙動は同じだが、公開基底の拡張時の契約は狭まるため、ContextTestsで確認する。
 
-### D. 更新結果の検証をGameplayReaction内の2関数にまとめる【優先度: 高】
+### D. 更新結果の検証をGameplayReaction内の2関数にまとめる【実施済み】
 
-対象: [GameUpdateValidation](../../InteractionFlow.Samples.EscapeGame/Aspects/Gameplay/Externals/GameUpdateValidation.cs)。
+対象: 旧GameUpdateValidation。検証は[GameplayReaction](../../InteractionFlow.Samples.EscapeGame/Aspects/Gameplay/Externals/GameplayReaction.cs)へ移した。
 
 実行時の利用者はGameplayReactionだけで、4関数のうちSelectionとRequiredTransitionの違いは
 Rejectedを成功扱いするかどうかである。Unexpectedは例外生成だけである。
@@ -132,7 +120,7 @@ Applied / Rejected / Stoppedの許容差、未知のenum値の拒否、提示キ
 この2関数は既存テストから直接確認できるinternalでもよい。
 直接テストの参照先を移すだけで、失敗ケースの検証は減らさない。
 
-### E. GameplayReactionの提示付き更新3本を共通化する【優先度: 中】
+### E. GameplayReactionの提示付き更新3本を共通化する【実施済み】
 
 対象: [GameplayReaction](../../InteractionFlow.Samples.EscapeGame/Aspects/Gameplay/Externals/GameplayReaction.cs)の
 ApplyPlayerActionAsync / ApplyEnemyActionAsync / PresentResultAsync。
@@ -190,22 +178,19 @@ SystemFlowからReactionを直接呼ぶとこれらの動作を失う。
 現在の4段階のゲーム用FlowとWindowSystemFlowは、ターン、セッション、リトライ、画面寿命を表している。
 GameTurnSystemFlowをセッションへ展開して型を1個減らす案も、ターン単位の読みやすさを失うため推奨しない。
 
-## 実装順と削減見込み
+## 実施範囲と削減実績
 
-| 段階 | 内容 | 型の純減 | メソッド実装の純減 |
-| --- | --- | ---: | ---: |
-| 1 | A: 登録の集約 | 5 | 5 |
-| 2 | B・C: 派生DTOと同一overrideの削除 | 1 | 3 |
-| 3 | D・E: 検証の集約と提示付き更新の共通化 | 1 | 1 |
-| 合計 | 推奨案 | 7 | 9 |
+| 内容 | 型の純減 | メソッド実装の純減 |
+| --- | ---: | ---: |
+| A: Profileは維持 | 0 | 0 |
+| B・C: 派生DTOと同一overrideの削除 | 1 | 3 |
+| D・E: 検証の集約と提示付き更新の共通化 | 1 | 1 |
+| 合計 | 2 | 4 |
 
-段階3の内訳は、検証4→2で2減、共通更新関数追加で1増である。
-interfaceのメソッド宣言1個と、空コンストラクタ2個の削減は上の9個に含めない。
-型数は78→71、クラスは46→40、record類は9→8、C#ファイルは66→60となる見込み。
-新しい汎用基底・戦略interface・ヘルパー型は追加しない。
-
-実装する際は各段階を独立した差分とし、既存の未コミット変更を巻き戻さない。
-削減数のためにテストや例外の識別情報を落とさない。
+D・Eの内訳は、検証4→2で2減、共通更新関数追加で1増である。
+interfaceのメソッド宣言1個と、空コンストラクタ2個の削減は上の4個に含めない。
+型数は78→76、クラスは46→45、record類は9→8、C#ファイルは66→65、行数は2,407→2,350となった。
+新しい汎用基底・戦略interface・ヘルパー型は追加していない。
 
 ## 動作を維持するための確認
 
@@ -236,9 +221,29 @@ dotnet build benchmarks/InteractionFlow.ExecutionMeasurements/InteractionFlow.Ex
 性能向上は今回の主目標にせず、現行計測と同条件でPresentFrame等の割り当てが悪化していないことを確かめる。
 現在の計測値は実描画を含まないため、全体の高速化率は算出しない。
 
-実装時に更新する文書は、サンプルREADME、ESCAPE_GAME_NAMESPACE_LAYOUT.md、
-本プランの実績欄を中心とする。共有状態の契約が変わる箇所はESCAPE_GAME_GAMEPLAY_RULES.mdにも反映する。
-本プランは未実装であり、現在の配置説明や過去の検証記録を先に書き換えない。
+## 実装後の検証結果
+
+- 全ソリューションビルド: 警告0・エラー0。
+- 全ソリューションテスト: EscapeGame 109件と他470件、計579件成功。
+- Contextの既存テストを拡張し、LifetimeContextだけを使うルート・子Contextにも
+  Access/Entry注入禁止が継承され、通常の追加値は利用できることを確認した。
+- Release計測プロジェクトはビルド・実行成功。描画なしフレームの割り当ては従来値を維持した。
+- 実画面で移動の仮選択・取消・確定、ターン進行、ポーズ中の入力抑止、Pでの再開、
+  敗北結果の提示、Rでの初期状態へのリトライ、Exitでの閉鎖を確認した。
+- 勝利解法、演出省略、演出中のポーズ競合、終了時の合流は自動テストで確認した。
+  今回の実画面ではこれらのタイミング操作とOSの閉じるボタンは再確認していない。
+
+.NET 10.0.14 / x64、TieredCompilation=0、20,000回ウォームアップ、200,000回×3。
+
+| 計測対象 | 割り当て | 今回の時間範囲 |
+| --- | ---: | ---: |
+| 不変GameStateの取得 | 0B | 14.3〜17.0ns |
+| 直接フレーム（取得2回・ローカル時計） | 0B | 107.2〜112.3ns |
+| PresentFrame一回 | 232B | 204.5〜214.4ns |
+
+実画面のゲームも起動中の計測であり、従来記録と同時条件の対照測定は行っていない。
+時間差から高速化・低速化の結論は出さない。実描画・表示文言生成・ゲーム全体の負荷を含む結果でもない。
+サンプルREADME、配置表、共有状態の契約文書も実装に合わせて更新した。
 
 関連: [現在の配置](./ESCAPE_GAME_NAMESPACE_LAYOUT.md)、
 [共有状態と同期契約](./ESCAPE_GAME_GAMEPLAY_RULES.md)、

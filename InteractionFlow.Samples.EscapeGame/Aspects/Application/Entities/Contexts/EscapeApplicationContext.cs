@@ -43,9 +43,6 @@ public sealed class EscapeApplicationContext : LifetimeContext, IApplicationCont
         return base.TryGetCore(out value);
     }
 
-    protected override void ValidateAdditionalValue<T>(T value)
-        => ContextAccessValidation.Validate(value!);
-
     protected override void DisposeCore()
     {
         access = null;

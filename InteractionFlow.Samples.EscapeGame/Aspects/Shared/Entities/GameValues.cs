@@ -21,6 +21,3 @@ public readonly record struct GameUpdateResult(GameUpdateStatus Status, GameStat
 {
     public PresentationKey? Presentation => State?.Event?.Key;
 }
-
-public readonly record struct SessionProgress(GameStage Stage, GameOutcome Outcome, bool HasConfirmedAction,
-    bool RetryRequested, bool Stopping, bool Paused);

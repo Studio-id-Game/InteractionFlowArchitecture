@@ -96,3 +96,14 @@ ForceResetMemoryStateは状態参照・文言・行キャッシュ・時計を�
 
 Function内部への集約は「そのFunctionだけで閉じる記憶」に限る。
 共有状態や通知まで移すことを一律の簡素化としない。
+
+## 実装簡素化後の契約
+
+ゲーム進行の確認もReadGameState(sessionId)から行い、重複していたSessionProgressは廃止した。
+awaitやInteraction実行後には必要な状態を再取得し、取得済みの状態を最新値として使い続けない。
+GameplayReactionは更新結果の検証を内部にまとめ、プレイヤー行動・敵行動・結果提示で
+再開待機、Deferredの再試行、提示完了待機を共有する。初回公開と制御要求の経路は個別に保つ。
+LifetimeContextが固定AccessとEntryの追加を拒否し、具象Contextとその基底利用の双方に適用する。
+役割別の探索制限、Cancellationの共有、共有Accessを所有しない寿命の契約は維持している。
+各AspectのProfileも責務分離として維持した。
+実装内容と検証結果は[簡素化プランの実績](./ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照する。

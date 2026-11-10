@@ -32,8 +32,6 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     internal bool CanConfirm => AcceptingInput && state.Selection.HasValue;
     private GridPosition Enemy => state.Room.PatrolAt(state.EnemyPatrolIndex);
 
-    public RaylibWindowReaction() { }
-
     public override void ForceResetMemoryState()
     {
         clock.Reset();

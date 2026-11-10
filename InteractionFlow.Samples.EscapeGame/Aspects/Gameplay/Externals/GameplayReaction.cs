@@ -4,6 +4,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
+using System;
 using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
@@ -17,14 +18,14 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         if (!context.Gameplay.TryReadControlInput(out var input)) return GetEnd();
         var change = context.Gameplay.UpdateGameState(input.SessionId,
             state => WorldRules.ApplyControl(state, input), allowWhilePaused: true);
-        return GetEnd(GameUpdateValidation.Selection(change.Status, nameof(ApplyControlRequest)));
+        return GetEnd(ValidateUpdate(change.Status, nameof(ApplyControlRequest), allowRejected: true));
     }
 
     public async ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
     {
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
         var change = context.Gameplay.BeginSession(context.SessionId, WorldRules.BeginSession);
-        var failure = GameUpdateValidation.Presentation(change, nameof(BeginSessionAsync));
+        var failure = ValidatePresentation(change, nameof(BeginSessionAsync));
         if (failure is not null || change.Status == GameUpdateStatus.Stopped)
             return GetEnd(failure);
 
@@ -40,7 +41,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
             if (status == GameUpdateStatus.Deferred)
                 continue;
 
-            return GetEnd(GameUpdateValidation.RequiredTransition(status, nameof(BeginActionSelectionAsync)));
+            return GetEnd(ValidateUpdate(status, nameof(BeginActionSelectionAsync)));
         }
 
         return GetEnd();
@@ -56,69 +57,20 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
                 continue;
 
             // 選択のRejectedは通常の無効操作。ゲーム状態の理由をViewが表示へ変換します。
-            return GetEnd(GameUpdateValidation.Selection(status, nameof(HandleCommandAsync)));
+            return GetEnd(ValidateUpdate(status, nameof(HandleCommandAsync), allowRejected: true));
         }
 
         return GetEnd();
     }
 
-    public async ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)
-    {
-        var token = context.Cancellation.GetToken();
-        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
-        {
-            // 事前の再開確認直後にもポーズし得るため、更新側の Deferred 検査は残します。
-            var change = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.ApplyPlayer);
-            if (change.Status == GameUpdateStatus.Deferred)
-                continue;
+    public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)
+        => UpdateAndPresentAsync(context, WorldRules.ApplyPlayer, nameof(ApplyPlayerActionAsync));
 
-            var failure = GameUpdateValidation.Presentation(change, nameof(ApplyPlayerActionAsync));
-            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
-                return GetEnd(failure);
+    public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context)
+        => UpdateAndPresentAsync(context, WorldRules.ApplyEnemy, nameof(ApplyEnemyActionAsync));
 
-            return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
-        }
-
-        return GetEnd();
-    }
-
-    public async ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context)
-    {
-        var token = context.Cancellation.GetToken();
-        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
-        {
-            var change = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.ApplyEnemy);
-            if (change.Status == GameUpdateStatus.Deferred)
-                continue;
-
-            var failure = GameUpdateValidation.Presentation(change, nameof(ApplyEnemyActionAsync));
-            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
-                return GetEnd(failure);
-
-            return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
-        }
-
-        return GetEnd();
-    }
-
-    public async ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context)
-    {
-        var token = context.Cancellation.GetToken();
-        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
-        {
-            var change = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.BeginResultPresentation);
-            if (change.Status == GameUpdateStatus.Deferred)
-                continue;
-
-            var failure = GameUpdateValidation.Presentation(change, nameof(PresentResultAsync));
-            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
-                return GetEnd(failure);
-
-            return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
-        }
-
-        return GetEnd();
-    }
+    public ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context)
+        => UpdateAndPresentAsync(context, WorldRules.BeginResultPresentation, nameof(PresentResultAsync));
 
     public async ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
     {
@@ -129,7 +81,47 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
             if (status == GameUpdateStatus.Deferred)
                 continue;
 
-            return GetEnd(GameUpdateValidation.RequiredTransition(status, nameof(EnableResultInputAsync)));
+            return GetEnd(ValidateUpdate(status, nameof(EnableResultInputAsync)));
+        }
+
+        return GetEnd();
+    }
+
+    // フローの前提だけを検証し、状態更新・待機・通知は行いません。
+    internal static Exception? ValidateUpdate(GameUpdateStatus status, string operation, bool allowRejected = false)
+        => status is GameUpdateStatus.Applied or GameUpdateStatus.Stopped
+            || allowRejected && status == GameUpdateStatus.Rejected
+            ? null
+            : new InvalidOperationException($"{operation}: update returned {status}; the flow precondition was not met.");
+
+    internal static Exception? ValidatePresentation(GameUpdateResult change, string operation)
+    {
+        var failure = ValidateUpdate(change.Status, operation);
+        if (failure is not null)
+            return failure;
+
+        if (change.Status == GameUpdateStatus.Applied && change.Presentation is null)
+            return new InvalidOperationException($"{operation}: an applied update requires a presentation key.");
+
+        return null;
+    }
+
+    private static async ValueTask<ReactionEnd> UpdateAndPresentAsync(
+        IGameplayContext context, Func<GameState, GameUpdateResult> update, string operation)
+    {
+        var token = context.Cancellation.GetToken();
+        while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
+        {
+            // 再開確認直後にもポーズし得るため、更新側のDeferred検査と再試行は残します。
+            var change = context.Gameplay.UpdateGameState(context.SessionId, update);
+            if (change.Status == GameUpdateStatus.Deferred)
+                continue;
+
+            var failure = ValidatePresentation(change, operation);
+            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
+                return GetEnd(failure);
+
+            return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
         }
 
         return GetEnd();

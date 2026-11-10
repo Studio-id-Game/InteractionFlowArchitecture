@@ -146,7 +146,7 @@ public sealed class GameplayReactionTests
 
         Assert.False(execution.IsCompleted);
         Assert.Equal(0, fixture.App.View.ReadGameState().Turn);
-        Assert.True(context.Gameplay.GetSessionProgress(context.SessionId).HasConfirmedAction);
+        Assert.True(context.Gameplay.ReadGameState(context.SessionId).Confirmed);
         Assert.True(fixture.App.Gameplay.SetPaused(context.SessionId, false));
         var presentation = await WaitForPresentationStartAsync(fixture.App);
         Assert.Equal(1, fixture.App.View.ReadGameState().Turn);
@@ -198,10 +198,10 @@ public sealed class GameplayReactionTests
     public void AppliedPresentationRequiresAKeyWhileStoppedDoesNot()
     {
         var missing = Assert.IsType<InvalidOperationException>(
-            GameUpdateValidation.Presentation(new(GameUpdateStatus.Applied), "apply"));
+            GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Applied), "apply"));
         Assert.Contains("presentation key", missing.Message);
-        Assert.Null(GameUpdateValidation.Presentation(new(GameUpdateStatus.Stopped), "stop"));
-        Assert.Null(GameUpdateValidation.Presentation(
+        Assert.Null(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop"));
+        Assert.Null(GameplayReaction.ValidatePresentation(
             new(GameUpdateStatus.Applied, new GameState(1)
             { Event = new(new PresentationKey(1, 1, 1), GameEventKind.Initial, default, default) }), "apply"));
     }
@@ -210,9 +210,9 @@ public sealed class GameplayReactionTests
     public void UnexpectedMutationStatusDoesNotBecomeSuccess()
     {
         var unknown = (GameUpdateStatus)123;
-        Assert.IsType<InvalidOperationException>(GameUpdateValidation.Selection(unknown, "select"));
-        Assert.IsType<InvalidOperationException>(GameUpdateValidation.RequiredTransition(unknown, "advance"));
-        Assert.IsType<InvalidOperationException>(GameUpdateValidation.Presentation(new(unknown), "present"));
+        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidateUpdate(unknown, "select", allowRejected: true));
+        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidateUpdate(unknown, "advance"));
+        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidatePresentation(new(unknown), "present"));
     }
 
     private static async Task<GameEvent> WaitForPresentationStartAsync(EscapeApplicationContext context)

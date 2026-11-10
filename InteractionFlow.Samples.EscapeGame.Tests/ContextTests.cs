@@ -153,23 +153,27 @@ public sealed class ContextTests
         Assert.Equal(session.SessionId, app.View.ReadGameState().SessionId);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.True(game.Gameplay.GetSessionProgress(game.SessionId).Stopping);
+        Assert.Equal(ExecutionMode.Stopping, game.Gameplay.ReadGameState(game.SessionId).Mode);
     }
 
     [Fact]
-    public void FixedAndHiddenContractsAndEntriesCannotBeInjectedIntoRoleContexts()
+    public void FixedAndHiddenContractsAndEntriesCannotBeInjectedIntoGameContexts()
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         using var view = new ViewContext(app, ContextInheritance.None);
+        using var root = new LifetimeOnlyContext(app.Lifetime);
+        using var child = new LifetimeOnlyContext(root, ContextInheritance.All);
         using var entry = new RefEntry<object>(app.View);
         var lifetime = new LifetimeOnlyAccess(app.Lifetime);
-        foreach (var context in new FlowContext[] { app, game, view })
+        foreach (var context in new FlowContext[] { app, game, view, root, child })
         {
             Assert.Throws<ArgumentException>(() => context.With<object>(app.Gameplay));
             Assert.Throws<ArgumentException>(() => context.With<object>(app.View));
             Assert.Throws<ArgumentException>(() => context.With<object>(lifetime));
             Assert.Throws<ArgumentException>(() => context.With(entry));
+            context.With("ordinary value");
+            Assert.Equal("ordinary value", context.GetRequired<string>());
         }
         using var ordinaryChild = new FlowContext(game).With<ILifetimeAccess>(lifetime);
         Assert.Same(lifetime, ordinaryChild.GetRequired<ILifetimeAccess>());

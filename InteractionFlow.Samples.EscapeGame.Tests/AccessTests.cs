@@ -23,7 +23,7 @@ public sealed class AccessTests
         Assert.False(session.Gameplay.ReadGameState(id).WaitingForInput);
 
         Assert.False(app.View.ReadGameState().WaitingForInput);
-        Assert.True(session.Gameplay.GetSessionProgress(id).HasConfirmedAction);
+        Assert.True(session.Gameplay.ReadGameState(id).Confirmed);
         Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer).Status);
     }
 
@@ -38,7 +38,7 @@ public sealed class AccessTests
         var token = session.Cancellation.GetToken();
         Assert.True(app.Gameplay.SetPaused(id, true));
         Assert.Equal(GameUpdateStatus.Deferred, session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer).Status);
-        Assert.True(session.Gameplay.GetSessionProgress(id).HasConfirmedAction);
+        Assert.True(session.Gameplay.ReadGameState(id).Confirmed);
         Assert.Equal(0, app.View.ReadGameState().Turn);
         Assert.True(app.Gameplay.SetPaused(id, false));
         var applied = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer);
@@ -91,7 +91,7 @@ public sealed class AccessTests
         Assert.True(app.View.TrySubmitCommand(id, GameCommand.Retry));
         var retryCommand = await input;
         Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, retryCommand)).Status);
-        Assert.True(session.Gameplay.GetSessionProgress(id).RetryRequested);
+        Assert.True(session.Gameplay.ReadGameState(id).RetryRequested);
         session.Gameplay.EndSession(id);
         using var fresh = GameTestSteps.Ready(app);
         Assert.NotEqual(id, fresh.SessionId);

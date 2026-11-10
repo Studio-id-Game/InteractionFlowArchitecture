@@ -33,6 +33,9 @@ public abstract class LifetimeContext : FlowContext, ILifetimeContext
         return base.TryGetCore(out value);
     }
 
+    // 固定AccessとEntryの注入禁止は、すべてのゲーム用Contextで共通です。
+    protected override void ValidateAdditionalValue<T>(T value) => ContextAccessValidation.Validate(value!);
+
     protected override void DisposeCore()
     {
         lifetime = null;

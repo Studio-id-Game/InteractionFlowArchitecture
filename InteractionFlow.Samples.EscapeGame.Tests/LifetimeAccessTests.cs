@@ -58,7 +58,7 @@ public sealed class LifetimeAccessTests
         Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Lifetime.RequestShutdown();
         Assert.Throws<InvalidOperationException>(() => app.Gameplay.AllocateSession());
-        Assert.True(app.Gameplay.GetSessionProgress(second).Stopping);
+        Assert.Equal(ExecutionMode.Stopping, app.Gameplay.ReadGameState(second).Mode);
     }
 
     private sealed class Lifetime : ILifetimeAccess

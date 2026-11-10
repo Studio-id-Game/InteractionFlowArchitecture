@@ -16,7 +16,7 @@ public sealed class GameSessionSystemFlow(
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         InteractionEnd end;
-        while (context.Gameplay.GetSessionProgress(context.SessionId).Outcome == GameOutcome.Running)
+        while (context.Gameplay.ReadGameState(context.SessionId).Outcome == GameOutcome.Running)
         {
             end = await turn.ExecuteAsync(context);
             if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
@@ -28,7 +28,7 @@ public sealed class GameSessionSystemFlow(
             return end;
 
         // PresentResultが提示と受付開始を完了してから、リトライ入力を待ちます。
-        while (!context.Gameplay.GetSessionProgress(context.SessionId).RetryRequested)
+        while (!context.Gameplay.ReadGameState(context.SessionId).RetryRequested)
         {
             end = await select.ExecuteAsync(context);
             if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))

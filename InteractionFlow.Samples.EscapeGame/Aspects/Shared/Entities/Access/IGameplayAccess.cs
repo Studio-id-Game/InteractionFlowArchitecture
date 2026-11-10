@@ -10,7 +10,6 @@ public interface IGameplayAccess
     GameUpdateResult BeginSession(long sessionId, Func<GameState, GameUpdateResult> initialize);
     void EndSession(long sessionId);
     GameState ReadGameState(long sessionId);
-    SessionProgress GetSessionProgress(long sessionId);
     // 更新関数は同期的に実行し、返した不変状態を一括で反映します。
     GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameUpdateResult> update,
         bool allowWhilePaused = false);

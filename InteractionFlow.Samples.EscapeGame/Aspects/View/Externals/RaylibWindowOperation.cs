@@ -11,8 +11,6 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 
 internal sealed class RaylibWindowOperation : Operation, IWindowOperation
 {
-    public RaylibWindowOperation() { }
-
     public override void ForceResetMemoryState() { }
 
     public void PollFrameInput(IViewContext context)

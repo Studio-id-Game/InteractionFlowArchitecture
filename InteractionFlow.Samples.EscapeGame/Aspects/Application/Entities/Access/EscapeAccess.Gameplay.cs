@@ -52,13 +52,6 @@ internal sealed partial class EscapeAccess
                 ?? new GameState(sessionId) { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping };
     }
 
-    public SessionProgress GetSessionProgress(long sessionId)
-    {
-        var state = ReadGameState(sessionId);
-        return new(state.Stage, state.Outcome, state.Confirmed, state.RetryRequested,
-            state.Mode == ExecutionMode.Stopping, state.Mode == ExecutionMode.Paused);
-    }
-
     public GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameUpdateResult> update,
         bool allowWhilePaused = false)
     {

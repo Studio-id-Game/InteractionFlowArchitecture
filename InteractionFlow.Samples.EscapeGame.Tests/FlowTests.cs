@@ -29,6 +29,69 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 
 public sealed class FlowTests
 {
+    [Theory]
+    [InlineData("selection", 0)]
+    [InlineData("input", 0)]
+    [InlineData("player", 1)]
+    public async Task CancellationAtATurnBoundaryStopsBeforeTheNextStep(string boundary, int turns)
+    {
+        using var fixture = new Fixture();
+        var observed = new List<string>();
+        var commands = new Queue<GameCommand>([GameCommand.Up, GameCommand.Confirm]);
+        fixture.Input.PollFrame = frames =>
+        {
+            if (frames.View.ReadGameState().WaitingForInput && commands.TryDequeue(out var command))
+                frames.GetRequired<FrameState>().Command = command;
+        };
+        fixture.Game.AfterStep = (step, context, end) =>
+        {
+            observed.Add(step);
+            if (step == boundary) context.Cancellation.Cancel();
+            return end;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(end.HasException);
+        Assert.Equal(boundary, observed[^1]);
+        Assert.DoesNotContain("enemy", observed);
+        Assert.Equal(turns, fixture.Context.View.ReadGameState().Turn);
+        Assert.True(fixture.Session.Ended);
+        Assert.False(fixture.Game.Cancellation!.HasTask);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+    }
+
+    [Theory]
+    [InlineData("selection")]
+    [InlineData("input")]
+    [InlineData("player")]
+    [InlineData("enemy")]
+    public async Task ReturnedTurnFailureDoesNotRunTheNextStep(string boundary)
+    {
+        using var fixture = new Fixture();
+        var failure = new InvalidOperationException("turn step failed");
+        var observed = new List<string>();
+        var commands = new Queue<GameCommand>([GameCommand.Up, GameCommand.Confirm]);
+        fixture.Input.PollFrame = frames =>
+        {
+            if (frames.View.ReadGameState().WaitingForInput && commands.TryDequeue(out var command))
+                frames.GetRequired<FrameState>().Command = command;
+        };
+        fixture.Game.AfterStep = (step, _, end) =>
+        {
+            observed.Add(step);
+            return step == boundary ? TrackingGameplayReaction.Failed(failure) : end;
+        };
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(Contains(end.Exception, failure));
+        Assert.Equal(boundary, observed[^1]);
+        Assert.True(fixture.Session.Ended);
+        Assert.False(fixture.Game.Cancellation!.HasTask);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+    }
+
     [Fact]
     public async Task FrameDrivenGameplayControlUsesIndependentCancellation()
     {
@@ -561,6 +624,8 @@ public sealed class FlowTests
         public CancellationObject? Cancellation { get; private set; }
         public bool CancellationObserved => cancellationObserved;
         public Action<IGameplayContext>? AfterBegin { get; set; }
+        public Func<string, IGameplayContext, ReactionEnd, ReactionEnd>? AfterStep { get; set; }
+        public static ReactionEnd Failed(Exception error) => GetEnd(error);
         public int SelectionStarts { get; private set; }
         public override void ForceResetMemoryState() { }
         public async ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
@@ -583,18 +648,25 @@ public sealed class FlowTests
         public ValueTask<ReactionEnd> BeginActionSelectionAsync(IGameplayContext context)
         {
             SelectionStarts++;
-            return inner.BeginActionSelectionAsync(context);
+            return ObserveAsync("selection", context, inner.BeginActionSelectionAsync(context));
         }
         public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command)
-            => inner.HandleCommandAsync(context, command);
+            => ObserveAsync("input", context, inner.HandleCommandAsync(context, command));
         public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)
-            => inner.ApplyPlayerActionAsync(context);
+            => ObserveAsync("player", context, inner.ApplyPlayerActionAsync(context));
         public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context)
-            => inner.ApplyEnemyActionAsync(context);
+            => ObserveAsync("enemy", context, inner.ApplyEnemyActionAsync(context));
         public ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context)
             => inner.PresentResultAsync(context);
         public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
             => inner.EnableResultInputAsync(context);
+
+        private async ValueTask<ReactionEnd> ObserveAsync(
+            string step, IGameplayContext context, ValueTask<ReactionEnd> execution)
+        {
+            var end = await execution;
+            return AfterStep is { } observe ? observe(step, context, end) : end;
+        }
     }
 
     private sealed class CanceledGameSessionReaction(OperationCanceledException canceled) : Reaction, IGameSessionReaction

@@ -105,7 +105,10 @@ EscapeAccessは現行イベントの完了通知を待機へ配送し、時間�
 
 WindowSystemFlowはメインスレッドのフレーム反復と、背景のGamePlaySystemFlowの寿命を所有します。
 GamePlaySystemFlowはセッションの生成・BeginSession・EndSession・リトライを管理します。
-GameSessionSystemFlowはターン反復と結果提示・入力、GameTurnSystemFlowは一ターンを合成します。
+GameSessionSystemFlowはPlayTurnのターン反復とHandleResultの結果確認を合成します。
+PlayTurnは選択開始・入力反復・プレイヤー行動・敵行動の提示完了までを一つのInteractionとして扱い、
+HandleResultは結果提示・受付開始・リトライ入力までを扱います。
+段階間とフロー間の停止・再開確認はGameplay内のGameplayCheckpointで共有します。
 
 ポーズ・省略要求はPresentFrameが入力として送り、GameplayのHandleControlInputが解釈します。
 WindowSystemFlowがフレームごとにこの独立した制御経路を実行するため、
@@ -170,3 +173,9 @@ EscapeGame115件と他470件の全585テストが成功しました。全体ビ�
 分割した入力待機・通常入力配送・制御入力配送・セッション終了・全体停止の5メソッドは処理内容を維持しています。
 計測プロジェクトもReleaseビルド・実行に成功し、直接フレーム0B・PresentFrame232Bを維持しました。
 今回のPort分割後には実画面操作を繰り返していません。
+
+ターン・結果確認の集約後は、GameplayのInteractionを8個から5個へ整理し、GameTurnSystemFlowも削除しました。
+段階境界の失敗・キャンセルと結果入力待機の解除を検証する8ケースを追加し、
+EscapeGame123件と他470件の全593テストが成功しました。全体ビルドは警告・エラー0件です。
+実画面でターン進行、ポーズ・再開、敗北表示、Rによるリトライ、入力待ちからのExit終了を確認しました。
+計測プロジェクトもReleaseビルド・実行に成功し、描画なしフレームの割り当て量を維持しました。

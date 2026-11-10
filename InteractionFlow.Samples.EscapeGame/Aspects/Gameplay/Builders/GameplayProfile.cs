@@ -16,10 +16,7 @@ public sealed class GameplayProfile : IScopeProfile
             .UseInteraction<HandleControlInput>()
             .UseInteraction<BeginSession>()
             .UseInteraction<EndSession>()
-            .UseInteraction<BeginActionSelection>()
-            .UseInteraction<HandleGameInput>()
-            .UseInteraction<ApplyPlayerAction>()
-            .UseInteraction<ApplyEnemyAction>()
-            .UseInteraction<PresentResult>();
+            .UseInteraction<PlayTurn>()
+            .UseInteraction<HandleResult>();
     }
 }

@@ -37,7 +37,7 @@ public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow
             try
             {
                 var end = await begin.ExecuteAsync(session);
-                if (await GameFlowCheckpoint.WaitToContinueAsync(session, end))
+                if (await GameplayCheckpoint.WaitToContinueAsync(session, end.End))
                     end = await sessionFlow.ExecuteAsync(session);
                 outcome = end.Result;
                 retry = !end.HasException && session.Gameplay.ReadGameState(session.SessionId).RetryRequested;

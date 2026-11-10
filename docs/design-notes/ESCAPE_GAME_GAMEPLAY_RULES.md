@@ -130,3 +130,13 @@ Portごとに対応するAspectのProfileが登録し、各Interactionは自身�
 入力先・セッション・提示・再開待機の共有と排他は従来どおりEscapeAccessが所有する。
 独立したキュー・待機・可変状態や、Aspect間の直接呼び出しは追加していない。
 ApplicationProfileは構成の入口として維持し、現在は登録処理を持たない。
+
+## ターンと結果確認のInteraction
+
+PlayTurnは選択開始・選択入力の反復・プレイヤー行動・必要な敵行動をPortから接続する。
+HandleResultは結果提示・受付開始・リトライ入力の反復を接続する。
+GameSessionSystemFlowはターンを反復し、勝敗確定後に結果確認へ進む。
+段階間の失敗・停止・再開確認はGameplayCheckpointが担い、ReactionEndを受け取る。
+Interactionは別のInteractionを実行せず、ゲーム状態の更新は引き続きReaction / Operationが行う。
+例外・キャンセルの処理と実行登録は1ターンまたは結果確認の単位となり、個々のPort呼び出しごとには行わない。
+入力・提示待機の同期契約、ポーズと省略の独立した制御経路、終了時の停止・合流の順序は維持する。

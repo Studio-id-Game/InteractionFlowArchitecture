@@ -2,6 +2,7 @@ using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
@@ -18,10 +19,10 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class ResultInteractionTests
 {
     [Fact]
-    public async Task ResultPresentationMustCompleteBeforeInputIsEnabled()
+    public async Task ResultPresentationMustCompleteBeforeInputIsEnabledAndRetryIsReceived()
     {
         using var app = new EscapeApplicationContext();
-        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
+        using var context = CreateResultContext(app);
         var pending = new TaskCompletionSource<ReactionEnd>(TaskCreationOptions.RunContinuationsAsynchronously);
         var reaction = new ResultReaction { Show = _ => new(pending.Task) };
         var execution = Create(reaction).ExecuteAsync(context);
@@ -29,8 +30,16 @@ public sealed class ResultInteractionTests
         Assert.Equal(0, reaction.Enabled);
 
         pending.SetResult(ResultReaction.End());
-        Assert.False((await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).HasException);
+        await WaitForInputAsync(context);
         Assert.Equal(1, reaction.Enabled);
+        Assert.False(execution.IsCompleted);
+        Assert.True(app.View.TrySubmitCommand(context.SessionId, GameCommand.Up));
+        await WaitForInputAsync(context);
+        Assert.False(execution.IsCompleted);
+        Assert.Equal(InputFeedback.StageDoesNotAcceptSelection, app.View.ReadGameState().Feedback);
+        Assert.True(app.View.TrySubmitCommand(context.SessionId, GameCommand.Retry));
+        Assert.False((await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).HasException);
+        Assert.True(app.View.ReadGameState().RetryRequested);
         Assert.False(context.Cancellation.HasTask);
     }
 
@@ -38,7 +47,7 @@ public sealed class ResultInteractionTests
     public async Task PresentationFailureDoesNotOpenInput()
     {
         using var app = new EscapeApplicationContext();
-        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
+        using var context = CreateResultContext(app);
         var failure = new InvalidOperationException("presentation failed");
         var reaction = new ResultReaction { Show = _ => new(ResultReaction.End(failure)) };
         var end = await Create(reaction).ExecuteAsync(context);
@@ -50,7 +59,7 @@ public sealed class ResultInteractionTests
     public async Task InputEnableFailureUsesExistingExceptionHandling()
     {
         using var app = new EscapeApplicationContext();
-        using var context = new GameplayContext(app, ContextInheritance.Cancellation);
+        using var context = CreateResultContext(app);
         var failure = new InvalidOperationException("enable failed");
         var reaction = new ResultReaction { Enable = _ => throw failure };
         var end = await Create(reaction).ExecuteAsync(context);
@@ -84,14 +93,54 @@ public sealed class ResultInteractionTests
         Assert.False(app.View.ReadGameState().WaitingForInput);
     }
 
-    private static PresentResult Create(IGameplayReaction reaction)
-        => new(reaction, new GameExceptionHandling(), new GameCancellationHandling());
+    [Fact]
+    public async Task CancellationWhileWaitingForRetryStopsInputAndReleasesTheInteraction()
+    {
+        using var app = new EscapeApplicationContext();
+        using var context = CreateResultContext(app);
+        var execution = Create(new ResultReaction()).ExecuteAsync(context);
+        await WaitForInputAsync(context);
+
+        context.Cancellation.Cancel();
+
+        var end = await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.False(end.HasException);
+        Assert.True(context.Lifetime.ShutdownRequested);
+        Assert.False(app.View.ReadGameState().WaitingForInput);
+        Assert.False(context.Cancellation.HasTask);
+        Assert.False(app.View.ReadGameState().RetryRequested);
+    }
+
+    private static HandleResult Create(IGameplayReaction reaction)
+        => new(new GameInputOperation(), reaction, new GameExceptionHandling(), new GameCancellationHandling());
+
+    private static GameplayContext CreateResultContext(EscapeApplicationContext app)
+    {
+        var context = GameTestSteps.Ready(app);
+        GameTestSteps.PlayTurn(context, app, GameCommand.Right);
+        GameTestSteps.PlayTurn(context, app, GameCommand.Up);
+        var result = app.Gameplay.UpdateGameState(context.SessionId, WorldRules.BeginResultPresentation);
+        GameTestSteps.Complete(app, result.Presentation!.Value);
+        return context;
+    }
+
+    private static async Task WaitForInputAsync(IGameplayContext context)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!context.Gameplay.ReadGameState(context.SessionId).WaitingForInput)
+        {
+            TestContext.Current.CancellationToken.ThrowIfCancellationRequested();
+            Assert.True(DateTime.UtcNow < deadline, "Result input did not start.");
+            await Task.Yield();
+        }
+    }
 
     private sealed class ResultReaction : Reaction, IGameplayReaction
     {
         public ReactionEnd ApplyControlRequest(IGameplayContext context) => GetEnd();
         public Func<IGameplayContext, ValueTask<ReactionEnd>> Show { get; init; } = _ => new(End());
-        public Func<IGameplayContext, ValueTask<ReactionEnd>> Enable { get; init; } = _ => new(End());
+        private readonly GameplayReaction actual = new();
+        public Func<IGameplayContext, ValueTask<ReactionEnd>>? Enable { get; init; }
         public int Enabled { get; private set; }
         public static ReactionEnd End(Exception? failure = null) => GetEnd(failure);
         public override void ForceResetMemoryState() { }
@@ -99,11 +148,12 @@ public sealed class ResultInteractionTests
         public ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
         {
             Enabled++;
-            return Enable(context);
+            return Enable is { } enable ? enable(context) : actual.EnableResultInputAsync(context);
         }
         public ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context) => throw new NotSupportedException();
         public ValueTask<ReactionEnd> BeginActionSelectionAsync(IGameplayContext context) => throw new NotSupportedException();
-        public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command) => throw new NotSupportedException();
+        public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command)
+            => actual.HandleCommandAsync(context, command);
         public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context) => throw new NotSupportedException();
         public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context) => throw new NotSupportedException();
     }

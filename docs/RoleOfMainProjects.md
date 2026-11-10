@@ -50,6 +50,8 @@ Port・External・Interactionは依存を含む範囲を先に置き、Aspects.G
 ウィンドウの生成・描画・閉鎖のPortとInteractionはAspects.Viewへまとめ、ViewProfileが登録します。
 入力待機とセッション終了のPort・実装はGameplay、入力配送はView、全体停止はLifetimeに置き、
 各AspectのProfileが登録します。Lifetimeは共通Context基底も扱います。
+PlayTurnが一ターン、HandleResultが結果提示からリトライ入力までを一つの相互作用として扱い、
+GameSessionSystemFlowがターン反復と結果確認を合成します。
 構成と操作は [Turn-based escape](../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ---

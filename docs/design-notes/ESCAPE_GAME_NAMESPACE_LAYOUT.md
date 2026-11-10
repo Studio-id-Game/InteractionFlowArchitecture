@@ -8,7 +8,7 @@ Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約
 | Aspects.Gameplay.Entities | WorldRules |
 | Aspects.Gameplay.ExternalPorts | IGameplayReaction、IGameInputOperation、IGameSessionReaction |
 | Aspects.Gameplay.Externals | GameplayReaction（更新結果検証を含む）、GameInputOperation、GameSessionReaction |
-| Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、HandleControlInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
+| Aspects.Gameplay.Interactions | BeginSession、PlayTurn、HandleResult、HandleControlInput、EndSession、GameplayCheckpoint（内部補助） |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
 | Aspects.View.Entities | FrameState、WindowState、PresentationClock |
 | Aspects.View.ExternalPorts | IWindowOperation、IWindowReaction、IGameInputSubmissionOperation |
@@ -38,6 +38,9 @@ Sharedは具体Aspectへ依存しない。各Aspectは自身とSharedを参照�
 具体Context3型はLifetimeContextを継承し、Lifetimeの保持・取得・参照解放を共有する。
 Context契約の所属にかかわらず、各機能は必要な最も狭いContextを受け取る。
 全体を跨ぐ実行はルートのSystemFlowが合成する。
+セッション内のターン反復と結果確認はGameSessionSystemFlow、1ターン内のOperation / Reaction接続はPlayTurn、
+結果提示からリトライまでの接続はHandleResultが担う。Interaction同士は直接実行しない。
+GameplayCheckpointはGameplay.Interactionsに置き、段階間とフロー間で継続方針を共有する。
 
 複数Aspectが利用するPortはSharedに置き、単一Aspectの機能契約と実装はそのAspectへまとめる。
 IWindowReactionとCloseWindowはViewに所属し、Open・DrawFrame・Closeを同じRaylibWindowReactionが実装する。

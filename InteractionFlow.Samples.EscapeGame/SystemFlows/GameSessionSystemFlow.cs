@@ -8,33 +8,19 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
 public sealed class GameSessionSystemFlow(
-    GameTurnSystemFlow turn,
-    PresentResult show,
-    HandleGameInput select)
-    : SystemFlow<IGameplayContext>(turn, show, select)
+    PlayTurn turn,
+    HandleResult result)
+    : SystemFlow<IGameplayContext>(turn, result)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        InteractionEnd end;
         while (context.Gameplay.ReadGameState(context.SessionId).Outcome == GameOutcome.Running)
         {
-            end = await turn.ExecuteAsync(context);
-            if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
+            var end = await turn.ExecuteAsync(context);
+            if (!await GameplayCheckpoint.WaitToContinueAsync(context, end.End))
                 return end;
         }
 
-        end = await show.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
-            return end;
-
-        // PresentResultが提示と受付開始を完了してから、リトライ入力を待ちます。
-        while (!context.Gameplay.ReadGameState(context.SessionId).RetryRequested)
-        {
-            end = await select.ExecuteAsync(context);
-            if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
-                return end;
-        }
-
-        return end;
+        return await result.ExecuteAsync(context);
     }
 }

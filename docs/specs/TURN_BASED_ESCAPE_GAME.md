@@ -184,7 +184,8 @@ Program
        ├─ GamePlaySystemFlow（Task.Runで一度起動、セッション割り当て・開始・終了・リトライ）
        │    └─ BeginSession→開始結果の確認→GameSessionSystemFlow→EndSessionを反復
        │         └─ GameSessionSystemFlow（開始済みセッションのターン反復→結果提示・入力）
-       │              └─ GameTurnSystemFlow（選択反復→プレイヤー行動→敵行動）
+       │              ├─ PlayTurn（選択反復→プレイヤー行動→敵行動）を反復
+       │              └─ HandleResult（結果提示→受付開始→リトライ入力）
        ├─ PresentFrameを反復（ゲーム側の入力・提示待ち・ポーズ中も継続）
        │    └─ フレーム結果の制御要求を受け、HandleControlInputを実行
        └─ 終了要求の適用→キャンセル→GamePlaySystemFlowの合流→CloseWindow
@@ -197,12 +198,12 @@ GamePlaySystemFlowは同時に一つだけ起動します。敵行動はター�
 ### 3.2 ターンとセッションの進行
 
 1. 初期化Reactionがセッションを公開し、初期状態の提示を要求する。ゲーム側は提示完了を待つ。
-2. 選択Interactionを繰り返し、有効な行動が確定されたらプレイヤー行動Reactionを実行する。
+2. PlayTurn Interaction内で入力Operationと選択Reactionを繰り返し、有効な行動が確定したらプレイヤー行動Reactionを実行する。
 3. プレイヤー行動Reactionが状態を一括更新し、演出提示の完了を待って終了する。
-4. SystemFlowがOutcomeを参照し、Runningなら敵行動Interactionを実行する。
+4. PlayTurnがOutcomeを参照し、Runningなら敵行動Reactionを実行する。
 5. 敵行動Reactionが状態・捕獲判定を更新し、演出提示の完了を待って終了する。
-6. Runningなら次の選択へ戻る。Won/Lostなら結果Reactionで結果画面を提示する。
-7. 結果画面はリトライまたは終了の入力まで保持する。勝敗が決まっただけでフレームループを終了しない。
+6. GameSessionSystemFlowはRunningなら次のPlayTurnへ進み、Won/LostならHandleResultへ進む。
+7. HandleResultは結果画面の提示後に受付を開き、リトライまたは終了まで入力を待つ。勝敗が決まっただけでフレームループを終了しない。
 8. リトライは旧セッション終了Reactionを経て、新しいIDと状態でやり直す。
 
 終了要求または実行障害があれば、通常の次段階へ進まず、共通の停止経路へ移ります。
@@ -217,9 +218,10 @@ WindowSystemFlowはPresentFrameが取得したポーズ・再開要求を受け�
 制御要求もセッションIDを持ち、対象の段階とセッションを適用時に再確認します。
 同じフレームでリトライ等により対象が変わっても、新しいセッションへ古いポーズを適用しません。
 
-Game/Session/GameTurnSystemFlowは、次の相互作用や段階へ進む境界で再開待機を行います。
+GamePlaySystemFlow / GameSessionSystemFlowとPlayTurn / HandleResultは、次の相互作用や段階へ進む境界で
+GameplayCheckpointを使って再開待機を行います。
 待機済み入力や提示結果の受領と、次のゲーム処理への適用も分けます。
-ただしSystemFlow側での事前確認だけでは、確認直後のポーズと競合します。
+ただし継続境界での事前確認だけでは、確認直後のポーズと競合します。
 アクセス管理の行動確定・段階更新も、Pausedかどうかの確認と一括更新を同じ同期境界で行います。
 停止により未適用となった仕事は呼び出し側が保持し、再開後に再検証して一度だけ適用します。
 
@@ -256,13 +258,9 @@ OS終了要求・終了ボタン・ゲーム側の終了選択・実行障害で
 | --- | --- | --- |
 | OpenWindow / PresentFrame / CloseWindow | ウィンドウ操作・描画・結果通知 | メインスレッドの同期フレーム処理と資源管理 |
 | BeginSession | セッション初期化Reaction | 初期状態を公開し、最初の提示完了まで |
-| SelectAction | ゲーム入力Operation→選択Reaction | 仮選択、取消、確定要求、無効操作のフィードバックまで |
-| ApplyPlayerAction | 行動Reaction | 再検証・確定・状態更新・提示完了まで |
-| ApplyEnemyAction | 敵行動Reaction | 移動・捕獲判定・状態更新・提示完了まで |
-| ShowResult | 結果Reaction | 結果段階の設定と結果画面の提示まで |
-| SelectAction（結果段階でも共用） | 結果入力Operation→応答Reaction | リトライの意図を記録するまで。終了は独立した制御経路 |
+| PlayTurn | 入力Operationと選択・行動Reaction | 選択開始、仮選択・取消・確定の反復、プレイヤー行動、必要な敵行動と提示完了まで |
+| HandleResult | 結果・受付開始Reactionと入力Operation→応答Reaction | 結果提示後に受付を開き、リトライの意図を受け取るまで。終了は独立した制御経路 |
 | HandleControlInput | 制御Reaction | 可能な段階でPaused/Active、または現在の提示の省略を適用するまで。再開待機は行わない |
-| EnableSelection / EnableResultInput | 受付開始Reaction | 必要な提示完了後、段階と受付可能性を更新するまで |
 | EndSession / RequestShutdown | 寿命終了・停止Reaction | 入力・提示の閉鎖と必要な応答まで。Task合流はSystemFlowの責務 |
 
 全Interactionは明示Reactionの終了結果で完了し、他のInteractionを直接実行しません。

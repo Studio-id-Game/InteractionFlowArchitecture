@@ -9,6 +9,7 @@ SessionProgressの廃止、Contextの追加値検証の共通化、更新結果�
 GameplayReactionの提示付き更新の共通化を実施した。
 実績はクラス1個・record struct 1個・メソッド実装4個の純減となった。
 共通化で増えた補助メソッド1個も差し引いた値である。
+これらは初回整理の実績。後続のFeedback整理・Aspect別Port分割に続き、今回はターン・結果確認をInteractionへ集約した。
 
 Interactionの一行委譲には例外・キャンセル処理の境界としての役割がある。
 これを一律に消す方法や、全段階をenumで切り替える汎用Interactionは採用しない。
@@ -48,9 +49,8 @@ Program → EscapeGameProfile → WindowSystemFlow
   ├─ フレーム: PresentFrame → 入力配送・描画 → HandleControlInput
   └─ ゲーム: GamePlaySystemFlow → BeginSession
        → GameSessionSystemFlow
-           → GameTurnSystemFlow
-               → 選択開始 → 入力反復 → プレイヤー行動 → 敵行動
-           → 結果提示 → リトライ入力
+           → PlayTurn（選択開始 → 入力反復 → プレイヤー行動 → 敵行動）を反復
+           → HandleResult（結果提示 → 受付開始 → リトライ入力）
        → EndSession → 次セッションまたは終了
   → 停止要求 → ゲーム合流 → CloseWindow
 ```
@@ -147,7 +147,7 @@ ApplyPlayerActionAsync / ApplyEnemyActionAsync / PresentResultAsync。
 GameplayReactionは通常進行と制御で並行利用され得るため、updateやcontextを可変フィールドに保存しない。
 既存のメソッドグループを使い、毎フレーム用の新規クロージャや独自スケジューラーを導入しない。
 
-## 小さな整理と見送り候補
+## 小さな整理と見送り候補（初回判断）
 
 | 対象 | 判断 |
 | --- | --- |
@@ -163,7 +163,7 @@ GameplayReactionは通常進行と制御で並行利用され得るため、upda
 | Viewの各Draw関数・座標ヘルパー | 画面の構成単位として読みやすさに寄与する。インライン化で巨大なDrawFrameにしない |
 | PresentationClock.Updateの戻り値 | 本体は未使用でもFlowTestsが使用している。戻り型変更では定義数も減らないため維持 |
 
-## 薄いInteractionを維持する理由
+## 薄いInteractionを維持する理由（初回判断・下記の追補で見直し）
 
 BeginSession / BeginActionSelection / ApplyPlayerAction / ApplyEnemyAction / HandleControlInput /
 OpenWindow / RequestShutdownは、見た目としては一行委譲である。
@@ -248,3 +248,27 @@ dotnet build benchmarks/InteractionFlow.ExecutionMeasurements/InteractionFlow.Ex
 関連: [現在の配置](./ESCAPE_GAME_NAMESPACE_LAYOUT.md)、
 [共有状態と同期契約](./ESCAPE_GAME_GAMEPLAY_RULES.md)、
 [利用設計指針](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。
+
+## 追補: ターンと結果確認の単位への集約
+
+初回の「薄いInteractionを維持する」という判断を見直した。
+Interaction基底の例外・キャンセル処理は必要だが、その境界を一つのPort呼び出しごとに設ける必要はない。
+
+- GameTurnSystemFlowとBeginActionSelection / HandleGameInput / ApplyPlayerAction / ApplyEnemyActionをPlayTurnへ集約。
+- PresentResultと結果段階でのHandleGameInputによる反復をHandleResultへ集約。
+- GameplayのInteractionは8個から5個となり、GameTurnSystemFlowも削除。合計4クラス減。
+- GameSessionSystemFlowはPlayTurnの反復とHandleResultへの遷移を担う。
+- GameFlowCheckpointはGameplay.InteractionsのGameplayCheckpointへ移し、ReactionEndを受け取る。
+  SystemFlow側はInteractionEnd.Endを渡し、Interaction内の段階境界と同じ継続方針を使う。
+- 状態更新・提示待機は既存Reaction、並行する制御経路はHandleControlInput、実行寿命と合流はSystemFlowに維持。
+
+削除した小さなInteractionを内部実行する構成にはしていない。
+エラーの診断名とキャンセル登録の単位はPlayTurn / HandleResultとなる。
+この粒度変更を踏まえ、段階境界の失敗・キャンセルで後続を実行しないことと、
+結果提示前に入力せず、無効入力後もリトライ待機を継続し、キャンセル時に登録と入力待機を解除することを検証する。
+
+集約後の全体ビルドは警告・エラー0件。追加8ケースを含むEscapeGame123件と他470件、全593テストが成功した。
+実画面でターン進行、ポーズ・再開、敗北結果、リトライ、入力待ちからのExit終了を確認した。
+勝利解法や演出中のキャンセル・省略は自動テストで確認し、今回の実画面では再実施していない。
+計測プロジェクトのReleaseビルド・実行も成功し、描画なし直接フレーム0B / PresentFrame232Bを維持した。
+この計測は入力待ち相当のフレームであり、PlayTurn / HandleResult自体の割り当てや時間は測定していない。

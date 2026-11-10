@@ -4,12 +4,12 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 
-// フロー間の共通方針。状態更新の原子性はAccess側の再確認が担います。
-internal static class GameFlowCheckpoint
+// 相互作用内の段階とフロー間で共有する継続方針。更新の原子性はAccess側が担います。
+internal static class GameplayCheckpoint
 {
-    internal static async ValueTask<bool> WaitToContinueAsync(IGameplayContext context, InteractionEnd end)
+    internal static async ValueTask<bool> WaitToContinueAsync(IGameplayContext context, ReactionEnd end)
     {
         if (end.HasException || context.Gameplay.ReadGameState(context.SessionId).Mode == ExecutionMode.Stopping)
             return false;

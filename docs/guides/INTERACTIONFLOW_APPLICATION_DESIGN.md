@@ -124,7 +124,7 @@ SystemFlow基底が自動で並行化・キャンセル伝播・全実行の終�
 | External | Portの実装と実行環境への接続 |
 | Entities | 外部環境に依存しない値、状態、計算、遷移規則 |
 
-Programに入力・描画・ゲーム進行を残さず、SystemFlowで表現できる流れはそこで記述します。
+Programに入力・描画・ゲーム進行を残さず、複数の相互作用を跨ぐ進行はSystemFlowへ記述します。
 Interactionから別のInteractionを直接実行せず、合成はSystemFlowで行います。
 SystemFlowも長い一つの手続きにせず、起動・反復・停止・終了など意味の単位でprivate関数へ分けます。
 
@@ -133,6 +133,9 @@ SystemFlowも長い一つの手続きにせず、起動・反復・停止・終�
 SystemFlowの各段階について、一回の相互作用で達成する目的と、その前後の状態を決めます。
 操作受付の条件、行動確定の時点、Operationから明示Reactionまでの実行順序を整理します。
 状態遷移の不変条件に沿って、関連する更新を一つの処理として扱う範囲を決めます。
+一つの目的を達成するためのOperation / Reactionの反復は、Interaction内へまとめられます。
+EscapeGameでは1ターンの選択・確定・行動・提示をPlayTurnへ、結果提示とリトライ入力をHandleResultへ集約し、
+SystemFlowはターン反復と実行寿命の合成を担当します。Port呼び出しごとにInteraction型を増やす必要はありません。
 
 Reactionの完了を状態更新・描画・演出のどこまでとするか、キャンセル時に何を保持するかも定義します。
 Interactionの終了結果を、SystemFlowが次の経路を選ぶ材料として扱います。

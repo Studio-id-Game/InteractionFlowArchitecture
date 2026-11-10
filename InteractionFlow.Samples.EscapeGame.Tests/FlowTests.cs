@@ -43,6 +43,7 @@ public sealed class FlowTests
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
         Assert.True(canceledAtBoundary);
+        Assert.Equal(0, fixture.Game.SelectionStarts);
         Assert.False(end.HasException);
         Assert.True(fixture.Session.Ended);
         Assert.NotNull(fixture.Game.Cancellation);
@@ -72,6 +73,7 @@ public sealed class FlowTests
         Assert.True(end.HasException);
         Assert.True(Contains(end.Exception, failure));
         Assert.True(fixture.Session.Ended);
+        Assert.Equal(0, fixture.Game.SelectionStarts);
         Assert.Equal("close", fixture.Window.Events[^1]);
         Assert.NotNull(fixture.Game.Cancellation);
         Assert.False(fixture.Game.Cancellation.HasTask);
@@ -512,6 +514,7 @@ public sealed class FlowTests
         public CancellationObject? Cancellation { get; private set; }
         public bool CancellationObserved => cancellationObserved;
         public Action<IGameplayContext>? AfterBegin { get; set; }
+        public int SelectionStarts { get; private set; }
         public override void ForceResetMemoryState() { }
         public async ValueTask<ReactionEnd> BeginSessionAsync(IGameplayContext context)
         {
@@ -531,7 +534,10 @@ public sealed class FlowTests
             }
         }
         public ValueTask<ReactionEnd> BeginActionSelectionAsync(IGameplayContext context)
-            => inner.BeginActionSelectionAsync(context);
+        {
+            SelectionStarts++;
+            return inner.BeginActionSelectionAsync(context);
+        }
         public ValueTask<ReactionEnd> HandleCommandAsync(IGameplayContext context, GameCommand command)
             => inner.HandleCommandAsync(context, command);
         public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)

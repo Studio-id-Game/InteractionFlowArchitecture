@@ -52,7 +52,8 @@ SystemFlows・Buildersと共通HandlerはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
-SessionLoopSystemFlowはセッションを繰り返し、SessionSystemFlowとTurnSystemFlowが状態に応じてInteractionを合成します。
+SessionLoopSystemFlowはセッションの割り当て・開始・終了とリトライを管理します。
+SessionSystemFlowは開始済みセッションのターン反復・結果提示・リトライ入力待機を担当し、TurnSystemFlowが一ターンを合成します。
 ゲーム側は演出提示の完了を非同期に待ちますが、フレーム側はその間も描画・制御入力を継続します。
 
 Entitiesは描画環境から独立した状態と安全なアクセス管理を提供します。

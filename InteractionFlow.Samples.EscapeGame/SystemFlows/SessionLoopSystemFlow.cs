@@ -10,8 +10,8 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class SessionLoopSystemFlow(SessionSystemFlow sessionFlow, EndSession endSession)
-    : SystemFlow<IGameplayContext>(sessionFlow, endSession)
+public sealed class SessionLoopSystemFlow(BeginSession begin, SessionSystemFlow sessionFlow, EndSession endSession)
+    : SystemFlow<IGameplayContext>(begin, sessionFlow, endSession)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
@@ -36,7 +36,9 @@ public sealed class SessionLoopSystemFlow(SessionSystemFlow sessionFlow, EndSess
             var retry = false;
             try
             {
-                var end = await sessionFlow.ExecuteAsync(session);
+                var end = await begin.ExecuteAsync(session);
+                if (await GameFlowCheckpoint.WaitToContinueAsync(session, end))
+                    end = await sessionFlow.ExecuteAsync(session);
                 outcome = end.Result;
                 retry = !end.HasException && session.Gameplay.GetSessionProgress(session.SessionId).RetryRequested;
             }

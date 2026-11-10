@@ -8,18 +8,14 @@ using System.Threading.Tasks;
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
 public sealed class SessionSystemFlow(
-    BeginSession begin,
     TurnSystemFlow turn,
     PresentResult show,
     HandleGameInput select)
-    : SystemFlow<IGameplayContext>(begin, turn, show, select)
+    : SystemFlow<IGameplayContext>(turn, show, select)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        var end = await begin.ExecuteAsync(context);
-        if (!await GameFlowCheckpoint.WaitToContinueAsync(context, end))
-            return end;
-
+        InteractionEnd end;
         while (context.Gameplay.GetSessionProgress(context.SessionId).Outcome == GameOutcome.Running)
         {
             end = await turn.ExecuteAsync(context);

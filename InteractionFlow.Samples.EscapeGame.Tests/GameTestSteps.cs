@@ -13,7 +13,10 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 internal static class GameTestSteps
 {
     internal static GameplayContext CreateSessionContext(IGameplayContext app)
-        => new(app, app.Gameplay.AllocateSession(), ContextInheritance.Cancellation);
+    {
+        Assert.True(app.Gameplay.TryAllocateSession(out var id));
+        return new(app, id, ContextInheritance.Cancellation);
+    }
 
     internal static GameplayContext Ready(IApplicationContext app)
     {

@@ -68,7 +68,8 @@ public sealed class ContextTests
         app.With(new LocalValue("application"));
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
         game.With(new LocalValue("game"));
-        using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
+        Assert.True(game.Gameplay.TryAllocateSession(out var id));
+        using var session = new GameplayContext(game, id, ContextInheritance.All);
         using var frames = new ViewContext(app, ContextInheritance.None);
         var frame = new FrameState();
         var window = new WindowState();
@@ -147,7 +148,8 @@ public sealed class ContextTests
     {
         using var app = new EscapeApplicationContext();
         using var game = new GameplayContext(app, ContextInheritance.Cancellation);
-        using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
+        Assert.True(game.Gameplay.TryAllocateSession(out var id));
+        using var session = new GameplayContext(game, id, ContextInheritance.All);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
         Assert.Equal(0, app.View.ReadGameState().State.SessionId);
@@ -219,7 +221,7 @@ public sealed class ContextTests
         var lifetime = game.Lifetime;
         if (disposeSource) app.Dispose();
         else game.Dispose();
-        var id = gameplay.AllocateSession();
+        Assert.True(gameplay.TryAllocateSession(out var id));
         Assert.Equal(GameUpdateStatus.Applied, gameplay.BeginSession(id, WorldRules.BeginSession).Status);
         Assert.Equal(id, view.View.ReadGameState().State.SessionId);
         Assert.False(lifetime.ShutdownRequested);

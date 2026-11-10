@@ -1,6 +1,7 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
@@ -29,7 +30,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
         var change = context.Gameplay.BeginSession(context.SessionId, WorldRules.BeginSession);
         var failure = ValidatePresentation(change, nameof(BeginSessionAsync));
-        if (failure is not null || change.Status == GameUpdateStatus.Stopped)
+        if (!failure.Try(out _) || change.Status == GameUpdateStatus.Stopped)
             return GetEnd(failure);
 
         return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -97,23 +98,20 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     }
 
     // フローの前提だけを検証し、状態更新・待機・通知は行いません。
-    internal static Exception? ValidateUpdate(GameUpdateStatus status, string operation, bool allowRejected = false)
+    internal static Result ValidateUpdate(GameUpdateStatus status, string operation, bool allowRejected = false)
         => status is GameUpdateStatus.Applied or GameUpdateStatus.Stopped
             || allowRejected && status == GameUpdateStatus.Rejected
-            ? null
+            ? Result.Success
             : new InvalidOperationException($"{operation}: update returned {status}; the flow precondition was not met.");
 
-    internal static Exception? ValidatePresentation(GameUpdateResult change, string operation)
-    {
-        var failure = ValidateUpdate(change.Status, operation);
-        if (failure is not null)
-            return failure;
+    internal static Result ValidatePresentation(GameUpdateResult change, string operation)
+        => ValidateUpdate(change.Status, operation).Then(() =>
+        {
+            if (change.Status == GameUpdateStatus.Applied && change.Presentation is null)
+                return new InvalidOperationException($"{operation}: an applied update requires a presentation key.");
 
-        if (change.Status == GameUpdateStatus.Applied && change.Presentation is null)
-            return new InvalidOperationException($"{operation}: an applied update requires a presentation key.");
-
-        return null;
-    }
+            return Result.Success;
+        });
 
     private static async ValueTask<ReactionEnd> UpdateAndPresentAsync(
         IGameplayContext context, Func<GameState, ExecutionMode, PresentationKey?, bool, GameInfo<GameChangeInfo>> update,
@@ -128,7 +126,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
                 continue;
 
             var failure = ValidatePresentation(change, operation);
-            if (failure is not null || change.Status == GameUpdateStatus.Stopped)
+            if (!failure.Try(out _) || change.Status == GameUpdateStatus.Stopped)
                 return GetEnd(failure);
 
             return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);

@@ -154,6 +154,14 @@ PlayTurnは選択開始・選択入力の反復・プレイヤー行動・必要
 HandleResultは結果提示・受付開始・リトライ入力の反復を接続する。
 GameSessionSystemFlowはターンを反復し、勝敗確定後に結果確認へ進む。
 段階間の失敗・停止・再開確認はGameplayCheckpointが担い、ReactionEndを受け取る。
+PlayTurn / HandleResultは各Reaction後の継続判定と早期returnを使う。
+Resultチェーン化は記述量と終了トークン保持の負担に見合う利点がなく撤回した。
+失敗・正常停止では元のReactionEndを直接返す。
+反復の境界を保ち、送出例外とTaskキャンセルは既存のInteraction基底へ伝播する。
+セッション確保はTryAllocateSessionで停止との競合を同じlock内で判定し、停止後はfalseとID 0を返す。
+実行所有者であるSystemFlowは、返却失敗とフローまで伝播した例外を終了結果へ保持し、後始末を試みる。
+SystemFlowのResultチェーン化も撤回し、実行・停止・終了の分岐とtry/catch/finallyを維持する。
+WindowSystemFlowはFailureCollectorで失敗を保持し、停止・合流・閉鎖を呼び出し元スレッドで進める。
 Interactionは別のInteractionを実行せず、ゲーム状態の更新は引き続きReaction / Operationが行う。
 例外・キャンセルの処理と実行登録は1ターンまたは結果確認の単位となり、個々のPort呼び出しごとには行わない。
 入力・提示待機の同期契約、ポーズと省略の独立した制御経路、終了時の停止・合流の順序は維持する。

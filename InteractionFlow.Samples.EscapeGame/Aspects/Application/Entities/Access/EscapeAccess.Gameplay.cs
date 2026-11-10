@@ -9,14 +9,16 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access
 
 internal sealed partial class EscapeAccess
 {
-    public long AllocateSession()
+    public bool TryAllocateSession(out long sessionId)
     {
         lock (gate)
         {
-            if (shutdown) throw new InvalidOperationException("The application is stopping.");
+            sessionId = 0;
+            if (shutdown) return false;
             var id = ++nextSession;
             sessions.Add(id, new SessionRuntime(id));
-            return id;
+            sessionId = id;
+            return true;
         }
     }
 

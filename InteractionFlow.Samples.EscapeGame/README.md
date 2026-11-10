@@ -118,6 +118,13 @@ PlayTurnは選択開始・入力反復・プレイヤー行動・敵行動の提
 HandleResultは結果提示・受付開始・リトライ入力までを扱います。
 段階間とフロー間の停止・再開確認はGameplay内のGameplayCheckpointで共有します。
 
+GamePlaySystemFlowは各実行の終了結果を読み、明示的な分岐でセッション進行・終了・リトライを判断します。
+PlayTurn / HandleResultは各Reaction後に継続を明示的に判定し、失敗・正常停止ではそのReactionEndを直接返します。
+SystemFlowと両InteractionのResultチェーン化は、記述量と終了処理の負担に見合う利点が得られず撤回しました。
+WindowSystemFlowはtry/catch/finallyとFailureCollectorで停止・合流・閉鎖と失敗の保持を調整します。
+OpenからCloseまで呼び出し元スレッドを維持します。
+局所検証と適用判断の詳細は[Result APIの利用調査と実装結果](../docs/design-notes/ESCAPE_GAME_RESULT_API_REVIEW.md)を参照してください。
+
 ポーズ・省略要求はPresentFrameが入力として送り、GameplayのHandleControlInputが解釈します。
 WindowSystemFlowがフレームごとにこの独立した制御経路を実行するため、
 通常進行が入力・提示・再開を待っていても制御要求を処理できます。追加の背景Taskは作りません。
@@ -140,7 +147,8 @@ CleanupInfoで先行結果と終了種別を渡し、終了処理自身の失敗
 
 ## 検証
 
-直近のテスト点検ではEscapeGame135件と他470件の全605テストを確認しています。
+今回の見直しではEscapeGame151件と他470件の全621テストを確認しています。
+開始・結果提示・入力受付の失敗Resultについて、後続の打ち切りと元の失敗結果の保持を確認しています。
 範囲・不足への対応・維持した重複の理由は[テスト点検](../docs/design-notes/ESCAPE_GAME_TEST_COVERAGE.md)を参照してください。
 ゲームの解法・勝敗・リトライ、ポーズ・キャンセル・終了の競合、古い提示への通知に加え、
 不変Snapshot、並行更新の取りこぼし防止、失敗した更新の非公開、Viewでの表示変換・時計を検証します。

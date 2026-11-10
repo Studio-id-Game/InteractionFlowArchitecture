@@ -96,7 +96,7 @@ public sealed class SharedGameStateTests
     public void RejectedInitializationDoesNotPublishAndCanBeRetried()
     {
         using var app = new EscapeApplicationContext();
-        var id = app.Gameplay.AllocateSession();
+        Assert.True(app.Gameplay.TryAllocateSession(out var id));
         var before = app.View.ReadGameState();
 
         var rejected = app.Gameplay.BeginSession(id, state => new(state with { Turn = 123 }, new(false)));

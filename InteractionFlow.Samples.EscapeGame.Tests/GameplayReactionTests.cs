@@ -198,21 +198,24 @@ public sealed class GameplayReactionTests
     [Fact]
     public void AppliedPresentationRequiresAKeyWhileStoppedDoesNot()
     {
-        var missing = Assert.IsType<InvalidOperationException>(
-            GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Applied), "apply"));
+        Assert.False(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Applied), "apply").Try(out var failure));
+        var missing = Assert.IsType<InvalidOperationException>(failure!.InnerException);
         Assert.Contains("presentation key", missing.Message);
-        Assert.Null(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop"));
-        Assert.Null(GameplayReaction.ValidatePresentation(
-            new(GameUpdateStatus.Applied, new PresentationKey(1, 1, 1)), "apply"));
+        Assert.True(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop").Try(out _));
+        Assert.True(GameplayReaction.ValidatePresentation(
+            new(GameUpdateStatus.Applied, new PresentationKey(1, 1, 1)), "apply").Try(out _));
     }
 
     [Fact]
     public void UnexpectedMutationStatusDoesNotBecomeSuccess()
     {
         var unknown = (GameUpdateStatus)123;
-        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidateUpdate(unknown, "select", allowRejected: true));
-        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidateUpdate(unknown, "advance"));
-        Assert.IsType<InvalidOperationException>(GameplayReaction.ValidatePresentation(new(unknown), "present"));
+        Assert.False(GameplayReaction.ValidateUpdate(unknown, "select", allowRejected: true).Try(out var select));
+        Assert.False(GameplayReaction.ValidateUpdate(unknown, "advance").Try(out var advance));
+        Assert.False(GameplayReaction.ValidatePresentation(new(unknown), "present").Try(out var present));
+        Assert.IsType<InvalidOperationException>(select!.InnerException);
+        Assert.IsType<InvalidOperationException>(advance!.InnerException);
+        Assert.IsType<InvalidOperationException>(present!.InnerException);
     }
 
     private static async Task<GameEvent> WaitForPresentationStartAsync(EscapeApplicationContext context)

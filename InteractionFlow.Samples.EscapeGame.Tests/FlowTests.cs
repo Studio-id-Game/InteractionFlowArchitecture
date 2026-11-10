@@ -2,6 +2,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
@@ -32,6 +33,98 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 
 public sealed class FlowTests
 {
+    [Theory]
+    [InlineData("open", false)]
+    [InlineData("open", true)]
+    [InlineData("frame", false)]
+    [InlineData("frame", true)]
+    [InlineData("begin", false)]
+    [InlineData("begin", true)]
+    public async Task FlowExceptionBoundaryStillStopsJoinsAndCloses(string stage, bool failClose)
+    {
+        using var fixture = new Fixture();
+        fixture.Exceptions.ThrowException = true;
+        var failure = new InvalidOperationException("execution failed");
+        var closing = new FormatException("close failed");
+        var thread = Environment.CurrentManagedThreadId;
+        if (stage == "open") fixture.Window.OnOpen = _ => throw failure;
+        else if (stage == "frame") fixture.Input.PollFrame = _ => throw failure;
+        else fixture.Game.AfterBegin = _ => throw failure;
+        if (failClose) fixture.Window.CloseFailure = closing;
+
+        var execution = fixture.Flow.ExecuteAsync(fixture.Context);
+        if (failClose)
+        {
+            var error = await Assert.ThrowsAsync<AggregateException>(() => execution);
+            Assert.True(Contains(error, failure));
+            Assert.True(Contains(error, closing));
+        }
+        else
+        {
+            var end = await execution;
+            Assert.True(Contains(end.Exception, failure));
+        }
+
+        Assert.True(fixture.Context.Lifetime.ShutdownRequested);
+        Assert.Equal(stage != "open", fixture.Session.Ended);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.All(fixture.Window.Threads, actual => Assert.Equal(thread, actual));
+        Assert.False(fixture.Context.Cancellation.HasTask);
+        if (fixture.Game.Cancellation is { } cancellation)
+            Assert.False(cancellation.HasTask);
+    }
+
+    [Fact]
+    public async Task SessionCloseExceptionPreservesReturnedFailureThroughWindowCleanup()
+    {
+        using var fixture = new Fixture();
+        fixture.Exceptions.ThrowException = true;
+        var failure = new InvalidOperationException("begin failed");
+        var closing = new FormatException("session close failed");
+        fixture.Game.BeginFailure = TrackingGameplayReaction.Failed(failure);
+        fixture.Session.EndFailure = closing;
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.True(Contains(end.Exception, failure));
+        Assert.True(Contains(end.Exception, closing));
+        Assert.True(fixture.Session.Ended);
+        Assert.Equal(0, fixture.Game.SelectionStarts);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        Assert.False(fixture.Game.Cancellation!.HasTask);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReturnedStartupFailureSkipsGameplayAndSurvivesCleanup(bool failBegin)
+    {
+        using var fixture = new Fixture();
+        var failed = TrackingGameplayReaction.Failed(new InvalidOperationException("startup failed"));
+        if (failBegin) fixture.Game.BeginFailure = failed;
+        else fixture.Window.OpenFailure = failed;
+
+        var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+        Assert.False(failed.Result.Try(out var original));
+        Assert.False(end.Result.Try(out var actual));
+        Assert.Same(original, actual);
+        Assert.Equal(0, fixture.Game.SelectionStarts);
+        Assert.Equal(failBegin, fixture.Session.Ended);
+        Assert.True(fixture.Context.Lifetime.ShutdownRequested);
+        Assert.Equal("close", fixture.Window.Events[^1]);
+        if (failBegin)
+        {
+            Assert.False(fixture.Session.PreviousResult.Try(out var beforeCleanup));
+            Assert.Same(original, beforeCleanup);
+        }
+        else
+        {
+            Assert.Null(fixture.Game.Cancellation);
+            Assert.Equal(0, fixture.Window.DrawCount);
+        }
+    }
+
     [Theory]
     [InlineData("selection", 0)]
     [InlineData("input", 0)]
@@ -490,6 +583,7 @@ public sealed class FlowTests
         public HeadlessWindowReaction Window { get; }
         public TrackingGameplayReaction Game { get; }
         public TrackingGameSessionReaction Session { get; }
+        public GameExceptionHandling Exceptions { get; }
 
         public Fixture(Exception? stopFailure = null)
         {
@@ -507,6 +601,7 @@ public sealed class FlowTests
             Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
             Game = Assert.IsType<TrackingGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
             Session = Assert.IsType<TrackingGameSessionReaction>(scope.GetRequiredService<IGameSessionReaction>());
+            Exceptions = Assert.IsType<GameExceptionHandling>(scope.GetRequiredService<IExceptionPort<Exception>>());
             Assert.IsType<TrackingShutdownReaction>(scope.GetRequiredService<IShutdownReaction>()).Failure = stopFailure;
             Flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         }
@@ -551,6 +646,7 @@ public sealed class FlowTests
         public int DrawCount { get; private set; }
         public bool CompletePresentations { get; set; } = true;
         public Exception? CloseFailure { get; set; }
+        public ReactionEnd? OpenFailure { get; set; }
         public Action<IViewContext>? OnOpen { get; set; }
         public Action? BeforeClose { get; set; }
         public override void ForceResetMemoryState() { }
@@ -558,7 +654,7 @@ public sealed class FlowTests
         {
             Record("open");
             OnOpen?.Invoke(context);
-            return GetEnd();
+            return OpenFailure ?? GetEnd();
         }
         public ReactionEnd DrawFrame(IViewContext context)
         {
@@ -592,11 +688,16 @@ public sealed class FlowTests
     public sealed class TrackingGameSessionReaction : Reaction, IGameSessionReaction
     {
         public bool Ended { get; private set; }
+        public Exception? EndFailure { get; set; }
+        public Result PreviousResult { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd EndSession(IGameplayContext context, Result previous)
         {
+            PreviousResult = previous;
             context.Gameplay.EndSession(context.SessionId);
             Ended = true;
+            if (EndFailure is { } failure)
+                throw failure;
             return GetEnd(previous);
         }
     }
@@ -627,6 +728,7 @@ public sealed class FlowTests
         public CancellationObject? Cancellation { get; private set; }
         public bool CancellationObserved => cancellationObserved;
         public Action<IGameplayContext>? AfterBegin { get; set; }
+        public ReactionEnd? BeginFailure { get; set; }
         public Func<string, IGameplayContext, ReactionEnd, ReactionEnd>? AfterStep { get; set; }
         public static ReactionEnd Failed(Exception error) => GetEnd(error);
         public int SelectionStarts { get; private set; }
@@ -636,6 +738,8 @@ public sealed class FlowTests
             Assert.False(context.TryGet<IViewAccess>(out _));
             Assert.False(context.TryGet<string>(out _));
             Cancellation = context.Cancellation;
+            if (BeginFailure is { } failed)
+                return failed;
             try
             {
                 var end = await inner.BeginSessionAsync(context);

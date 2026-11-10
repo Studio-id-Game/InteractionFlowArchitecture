@@ -10,9 +10,9 @@ public interface IGameplayAccess
 {
     /// <summary>
     /// 未公開のセッションを確保し、そのセッションを識別するIDを返します。
-    /// 初期化と公開はBeginSessionで行い、アプリ全体の停止後は新しいセッションを確保できません。
+    /// 初期化と公開はBeginSessionで行い、アプリ全体の停止後はfalseとID 0を返します。
     /// </summary>
-    long AllocateSession();
+    bool TryAllocateSession(out long sessionId);
 
     /// <summary>
     /// 初期化関数が操作の成立可否と次状態を返し、Info.Acceptedがtrueの場合だけ状態を反映して公開します。

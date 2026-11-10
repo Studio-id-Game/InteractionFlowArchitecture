@@ -27,7 +27,9 @@ internal static class EscapeFrameMeasurements
     internal static void Run()
     {
         using var root = new AC.EscapeApplicationContext();
-        using var session = new GameplayContexts.GameplayContext(root, root.Gameplay.AllocateSession(), ContextInheritance.Cancellation);
+        if (!root.Gameplay.TryAllocateSession(out var id))
+            throw new InvalidOperationException("The measurement requires an active application.");
+        using var session = new GameplayContexts.GameplayContext(root, id, ContextInheritance.Cancellation);
         var initial = session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession).Presentation!.Value;
         if (!root.View.TryCompletePresentation(initial)
             || session.Gameplay.UpdateGameState(session.SessionId,

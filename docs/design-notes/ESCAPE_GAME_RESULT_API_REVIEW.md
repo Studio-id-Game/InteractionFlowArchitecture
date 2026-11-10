@@ -1,9 +1,114 @@
 # EscapeGameのResult API利用調査と改善案
 
 確認日: 2026-11-11。対象は現在の作業ツリーのEscapeGameと既存テスト。
-この文書は調査と提案であり、製品コード・Port契約・テストは変更していない。
+当初の調査・提案と、その後の実装結果を記録する。
 
-## 結論
+## 実装結果
+
+2026-11-11、以下の変更を適用した。後続の「現状」「改善案」は変更前の調査と設計判断の記録であり、
+案1・4は実装済み。案2・3のフローのチェーン化は試行後に撤回した。案5は既存の例外処理方針の確認を記録した。
+
+| 案 | 適用した内容 |
+| --- | --- |
+| 1: 局所検証 | ValidateUpdate / ValidatePresentationをResult返却にし、提示キー検証をThenで接続した。 |
+| 2: SystemFlow | 部分的な連結と実行境界・終了処理のチェーン化を試行したが不採用。変更前の分岐とtry/catch/finallyへ戻した。GamePlaySystemFlowのTryAllocateSessionへの対応だけは維持する。 |
+| 3: Interaction | ContinueAfterAsyncとResult<ReactionEnd>のチェーン化を試行したが不採用。PlayTurn / HandleResultは変更前の継続判定と早期returnへ戻した。 |
+| 4: セッション確保 | AllocateSessionをTryAllocateSession(out long sessionId)へ置き換えた。停止後はfalseとID 0を返し、GamePlaySystemFlowの例外による正常停止判定を除いた。テストと計測用の呼び出し側も更新した。 |
+| 5: 例外境界 | フロー所有者が送出例外を最終Resultへ集約する既存の方針を確認し、この文書へ記録した。例外境界の再構成は撤回した。 |
+
+案5の境界は、通常のResult連結とは別の実行所有責任である。
+Interaction内の送出例外は既存のException/Cancellation Portが扱い、そこを越えてフローへ伝播した例外は、
+実行所有者が停止・合流・終了を試みたうえで最終結果に含める。
+Then/Resolveに例外捕捉を追加せず、raylibのExternalに包括catchを追加する変更も行っていない。
+GameSessionSystemFlow、PresentFrame、単一Reactionへ委譲するInteraction、Core/StandardのAPIは維持した。
+
+失敗経路の回帰テストを6ケース追加した。
+Open/Beginの失敗Resultが後続を止め、元のResultExceptionを終了処理まで保持することを確認する。
+結果提示/入力受付では、通常例外とOperationCanceledExceptionを格納した失敗Resultの両方について、
+元のReactionEndを返し、入力を読まず、送出例外・Taskキャンセルの処理へ入らないことを確認する。
+既存の停止後確保テストと検証補助のテストは新契約に更新した。
+
+## SystemFlowの最終判断
+
+SystemFlowのResultチェーン化も撤回した。今回の具体案では、正常停止・再開待機・後始末・
+実行の所有・描画スレッドの制約を扱う変換と補助処理が増え、利点が十分に得られなかったためである。
+WindowSystemFlowはHEADの実装へ戻し、GamePlaySystemFlowもセッション確保のTryAllocateSession対応以外は戻した。
+GameplayReactionの局所検証のResult化、TryAllocateSession、意味のある回帰テストは維持する。
+今回の検討はResultチェーンを増やすこと自体を目標にせず、局所的な失敗伝播が簡潔になる箇所で使う判断とした。
+
+「失敗しても後始末を続ける」こと自体がチェーン化を妨げるわけではない。
+ThenErrorで先行失敗をFailureCollectorへ保持し、進行用の成功Resultを返してからThenで後始末へ進み、
+最後に記録した失敗を含めて結果を確定する構成も可能である。
+この案を十分検討せず、終了処理はResolveでなければならないと判断した点は訂正する。
+送出例外の捕捉はThenErrorの機能ではなく、別の明示的な境界として必要になる。
+現在の復元判断は、試行した具体案の不採用であり、Result APIの表現能力の限界を結論するものではない。
+
+## SystemFlowの実行境界と終了処理の再整理（不採用の試行記録）
+
+GamePlaySystemFlowは実行本体のtry/catchをRunSessionAsyncへ集約した。
+Begin→SessionをThenAsyncで連結し、成功時のリトライ意図をResult<bool>として返す。
+自分自身への要求済みキャンセルは成功値false、それ以外の送出例外は失敗Resultにする。
+本体はその成功・失敗をResolveAsyncでEndSessionAsyncへ接続する。
+終了結果とリトライ意図をタプルで受け取り、終了失敗・終了要求がなければ次のセッションへ進む。
+EndSessionAsyncの追加失敗は先行失敗を保持して再送出し、終了トークンは終了Reactionのものを使う。
+
+WindowSystemFlowはRunWindowでOpen→ゲーム起動→フレーム反復をThenで接続し、
+送出例外もこの実行境界でResultへ確定する。
+起動済みTaskは、フレームが例外終了した場合もfinallyで呼び出し元へ渡す。
+本体は二回の同期Resolveで、成功・失敗にかかわらずStopAndJoinGameplay→CloseWindowへ接続する。
+StopAndJoinGameplayは先行Resultに停止・キャンセル・合流の失敗を集約して返す。
+ここをThenへ変更すると先行失敗時に後始末が省略されるため、両経路を解決するResolveを使う。
+OpenからCloseまで非同期チェーンを使わず、呼び出し元スレッドを維持する。
+
+Result API自体は例外を捕捉しない。実行所有者の捕捉、後始末の継続と失敗集約、
+最終終了処理の失敗の再送出は、各privateメソッドの明示的な境界に残す。
+失敗Resultの回復やThrowIfErrorによる例外化は追加しない。
+Windowの送出例外は停止処理より前にResult化されるため、複合失敗のラッパー階層は従来と異なる場合がある。
+先行ResultExceptionと原因例外の参照を保持し、集約をflattenせず、実行→停止→合流→閉鎖の順序で保持する。
+
+例外Portが再送出する構成で、Open・フレーム・Beginの各例外とCloseの追加例外の組み合わせを6ケース検証した。
+さらにBeginの返却失敗とEndSessionの送出例外が、ウィンドウ閉鎖まで保持されるケースを追加した。
+
+## Interactionの最終判断
+
+PlayTurn / HandleResultのResultチェーン化は撤回した。
+終了トークンの保持、成功Resultである正常停止の別判定、Resultとの相互変換が必要になり、
+元の継続判定と早期returnに比べて記述量と状態管理の負担が増えたためである。
+両ソースは今回の変更前へ戻し、GameplayCheckpoint.WaitToContinueAsyncによる明示的な判定を維持する。
+ContinueAfterAsyncは追加しない。失敗伝播・終了結果保持・正常停止を確認する回帰テストは維持する。
+GameplayReactionの局所検証、TryAllocateSession、既存の例外境界の説明は維持する。SystemFlowの連結も最終的に撤回した。
+
+## Interactionの再検討と再修正（不採用の試行記録）
+
+初回のContinueAfterAsyncは、Result.ResolveAsyncで条件分岐を包む構造だった。
+次段階がResultを返さず、Interaction本体からResultの接続も読み取れないため、これを削除した。
+HandleResultはさらに、途中でReactionEndへ戻す二重のチェーンを一本化した。
+以下は撤回前の構成であり、現在のHandleResultには適用していない。
+提示結果をResult<ReactionEnd>へ変換し、受付開始とリトライ待機を二つのThenAsyncで接続する。
+最後のReactionEndの保持とResolveは一箇所にまとめ、EnableInputAndWaitForRetryAsyncとWaitForRetryAsyncは削除した。
+
+`end.Result.Then(() => end.AsResult())`は、成功時だけ終了トークンを値へ変換する。
+概念上は値なしResultのMapに相当するが、そのオーバーロードは現在のCoreにないため既存のThenを使う。
+戻り値はResult<ReactionEnd>となり、失敗は外側のResultで伝播してThenAsyncの後続を抑止する。
+ReactionEndを無条件にAsResultで包む方法は使わない。
+
+失敗Resultは成功値を持たないので、失敗を返した最後のReactionEndをローカル変数endへ保持する。
+最後のResolveは成功時の終了トークン、または保持していた失敗時の終了トークンを返す。
+ThenAsyncの途中で失敗を成功へ回復せず、終了時の取り出しだけをResolveで行う。
+返却失敗、送出例外、Taskキャンセルの区別と元の終了トークンの同一性を保つ。
+
+正常停止は成功なので、ThenAsync内のチェックポイントで判定してその終了トークンを返す。
+PlayTurnは選択開始→選択・行動と、プレイヤー行動→敵行動の二つの接続を持つ。
+HandleResultは提示後の継続判断をcanContinueに保持し、正常停止では受付を開かず、
+次のThenAsyncでもチェックポイントや入力待機を実行せず終了する。
+通常の失敗はResultが後続コールバックを抑止する。正常停止のために失敗Resultを作らない。
+入力反復はwhileを保ち、再開待機やチェックポイントの回数・位置を増やさない。
+
+この構成は終了トークン保持とResult<ReactionEnd>への変換が必要なので、元の早期returnより短くはない。
+Resultチェーンの失敗伝播を直接利用する例として採用し、新しいCore APIや汎用の段階接続APIは追加しない。
+GameplayCheckpointは停止・再開判断だけを担当する。
+
+## 調査時の結論
 
 成功・失敗の伝播と終了結果の集約にはResultが使われている。
 一方、`Then` / `Map` / `Resolve`などによる局所処理の連結は使われていない。
@@ -135,7 +240,9 @@ SystemFlowのResult利用は、上記二つの区間から導入する。
 Beginが失敗Resultを返した場合にSessionを実行せず、EndSessionへその失敗を渡すケースを確認する。
 既存テストに同じ契約の直接検証があれば重複追加は避ける。
 
-## 改善案3: Interactionの段階接続にResultを使う（優先）
+## 改善案3: Interactionの段階接続にResultを使う（旧案）
+
+この節は初回の設計記録。ContinueAfterAsyncの案は上記「Interactionの再検討と再修正」で置き換えた。
 
 ### 接続方法: ResolveAsyncで元のReactionEndを保持する
 
@@ -303,7 +410,7 @@ Result APIの原則は「Resultを返す委譲先の例外を呼び出し側で�
   局所的な失敗値の要件がないままResult<GameCommand>へ変更せず、Taskキャンセルとの区別を保つ。
 - raylibのOpenからCloseまでを呼び出し元スレッドで完了する同期フレームループを保つ。
 
-## 検証結果と進め方
+## 調査時の検証結果
 
 既存のEscapeGameテストを次のコマンドで実行し、135件成功、失敗・スキップ0件を確認した。
 依存プロジェクトを含む対象テストのビルドも成功した。
@@ -312,9 +419,48 @@ Result APIの原則は「Resultを返す委譲先の例外を呼び出し側で�
 dotnet test InteractionFlow.Samples.EscapeGame.Tests/InteractionFlow.Samples.EscapeGame.Tests.csproj --no-restore
 ```
 
-今回追加したのはこの調査文書のみ。全体ソリューションの再ビルド・再テストと実GUI操作は実施していない。
+当初の調査ではこの文書だけを追加し、全体ソリューションの再ビルド・再テストと実GUI操作は実施していない。
 既存の作業ツリーにある変更を含む結果であり、任意の実行順序や実raylibの障害を網羅する保証ではない。
 
-実装する場合は案1・案2・案3を優先し、局所検証・SystemFlow・Interactionの連結を小さな変更として進める。
-案4はAccess契約、案5は例外と資源所有の契約を扱うため、それぞれ別変更として検討する。
-いずれもCore/Standardに新APIを追加する必要は現時点では認められない。
+実装後の確認結果は冒頭の実装結果と下の記録を参照する。
+Core/Standardに新APIを追加する必要はなかった。
+
+## 実装後の検証結果
+
+- `dotnet build InteractionFlow.slnx`: 警告0、エラー0。
+- 初回の`dotnet test InteractionFlow.slnx`: 全611件成功、失敗・スキップ0。EscapeGameは141件、他470件。
+- `dotnet build benchmarks/InteractionFlow.ExecutionMeasurements/InteractionFlow.ExecutionMeasurements.csproj --no-restore`:
+  警告0、エラー0。ソリューション外のセッション確保API利用箇所も確認した。
+- `git diff --check`: 問題なし。
+
+サンプルの進行確認は、描画を代替した既存のFlowTestsで12ターンの解法・結果提示・リトライ、
+ポーズと再開、停止とキャンセル、合流と閉鎖を実行して確認した。
+実ウィンドウとキーボード操作の再確認、ゲーム全体の性能再計測は実施していない。
+フレームごとのPresentFrameへ非同期チェーンを追加せず、ネイティブ描画の呼び出し順序も変更していない。
+
+Result<ReactionEnd>への再修正後も全体ビルドは警告0・エラー0。
+`dotnet test InteractionFlow.slnx --no-restore`は全613件成功、失敗・スキップ0（EscapeGame143件、他470件）。
+結果提示に加えて入力受付後の正常停止・キャンセルを確認する2ケースを追加し、
+失敗と正常停止のいずれでも後続の入力を読まないことを確認した。
+元の終了トークンの同一性、返却されたキャンセル失敗とTaskキャンセルの区別、
+ターン各段階の失敗、勝敗・リトライ・ポーズ・再開は既存ケースも含めて確認した。
+再修正後の実GUI操作と性能の再計測は行っていない。
+
+HandleResultのチェーン一本化後も全体ビルドは警告0・エラー0。
+`dotnet test InteractionFlow.slnx --no-restore`は全614件成功（EscapeGame144件、他470件）。
+入力待機後のHandleCommandが失敗Resultを返すケースを追加し、元のReactionEndを保持して終了し、
+リトライを確定せず入力待機も残さないことを確認した。
+
+PlayTurn / HandleResultを変更前へ戻した後も、全体ビルドは警告0・エラー0、
+全体テストは614件成功（EscapeGame144件、他470件）。両ソースにHEADとの差分がないことを確認した。
+
+SystemFlowの実行境界と終了処理の再整理後も、全体ビルドは警告0・エラー0。
+`dotnet test InteractionFlow.slnx --no-restore`は全621件成功（EscapeGame151件、他470件）、失敗・スキップ0。
+描画を代替したフローでリトライ・停止・再開・失敗時の合流と閉鎖を確認し、
+追加ケースではフロー境界へ伝播する例外と終了時の追加例外、描画の呼び出しスレッドも確認した。
+実GUI操作と性能再計測は行っていない。
+
+SystemFlowのチェーン化を撤回した最終状態でも、全体ビルドは警告0・エラー0、
+全体テストは621件成功（EscapeGame151件、他470件）、失敗・スキップ0。
+WindowSystemFlowと二つのInteractionにHEADとの差分はなく、
+GamePlaySystemFlowはTryAllocateSessionへの対応だけを残した。

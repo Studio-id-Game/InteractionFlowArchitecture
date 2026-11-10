@@ -17,13 +17,7 @@ public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow
     {
         while (true)
         {
-            GameplayContext created;
-            try
-            {
-                var id = context.Gameplay.AllocateSession();
-                created = new GameplayContext(context, id, ContextInheritance.All);
-            }
-            catch (InvalidOperationException) when (context.Lifetime.ShutdownRequested)
+            if (!context.Gameplay.TryAllocateSession(out var id))
             {
                 // ウィンドウ停止とセッション生成が競合した通常終了です。
                 using var stopped = new GameplayContext(context, ContextInheritance.None);
@@ -31,7 +25,7 @@ public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow
                 return await endSession.ExecuteAsync(stopped);
             }
 
-            using var session = created;
+            using var session = new GameplayContext(context, id, ContextInheritance.All);
             Result outcome;
             var retry = false;
             try

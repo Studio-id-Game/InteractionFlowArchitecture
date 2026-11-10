@@ -19,6 +19,7 @@ public sealed class EscapeGameProfile : IScopeProfile
             .Apply(new ViewProfile())
             .Apply(new LifetimeProfile())
             .UseSystemFlow<GameSessionSystemFlow>()
-            .UseSystemFlow<GamePlaySystemFlow>();
+            .UseSystemFlow<GamePlaySystemFlow>()
+            .UseSystemFlow<WindowSystemFlow>();
     }
 }

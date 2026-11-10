@@ -1,6 +1,6 @@
 # EscapeGameのゲーム状態と入力の共有
 
-状態: 単純な共有モデルへの再実装済み。以前のIGameplayRules / InputAcceptance / 入力待機ID案を置き換える。
+現行の状態共有・同期契約をまとめる。旧方式の計画と移行記録は[アーカイブ](../../archives/escape-game/README.md)に保存する。
 
 ## 責務
 
@@ -91,24 +91,13 @@ EscapeAccessは現行イベントかを確認して待機先へ配送し、Sessi
 
 ## 検証
 
-既存のゲーム・終了・キャンセル・リトライ検証を新APIへ移行し、次の確認を追加した。
-
-- 取得済みゲーム状態が変更されないことと、失敗した更新の非公開。
-- 並行更新の取りこぼし防止、セッションを跨ぐ更新の拒否。
-- 入力を溜めない動作と、入力内容の意味をGameplayが決めること。
-- View側の文言・位置・有効表示変換と、ローカル演出時計。
-- 制御入力だけでは状態が変化せず、Gameplayが消費して反映すること。
-- 通常進行のキャンセルが独立した制御経路と干渉しないこと。
-
-旧ポリシー・待機ID固有のテストを削除し、現在の契約を検証するテストへ置き換えた。
-再実装後はEscapeGame109件、他470件の計579テスト。実画面も操作・描画・ポーズ・再開・リトライ・終了を確認した。
-性能計測の条件と結果は[サンプルREADME](../../InteractionFlow.Samples.EscapeGame/README.md)を参照する。
-Core / Standard / Analyzerのコードや契約は変更していない。
+現在の責務・契約とテストの対応、追加した境界ケースは[テスト点検](./ESCAPE_GAME_TEST_COVERAGE.md)を参照する。
+描画なし計測の条件と結果は[サンプルREADME](../../InteractionFlow.Samples.EscapeGame/README.md)を参照する。
 
 ## Function内部の記憶と共有状態の切り分け
 
-Operation / Reactionは状態を持てる。今回、表示DTOとViewProjectionを廃止し、
-RaylibWindowReactionが現在描画するGameState、表示文言、折り返し結果、演出時計を保持する形にした。
+Operation / Reactionは状態を持てる。RaylibWindowReactionはGameInfo<GameViewInfo>、
+表示文言、折り返し結果、演出時計を保持する。
 DrawFrameは一つの不変GameInfo<GameViewInfo>から描画し、EndDrawing後にそのイベントの提示完了を通知する。
 ForceResetMemoryStateは状態参照・文言・行キャッシュ・時計を初期化する。
 このReactionはWindowSystemFlowの描画スレッドで逐次利用する。
@@ -127,16 +116,16 @@ ForceResetMemoryStateは状態参照・文言・行キャッシュ・時計を�
 Function内部への集約は「そのFunctionだけで閉じる記憶」に限る。
 共有状態や通知まで移すことを一律の簡素化としない。
 
-## 実装簡素化後の契約
+## 進行とContextの契約
 
-ゲーム進行の確認もReadGameState(sessionId)から行い、重複していたSessionProgressは廃止した。
+ゲーム進行はReadGameState(sessionId)で取得したGameInfo<ExecutionMode>から確認する。
 awaitやInteraction実行後には必要な状態を再取得し、取得済みの状態を最新値として使い続けない。
 GameplayReactionは更新結果の検証を内部にまとめ、プレイヤー行動・敵行動・結果提示で
 再開待機、Deferredの再試行、提示完了待機を共有する。初回公開と制御要求の経路は個別に保つ。
 LifetimeContextが固定AccessとEntryの追加を拒否し、具象Contextとその基底利用の双方に適用する。
 役割別の探索制限、Cancellationの共有、共有Accessを所有しない寿命の契約は維持している。
 各AspectのProfileも責務分離として維持した。
-実装内容と検証結果は[簡素化プランの実績](./ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照する。
+改修時の判断と検証記録は[簡素化プランの実績](../../archives/escape-game/ESCAPE_GAME_SIMPLIFICATION_PLAN.md)を参照する。
 
 ## Feedbackの保持と表示への変換
 
@@ -157,7 +146,7 @@ LifetimeのIShutdownReaction / ShutdownReactionへ分離した。
 Portごとに対応するAspectのProfileが登録し、各Interactionは自身に必要な契約だけを受け取る。
 入力先・セッション・提示・再開待機の共有と排他は従来どおりEscapeAccessが所有する。
 独立したキュー・待機・可変状態や、Aspect間の直接呼び出しは追加していない。
-ApplicationProfileは構成の入口として維持し、現在は登録処理を持たない。
+ApplicationProfileとSharedProfileは構成の入口として維持し、現在は登録処理を持たない。
 
 ## ターンと結果確認のInteraction
 
@@ -168,11 +157,3 @@ GameSessionSystemFlowはターンを反復し、勝敗確定後に結果確認�
 Interactionは別のInteractionを実行せず、ゲーム状態の更新は引き続きReaction / Operationが行う。
 例外・キャンセルの処理と実行登録は1ターンまたは結果確認の単位となり、個々のPort呼び出しごとには行わない。
 入力・提示待機の同期契約、ポーズと省略の独立した制御経路、終了時の停止・合流の順序は維持する。
-
-## 同期状態の簡素化後の確認
-
-Published / Retiredと入力待機の同一性確認の削除後、全体ビルドは警告・エラー0件、
-EscapeGame125件と他470件の全595テストが成功した。
-公開中の重複初期化の拒否、全体停止を伴わないセッション停止後の再公開拒否・次セッション開始、
-二件目の入力待機が既存の受信先を置換しないことを確認した。
-既存テストでもキャンセル後の次入力、ポーズ・提示・入力の解除、リトライ、終了合流を引き続き確認する。

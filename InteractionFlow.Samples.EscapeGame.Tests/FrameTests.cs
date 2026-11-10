@@ -24,27 +24,38 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 public sealed class FrameTests
 {
     [Theory]
-    [InlineData(false, false, false, 1)]
-    [InlineData(true, false, false, 0)]
-    [InlineData(false, true, false, 0)]
-    [InlineData(false, false, true, 0)]
-    [InlineData(true, true, true, 0)]
+    [InlineData(false, false, false, 1, null)]
+    [InlineData(true, false, false, 0, null)]
+    [InlineData(false, true, false, 0, GameControlCommand.TogglePause)]
+    [InlineData(false, false, true, 0, GameControlCommand.Skip)]
+    [InlineData(true, true, true, 0, null)]
+    [InlineData(false, true, true, 0, GameControlCommand.TogglePause)]
     public async Task FrameControlRequestsSuppressOrdinaryInputBeforeDrawing(
-        bool stop, bool pause, bool skip, int delivered)
+        bool stop, bool pause, bool skip, int delivered, GameControlCommand? expectedControl)
     {
         using var app = new EscapeApplicationContext();
         using var context = new ViewContext(app, ContextInheritance.None);
         context.With(new FrameState());
+        var presentation = new PresentationKey(17, 3, 3);
         var operation = new FrameOperation(frame =>
         {
             frame.SessionId = 17;
             frame.Command = GameCommand.Up;
+            frame.Presentation = presentation;
             frame.ShutdownRequested = stop;
             frame.PauseRequested = pause;
             frame.SkipRequested = skip;
         });
         var game = new RecordedGameInputSubmissionOperation();
-        var window = new FrameReaction(() => Assert.Equal(delivered, game.Commands.Count));
+        var window = new FrameReaction(() =>
+        {
+            Assert.Equal(delivered, game.Commands.Count);
+            if (expectedControl is { } command)
+                Assert.Equal(new GameControlInput(17, command,
+                    command == GameControlCommand.Skip ? presentation : null), Assert.Single(game.Controls));
+            else
+                Assert.Empty(game.Controls);
+        });
         var interaction = new PresentFrame(operation, window, game,
             new GameExceptionHandling(), new GameCancellationHandling());
 
@@ -109,7 +120,12 @@ public sealed class FrameTests
     private sealed class RecordedGameInputSubmissionOperation : Operation, IGameInputSubmissionOperation
     {
         public List<(long, GameCommand)> Commands { get; } = [];
-        public bool TrySubmitControl(IViewContext context, GameControlInput input) => true;
+        public List<GameControlInput> Controls { get; } = [];
+        public bool TrySubmitControl(IViewContext context, GameControlInput input)
+        {
+            Controls.Add(input);
+            return true;
+        }
         public override void ForceResetMemoryState() { }
         public bool TrySubmitCommand(IViewContext context, long sessionId, GameCommand command)
         {

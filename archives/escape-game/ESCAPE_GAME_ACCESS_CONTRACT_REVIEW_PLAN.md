@@ -1,5 +1,8 @@
 # EscapeGame Access契約の再分類プラン
 
+保存日: 2026-11-11。完了または後続設計へ置き換えられた検討記録です。現行実装の指示には使いません。
+現在の案内は[アーカイブ一覧](./README.md)を参照してください。
+
 状態: 3Accessへの再編と、後半のContext契約分割を実装済み。
 本文は再分類・分割時点の名称を記録している。現行名称との対応は[命名整理](./ESCAPE_GAME_NAMING_PLAN.md)を参照。
 調査・実装ともサブエージェントは使用していない。
@@ -332,4 +335,4 @@ CancellationとIFlowContextの探索機能自体は共通の基盤契約とし�
 
 関連: [現在の実装と操作](../../InteractionFlow.Samples.EscapeGame/README.md)、
 [これまでの利用側改善](./ESCAPE_GAME_APPLICATION_REFACTOR_PLAN.md)、
-[利用設計指針](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。
+[利用設計指針](../../docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。

@@ -23,8 +23,6 @@ public sealed class AccessTests
             (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
 
         Assert.False(app.View.ReadGameState().Info.WaitingForInput);
-
-        Assert.False(app.View.ReadGameState().Info.WaitingForInput);
         Assert.True(session.Gameplay.ReadGameState(id).State.Confirmed);
         Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id,
             (state, _, _, _) => WorldRules.ApplyPlayer(state)).Status);
@@ -145,17 +143,134 @@ public sealed class AccessTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
+        session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+        session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
+        var key = session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyPlayer(state)).Presentation!.Value;
+        var presentation = session.Gameplay.WaitForPresentationCompletionAsync(
+            key, TestContext.Current.CancellationToken).AsTask();
         var input = session.Gameplay.ReadCommandAsync(id, TestContext.Current.CancellationToken).AsTask();
         Assert.True(app.Gameplay.SetPaused(id, true));
         var checkpoint = session.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
         app.Lifetime.RequestShutdown();
         Assert.Equal(GameCommand.Stop, await input);
+        Assert.Equal(PresentationCompletion.Stopped, await presentation);
         Assert.False(await checkpoint);
         Assert.True(app.Lifetime.ShutdownRequested);
         Assert.False(app.Gameplay.SetPaused(id, false));
         Assert.Equal(GameUpdateStatus.Stopped, session.Gameplay.UpdateGameState(id,
             (state, _, _, _) => WorldRules.ApplyPlayer(state)).Status);
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReplacingOrClearingPresentationStopsTheOldWait(bool replace)
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var id = session.SessionId;
+        session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+        session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
+        var key = session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyPlayer(state)).Presentation!.Value;
+        var oldWait = session.Gameplay.WaitForPresentationCompletionAsync(
+            key, TestContext.Current.CancellationToken).AsTask();
+        Assert.True(app.Gameplay.RequestSkip(key));
+        var before = app.View.ReadGameState();
+
+        var update = session.Gameplay.UpdateGameState(id, (state, _, _, _) => new(state, new(true)
+        {
+            ReplacePresentation = true,
+            Presentation = replace ? GameEventKind.EnemyMove : null,
+            From = new(3, 1),
+            To = new(3, 2)
+        }));
+
+        Assert.Equal(PresentationCompletion.Stopped,
+            await oldWait.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        var after = app.View.ReadGameState();
+        Assert.Same(before.State, after.State);
+        Assert.Equal(key, before.Info.Event!.Key);
+        Assert.True(before.Info.SkipRequested);
+        Assert.False(app.View.TryCompletePresentation(key));
+        if (replace)
+        {
+            var next = after.Info.Event!;
+            Assert.Equal(next.Key, update.Presentation);
+            Assert.Equal(id, next.Key.SessionId);
+            Assert.True(next.Key.PresentationId > key.PresentationId);
+            Assert.Equal(GameEventKind.EnemyMove, next.Kind);
+            Assert.Equal(new GridPosition(3, 1), next.From);
+            Assert.Equal(new GridPosition(3, 2), next.To);
+            Assert.False(after.Info.SkipRequested);
+            var nextWait = session.Gameplay.WaitForPresentationCompletionAsync(
+                next.Key, TestContext.Current.CancellationToken).AsTask();
+            Assert.False(nextWait.IsCompleted);
+            Assert.True(app.View.TryCompletePresentation(next.Key));
+            Assert.Equal(PresentationCompletion.Completed, await nextWait);
+        }
+        else
+        {
+            Assert.Null(after.Info.Event);
+            Assert.Null(update.Presentation);
+        }
+    }
+
+    [Fact]
+    public async Task CancelingOnePresentationWaitDoesNotCancelOtherWaiters()
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.CreateSessionContext(app);
+        var key = session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession).Presentation!.Value;
+        using var cancellation = new CancellationTokenSource();
+        var canceled = session.Gameplay.WaitForPresentationCompletionAsync(key, cancellation.Token).AsTask();
+        var remaining = session.Gameplay.WaitForPresentationCompletionAsync(
+            key, TestContext.Current.CancellationToken).AsTask();
+
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceled);
+        Assert.False(remaining.IsCompleted);
+        Assert.True(app.View.TryCompletePresentation(key));
+        Assert.Equal(PresentationCompletion.Completed,
+            await remaining.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.Equal(PresentationCompletion.Completed,
+            await session.Gameplay.WaitForPresentationCompletionAsync(key, TestContext.Current.CancellationToken));
+        Assert.False(app.View.TryCompletePresentation(key));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ControlMailboxKeepsOnlyTheLatestRequestAndDiscardsItOnTermination(bool shutdown)
+    {
+        using var app = new EscapeApplicationContext();
+        using var session = GameTestSteps.Ready(app);
+        var first = new GameControlInput(session.SessionId, GameControlCommand.TogglePause);
+        var latest = new GameControlInput(session.SessionId, GameControlCommand.Skip);
+        Assert.True(app.View.TrySubmitControl(first));
+        Assert.True(app.View.TrySubmitControl(latest));
+        Assert.True(app.Gameplay.TryReadControlInput(out var received));
+        Assert.Equal(latest, received);
+        Assert.False(app.Gameplay.TryReadControlInput(out _));
+        Assert.True(app.View.TrySubmitControl(first));
+
+        if (shutdown) app.Lifetime.RequestShutdown();
+        else app.Gameplay.EndSession(session.SessionId);
+
+        Assert.False(app.Gameplay.TryReadControlInput(out _));
+        Assert.False(app.View.TrySubmitControl(latest));
+        if (!shutdown)
+        {
+            using var next = GameTestSteps.Ready(app);
+            Assert.False(app.Gameplay.TryReadControlInput(out _));
+        }
     }
 
     [Fact]

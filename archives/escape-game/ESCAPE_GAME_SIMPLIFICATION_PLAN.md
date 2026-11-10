@@ -1,5 +1,8 @@
 # EscapeGameの実装簡素化プラン
 
+保存日: 2026-11-11。完了または後続設計へ置き換えられた検討記録です。現行実装の指示には使いません。
+現在の案内は[アーカイブ一覧](./README.md)を参照してください。
+
 作成・実装日: 2026-11-10。状態: B〜Eと空コンストラクタ削除を実施済み。Aは利用者の方針により不採用。
 
 ## 結論
@@ -65,7 +68,7 @@ EscapeGameProfileも各ProfileをApplyする現在の構成を保つ。
 
 ### B. SessionProgressをGameStateの直接参照へ置き換える【実施済み】
 
-対象: [ゲームの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Game/)・[セッションの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Session/)、
+対象: [ゲームの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Game)・[セッションの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Session)、
 [EscapeAccess.Gameplay](../../InteractionFlow.Samples.EscapeGame/Aspects/Application/Entities/Access/EscapeAccess.Gameplay.cs)、
 IGameplayAccess、4個のゲーム用SystemFlow/Checkpointと関連テスト。
 
@@ -245,9 +248,9 @@ dotnet build benchmarks/InteractionFlow.ExecutionMeasurements/InteractionFlow.Ex
 時間差から高速化・低速化の結論は出さない。実描画・表示文言生成・ゲーム全体の負荷を含む結果でもない。
 サンプルREADME、配置表、共有状態の契約文書も実装に合わせて更新した。
 
-関連: [現在の配置](./ESCAPE_GAME_NAMESPACE_LAYOUT.md)、
-[共有状態と同期契約](./ESCAPE_GAME_GAMEPLAY_RULES.md)、
-[利用設計指針](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。
+関連: [現在の配置](../../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)、
+[共有状態と同期契約](../../docs/design-notes/ESCAPE_GAME_GAMEPLAY_RULES.md)、
+[利用設計指針](../../docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)。
 
 ## 追補: ターンと結果確認の単位への集約
 

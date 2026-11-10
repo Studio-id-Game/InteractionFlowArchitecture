@@ -71,36 +71,6 @@ Aspect間の上記配置方針に対する新しいAnalyzerは追加しない。
 単純なデータ共有モデルのビルド・テスト・実画面・計測結果は[サンプルREADME](../../InteractionFlow.Samples.EscapeGame/README.md)を参照する。
 旧ルール注入・受付ポリシー・待機ID方式は撤回し、[ゲーム状態と入力の共有](./ESCAPE_GAME_GAMEPLAY_RULES.md)へ置き換えた。
 
-### 共有データと終了処理の分類後の確認
+現在の契約とテストの対応、直近の検証結果は[テスト点検](./ESCAPE_GAME_TEST_COVERAGE.md)を参照する。
 
-共有データ・列挙型21型をGameとSessionへ分類し、各宣言の内容が移動前と同一であることを確認した。
-終了処理・Handlerの移動では、登録先を変更した2つのProfileを除き、using・名前空間・空白以外のコード内容は同一である。
-Sharedから具体Aspectへの依存と、Application・Gameplay・View間の相互参照がないことも確認した。
-全体ビルドとRelease計測プロジェクトのビルドは警告・エラー0件、EscapeGame129件を含む全599テストが成功した。
-
-### ルール分離前の確認記録
-
-分類間依存の整理後、Shared以外のAspectを跨ぐ参照はLifetimeContextへの継承3件だけになった。
-Shared自身から具体Aspectへの依存もない。今回の確認はimport・参照の点検であり、自動検査ルールは追加していない。
-サンプルの名前空間・usingを除くコードトークンの集合は移動前と一致し、処理内容は変更していない。
-全体・計測プロジェクトのビルドは警告・エラー0件、全570テストが成功した。
-
-Aspects階層の追加後は、構成説明・配置表・ソースへのリンクを更新した。
-テスト・計測コードに残っていた旧名前空間のusingも更新した。
-全体と計測プロジェクトのビルドは警告・エラー0件、全569テストが成功した。
-
-### Aspects追加前の確認記録
-
-26型を移動し、Builder・SystemFlow・テスト・計測コードと文書リンクを更新した。
-その後、全28要素（26型と共通Handler2型）を包含関係で再点検した。
-Lifetimeを基底として展開すると、WindowReaction系2型とGameLifetimeReaction系2型がApplicationでは広すぎたため再配置した。
-他の型・専用ヘルパー・分類外Handlerには同じ誤りはなかった。
-メソッド本体・契約・ゲーム規則・描画・Cancellation共有・状態の同期境界は変更していない。
-名前空間・using・参照名を除いたC#66ファイルのトークン比較で差分なし。
-全体ビルドは警告・エラー0件、EscapeGame99件と他プロジェクト470件、計569件が成功。
-今回の4型の再配置後も全体ビルドと全569件が成功した。
-初回整理時のRelease簡易計測では、通常PresentFrameは488B/回・約221〜234nsで、割り当て量を維持している。今回の再配置では計測を繰り返していない。
-実画面での再確認は未実施。サブエージェントは使用していない。
-
-関連: [ContextとAccessの分類](./ESCAPE_GAME_ACCESS_CONTRACT_REVIEW_PLAN.md)、
-[サンプルの構成](../../InteractionFlow.Samples.EscapeGame/README.md)。
+過去の分類・移行時の確認記録は[アーカイブ](../../archives/escape-game/README.md)を参照する。

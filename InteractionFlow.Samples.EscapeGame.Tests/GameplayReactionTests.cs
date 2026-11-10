@@ -26,11 +26,11 @@ public sealed class GameplayReactionTests
 
         Assert.False(end.HasException);
         var after = fixture.App.View.ReadGameState();
-        Assert.Null(after.Selection);
-        Assert.Equal(before.Player, after.Player);
-        Assert.Equal(before.EnemyPatrolIndex, after.EnemyPatrolIndex);
-        Assert.Equal(before.Turn, after.Turn);
-        Assert.NotEqual(before.Feedback, after.Feedback);
+        Assert.Null(after.State.Selection);
+        Assert.Equal(before.State.Player, after.State.Player);
+        Assert.Equal(before.State.EnemyPatrolIndex, after.State.EnemyPatrolIndex);
+        Assert.Equal(before.State.Turn, after.State.Turn);
+        Assert.NotEqual(before.Info.Feedback, after.Info.Feedback);
     }
 
     [Theory]
@@ -60,26 +60,26 @@ public sealed class GameplayReactionTests
         var failure = Assert.IsType<InvalidOperationException>(end.Exception);
         Assert.Contains(operation, failure.Message);
         Assert.Contains(nameof(GameUpdateStatus.Rejected), failure.Message);
-        Assert.Equal(0, fixture.App.View.ReadGameState().Turn);
+        Assert.Equal(0, fixture.App.View.ReadGameState().State.Turn);
     }
 
     [Fact]
     public async Task BeginExplicitlyPublishesUninitializedSessionAndWaitsForItsInitialFrame()
     {
         using var fixture = new ReactionFixture(prepare: false);
-        Assert.Equal(0, fixture.App.View.ReadGameState().SessionId);
+        Assert.Equal(0, fixture.App.View.ReadGameState().State.SessionId);
 
         var begin = fixture.Reaction.BeginSessionAsync(fixture.Session).AsTask();
 
         var snapshot = fixture.App.View.ReadGameState();
-        Assert.Equal(fixture.Session.SessionId, snapshot.SessionId);
-        Assert.Equal(GameStage.Preparing, snapshot.Stage);
+        Assert.Equal(fixture.Session.SessionId, snapshot.State.SessionId);
+        Assert.Equal(GameStage.Preparing, snapshot.State.Stage);
         Assert.False(begin.IsCompleted);
-        Assert.NotNull(snapshot.Event);
-        GameTestSteps.Complete(fixture.App, snapshot.Event.Key);
+        Assert.NotNull(snapshot.Info.Event);
+        GameTestSteps.Complete(fixture.App, snapshot.Info.Event.Key);
         Assert.False((await begin).HasException);
         Assert.False((await fixture.Reaction.BeginActionSelectionAsync(fixture.Session)).HasException);
-        Assert.Equal(GameStage.Selecting, fixture.App.View.ReadGameState().Stage);
+        Assert.Equal(GameStage.Selecting, fixture.App.View.ReadGameState().State.Stage);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class GameplayReactionTests
 
         Assert.True(early.HasException);
         Assert.False(begin.IsCompleted);
-        Assert.Equal(GameStage.Preparing, fixture.App.View.ReadGameState().Stage);
+        Assert.Equal(GameStage.Preparing, fixture.App.View.ReadGameState().State.Stage);
         fixture.App.Lifetime.RequestShutdown();
         Assert.False((await begin).HasException);
     }
@@ -110,8 +110,8 @@ public sealed class GameplayReactionTests
 
         Assert.True(enemy.HasException);
         Assert.False(player.IsCompleted);
-        Assert.Equal(before.EnemyPatrolIndex, fixture.App.View.ReadGameState().EnemyPatrolIndex);
-        Assert.Equal(1, fixture.App.View.ReadGameState().Turn);
+        Assert.Equal(before.State.EnemyPatrolIndex, fixture.App.View.ReadGameState().State.EnemyPatrolIndex);
+        Assert.Equal(1, fixture.App.View.ReadGameState().State.Turn);
         fixture.App.Lifetime.RequestShutdown();
         Assert.False((await player).HasException);
     }
@@ -127,8 +127,8 @@ public sealed class GameplayReactionTests
 
         Assert.True((await fixture.Reaction.EnableResultInputAsync(fixture.Session)).HasException);
         Assert.False(result.IsCompleted);
-        Assert.False(snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active);
-        GameTestSteps.Complete(fixture.App, snapshot.Event!.Key);
+        Assert.False(snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active);
+        GameTestSteps.Complete(fixture.App, snapshot.Info.Event!.Key);
         Assert.False((await result).HasException);
         Assert.False((await fixture.Reaction.EnableResultInputAsync(fixture.Session)).HasException);
     }
@@ -145,14 +145,14 @@ public sealed class GameplayReactionTests
         var execution = fixture.Reaction.ApplyPlayerActionAsync(context).AsTask();
 
         Assert.False(execution.IsCompleted);
-        Assert.Equal(0, fixture.App.View.ReadGameState().Turn);
-        Assert.True(context.Gameplay.ReadGameState(context.SessionId).Confirmed);
+        Assert.Equal(0, fixture.App.View.ReadGameState().State.Turn);
+        Assert.True(context.Gameplay.ReadGameState(context.SessionId).State.Confirmed);
         Assert.True(fixture.App.Gameplay.SetPaused(context.SessionId, false));
         var presentation = await WaitForPresentationStartAsync(fixture.App);
-        Assert.Equal(1, fixture.App.View.ReadGameState().Turn);
+        Assert.Equal(1, fixture.App.View.ReadGameState().State.Turn);
         GameTestSteps.Complete(fixture.App, presentation.Key);
         Assert.False((await execution).HasException);
-        Assert.Equal(1, fixture.App.View.ReadGameState().Turn);
+        Assert.Equal(1, fixture.App.View.ReadGameState().State.Turn);
         Assert.True((await fixture.Reaction.ApplyPlayerActionAsync(context)).HasException);
     }
 
@@ -169,7 +169,7 @@ public sealed class GameplayReactionTests
         fixture.App.Lifetime.RequestShutdown();
 
         Assert.False((await execution).HasException);
-        Assert.Equal(0, fixture.App.View.ReadGameState().Turn);
+        Assert.Equal(0, fixture.App.View.ReadGameState().State.Turn);
         Assert.False((await fixture.Reaction.BeginSessionAsync(context)).HasException);
         Assert.False((await fixture.Reaction.BeginActionSelectionAsync(context)).HasException);
         Assert.False((await fixture.Reaction.HandleCommandAsync(context, GameCommand.Up)).HasException);
@@ -190,8 +190,8 @@ public sealed class GameplayReactionTests
         context.Cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => execution);
-        Assert.Equal(1, fixture.App.View.ReadGameState().Turn);
-        Assert.Equal(new GridPosition(1, 2), fixture.App.View.ReadGameState().Player);
+        Assert.Equal(1, fixture.App.View.ReadGameState().State.Turn);
+        Assert.Equal(new GridPosition(1, 2), fixture.App.View.ReadGameState().State.Player);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public sealed class GameplayReactionTests
         while (true)
         {
             TestContext.Current.CancellationToken.ThrowIfCancellationRequested();
-            if (context.View.ReadGameState().Event is { } presentation)
+            if (context.View.ReadGameState().Info.Event is { } presentation)
                 return presentation;
             Assert.True(timer.Elapsed < TimeSpan.FromSeconds(5), "The resumed work did not request presentation.");
             await Task.Yield();

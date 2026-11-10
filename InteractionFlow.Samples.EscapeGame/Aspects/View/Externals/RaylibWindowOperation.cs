@@ -18,8 +18,8 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
         context.GetRequired<WindowState>().VerifyAccess();
         var snapshot = context.View.ReadGameState();
         var frame = context.GetRequired<FrameState>();
-        frame.SessionId = snapshot.SessionId;
-        frame.Presentation = snapshot.Event?.Key;
+        frame.SessionId = snapshot.State.SessionId;
+        frame.Presentation = snapshot.Info.Event?.Key;
         frame.Command = null;
         frame.PauseRequested = false;
         frame.SkipRequested = false;
@@ -36,7 +36,7 @@ internal sealed class RaylibWindowOperation : Operation, IWindowOperation
             frame.PauseRequested = true;
             return;
         }
-        if (snapshot.Mode != ExecutionMode.Active) return;
+        if (snapshot.Info.Mode != ExecutionMode.Active) return;
 
         if (RL.IsKeyPressed(KeyboardKey.F) || button == 5)
             frame.SkipRequested = true;

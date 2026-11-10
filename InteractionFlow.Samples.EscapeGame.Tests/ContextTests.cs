@@ -148,12 +148,12 @@ public sealed class ContextTests
         using var session = new GameplayContext(game, game.Gameplay.AllocateSession(), ContextInheritance.All);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.Equal(0, app.View.ReadGameState().SessionId);
+        Assert.Equal(0, app.View.ReadGameState().State.SessionId);
         Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession).Status);
-        Assert.Equal(session.SessionId, app.View.ReadGameState().SessionId);
+        Assert.Equal(session.SessionId, app.View.ReadGameState().State.SessionId);
         Assert.Equal(0, app.SessionId);
         Assert.Equal(0, game.SessionId);
-        Assert.Equal(ExecutionMode.Stopping, game.Gameplay.ReadGameState(game.SessionId).Mode);
+        Assert.Equal(ExecutionMode.Stopping, game.Gameplay.ReadGameState(game.SessionId).Info);
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public sealed class ContextTests
         else game.Dispose();
         var id = gameplay.AllocateSession();
         Assert.Equal(GameUpdateStatus.Applied, gameplay.BeginSession(id, WorldRules.BeginSession).Status);
-        Assert.Equal(id, view.View.ReadGameState().SessionId);
+        Assert.Equal(id, view.View.ReadGameState().State.SessionId);
         Assert.False(lifetime.ShutdownRequested);
         Assert.False(game.Cancellation.IsCancellationRequested);
     }

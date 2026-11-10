@@ -65,9 +65,9 @@ public sealed class FrameTests
         var pending = session.Gameplay.ReadCommandAsync(id, session.Cancellation.GetToken()).AsTask();
         var control = new HandleControlInput(new GameplayReaction(), new GameExceptionHandling(), new GameCancellationHandling());
         Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
-        Assert.Equal(ExecutionMode.Active, app.View.ReadGameState().Mode);
+        Assert.Equal(ExecutionMode.Active, app.View.ReadGameState().Info.Mode);
         Assert.False((await control.ExecuteAsync(session)).HasException);
-        Assert.Equal(ExecutionMode.Paused, app.View.ReadGameState().Mode);
+        Assert.Equal(ExecutionMode.Paused, app.View.ReadGameState().Info.Mode);
         Assert.False(pending.IsCompleted);
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
         Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
@@ -82,18 +82,21 @@ public sealed class FrameTests
         using var app = new EscapeApplicationContext();
         using var session = GameTestSteps.Ready(app);
         var id = session.SessionId;
-        session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Up));
-        session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
-        var player = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer).Presentation!.Value;
+        session.Gameplay.UpdateGameState(id, (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Up));
+        session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Confirm));
+        var player = session.Gameplay.UpdateGameState(id,
+            (state, _, _, _) => WorldRules.ApplyPlayer(state)).Presentation!.Value;
         GameTestSteps.Complete(app, player);
-        var enemy = session.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy).Presentation!.Value;
+        var enemy = session.Gameplay.UpdateGameState(id,
+            (state, _, _, completed) => WorldRules.ApplyEnemy(state, completed)).Presentation!.Value;
         var control = new GameplayReaction();
         Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.Skip, player)));
         Assert.False(control.ApplyControlRequest(session).HasException);
-        Assert.False(app.View.ReadGameState().SkipRequested);
+        Assert.False(app.View.ReadGameState().Info.SkipRequested);
         Assert.True(app.View.TrySubmitControl(new(id, GameControlCommand.Skip, enemy)));
         Assert.False(control.ApplyControlRequest(session).HasException);
-        Assert.True(app.View.ReadGameState().SkipRequested);
+        Assert.True(app.View.ReadGameState().Info.SkipRequested);
     }
 
     private sealed class FrameOperation(Action<FrameState> poll) : Operation, IWindowOperation

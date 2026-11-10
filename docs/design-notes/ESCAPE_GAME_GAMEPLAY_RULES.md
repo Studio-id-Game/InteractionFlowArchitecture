@@ -8,26 +8,33 @@
 - Gameplayは入力の意味を解釈し、ゲーム規則を適用してゲーム状態を更新する。
 - EscapeAccessは入力とゲーム状態の受け渡しを安全に同期する。
 
-共有するのは不変のGameStateと入力内容。表示用Snapshot・文字列・演出時間はViewに置く。
+共有するのは不変のGameState、用途別の付帯情報と入力内容。表示文字列・演出時間はViewに置く。
 IGameplayRulesのDIや実行時注入、受付ポリシーの公開、入力待機IDは廃止した。
 ルールはGameplayの通常の計算であり、Applicationはその型も知る必要がない。
 
 ## 更新と取得
 
 ```csharp
-var result = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.ApplyPlayer);
-var state = context.View.ReadGameState();
-var shown = projection.Create(state, clock.Update(state, deltaSeconds));
+var result = context.Gameplay.UpdateGameState(context.SessionId,
+    (state, _, _, _) => WorldRules.ApplyPlayer(state));
+var game = context.View.ReadGameState();
+var shown = clock.Update(game, deltaSeconds);
 ```
 
 UpdateGameStateはロック内で現在の不変状態を更新関数へ渡し、返却された次状態を一括反映する。
-WorldRulesはGameStateChange(bool Accepted, GameState State)で操作の成立可否と次状態を返す。
-保留・停止等の受付判断は行わず、GameUpdateStatusは使わない。
-EscapeAccessは通常更新ではAcceptedがfalseでもFeedback等の次状態を反映し、Rejectedへ変換する。
-BeginSessionではAcceptedがtrueの場合だけ反映・公開する。
+WorldRulesはGameInfo<GameChangeInfo>で次状態と操作の成立可否、セッションへの反映指示を返す。
+更新入力はGameState、実行モード、提示キー、提示完了の個別引数で渡し、各規則へ必要な引数だけを渡す。
+GameChangeInfoはFeedbackと提示の保持・設定・解除、モード変更、スキップ要求を表す。
+SessionStateはApplication.Entitiesに置き、Feedback・WaitingForInput・Event・PresentationCompleted・
+SkipRequested・Mode・ControlRevision・VersionをSessionRuntimeが所有する。
+提示キーはSessionRuntimeが更新版から発行し、WorldRulesは種類と位置だけを返す。
+WorldRulesは保留・停止等の受付判断を行わず、GameUpdateStatusは使わない。
+EscapeAccessは通常更新ではInfo.Acceptedがfalseでもゲーム状態とFeedback等の指示を反映し、Rejectedへ変換する。
+BeginSessionではInfo.Acceptedがtrueの場合だけ反映・公開する。
 GameUpdateResultはEscapeAccessからの結果としてStatusとPresentationだけを持ち、GameState全体は返さない。
 提示キーはロック内で反映した状態のGameEventから取得するため、待機対象を別の状態取得で探す必要がない。
-更新関数が投げた場合、元の状態はそのまま保持する。他セッションの状態やイベントは反映しない。
+更新関数が投げた場合、元のGameStateとSessionStateはそのまま保持する。他セッションの状態は反映しない。
+イベントのIDはApplicationが発行するため、更新関数から他セッションのイベントを持ち込む経路はない。
 更新関数は短い同期処理とし、外部I/O、待機、Accessの再入呼び出しや外部への副作用は行わない。
 外部副作用やクロージャで別途変更した値までロールバックする仕組みではない。
 
@@ -36,13 +43,13 @@ GameStateは不変recordで、内部に共有可変オブジェクトを持た�
 共有の可変Stateを呼び出し元へ貸し出す方法や、Snapshot取得時に全状態をコピーする方法は使わない。
 セッションの公開・退役、入力・再開・提示完了の待機はprivateなSessionRuntimeへ閉じる。
 SessionRuntimeは自身のCommit / StopSessionで更新と停止通知を行い、排他は呼び出し元のEscapeAccess.gateが担う。
-SessionRuntimeは入力待機や提示完了に伴うStateの更新を担い、通知処理はEscapeAccess直下のprivate classへ分ける。
+SessionRuntimeは入力待機や提示完了に伴うSessionStateの更新を担い、通知処理はEscapeAccess直下のprivate classへ分ける。
 InputWaitは入力受信先と取消判定用Token、ResumeWaitはポーズからの再開通知、
 PresentationWaitは提示キーと完了・停止通知を管理する。各クラスはセッションごとに一つ作成する。
-Stateのsetterと各通知先はprivateとし、3クラスの操作も同じEscapeAccess.gateで保護する。
+GameStateとSessionStateの差し替えと各通知先はprivateに閉じ、3クラスの操作も同じEscapeAccess.gateで保護する。
 EscapeAccessはロック内で対象セッションを選択して処理を呼び、取得したTaskをロック外でawaitする。
 SessionRuntimeはTaskCompletionSourceを外側へ公開せず、待機に必要なTaskだけを返す。
-公開中のセッションはactiveが指し、停止済みかどうかはGameState.Modeで判断する。Published / Retiredの別フラグは持たない。
+公開中のセッションはactiveが指し、停止済みかどうかはSessionState.Modeで判断する。Published / Retiredの別フラグは持たない。
 停止していない公開済みセッションが存在する間はBeginSessionを拒否し、停止済みセッションの再公開も拒否する。
 停止済みの除外はFindActiveSessionへ集約する。複数の未公開セッションを確保する契約は維持する。
 
@@ -68,13 +75,16 @@ Applicationは通常更新をPaused中にDeferredにし、制御用更新はallo
 ## ゲーム状態から表示へ
 
 InputFeedbackは取消・無効選択・使用可能な仕掛けなし・受付段階外の4種類の操作結果を表す。
-GameState.FeedbackはInputFeedback?で、通常進行時はnullとなる。
+SessionState.FeedbackはInputFeedback?で、通常進行時はnullとなる。
 GameEventは発生した出来事と位置・識別子を表す。
 表示文字列・ボタン表示はRaylibWindowReaction、秒数と経過時間はその内部のPresentationClockが決定する。
-Reactionが不変GameStateの参照・文言・折り返し結果を記憶するため、表示用Snapshotへの変換は不要。
+Viewへの取得結果はGameInfo<GameViewInfo>で、GameStateと必要なセッション情報を同時に返す。
+状態変更時に作成した取得結果を再利用し、毎フレームの取得では割り当てない。
+GameplayにはGameInfo<ExecutionMode>を返す。SessionStateの実装型をShared・Gameplay・Viewへ公開しない。
+ReactionはView向け取得結果の参照・文言・折り返し結果を記憶する。
 
 Viewは描画提出後に提示完了を入力通知として返す。
-EscapeAccessは現行イベントかを確認して待機先へ配送し、GameStateの完了受領状態を更新する。
+EscapeAccessは現行イベントかを確認して待機先へ配送し、SessionStateの完了受領状態を更新する。
 描画を実行したことや演出時間の判断はViewの責務であり、同期側で再計算しない。
 ポーズ・再開のControlRevisionを跨いだdeltaはViewの時計が破棄する。
 古い提示キー・終了済みセッションへの完了通知は受理しない。
@@ -99,7 +109,7 @@ Core / Standard / Analyzerのコードや契約は変更していない。
 
 Operation / Reactionは状態を持てる。今回、表示DTOとViewProjectionを廃止し、
 RaylibWindowReactionが現在描画するGameState、表示文言、折り返し結果、演出時計を保持する形にした。
-DrawFrameは一つの不変GameStateから描画し、EndDrawing後にそのイベントの提示完了を通知する。
+DrawFrameは一つの不変GameInfo<GameViewInfo>から描画し、EndDrawing後にそのイベントの提示完了を通知する。
 ForceResetMemoryStateは状態参照・文言・行キャッシュ・時計を初期化する。
 このReactionはWindowSystemFlowの描画スレッドで逐次利用する。
 

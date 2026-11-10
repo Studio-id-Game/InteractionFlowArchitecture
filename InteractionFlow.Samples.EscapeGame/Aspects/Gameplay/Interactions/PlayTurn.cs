@@ -23,7 +23,7 @@ public sealed class PlayTurn(
         if (!await GameplayCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        while (!context.Gameplay.ReadGameState(context.SessionId).Confirmed)
+        while (!context.Gameplay.ReadGameState(context.SessionId).State.Confirmed)
         {
             var command = await operation.ReadCommandAsync(context);
             end = await reaction.HandleCommandAsync(context, command);
@@ -33,7 +33,7 @@ public sealed class PlayTurn(
 
         end = await reaction.ApplyPlayerActionAsync(context);
         if (!await GameplayCheckpoint.WaitToContinueAsync(context, end)
-            || context.Gameplay.ReadGameState(context.SessionId).Outcome != GameOutcome.Running)
+            || context.Gameplay.ReadGameState(context.SessionId).State.Outcome != GameOutcome.Running)
         {
             return end;
         }

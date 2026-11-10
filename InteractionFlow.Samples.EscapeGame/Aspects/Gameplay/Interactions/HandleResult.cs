@@ -26,7 +26,7 @@ public sealed class HandleResult(
         if (!await GameplayCheckpoint.WaitToContinueAsync(context, end))
             return end;
 
-        while (!context.Gameplay.ReadGameState(context.SessionId).RetryRequested)
+        while (!context.Gameplay.ReadGameState(context.SessionId).State.RetryRequested)
         {
             var command = await operation.ReadCommandAsync(context);
             end = await reaction.HandleCommandAsync(context, command);

@@ -40,7 +40,7 @@ public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow
                 if (await GameplayCheckpoint.WaitToContinueAsync(session, end.End))
                     end = await sessionFlow.ExecuteAsync(session);
                 outcome = end.Result;
-                retry = !end.HasException && session.Gameplay.ReadGameState(session.SessionId).RetryRequested;
+                retry = !end.HasException && session.Gameplay.ReadGameState(session.SessionId).State.RetryRequested;
             }
             // Interaction間の再開待機も、実行自身へのキャンセルなら通常停止です。
             catch (OperationCanceledException) when (session.Lifetime.ShutdownRequested

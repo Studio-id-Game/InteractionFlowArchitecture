@@ -11,13 +11,13 @@ internal static class GameplayCheckpoint
 {
     internal static async ValueTask<bool> WaitToContinueAsync(IGameplayContext context, ReactionEnd end)
     {
-        if (end.HasException || context.Gameplay.ReadGameState(context.SessionId).Mode == ExecutionMode.Stopping)
+        if (end.HasException || context.Gameplay.ReadGameState(context.SessionId).Info == ExecutionMode.Stopping)
             return false;
 
         try
         {
             return await context.Gameplay.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken())
-                && context.Gameplay.ReadGameState(context.SessionId).Mode != ExecutionMode.Stopping;
+                && context.Gameplay.ReadGameState(context.SessionId).Info != ExecutionMode.Stopping;
         }
         catch (OperationCanceledException) when (context.Lifetime.ShutdownRequested)
         {

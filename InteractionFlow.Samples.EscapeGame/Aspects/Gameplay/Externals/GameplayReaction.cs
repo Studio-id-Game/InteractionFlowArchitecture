@@ -17,7 +17,8 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     {
         if (!context.Gameplay.TryReadControlInput(out var input)) return GetEnd();
         var change = context.Gameplay.UpdateGameState(input.SessionId,
-            state => WorldRules.ApplyControl(state, input), allowWhilePaused: true);
+            (state, mode, presentation, completed) =>
+                WorldRules.ApplyControl(state, input, mode, presentation, completed), allowWhilePaused: true);
         return GetEnd(ValidateUpdate(change.Status, nameof(ApplyControlRequest), allowRejected: true));
     }
 
@@ -37,7 +38,8 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.BeginActionSelection).Status;
+            var status = context.Gameplay.UpdateGameState(context.SessionId,
+                (state, _, _, completed) => WorldRules.BeginActionSelection(state, completed)).Status;
             if (status == GameUpdateStatus.Deferred)
                 continue;
 
@@ -52,7 +54,8 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.Gameplay.UpdateGameState(context.SessionId, state => WorldRules.ApplyInputCommand(state, command)).Status;
+            var status = context.Gameplay.UpdateGameState(context.SessionId,
+                (state, _, _, _) => WorldRules.ApplyInputCommand(state, command)).Status;
             if (status == GameUpdateStatus.Deferred)
                 continue;
 
@@ -64,20 +67,24 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     }
 
     public ValueTask<ReactionEnd> ApplyPlayerActionAsync(IGameplayContext context)
-        => UpdateAndPresentAsync(context, WorldRules.ApplyPlayer, nameof(ApplyPlayerActionAsync));
+        => UpdateAndPresentAsync(context, (state, _, _, _) => WorldRules.ApplyPlayer(state),
+            nameof(ApplyPlayerActionAsync));
 
     public ValueTask<ReactionEnd> ApplyEnemyActionAsync(IGameplayContext context)
-        => UpdateAndPresentAsync(context, WorldRules.ApplyEnemy, nameof(ApplyEnemyActionAsync));
+        => UpdateAndPresentAsync(context, (state, _, _, completed) => WorldRules.ApplyEnemy(state, completed),
+            nameof(ApplyEnemyActionAsync));
 
     public ValueTask<ReactionEnd> PresentResultAsync(IGameplayContext context)
-        => UpdateAndPresentAsync(context, WorldRules.BeginResultPresentation, nameof(PresentResultAsync));
+        => UpdateAndPresentAsync(context, (state, _, _, completed) => WorldRules.BeginResultPresentation(state, completed),
+            nameof(PresentResultAsync));
 
     public async ValueTask<ReactionEnd> EnableResultInputAsync(IGameplayContext context)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))
         {
-            var status = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.EnableResultInput).Status;
+            var status = context.Gameplay.UpdateGameState(context.SessionId,
+                (state, _, _, completed) => WorldRules.EnableResultInput(state, completed)).Status;
             if (status == GameUpdateStatus.Deferred)
                 continue;
 
@@ -107,7 +114,8 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
     }
 
     private static async ValueTask<ReactionEnd> UpdateAndPresentAsync(
-        IGameplayContext context, Func<GameState, GameStateChange> update, string operation)
+        IGameplayContext context, Func<GameState, ExecutionMode, PresentationKey?, bool, GameInfo<GameChangeInfo>> update,
+        string operation)
     {
         var token = context.Cancellation.GetToken();
         while (await context.Gameplay.WaitForActiveAsync(context.SessionId, token))

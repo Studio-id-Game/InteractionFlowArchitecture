@@ -40,7 +40,7 @@ public sealed class FlowTests
         var commands = new Queue<GameCommand>([GameCommand.Up, GameCommand.Confirm]);
         fixture.Input.PollFrame = frames =>
         {
-            if (frames.View.ReadGameState().WaitingForInput && commands.TryDequeue(out var command))
+            if (frames.View.ReadGameState().Info.WaitingForInput && commands.TryDequeue(out var command))
                 frames.GetRequired<FrameState>().Command = command;
         };
         fixture.Game.AfterStep = (step, context, end) =>
@@ -55,7 +55,7 @@ public sealed class FlowTests
         Assert.False(end.HasException);
         Assert.Equal(boundary, observed[^1]);
         Assert.DoesNotContain("enemy", observed);
-        Assert.Equal(turns, fixture.Context.View.ReadGameState().Turn);
+        Assert.Equal(turns, fixture.Context.View.ReadGameState().State.Turn);
         Assert.True(fixture.Session.Ended);
         Assert.False(fixture.Game.Cancellation!.HasTask);
         Assert.Equal("close", fixture.Window.Events[^1]);
@@ -74,7 +74,7 @@ public sealed class FlowTests
         var commands = new Queue<GameCommand>([GameCommand.Up, GameCommand.Confirm]);
         fixture.Input.PollFrame = frames =>
         {
-            if (frames.View.ReadGameState().WaitingForInput && commands.TryDequeue(out var command))
+            if (frames.View.ReadGameState().Info.WaitingForInput && commands.TryDequeue(out var command))
                 frames.GetRequired<FrameState>().Command = command;
         };
         fixture.Game.AfterStep = (step, _, end) =>
@@ -101,7 +101,7 @@ public sealed class FlowTests
         {
             var state = frames.View.ReadGameState();
             var frame = frames.GetRequired<FrameState>();
-            if (!requested && state.WaitingForInput)
+            if (!requested && state.Info.WaitingForInput)
             {
                 requested = true;
                 frame.PauseRequested = true;
@@ -206,7 +206,7 @@ public sealed class FlowTests
             && fixture.Game.Cancellation is { HasTask: false };
         fixture.Input.PollFrame = frames =>
         {
-            if (canceledDuringPresentation || frames.View.ReadGameState().Event is null)
+            if (canceledDuringPresentation || frames.View.ReadGameState().Info.Event is null)
                 return;
             Assert.NotSame(fixture.Context.Cancellation, frames.Cancellation);
             fixture.Context.Cancellation.Cancel();
@@ -243,13 +243,13 @@ public sealed class FlowTests
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.ReadGameState();
-            if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
+            if (snapshot.State.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
 
             heldFrames++;
-            Assert.Equal(GameStage.Preparing, snapshot.Stage);
-            Assert.False(snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active);
-            Assert.False(context.View.TrySubmitCommand(snapshot.SessionId, GameCommand.Up));
+            Assert.Equal(GameStage.Preparing, snapshot.State.Stage);
+            Assert.False(snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active);
+            Assert.False(context.View.TrySubmitCommand(snapshot.State.SessionId, GameCommand.Up));
             if (heldFrames >= 5)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
         };
@@ -274,26 +274,26 @@ public sealed class FlowTests
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.ReadGameState();
-            if (snapshot.SessionId == EscapeApplicationContext.NoSessionId)
+            if (snapshot.State.SessionId == EscapeApplicationContext.NoSessionId)
                 return;
             if (firstSession == 0)
-                firstSession = snapshot.SessionId;
+                firstSession = snapshot.State.SessionId;
 
             var input = context.GetRequired<FrameState>();
-            input.SessionId = snapshot.SessionId;
+            input.SessionId = snapshot.State.SessionId;
 
-            if (snapshot.SessionId != firstSession)
+            if (snapshot.State.SessionId != firstSession)
             {
-                secondSession = snapshot.SessionId;
-                Assert.Equal(0, snapshot.Turn);
-                Assert.Equal(snapshot.Room.PlayerStart, snapshot.Player);
-                Assert.False(snapshot.HasKey);
-                Assert.False(snapshot.DoorUnlocked);
+                secondSession = snapshot.State.SessionId;
+                Assert.Equal(0, snapshot.State.Turn);
+                Assert.Equal(snapshot.State.Room.PlayerStart, snapshot.State.Player);
+                Assert.False(snapshot.State.HasKey);
+                Assert.False(snapshot.State.DoorUnlocked);
                 input.ShutdownRequested = true;
                 return;
             }
 
-            if (!(snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
+            if (!(snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active))
                 return;
             if (commands.TryDequeue(out var command))
             {
@@ -301,9 +301,9 @@ public sealed class FlowTests
                 return;
             }
 
-            won = snapshot;
-            Assert.Equal(GameStage.Result, snapshot.Stage);
-            Assert.Equal(GameOutcome.Won, snapshot.Outcome);
+            won = snapshot.State;
+            Assert.Equal(GameStage.Result, snapshot.State.Stage);
+            Assert.Equal(GameOutcome.Won, snapshot.State.Outcome);
             input.Command = GameCommand.Retry;
         };
 
@@ -327,38 +327,38 @@ public sealed class FlowTests
         using var fixture = new Fixture();
         var phase = 0;
         var pausedFrames = 0;
-        GameState? frozen = null;
+        GameInfo<GameViewInfo>? frozen = null;
         fixture.Input.PollFrame = context =>
         {
             var snapshot = context.View.ReadGameState();
             var input = context.GetRequired<FrameState>();
-            input.SessionId = snapshot.SessionId;
+            input.SessionId = snapshot.State.SessionId;
 
-            if (phase == 0 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
+            if (phase == 0 && (snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active))
             {
                 input.Command = GameCommand.Up;
                 phase = 1;
             }
-            else if (phase == 1 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
+            else if (phase == 1 && (snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active))
             {
                 input.Command = GameCommand.Confirm;
                 phase = 2;
                 fixture.Window.CompletePresentations = false;
             }
-            else if (phase == 2 && snapshot.Stage == GameStage.PlayerPresenting)
+            else if (phase == 2 && snapshot.State.Stage == GameStage.PlayerPresenting)
             {
                 input.PauseRequested = true;
                 phase = 3;
             }
-            else if (phase == 3 && snapshot.Mode == ExecutionMode.Paused)
+            else if (phase == 3 && snapshot.Info.Mode == ExecutionMode.Paused)
             {
                 frozen ??= snapshot;
-                Assert.Equal(frozen.Player, snapshot.Player);
-                Assert.Equal(frozen.EnemyPatrolIndex, snapshot.EnemyPatrolIndex);
-                Assert.Equal(frozen.Turn, snapshot.Turn);
-                Assert.Equal(frozen.Stage, snapshot.Stage);
-                Assert.Equal(frozen.Event!.Key, snapshot.Event!.Key);
-                Assert.False(context.View.TrySubmitCommand(snapshot.SessionId, GameCommand.Confirm));
+                Assert.Equal(frozen.State.Player, snapshot.State.Player);
+                Assert.Equal(frozen.State.EnemyPatrolIndex, snapshot.State.EnemyPatrolIndex);
+                Assert.Equal(frozen.State.Turn, snapshot.State.Turn);
+                Assert.Equal(frozen.State.Stage, snapshot.State.Stage);
+                Assert.Equal(frozen.Info.Event!.Key, snapshot.Info.Event!.Key);
+                Assert.False(context.View.TrySubmitCommand(snapshot.State.SessionId, GameCommand.Confirm));
                 if (++pausedFrames == 5)
                 {
                     input.PauseRequested = true;
@@ -366,9 +366,9 @@ public sealed class FlowTests
                     fixture.Window.CompletePresentations = true;
                 }
             }
-            else if (phase == 4 && (snapshot.WaitingForInput && snapshot.Mode == ExecutionMode.Active))
+            else if (phase == 4 && (snapshot.Info.WaitingForInput && snapshot.Info.Mode == ExecutionMode.Active))
             {
-                Assert.Equal(1, snapshot.Turn);
+                Assert.Equal(1, snapshot.State.Turn);
                 input.ShutdownRequested = true;
             }
         };
@@ -401,7 +401,7 @@ public sealed class FlowTests
         fixture.Window.CompletePresentations = false;
         fixture.Input.PollFrame = context =>
         {
-            if (context.View.ReadGameState().Event is not null)
+            if (context.View.ReadGameState().Info.Event is not null)
                 context.GetRequired<FrameState>().ShutdownRequested = true;
         };
 
@@ -529,13 +529,13 @@ public sealed class FlowTests
                 throw new TimeoutException("The scripted game did not finish.");
             var frame = context.GetRequired<FrameState>();
             var snapshot = context.View.ReadGameState();
-            frame.SessionId = snapshot.SessionId;
+            frame.SessionId = snapshot.State.SessionId;
 
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
             frame.ShutdownRequested = false;
-            frame.Presentation = snapshot.Event?.Key;
+            frame.Presentation = snapshot.Info.Event?.Key;
             PollFrame?.Invoke(context);
         }
     }
@@ -562,7 +562,7 @@ public sealed class FlowTests
             Record("draw");
             DrawCount++;
             var snapshot = context.View.ReadGameState();
-            if (snapshot.Event is { } presentation)
+            if (snapshot.Info.Event is { } presentation)
             {
                 var frame = clock.Update(context.View.ReadGameState(), 1);
                 if (CompletePresentations && frame is not null && clock.IsComplete)

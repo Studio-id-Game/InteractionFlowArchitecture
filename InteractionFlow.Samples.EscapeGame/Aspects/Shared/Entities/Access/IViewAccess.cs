@@ -4,10 +4,10 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 public interface IViewAccess
 {
     /// <summary>
-    /// 直近に公開されたセッションの不変状態を取得し、描画と入力内容の作成に使います。
+    /// 直近に公開された不変ゲーム状態と、描画・入力に必要なセッション情報を同時に取得します。
     /// セッション停止後もその最終状態を返し、まだ一度も公開されていなければ空の状態を返します。
     /// </summary>
-    GameState ReadGameState();
+    GameInfo<GameViewInfo> ReadGameState();
 
     /// <summary>
     /// 指定セッションがActiveで、未完了かつ取消前の入力待機がある場合に通常入力を一件配送します。

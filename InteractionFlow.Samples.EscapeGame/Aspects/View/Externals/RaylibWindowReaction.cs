@@ -21,22 +21,25 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     private static readonly string[] labels = ["Confirm  [Enter]", "Cancel  [Esc]", "Interact  [E]", "Wait  [Space]",
         "Pause  [P]", "Skip  [F]", "Retry  [R]", "Exit"];
     private readonly PresentationClock clock = new();
-    private GameState state = GameState.Empty;
-    private string message = FormatMessage(GameState.Empty);
+    private static readonly GameInfo<GameViewInfo> empty = new(GameState.Empty, new());
+    private GameInfo<GameViewInfo> game = empty;
+    private GameState State => game.State;
+    private GameViewInfo Info => game.Info;
+    private string message = FormatMessage(empty);
     private string[] messageLines = [];
 
     internal string Message => message;
-    internal bool AcceptingInput => state.WaitingForInput && state.Mode == ExecutionMode.Active
-        && (state.Stage == GameStage.Selecting && !state.Confirmed && state.Outcome == GameOutcome.Running
-            || state.Stage == GameStage.Result && state.ResultInputEnabled && !state.RetryRequested);
-    internal bool CanConfirm => AcceptingInput && state.Selection.HasValue;
-    private GridPosition Enemy => state.Room.PatrolAt(state.EnemyPatrolIndex);
+    internal bool AcceptingInput => Info.WaitingForInput && Info.Mode == ExecutionMode.Active
+        && (State.Stage == GameStage.Selecting && !State.Confirmed && State.Outcome == GameOutcome.Running
+            || State.Stage == GameStage.Result && State.ResultInputEnabled && !State.RetryRequested);
+    internal bool CanConfirm => AcceptingInput && State.Selection.HasValue;
+    private GridPosition Enemy => State.Room.PatrolAt(State.EnemyPatrolIndex);
 
     public override void ForceResetMemoryState()
     {
         clock.Reset();
-        state = GameState.Empty;
-        message = FormatMessage(state);
+        game = empty;
+        message = FormatMessage(game);
         messageLines = [];
     }
 
@@ -69,15 +72,15 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         }
         finally { RL.EndDrawing(); }
 
-        if (state.Event is { } presentation && clock.IsComplete)
+        if (Info.Event is { } presentation && clock.IsComplete)
             context.View.TryCompletePresentation(presentation.Key);
         return GetEnd();
     }
 
-    // このReactionだけが使う表示の記憶。共有するのは不変のゲーム状態だけです。
-    internal void PrepareFrame(GameState next, double deltaSeconds)
+    // このReactionだけが使う表示の記憶。同時点のゲーム状態とセッション情報を不変の組として受け取ります。
+    internal void PrepareFrame(GameInfo<GameViewInfo> next, double deltaSeconds)
     {
-        if (!ReferenceEquals(state, next))
+        if (!ReferenceEquals(game, next))
         {
             var nextMessage = FormatMessage(next);
             if (message != nextMessage)
@@ -85,31 +88,42 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
                 message = nextMessage;
                 messageLines = [];
             }
-            state = next;
+            game = next;
         }
-        clock.Update(state, deltaSeconds);
+        clock.Update(game, deltaSeconds);
     }
 
     // 操作結果を優先し、それ以外は同じ不変状態のイベント・選択から導出します。
-    private static string FormatMessage(GameState state) => state switch
+    private static string FormatMessage(GameInfo<GameViewInfo> game)
     {
-        { Feedback: InputFeedback.SelectionCanceled } => "Selection canceled",
-        { Feedback: InputFeedback.InvalidSelection } => "That action is not valid",
-        { Feedback: InputFeedback.NoUsableMechanism } => "No usable mechanism (switch and key are required for door)",
-        { Feedback: InputFeedback.StageDoesNotAcceptSelection } => "This stage does not accept selection",
-        { RetryRequested: true } => "Retrying",
-        { Confirmed: true } => "Action confirmed",
-        { Event.Kind: GameEventKind.Initial } => "Find the key, activate the switch, unlock the door",
-        { Event.Kind: GameEventKind.PlayerMove } => "Player: Move",
-        { Event.Kind: GameEventKind.Switch } => "Player: Switch",
-        { Event.Kind: GameEventKind.Unlock } => "Player: Unlock",
-        { Event.Kind: GameEventKind.Wait } => "Player: Wait",
-        { Event.Kind: GameEventKind.EnemyMove } => "Guard moves",
-        { Event.Kind: GameEventKind.Result } => state.Outcome == GameOutcome.Won ? "Escaped! R to retry" : "Caught! R to retry",
-        { Selection: { } action } => "Selected " + action.Kind + "; Enter to confirm",
-        { Stage: GameStage.Selecting or GameStage.Stopping } => "Choose an action, then confirm",
-        _ => "Preparing room"
-    };
+        var feedback = game.Info.Feedback switch
+        {
+            InputFeedback.SelectionCanceled => "Selection canceled",
+            InputFeedback.InvalidSelection => "That action is not valid",
+            InputFeedback.NoUsableMechanism => "No usable mechanism (switch and key are required for door)",
+            InputFeedback.StageDoesNotAcceptSelection => "This stage does not accept selection",
+            _ => null
+        };
+        if (feedback is not null) return feedback;
+
+        var state = game.State;
+        if (state.RetryRequested) return "Retrying";
+        if (state.Confirmed) return "Action confirmed";
+
+        return game.Info.Event?.Kind switch
+        {
+            GameEventKind.Initial => "Find the key, activate the switch, unlock the door",
+            GameEventKind.PlayerMove => "Player: Move",
+            GameEventKind.Switch => "Player: Switch",
+            GameEventKind.Unlock => "Player: Unlock",
+            GameEventKind.Wait => "Player: Wait",
+            GameEventKind.EnemyMove => "Guard moves",
+            GameEventKind.Result => state.Outcome == GameOutcome.Won ? "Escaped! R to retry" : "Caught! R to retry",
+            _ => state.Selection is { } action ? "Selected " + action.Kind + "; Enter to confirm"
+                : state.Stage is GameStage.Selecting or GameStage.Stopping ? "Choose an action, then confirm"
+                : "Preparing room"
+        };
+    }
 
     public ReactionEnd Close(ILifetimeContext context, Result previous)
     {
@@ -138,35 +152,35 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     {
         RL.DrawText("ONE ROOM / ONE WAY OUT", 32, 26, 30, accent);
         RL.DrawText("Find the key. Activate the switch. Unlock the exit.", 32, 70, 19, muted);
-        RL.DrawText($"TURN {state.Turn:00}", 784, 30, 26, Color.RayWhite);
+        RL.DrawText($"TURN {State.Turn:00}", 784, 30, 26, Color.RayWhite);
     }
 
     private void DrawBoard()
     {
-        for (var y = 0; y < state.Room.Height; y++)
-        for (var x = 0; x < state.Room.Width; x++)
+        for (var y = 0; y < State.Room.Height; y++)
+        for (var x = 0; x < State.Room.Width; x++)
         {
             var bounds = GetTileBounds(x, y);
-            var wall = state.Room.TileAt(x, y) == '#';
+            var wall = State.Room.TileAt(x, y) == '#';
             RL.DrawRectangleRec(bounds, wall ? new Color(43, 57, 76, 255) : new Color(29, 40, 56, 255));
             if (wall) RL.DrawRectangle((int)bounds.X + 7, (int)bounds.Y + 7, (int)bounds.Width - 14, 4, new Color(57, 73, 94, 255));
         }
-        DrawMark(state.Room.Exit, "EXIT", new Color(84, 184, 152, 255));
-        if (!state.KeyCollected) DrawMark(state.Room.Key, "KEY", Color.Gold);
-        DrawMark(state.Room.Switch, state.SwitchActivated ? "ON" : "SW", state.SwitchActivated ? accent : Color.Orange);
-        DrawMark(state.Room.Door, state.DoorUnlocked ? "OPEN" : "LOCK", state.DoorUnlocked ? accent : new Color(191, 137, 86, 255));
+        DrawMark(State.Room.Exit, "EXIT", new Color(84, 184, 152, 255));
+        if (!State.KeyCollected) DrawMark(State.Room.Key, "KEY", Color.Gold);
+        DrawMark(State.Room.Switch, State.SwitchActivated ? "ON" : "SW", State.SwitchActivated ? accent : Color.Orange);
+        DrawMark(State.Room.Door, State.DoorUnlocked ? "OPEN" : "LOCK", State.DoorUnlocked ? accent : new Color(191, 137, 86, 255));
 
-        if (state.Selection is GameAction action)
+        if (State.Selection is GameAction action)
         {
             var bounds = GetTileBounds(action.Target.X, action.Target.Y);
             RL.DrawRectangleLinesEx(bounds, 3, Color.Gold);
         }
 
-        var player = GetTileCenter(state.Player);
+        var player = GetTileCenter(State.Player);
         var enemy = GetTileCenter(Enemy);
-        if (state.Event is { } presentation)
+        if (Info.Event is { } presentation)
         {
-            var t = clock.DurationSeconds <= 0 || state.SkipRequested ? 1f
+            var t = clock.DurationSeconds <= 0 || Info.SkipRequested ? 1f
                 : (float)Math.Clamp(clock.ElapsedSeconds / clock.DurationSeconds, 0, 1);
             var position = Vector2.Lerp(
                 GetTileCenter(presentation.From), GetTileCenter(presentation.To), t * t * (3 - 2 * t));
@@ -178,7 +192,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
         RL.DrawCircleV(player, 21, new Color(103, 187, 249, 255));
         RL.DrawText("P", (int)player.X - 8, (int)player.Y - 12, 24, background);
 
-        if (state.Mode == ExecutionMode.Paused)
+        if (Info.Mode == ExecutionMode.Paused)
         {
             RL.DrawRectangle(RaylibLayout.BoardX, RaylibLayout.BoardY, 7 * RaylibLayout.Cell, 5 * RaylibLayout.Cell, new Color(12, 18, 29, 180));
             RL.DrawText("PAUSED", 205, 270, 38, Color.Gold);
@@ -197,18 +211,18 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     {
         RL.DrawRectangle(600, 120, 328, 380, new Color(25, 35, 50, 255));
         RL.DrawText("SESSION", 622, 140, 17, muted);
-        var title = state.Stage == GameStage.Result ? state.Outcome == GameOutcome.Won ? "ESCAPED!" : "CAUGHT!"
-            : state.Mode == ExecutionMode.Paused ? "Take a breath" : "Plan your next move";
-        RL.DrawText(title, 622, 172, 24, state.Stage == GameStage.Result ? Color.Gold : Color.RayWhite);
-        RL.DrawText($"Key       {(state.HasKey ? "carrying" : state.KeyCollected ? "used" : "not found")}", 622, 218, 18, muted);
-        RL.DrawText($"Switch    {(state.SwitchActivated ? "active" : "inactive")}", 622, 250, 18, muted);
-        RL.DrawText($"Door      {(state.DoorUnlocked ? "open" : "locked")}", 622, 282, 18, muted);
-        RL.DrawText($"Selection: {state.Selection?.Kind.ToString() ?? "none"}", 622, 330, 18, Color.Gold);
+        var title = State.Stage == GameStage.Result ? State.Outcome == GameOutcome.Won ? "ESCAPED!" : "CAUGHT!"
+            : Info.Mode == ExecutionMode.Paused ? "Take a breath" : "Plan your next move";
+        RL.DrawText(title, 622, 172, 24, State.Stage == GameStage.Result ? Color.Gold : Color.RayWhite);
+        RL.DrawText($"Key       {(State.HasKey ? "carrying" : State.KeyCollected ? "used" : "not found")}", 622, 218, 18, muted);
+        RL.DrawText($"Switch    {(State.SwitchActivated ? "active" : "inactive")}", 622, 250, 18, muted);
+        RL.DrawText($"Door      {(State.DoorUnlocked ? "open" : "locked")}", 622, 282, 18, muted);
+        RL.DrawText($"Selection: {State.Selection?.Kind.ToString() ?? "none"}", 622, 330, 18, Color.Gold);
         DrawMessage();
-        var next = state.Room.PatrolAt((state.EnemyPatrolIndex + 1) % state.Room.PatrolLength);
+        var next = State.Room.PatrolAt((State.EnemyPatrolIndex + 1) % State.Room.PatrolLength);
         var direction = next.X > Enemy.X ? "right" : next.X < Enemy.X ? "left"
             : next.Y > Enemy.Y ? "down" : "up";
-        RL.DrawText($"Guard next: {direction}  [{state.EnemyPatrolIndex + 1}/4]", 622, 467, 17, muted);
+        RL.DrawText($"Guard next: {direction}  [{State.EnemyPatrolIndex + 1}/4]", 622, 467, 17, muted);
         RL.DrawText("MOVE: arrows / WASD       CONFIRM: Enter", 32, 521, 19, muted);
     }
 
@@ -241,24 +255,24 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
     private void DrawButtons()
     {
-        var active = state.Mode == ExecutionMode.Active;
+        var active = Info.Mode == ExecutionMode.Active;
         for (var i = 0; i < labels.Length; i++)
         {
             var enabled = i switch
             {
                 0 => CanConfirm,
-                1 or 2 or 3 => AcceptingInput && state.Stage == GameStage.Selecting,
-                4 => state.Stage is GameStage.Selecting or GameStage.PlayerPresenting or GameStage.EnemyPresenting,
-                5 => active && state.Event is not null
-                    && state.Stage is GameStage.PlayerPresenting or GameStage.EnemyPresenting,
-                6 => AcceptingInput && state.Stage == GameStage.Result,
+                1 or 2 or 3 => AcceptingInput && State.Stage == GameStage.Selecting,
+                4 => State.Stage is GameStage.Selecting or GameStage.PlayerPresenting or GameStage.EnemyPresenting,
+                5 => active && Info.Event is not null
+                    && State.Stage is GameStage.PlayerPresenting or GameStage.EnemyPresenting,
+                6 => AcceptingInput && State.Stage == GameStage.Result,
                 _ => true
             };
             var bounds = RaylibLayout.GetButtonBounds(i);
             var hover = enabled && RL.CheckCollisionPointRec(RL.GetMousePosition(), bounds);
             RL.DrawRectangleRec(bounds, !enabled ? new Color(30, 40, 54, 255)
                 : hover ? new Color(58, 92, 119, 255) : new Color(39, 64, 86, 255));
-            var label = i == 4 && state.Mode == ExecutionMode.Paused ? "Resume  [P]" : labels[i];
+            var label = i == 4 && Info.Mode == ExecutionMode.Paused ? "Resume  [P]" : labels[i];
             RL.DrawText(label, (int)bounds.X + 18, (int)bounds.Y + 12, 19, enabled ? Color.RayWhite : new Color(96, 113, 135, 255));
         }
     }

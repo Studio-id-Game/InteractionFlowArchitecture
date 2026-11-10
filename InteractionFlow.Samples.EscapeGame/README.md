@@ -37,7 +37,7 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 | View | ウィンドウの生成・描画・閉鎖を扱う。ゲーム状態から表示・演出時間を作り、操作と描画後の完了を入力として送る |
 | Gameplay | 入力の意味を解釈し、ゲーム規則を適用して次のゲーム状態を作る |
 | Application | 入力とゲーム状態の共有、排他、一括反映、待機・通知、セッションの寿命を管理する |
-| Shared | 不変のGameState、入力内容、Context・Access・Port契約と共通Handler |
+| Shared | 不変のGameState、GameInfo<T>と用途別の付帯情報、入力内容、Context・Access・Port契約と共通Handler |
 | Lifetime | 共通Context基底と全体停止要求の相互作用 |
 
 Aspectsは範囲→レイヤーの順です。共有契約以外は、各Aspect内と基底Lifetimeへの依存に限定します。
@@ -58,21 +58,29 @@ ApplicationProfileは構成の入口として維持しますが、現在はサ�
 
 ```text
 Viewの入力取得 → EscapeAccessに操作を渡す → Gameplayが入力を読む
-GameplayのWorldRules → 次のGameState → EscapeAccessが一括反映
-EscapeAccessのGameState → RaylibWindowReaction（表示の記憶・変換）→ 描画
+GameplayのWorldRules → GameInfo<GameChangeInfo> → EscapeAccessが一括反映
+EscapeAccessのGameInfo<GameViewInfo> → RaylibWindowReaction（表示の記憶・変換）→ 描画
 ```
 
 [GameState](./Aspects/Shared/Entities/GameState.cs)は不変のrecordです。
 取得した状態はロック外でも安全に読め、後からゲームが進んでも変化しません。
-[EscapeAccess](./Aspects/Application/Entities/Access/EscapeAccess.cs)は表示用Snapshot、文字列、演出時間を保持しません。
+[SessionState](./Aspects/Application/Entities/SessionState.cs)はFeedback、入力待機、提示、実行モード、版を保持します。
+[EscapeAccess](./Aspects/Application/Entities/Access/EscapeAccess.cs)は同時点のGameStateと必要な値を
+SharedのGameInfo<T>で返し、SessionStateの実装型を外側へ公開しません。
+View向けのGameInfo<GameViewInfo>は状態変更時に作成して再利用し、取得時には割り当てません。
+表示文字列や演出時間はViewだけが保持します。
 
 [GameplayReaction](./Aspects/Gameplay/Externals/GameplayReaction.cs)は、例えば次のように更新します。
 
 ```csharp
-var change = context.Gameplay.UpdateGameState(context.SessionId, WorldRules.ApplyPlayer);
+var change = context.Gameplay.UpdateGameState(context.SessionId,
+    (state, _, _, _) => WorldRules.ApplyPlayer(state));
 ```
 
-更新関数はロック内で現在のGameStateを受け取り、次の不変状態を返します。
+更新関数はロック内でGameState、実行モード、提示キー、提示完了を個別の引数で受け取ります。
+WorldRulesへは必要な引数だけを渡し、GameInfo<GameChangeInfo>で次状態とセッションへの反映指示を返します。
+Feedbackと提示は保持・設定・解除を区別し、SessionRuntimeが版の更新と提示キー発行を担います。
+Gameplayの状態取得はGameInfo<ExecutionMode>を返します。
 [WorldRules](./Aspects/Gameplay/Entities/WorldRules.cs)はゲーム規則だけを扱い、外部I/Oや待機を行いません。
 更新関数が例外を送出した場合は、返却前の状態を公開しません。同期処理は短く保ちます。
 IGameplayRules、受付条件のビット集合、入力待機ID、ルールのDI登録はありません。
@@ -84,12 +92,12 @@ IGameplayRules、受付条件のビット集合、入力待機ID、ルールのD
 
 ## Viewでの変換
 
-[RaylibWindowReaction](./Aspects/View/Externals/RaylibWindowReaction.cs)がGameStateを読み、
+[RaylibWindowReaction](./Aspects/View/Externals/RaylibWindowReaction.cs)がGameInfo<GameViewInfo>を読み、
 GameEvent・選択・確定状態などから通常の表示文言・位置・ボタン状態を導きます。
 Feedbackは取消・拒否など、現在の状態だけでは復元できない4種類の操作結果に限定しています。
 操作結果はポーズや入力待機・提示完了通知を通じて保持し、次の有効操作や提示開始で解除します。
-ViewSnapshot / PresentationSnapshot / ViewProjectionは不要になり、表示用DTOを毎フレーム生成しません。
-文言はゲーム状態の参照が変わったときに組み立て、同じ文言の折り返し結果も再利用します。
+表示用DTOを毎フレーム生成せず、同時点のGameStateとGameViewInfoをまとめた取得結果を再利用します。
+文言は取得結果の参照が変わったときに組み立て、同じ文言の折り返し結果も再利用します。
 
 [PresentationClock](./Aspects/View/Entities/PresentationClock.cs)はReaction内部で演出時間を保持するヘルパーです。
 更新ごとにSnapshotを返さず、自身の経過時間・所要時間・完了状態を更新します。
@@ -132,23 +140,24 @@ CleanupInfoで先行結果と終了種別を渡し、終了処理自身の失敗
 
 ## 検証
 
-全体・計測プロジェクトのビルドは警告・エラー0件、EscapeGame109件と他470件の全579テストが成功しました。
+SessionState分離後は全体・計測プロジェクトのビルドが警告・エラー0件、EscapeGame129件と他470件の全599テストが成功しました。
 ゲームの解法・勝敗・リトライ、ポーズ・キャンセル・終了の競合、古い提示への通知に加え、
 不変Snapshot、並行更新の取りこぼし防止、失敗した更新の非公開、Viewでの表示変換・時計を検証します。
 旧案固有の受付ポリシー・待機IDテストは廃止し、現在のデータ境界を検証するテストへ置き換えました。
 
-実画面でW/Dによる選択、Enter確定、ターン進行、ポーズ・Pでの再開、敗北表示、Rでのリトライ、Exit終了を確認しました。
+分離前の実画面確認では、W/Dによる選択、Enter確定、ターン進行、ポーズ・Pでの再開、敗北表示、Rでのリトライ、Exit終了を確認しました。
+分離後は描画APIを置き換えたフロー実行とViewの状態変換・時計のテストで同じ進行を検証しています。
 
 .NET 10.0.14 / x64、TieredCompilation=0、20,000回ウォームアップ、200,000回×3の描画なし簡易計測は次のとおりです。
 
 | 対象 | 割り当て | 時間の目安 |
 | --- | ---: | ---: |
-| 不変GameStateの取得 | 0B | 約14〜15ns |
-| 直接フレーム（取得2回・ローカル時計） | 0B | 約99ns |
-| PresentFrame一回 | 232B | 約186〜193ns |
+| View向け不変状態の取得 | 0B | 約14〜15ns |
+| 直接フレーム（取得2回・ローカル時計） | 0B | 約101〜103ns |
+| PresentFrame一回 | 232B | 約204〜212ns |
 
 表示DTOがあった版の直接フレーム128B / PresentFrame360Bから、それぞれ128B減りました。
-計測用ReactionはGameStateの保持と時計更新だけを行い、実描画・文言組み立て・折り返しを含みません。
+計測用ReactionはGameInfo<GameViewInfo>の保持と時計更新だけを行い、実描画・文言組み立て・折り返しを含みません。
 実描画時の補間文字列や、ゲーム更新・入力通知時の不変状態生成には割り当てがあります。
 上の計測はネイティブ描画、ゲーム更新、入力・制御の競合を含むゲーム全体の性能保証ではありません。
 再実行は[計測プロジェクト](../benchmarks/InteractionFlow.ExecutionMeasurements/README.md)を参照してください。

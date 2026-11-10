@@ -18,18 +18,18 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public GameUpdateResult BeginSession(long sessionId, Func<GameState, GameStateChange> initialize)
+    public GameUpdateResult BeginSession(long sessionId, Func<GameState, GameInfo<GameChangeInfo>> initialize)
     {
         lock (gate)
         {
             if (shutdown || !sessions.TryGetValue(sessionId, out var session)
-                || session.State.Mode == ExecutionMode.Stopping)
+                || session.Mode == ExecutionMode.Stopping)
                 return new(GameUpdateStatus.Stopped);
             // 公開済みで停止していないセッションは必ずactiveが指しています。
-            if (active is { State.Mode: not ExecutionMode.Stopping })
+            if (active is { Mode: not ExecutionMode.Stopping })
                 return new(GameUpdateStatus.Rejected);
             var change = initialize(session.State);
-            if (!change.Accepted) return new(GameUpdateStatus.Rejected, change.State.Event?.Key);
+            if (!change.Info.Accepted) return new(GameUpdateStatus.Rejected);
             var result = session.Commit(change);
             active = session;
             return result;
@@ -46,14 +46,16 @@ internal sealed partial class EscapeAccess
         }
     }
 
-    public GameState ReadGameState(long sessionId)
+    public GameInfo<ExecutionMode> ReadGameState(long sessionId)
     {
         lock (gate)
-            return FindActiveSession(sessionId)?.State
-                ?? new GameState(sessionId) { Mode = ExecutionMode.Stopping, Stage = GameStage.Stopping };
+            return FindActiveSession(sessionId) is { } session
+                ? new(session.State, session.Mode)
+                : new(new(sessionId) { Stage = GameStage.Stopping }, ExecutionMode.Stopping);
     }
 
-    public GameUpdateResult UpdateGameState(long sessionId, Func<GameState, GameStateChange> update,
+    public GameUpdateResult UpdateGameState(long sessionId,
+        Func<GameState, ExecutionMode, PresentationKey?, bool, GameInfo<GameChangeInfo>> update,
         bool allowWhilePaused = false)
     {
         lock (gate)
@@ -61,10 +63,10 @@ internal sealed partial class EscapeAccess
             var session = FindActiveSession(sessionId);
             if (session is null)
                 return new(GameUpdateStatus.Stopped);
-            if (!allowWhilePaused && session.State.Mode == ExecutionMode.Paused)
+            if (!allowWhilePaused && session.Mode == ExecutionMode.Paused)
                 return new(GameUpdateStatus.Deferred);
             // 更新関数は短い同期処理。外部I/Oやawaitをせず、不変の次状態を返します。
-            return session.Commit(update(session.State));
+            return session.Update(update);
         }
     }
 

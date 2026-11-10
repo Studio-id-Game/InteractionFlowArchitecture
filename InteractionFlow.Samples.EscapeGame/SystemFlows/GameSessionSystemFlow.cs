@@ -14,7 +14,7 @@ public sealed class GameSessionSystemFlow(
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
-        while (context.Gameplay.ReadGameState(context.SessionId).Outcome == GameOutcome.Running)
+        while (context.Gameplay.ReadGameState(context.SessionId).State.Outcome == GameOutcome.Running)
         {
             var end = await turn.ExecuteAsync(context);
             if (!await GameplayCheckpoint.WaitToContinueAsync(context, end.End))

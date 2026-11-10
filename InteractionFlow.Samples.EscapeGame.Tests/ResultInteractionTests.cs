@@ -30,16 +30,16 @@ public sealed class ResultInteractionTests
         Assert.Equal(0, reaction.Enabled);
 
         pending.SetResult(ResultReaction.End());
-        await WaitForInputAsync(context);
+        await WaitForInputAsync(app);
         Assert.Equal(1, reaction.Enabled);
         Assert.False(execution.IsCompleted);
         Assert.True(app.View.TrySubmitCommand(context.SessionId, GameCommand.Up));
-        await WaitForInputAsync(context);
+        await WaitForInputAsync(app);
         Assert.False(execution.IsCompleted);
-        Assert.Equal(InputFeedback.StageDoesNotAcceptSelection, app.View.ReadGameState().Feedback);
+        Assert.Equal(InputFeedback.StageDoesNotAcceptSelection, app.View.ReadGameState().Info.Feedback);
         Assert.True(app.View.TrySubmitCommand(context.SessionId, GameCommand.Retry));
         Assert.False((await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).HasException);
-        Assert.True(app.View.ReadGameState().RetryRequested);
+        Assert.True(app.View.ReadGameState().State.RetryRequested);
         Assert.False(context.Cancellation.HasTask);
     }
 
@@ -90,7 +90,7 @@ public sealed class ResultInteractionTests
             .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.False(end.HasException);
         Assert.False(context.Cancellation.HasTask);
-        Assert.False(app.View.ReadGameState().WaitingForInput);
+        Assert.False(app.View.ReadGameState().Info.WaitingForInput);
     }
 
     [Fact]
@@ -99,16 +99,16 @@ public sealed class ResultInteractionTests
         using var app = new EscapeApplicationContext();
         using var context = CreateResultContext(app);
         var execution = Create(new ResultReaction()).ExecuteAsync(context);
-        await WaitForInputAsync(context);
+        await WaitForInputAsync(app);
 
         context.Cancellation.Cancel();
 
         var end = await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.False(end.HasException);
         Assert.True(context.Lifetime.ShutdownRequested);
-        Assert.False(app.View.ReadGameState().WaitingForInput);
+        Assert.False(app.View.ReadGameState().Info.WaitingForInput);
         Assert.False(context.Cancellation.HasTask);
-        Assert.False(app.View.ReadGameState().RetryRequested);
+        Assert.False(app.View.ReadGameState().State.RetryRequested);
     }
 
     private static HandleResult Create(IGameplayReaction reaction)
@@ -119,15 +119,16 @@ public sealed class ResultInteractionTests
         var context = GameTestSteps.Ready(app);
         GameTestSteps.PlayTurn(context, app, GameCommand.Right);
         GameTestSteps.PlayTurn(context, app, GameCommand.Up);
-        var result = app.Gameplay.UpdateGameState(context.SessionId, WorldRules.BeginResultPresentation);
+        var result = app.Gameplay.UpdateGameState(context.SessionId,
+            (state, _, _, completed) => WorldRules.BeginResultPresentation(state, completed));
         GameTestSteps.Complete(app, result.Presentation!.Value);
         return context;
     }
 
-    private static async Task WaitForInputAsync(IGameplayContext context)
+    private static async Task WaitForInputAsync(IViewContext context)
     {
         var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (!context.Gameplay.ReadGameState(context.SessionId).WaitingForInput)
+        while (!context.View.ReadGameState().Info.WaitingForInput)
         {
             TestContext.Current.CancellationToken.ThrowIfCancellationRequested();
             Assert.True(DateTime.UtcNow < deadline, "Result input did not start.");

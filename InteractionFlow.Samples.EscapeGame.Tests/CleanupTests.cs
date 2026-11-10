@@ -261,7 +261,7 @@ public sealed class CleanupTests
             frame.Command = null;
             frame.PauseRequested = false;
             frame.SkipRequested = false;
-            frame.ShutdownRequested = context.View.ReadGameState().SessionId != 0;
+            frame.ShutdownRequested = context.View.ReadGameState().State.SessionId != 0;
         }
     }
 

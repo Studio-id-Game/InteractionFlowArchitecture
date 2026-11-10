@@ -30,7 +30,8 @@ internal static class EscapeFrameMeasurements
         using var session = new GameplayContexts.GameplayContext(root, root.Gameplay.AllocateSession(), ContextInheritance.Cancellation);
         var initial = session.Gameplay.BeginSession(session.SessionId, WorldRules.BeginSession).Presentation!.Value;
         if (!root.View.TryCompletePresentation(initial)
-            || session.Gameplay.UpdateGameState(session.SessionId, WorldRules.BeginActionSelection).Status != GameUpdateStatus.Applied)
+            || session.Gameplay.UpdateGameState(session.SessionId,
+                (state, _, _, completed) => WorldRules.BeginActionSelection(state, completed)).Status != GameUpdateStatus.Applied)
             throw new InvalidOperationException("Failed to initialize measurement session.");
 
         using var frames = new VC.ViewContext(root, ContextInheritance.None);
@@ -61,8 +62,8 @@ internal static class EscapeFrameMeasurements
             context.GetRequired<VE.WindowState>().VerifyAccess();
             var state = context.View.ReadGameState();
             var frame = context.GetRequired<VE.FrameState>();
-            frame.SessionId = state.SessionId;
-            frame.Presentation = state.Event?.Key;
+            frame.SessionId = state.State.SessionId;
+            frame.Presentation = state.Info.Event?.Key;
             frame.Command = null;
             frame.PauseRequested = frame.SkipRequested = frame.ShutdownRequested = false;
         }

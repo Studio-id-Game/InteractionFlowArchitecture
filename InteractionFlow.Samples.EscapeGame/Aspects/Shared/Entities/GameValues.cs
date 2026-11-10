@@ -21,10 +21,38 @@ public enum ActionKind { Move, Switch, Unlock, Wait }
 public readonly record struct GameAction(ActionKind Kind, GridPosition Target);
 
 /// <summary>
-/// ゲーム規則による操作の成立可否と次状態です。拒否時にもFeedback等を反映した状態を保持します。
-/// 共有アクセスが次状態を反映し、受付状況を含むGameUpdateResultへ変換します。
+/// ゲーム状態と、用途ごとに必要な付帯情報をまとめます。
 /// </summary>
-public readonly record struct GameStateChange(bool Accepted, GameState State);
+public sealed record GameInfo<T>(GameState State, T Info);
+
+/// <summary>
+/// ゲーム規則による操作の成立可否と、セッションへの反映指示です。未指定の情報は保持します。
+/// </summary>
+public sealed record GameChangeInfo(bool Accepted)
+{
+    /// <summary> trueならFeedbackを設定します。値がnullなら解除します。 </summary>
+    public bool ReplaceFeedback { get; init; }
+    public InputFeedback? Feedback { get; init; }
+
+    /// <summary> trueなら提示を置き換えます。種類がnullなら解除し、キーはSessionRuntimeが発行します。 </summary>
+    public bool ReplacePresentation { get; init; }
+    public GameEventKind? Presentation { get; init; }
+    public GridPosition From { get; init; }
+    public GridPosition To { get; init; }
+    public ExecutionMode? Mode { get; init; }
+    public bool RequestSkip { get; init; }
+}
+
+/// <summary>
+/// Viewがゲーム状態と同時に取得する不変のセッション情報です。表示文字列や演出時間は含みません。
+/// </summary>
+public sealed record GameViewInfo(
+    InputFeedback? Feedback = null,
+    ExecutionMode Mode = ExecutionMode.Active,
+    bool WaitingForInput = false,
+    GameEvent? Event = null,
+    bool SkipRequested = false,
+    long ControlRevision = 0);
 
 /// <summary>
 /// 共有アクセスへの更新要求の結果と、その要求に対応する提示キーを返します。

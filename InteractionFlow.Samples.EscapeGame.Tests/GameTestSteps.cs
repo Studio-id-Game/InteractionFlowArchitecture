@@ -21,7 +21,8 @@ internal static class GameTestSteps
         Assert.Equal(GameUpdateStatus.Applied, begin.Status);
         Complete(app, begin.Presentation!.Value);
         Assert.Equal(GameUpdateStatus.Applied,
-            session.Gameplay.UpdateGameState(session.SessionId, WorldRules.BeginActionSelection).Status);
+            session.Gameplay.UpdateGameState(session.SessionId,
+                (state, _, _, completed) => WorldRules.BeginActionSelection(state, completed)).Status);
         return session;
     }
 
@@ -29,30 +30,36 @@ internal static class GameTestSteps
         => Assert.True(context.View.TryCompletePresentation(key));
 
     internal static bool SetPaused(this IGameplayAccess access, long id, bool paused)
-        => access.UpdateGameState(id, state => state.Mode == (paused ? ExecutionMode.Paused : ExecutionMode.Active)
-            ? new(false, state)
-            : WorldRules.ApplyControl(state, new(id, GameControlCommand.TogglePause)), allowWhilePaused: true)
-            .Status == GameUpdateStatus.Applied;
+        => access.UpdateGameState(id, (state, mode, presentation, completed) =>
+            mode == (paused ? ExecutionMode.Paused : ExecutionMode.Active)
+                ? new(state, new(false))
+                : WorldRules.ApplyControl(state, new(id, GameControlCommand.TogglePause), mode, presentation, completed),
+            allowWhilePaused: true).Status == GameUpdateStatus.Applied;
 
     internal static bool RequestSkip(this IGameplayAccess access, PresentationKey key)
-        => access.UpdateGameState(key.SessionId, state => WorldRules.ApplyControl(state,
-            new(key.SessionId, GameControlCommand.Skip, key)), allowWhilePaused: true).Status == GameUpdateStatus.Applied;
+        => access.UpdateGameState(key.SessionId, (state, mode, presentation, completed) =>
+            WorldRules.ApplyControl(state, new(key.SessionId, GameControlCommand.Skip, key),
+                mode, presentation, completed), allowWhilePaused: true).Status == GameUpdateStatus.Applied;
 
     internal static void PlayTurn(IGameplayContext session, IViewContext view, GameCommand command)
     {
         var id = session.SessionId;
         Assert.Equal(GameUpdateStatus.Applied,
-            session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, command)).Status);
+            session.Gameplay.UpdateGameState(id,
+                (state, _, _, _) => WorldRules.ApplyInputCommand(state, command)).Status);
         Assert.Equal(GameUpdateStatus.Applied,
-            session.Gameplay.UpdateGameState(id, state => WorldRules.ApplyInputCommand(state, GameCommand.Confirm)).Status);
-        var player = session.Gameplay.UpdateGameState(id, WorldRules.ApplyPlayer);
+            session.Gameplay.UpdateGameState(id,
+                (state, _, _, _) => WorldRules.ApplyInputCommand(state, GameCommand.Confirm)).Status);
+        var player = session.Gameplay.UpdateGameState(id, (state, _, _, _) => WorldRules.ApplyPlayer(state));
         Assert.Equal(GameUpdateStatus.Applied, player.Status);
         Complete(view, player.Presentation!.Value);
-        if (session.Gameplay.ReadGameState(id).Outcome != GameOutcome.Running) return;
-        var enemy = session.Gameplay.UpdateGameState(id, WorldRules.ApplyEnemy);
+        if (session.Gameplay.ReadGameState(id).State.Outcome != GameOutcome.Running) return;
+        var enemy = session.Gameplay.UpdateGameState(id,
+            (state, _, _, completed) => WorldRules.ApplyEnemy(state, completed));
         Assert.Equal(GameUpdateStatus.Applied, enemy.Status);
         Complete(view, enemy.Presentation!.Value);
-        if (session.Gameplay.ReadGameState(id).Outcome == GameOutcome.Running)
-            Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id, WorldRules.BeginActionSelection).Status);
+        if (session.Gameplay.ReadGameState(id).State.Outcome == GameOutcome.Running)
+            Assert.Equal(GameUpdateStatus.Applied, session.Gameplay.UpdateGameState(id,
+                (state, _, _, completed) => WorldRules.BeginActionSelection(state, completed)).Status);
     }
 }

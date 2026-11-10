@@ -50,9 +50,9 @@ public sealed class LifetimeAccessTests
         var second = app.Gameplay.AllocateSession();
         Assert.True(first > EscapeApplicationContext.NoSessionId);
         Assert.True(second > first);
-        Assert.Equal(EscapeApplicationContext.NoSessionId, app.View.ReadGameState().SessionId);
+        Assert.Equal(EscapeApplicationContext.NoSessionId, app.View.ReadGameState().State.SessionId);
         Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(first, WorldRules.BeginSession).Status);
-        Assert.Equal(first, app.View.ReadGameState().SessionId);
+        Assert.Equal(first, app.View.ReadGameState().State.SessionId);
         Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(first,
             _ => throw new InvalidOperationException("A published session must not be initialized again.")).Status);
         Assert.Equal(GameUpdateStatus.Rejected, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
@@ -60,7 +60,7 @@ public sealed class LifetimeAccessTests
         Assert.Equal(GameUpdateStatus.Applied, app.Gameplay.BeginSession(second, WorldRules.BeginSession).Status);
         app.Lifetime.RequestShutdown();
         Assert.Throws<InvalidOperationException>(() => app.Gameplay.AllocateSession());
-        Assert.Equal(ExecutionMode.Stopping, app.Gameplay.ReadGameState(second).Mode);
+        Assert.Equal(ExecutionMode.Stopping, app.Gameplay.ReadGameState(second).Info);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class LifetimeAccessTests
         var resume = app.Gameplay.WaitForActiveAsync(id, TestContext.Current.CancellationToken).AsTask();
 
         var stopped = app.Gameplay.UpdateGameState(id,
-            state => new(true, state with { Mode = ExecutionMode.Stopping }), allowWhilePaused: true);
+            (state, _, _, _) => new(state, new(true) { Mode = ExecutionMode.Stopping }), allowWhilePaused: true);
 
         Assert.Equal(GameUpdateStatus.Applied, stopped.Status);
         Assert.Equal(GameCommand.Stop, await input);
@@ -83,7 +83,7 @@ public sealed class LifetimeAccessTests
         Assert.Equal(GameUpdateStatus.Stopped, app.Gameplay.BeginSession(id,
             _ => throw new InvalidOperationException("A stopped session must not be initialized again.")).Status);
         Assert.Equal(GameUpdateStatus.Stopped, app.Gameplay.UpdateGameState(id,
-            _ => throw new InvalidOperationException("A stopped session must not receive updates."), allowWhilePaused: true).Status);
+            (_, _, _, _) => throw new InvalidOperationException("A stopped session must not receive updates."), allowWhilePaused: true).Status);
         Assert.False(app.View.TrySubmitCommand(id, GameCommand.Up));
         Assert.False(app.View.TrySubmitControl(new(id, GameControlCommand.TogglePause)));
 
@@ -92,8 +92,8 @@ public sealed class LifetimeAccessTests
         var current = app.View.ReadGameState();
         app.Gameplay.EndSession(id);
         Assert.Same(current, app.View.ReadGameState());
-        Assert.Equal(next.SessionId, current.SessionId);
-        Assert.Equal(ExecutionMode.Active, current.Mode);
+        Assert.Equal(next.SessionId, current.State.SessionId);
+        Assert.Equal(ExecutionMode.Active, current.Info.Mode);
     }
 
     private sealed class Lifetime : ILifetimeAccess

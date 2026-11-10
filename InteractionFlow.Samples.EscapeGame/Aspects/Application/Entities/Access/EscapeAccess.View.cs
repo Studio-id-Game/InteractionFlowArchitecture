@@ -4,10 +4,14 @@ namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access
 
 internal sealed partial class EscapeAccess
 {
-    public GameState ReadGameState()
+    private static readonly GameInfo<GameViewInfo> emptyView = new(GameState.Empty, new());
+    private static readonly GameInfo<GameViewInfo> stoppedView =
+        new(GameState.Empty, new(Mode: ExecutionMode.Stopping));
+
+    public GameInfo<GameViewInfo> ReadGameState()
     {
         lock (gate)
-            return active?.State ?? (shutdown ? GameState.Empty with { Mode = ExecutionMode.Stopping } : GameState.Empty);
+            return active?.View ?? (shutdown ? stoppedView : emptyView);
     }
 
     public bool TrySubmitCommand(long sessionId, GameCommand command)

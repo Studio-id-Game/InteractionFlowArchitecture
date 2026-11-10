@@ -19,8 +19,9 @@ public sealed class PresentationClock
         ElapsedSeconds = DurationSeconds = 0;
     }
 
-    public GameEvent? Update(GameState state, double deltaSeconds)
+    public GameEvent? Update(GameInfo<GameViewInfo> game, double deltaSeconds)
     {
+        var state = game.Info;
         if (!double.IsFinite(deltaSeconds) || deltaSeconds < 0)
             throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
         if (state.Event is not { } e) { Reset(); return null; }

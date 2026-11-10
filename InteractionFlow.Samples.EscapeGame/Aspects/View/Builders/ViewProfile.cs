@@ -1,5 +1,4 @@
 using InteractionFlow.Core.Builders;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
@@ -14,6 +13,7 @@ public sealed class ViewProfile : IScopeProfile
         services.UseFunction<IWindowOperation, RaylibWindowOperation>()
             .UseFunction<IWindowReaction, RaylibWindowReaction>()
             .UseInteraction<OpenWindow>()
-            .UseInteraction<PresentFrame>();
+            .UseInteraction<PresentFrame>()
+            .UseInteraction<CloseWindow>();
     }
 }

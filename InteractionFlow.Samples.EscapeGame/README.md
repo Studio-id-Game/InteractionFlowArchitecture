@@ -34,16 +34,18 @@ dotnet run --project InteractionFlow.Samples.EscapeGame
 
 | 分類 | 責務 |
 | --- | --- |
-| View | ゲーム状態から文言・ボタン状態・表示・演出時間を作る。操作と描画後の完了を入力として送る |
+| View | ウィンドウの生成・描画・閉鎖を扱う。ゲーム状態から表示・演出時間を作り、操作と描画後の完了を入力として送る |
 | Gameplay | 入力の意味を解釈し、ゲーム規則を適用して次のゲーム状態を作る |
 | Application | 入力とゲーム状態の共有、排他、一括反映、待機・通知、セッションの寿命を管理する |
 | Shared | 不変のGameState、入力内容、Context・Access・Port契約と共通Handler |
-| Lifetime | 共通Context基底と停止・閉鎖の相互作用 |
+| Lifetime | 共通Context基底と全体停止要求の相互作用 |
 
 Aspectsは範囲→レイヤーの順です。共有契約以外は、各Aspect内と基底Lifetimeへの依存に限定します。
 配置表は[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
 各AspectのProfileは自身のFunction・Interactionを登録し、EscapeGameProfileがApplyします。
 ゲーム進行のSystemFlowはEscapeGameProfile自身で登録します。
+IWindowReactionとOpenWindow / PresentFrame / CloseWindowはViewにまとめ、ViewProfileが登録します。
+LifetimeProfileはRequestShutdownを登録します。ウィンドウ閉鎖もRaylibWindowReactionが担います。
 
 ## 入力・ゲーム状態・表示の流れ
 

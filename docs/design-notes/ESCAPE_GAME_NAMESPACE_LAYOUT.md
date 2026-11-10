@@ -1,7 +1,7 @@
 # EscapeGameの名前空間と配置
 
 Aspectsは関心→レイヤーの順に置く。現在の責務は、Viewが表示変換と入力、Gameplayがゲームの判断、
-Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約・値・共通補助処理、Lifetimeが共通基底と終了処理である。
+Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約・値・共通補助処理、Lifetimeが共通基底と全体停止である。
 
 | 名前空間の末尾 | 要素 |
 | --- | --- |
@@ -11,19 +11,19 @@ Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約
 | Aspects.Gameplay.Interactions | BeginSession、BeginActionSelection、HandleGameInput、HandleControlInput、ApplyPlayerAction、ApplyEnemyAction、PresentResult、EndSession |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
 | Aspects.View.Entities | FrameState、WindowState、PresentationClock |
-| Aspects.View.ExternalPorts | IWindowOperation |
+| Aspects.View.ExternalPorts | IWindowOperation、IWindowReaction |
 | Aspects.View.Externals | RaylibWindowOperation、RaylibWindowReaction、RaylibLayout |
-| Aspects.View.Interactions | OpenWindow、PresentFrame |
+| Aspects.View.Interactions | OpenWindow、PresentFrame、CloseWindow |
 | Aspects.View.Entities.Contexts | ViewContext |
 | Aspects.Application.Entities.Access | EscapeAccess（本体・Gameplay・View・Lifetimeの4ファイルとprivateなSessionRuntime） |
 | Aspects.Application.Entities.Contexts | EscapeApplicationContext |
 | Aspects.Application.Externals | GameInputOperation |
 | Aspects.Lifetime.Entities.Contexts | LifetimeContext（抽象基底） |
-| Aspects.Lifetime.Interactions | RequestShutdown、CloseWindow |
+| Aspects.Lifetime.Interactions | RequestShutdown |
 | Aspects.Shared.Entities | GameState、InputFeedback、GameEvent、GameControlInput、RoomDefinition、CleanupInfo、FailureCollector、その他の共有値 |
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
-| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction、IWindowReaction |
+| Aspects.Shared.ExternalPorts | IGameInputOperation、IGameLifetimeReaction |
 | Aspects.Shared.Externals | GameExceptionHandling、GameCancellationHandling |
 | Aspects.各範囲.Builders | GameplayProfile、ViewProfile、ApplicationProfile、LifetimeProfile、SharedProfile |
 
@@ -39,7 +39,10 @@ Sharedは具体Aspectへ依存しない。各Aspectは自身とSharedを参照�
 Context契約の所属にかかわらず、各機能は必要な最も狭いContextを受け取る。
 全体を跨ぐ実行はルートのSystemFlowが合成する。
 
-共有Portは機能の契約、各AspectのExternalはその実装である。
+複数Aspectが利用するPortはSharedに置き、単一Aspectの機能契約と実装はそのAspectへまとめる。
+IWindowReactionとCloseWindowはViewに所属し、Open・DrawFrame・Closeを同じRaylibWindowReactionが実装する。
+CloseWindowの登録はViewProfile、全体停止要求の登録はLifetimeProfileが担当する。
+Closeが必要とする引数は引き続きILifetimeContextであり、WindowStateとCleanupInfoはContextから取得する。
 WorldRulesは外部環境を使わない通常の計算としてGameplay.Entitiesに置く。
 Applicationはロック内で渡された同期更新関数を実行するだけで、WorldRulesやゲーム段階の条件を参照しない。
 ゲーム状態からの文言・表示・演出指定の変換はViewに閉じる。

@@ -8,7 +8,6 @@ public sealed class LifetimeProfile : IScopeProfile
 {
     public void Configure(IScopeServices services)
     {
-        services.UseInteraction<CloseWindow>()
-            .UseInteraction<RequestShutdown>();
+        services.UseInteraction<RequestShutdown>();
     }
 }

@@ -47,6 +47,8 @@ EscapeApplicationContextが共有EscapeAccessを作り、GameplayContext / ViewC
 Cancellationの共有と親の値探索はContextInheritanceで独立に指定します。
 Port・External・Interactionは依存を含む範囲を先に置き、Aspects.Gameplay.Interactions等の名前空間で配置します。
 共有契約・値・共通補助処理はAspects.Sharedへ、集約・接続・共有状態管理はAspects.Applicationへ置きます。
+ウィンドウの生成・描画・閉鎖のPortとInteractionはAspects.Viewへまとめ、ViewProfileが登録します。
+Lifetimeは共通Context基底と全体停止要求を扱います。
 構成と操作は [Turn-based escape](../InteractionFlow.Samples.EscapeGame/README.md) を参照してください。
 
 ---

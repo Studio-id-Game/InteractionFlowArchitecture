@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
@@ -7,7 +7,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Threading.Tasks;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Interactions;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 
 public sealed class CloseWindow(
     IWindowReaction reaction,

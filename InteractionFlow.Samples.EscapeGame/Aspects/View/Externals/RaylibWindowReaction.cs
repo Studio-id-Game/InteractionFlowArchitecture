@@ -3,7 +3,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.ExternalPorts;
+using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities;
 using Raylib_cs;
 using System;

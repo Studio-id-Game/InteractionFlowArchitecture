@@ -36,6 +36,7 @@ IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / Rayl
 | Aspects.Shared.Entities | RoomDefinition、CleanupKind、CleanupInfo、FailureCollector、GameValues.csのゲーム値型、ExecutionMode、PresentationValues.csの提示値型、ViewSnapshot |
 | Aspects.Gameplay.Entities.Contexts | GameplayContext |
 | Aspects.View.Entities.Contexts | ViewContext |
+| Aspects.Lifetime.Entities.Contexts | LifetimeContext（抽象基底） |
 | Aspects.Application.Entities.Contexts | EscapeApplicationContext |
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
@@ -49,6 +50,8 @@ FrameStateとWindowStateは画面側で扱う状態としてAspects.View.Entitie
 ゲーム規則と内部の論理状態7型はAspects.Gameplay.Entitiesへ置く。
 これらはApplicationのEscapeAccessとSessionRuntimeから利用する。
 Context契約は共有の引数契約としてShared.Entities.Contextsへ置き、具体Contextは対応する範囲のEntities.Contextsへ置く。
+具体Context3型はLifetimeContextを継承する。基底はLifetimeの保持・破棄確認付き取得・型探索と参照解放だけを共有し、Accessの所有権は取得しない。
+派生ContextのDisposeCoreは固有参照を解放してからbase.DisposeCoreを呼ぶ。役割別の探索制限と追加値検証は派生側に残す。
 契約の配置にかかわらず、各機能は必要な依存を含む最も狭いContext契約を受け取る。
 3つのAccess契約は共有状態への操作契約としてShared.Entities.Accessへまとめる。
 全Access契約を実装するEscapeAccessは、Contextが提供する値としてApplication.Entities.Accessへ置く。

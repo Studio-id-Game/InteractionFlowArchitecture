@@ -40,6 +40,8 @@ IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通Handler�
 FrameStateとWindowStateはAspects.View.Entitiesへ置きます。
 ゲーム規則のWorldRules・ActionEffectと論理状態5型はAspects.Gameplay.Entitiesへ置きます。
 Context契約4型はShared.Entities.Contexts、具体Contextは各範囲のEntities.Contextsへ置きます。
+3つの具体ContextはLifetime.Entities.ContextsのLifetimeContextを継承し、Lifetimeの保持・取得・参照解放を共有します。
+基底は共有Accessを停止・破棄せず、固有Accessの提供・探索制限・追加値検証は各派生Contextが担当します。
 3つのAccess契約はAspects.Shared.Entities.Access、共有アクセス管理のEscapeAccessはAspects.Application.Entities.Accessへ置きます。
 partialは本体と、Access契約に対応するGameplay・View・Lifetimeの4ファイルに分けます。
 共有フィールド・補助メソッド・両契約共通のGetSessionProgressと、privateな内部クラス3型は本体へまとめます。

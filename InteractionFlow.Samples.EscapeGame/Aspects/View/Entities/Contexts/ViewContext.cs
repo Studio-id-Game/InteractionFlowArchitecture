@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
@@ -7,24 +8,20 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 
-public sealed class ViewContext : FlowContext, IViewContext
+public sealed class ViewContext : LifetimeContext, IViewContext
 {
     private IViewAccess? view;
-    private ILifetimeAccess? lifetime;
 
     public ViewContext(IViewContext parent, ContextInheritance inheritance) : base(parent, inheritance)
     {
         view = parent.View;
-        lifetime = parent.Lifetime;
     }
 
     public IViewAccess View => view ?? throw new ObjectDisposedException(nameof(ViewContext));
-    public ILifetimeAccess Lifetime => lifetime ?? throw new ObjectDisposedException(nameof(ViewContext));
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
-        object? provided = typeof(T) == typeof(IViewAccess) ? View
-            : typeof(T) == typeof(ILifetimeAccess) ? Lifetime : null;
+        object? provided = typeof(T) == typeof(IViewAccess) ? View : null;
         if (provided is T found)
         {
             value = found;
@@ -44,6 +41,6 @@ public sealed class ViewContext : FlowContext, IViewContext
     protected override void DisposeCore()
     {
         view = null;
-        lifetime = null;
+        base.DisposeCore();
     }
 }

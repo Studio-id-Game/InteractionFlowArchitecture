@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
@@ -7,10 +8,9 @@ using System;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 
-public sealed class GameplayContext : FlowContext, IGameplayContext
+public sealed class GameplayContext : LifetimeContext, IGameplayContext
 {
     private IGameplayAccess? gameplay;
-    private ILifetimeAccess? lifetime;
 
     // アプリからはCancellationのみ、同じ役割の子はAll、後始末はNoneを指定します。
     public GameplayContext(IGameplayContext parent, ContextInheritance inheritance)
@@ -20,18 +20,15 @@ public sealed class GameplayContext : FlowContext, IGameplayContext
         : base(parent, inheritance)
     {
         gameplay = parent.Gameplay;
-        lifetime = parent.Lifetime;
         SessionId = sessionId;
     }
 
     public long SessionId { get; }
     public IGameplayAccess Gameplay => gameplay ?? throw new ObjectDisposedException(nameof(GameplayContext));
-    public ILifetimeAccess Lifetime => lifetime ?? throw new ObjectDisposedException(nameof(GameplayContext));
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
-        object? provided = typeof(T) == typeof(IGameplayAccess) ? Gameplay
-            : typeof(T) == typeof(ILifetimeAccess) ? Lifetime : null;
+        object? provided = typeof(T) == typeof(IGameplayAccess) ? Gameplay : null;
         if (provided is T found)
         {
             value = found;
@@ -51,6 +48,6 @@ public sealed class GameplayContext : FlowContext, IGameplayContext
     protected override void DisposeCore()
     {
         gameplay = null;
-        lifetime = null;
+        base.DisposeCore();
     }
 }

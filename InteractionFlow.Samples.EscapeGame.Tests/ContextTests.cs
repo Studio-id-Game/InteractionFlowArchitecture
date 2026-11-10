@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
@@ -241,6 +242,36 @@ public sealed class ContextTests
         }
         Assert.Throws<ObjectDisposedException>(() => new GameplayContext(game, ContextInheritance.None));
         Assert.Throws<ObjectDisposedException>(() => new ViewContext(view, ContextInheritance.None));
+    }
+
+    [Fact]
+    public void LifetimeBaseProvidesOnlyItsContractAndDoesNotOwnSharedAccess()
+    {
+        using var app = new EscapeApplicationContext();
+        var access = app.Lifetime;
+        using var root = new LifetimeOnlyContext(access);
+        using var child = new LifetimeOnlyContext(root, ContextInheritance.Cancellation);
+        Assert.Same(access, root.Lifetime);
+        Assert.Same(access, child.GetRequired<ILifetimeAccess>());
+        Assert.Same(root.Cancellation, child.Cancellation);
+        Assert.False(root.TryGet<IGameplayAccess>(out _));
+        Assert.False(root.TryGet<IViewAccess>(out _));
+
+        root.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => root.Lifetime);
+        Assert.Same(access, child.Lifetime);
+        child.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => child.Lifetime);
+        Assert.False(access.ShutdownRequested);
+        Assert.Same(access, app.Lifetime);
+        Assert.Throws<ArgumentNullException>(() => new LifetimeOnlyContext((ILifetimeAccess)null!));
+    }
+
+    private sealed class LifetimeOnlyContext : LifetimeContext
+    {
+        internal LifetimeOnlyContext(ILifetimeAccess lifetime) : base(lifetime) { }
+        internal LifetimeOnlyContext(ILifetimeContext parent, ContextInheritance inheritance)
+            : base(parent, inheritance) { }
     }
 
     private sealed class GameplaySource(IGameplayContext parent) : FlowContext, IGameplayContext

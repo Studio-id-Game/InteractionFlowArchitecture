@@ -1,3 +1,4 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
@@ -9,15 +10,17 @@ using System;
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 
 // 共有アクセスを作る全体構成用の入口です。実行先には役割別Contextを構築して渡します。
-public sealed class EscapeApplicationContext : FlowContext, IApplicationContext
+public sealed class EscapeApplicationContext : LifetimeContext, IApplicationContext
 {
     // 0 は特定セッションを指さないアプリのスコープです。実セッションIDは1から始まります。
     public const long NoSessionId = 0;
 
     private EscapeAccess? access;
-    public EscapeApplicationContext()
+    public EscapeApplicationContext() : this(new EscapeAccess()) { }
+
+    private EscapeApplicationContext(EscapeAccess access) : base(access)
     {
-        access = new();
+        this.access = access;
         SessionId = NoSessionId;
     }
 
@@ -26,13 +29,11 @@ public sealed class EscapeApplicationContext : FlowContext, IApplicationContext
     public long SessionId { get; }
     public IGameplayAccess Gameplay => Access;
     public IViewAccess View => Access;
-    public ILifetimeAccess Lifetime => Access;
 
     protected override bool TryGetCore<T>([MaybeNullWhen(false)] out T value)
     {
         object? provided = typeof(T) == typeof(IGameplayAccess) ? Gameplay
-            : typeof(T) == typeof(IViewAccess) ? View
-            : typeof(T) == typeof(ILifetimeAccess) ? Lifetime : null;
+            : typeof(T) == typeof(IViewAccess) ? View : null;
         if (provided is T found)
         {
             value = found;
@@ -45,5 +46,9 @@ public sealed class EscapeApplicationContext : FlowContext, IApplicationContext
     protected override void ValidateAdditionalValue<T>(T value)
         => ContextAccessValidation.Validate(value!);
 
-    protected override void DisposeCore() => access = null;
+    protected override void DisposeCore()
+    {
+        access = null;
+        base.DisposeCore();
+    }
 }

@@ -2,7 +2,6 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Diagnostics.CodeAnalysis;
 using System;
 

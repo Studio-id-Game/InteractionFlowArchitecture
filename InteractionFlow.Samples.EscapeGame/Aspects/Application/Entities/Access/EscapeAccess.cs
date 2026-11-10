@@ -1,4 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using System.Collections.Generic;
 

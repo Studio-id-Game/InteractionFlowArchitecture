@@ -22,7 +22,9 @@ Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約
 | Aspects.Lifetime.ExternalPorts | IShutdownReaction |
 | Aspects.Lifetime.Externals | ShutdownReaction |
 | Aspects.Lifetime.Interactions | RequestShutdown |
-| Aspects.Shared.Entities | GameState、GameInfo<T>、GameChangeInfo、GameViewInfo、InputFeedback、GameEvent、GameControlInput、RoomDefinition、CleanupInfo、FailureCollector、その他の共有値 |
+| Aspects.Shared.Entities | GameInfo<T>、CleanupInfo、CleanupKind、FailureCollector |
+| Aspects.Shared.Entities.Game | GameState、GameStage、GameOutcome、RoomDefinition、GridPosition、GameAction、ActionKind、GameCommand |
+| Aspects.Shared.Entities.Session | GameChangeInfo、GameViewInfo、GameUpdateResult、GameUpdateStatus、ExecutionMode、InputFeedback、GameControlInput、GameControlCommand、GameEvent、GameEventKind、PresentationKey、PresentationCompletion |
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
 | Aspects.Shared.Externals | GameExceptionHandling、GameCancellationHandling |
@@ -30,6 +32,8 @@ Applicationが入力と不変ゲーム状態の安全な共有、Sharedが契約
 
 各名前空間はInteractionFlow.Samples.EscapeGameを先頭とし、ディレクトリーも同じ順に揃える。
 要素のない階層は作らない。
+Gameはゲーム内の状態・位置・行動、Sessionは共有アクセスを通した制御・提示・反映情報を置く。
+関連する列挙型は主となるデータ型と同じファイルにまとめ、GameValues / PresentationValuesの混在を解消する。
 ルートのBuilders/EscapeGameProfileは各ProfileをApplyし、ゲーム進行のSystemFlowを自身で登録する。
 SystemFlowsとProgramはルートのまま、全体合成と実行寿命を扱う。
 

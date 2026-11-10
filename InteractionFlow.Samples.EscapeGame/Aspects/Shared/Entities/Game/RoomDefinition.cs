@@ -1,7 +1,4 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
-using System;
-
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 
 public sealed class RoomDefinition
 {

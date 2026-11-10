@@ -62,7 +62,7 @@ GameplayのWorldRules → GameInfo<GameChangeInfo> → EscapeAccessが一括反�
 EscapeAccessのGameInfo<GameViewInfo> → RaylibWindowReaction（表示の記憶・変換）→ 描画
 ```
 
-[GameState](./Aspects/Shared/Entities/GameState.cs)は不変のrecordです。
+[GameState](./Aspects/Shared/Entities/Game/GameState.cs)は不変のrecordです。
 取得した状態はロック外でも安全に読め、後からゲームが進んでも変化しません。
 [SessionState](./Aspects/Application/Entities/SessionState.cs)はFeedback、入力待機、提示、実行モード、版を保持します。
 [EscapeAccess](./Aspects/Application/Entities/Access/EscapeAccess.cs)は同時点のGameStateと必要な値を

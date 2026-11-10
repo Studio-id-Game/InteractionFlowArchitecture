@@ -1,3 +1,5 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;

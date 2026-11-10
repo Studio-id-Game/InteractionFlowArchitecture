@@ -1,3 +1,6 @@
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
+
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 
 // Viewはゲーム状態を読み、操作と提示完了を入力として渡します。

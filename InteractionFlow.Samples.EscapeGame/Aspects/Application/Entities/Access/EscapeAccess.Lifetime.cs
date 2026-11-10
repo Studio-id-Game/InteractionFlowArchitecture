@@ -1,4 +1,3 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Access;
 

@@ -65,7 +65,7 @@ EscapeGameProfileも各ProfileをApplyする現在の構成を保つ。
 
 ### B. SessionProgressをGameStateの直接参照へ置き換える【実施済み】
 
-対象: [GameValues](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/GameValues.cs)、
+対象: [ゲームの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Game/)・[セッションの共有値](../../InteractionFlow.Samples.EscapeGame/Aspects/Shared/Entities/Session/)、
 [EscapeAccess.Gameplay](../../InteractionFlow.Samples.EscapeGame/Aspects/Application/Entities/Access/EscapeAccess.Gameplay.cs)、
 IGameplayAccess、4個のゲーム用SystemFlow/Checkpointと関連テスト。
 

@@ -1,4 +1,4 @@
-namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 
 // 不変の共有ゲーム状態。取得したインスタンスはロック外でも安全に読めます。
 public sealed record GameState(long SessionId)
@@ -20,7 +20,6 @@ public sealed record GameState(long SessionId)
     public bool ResultInputEnabled { get; init; }
 }
 
-public enum InputFeedback
-{
-    SelectionCanceled, InvalidSelection, NoUsableMechanism, StageDoesNotAcceptSelection
-}
+public enum GameStage { Preparing, Selecting, PlayerPresenting, EnemyPresenting, Result, Stopping }
+
+public enum GameOutcome { Running, Won, Lost }

@@ -4,7 +4,7 @@ using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using System.Threading.Tasks;
 using System;
 using Xunit;

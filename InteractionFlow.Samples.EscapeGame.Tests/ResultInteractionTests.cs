@@ -8,7 +8,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using System.Threading.Tasks;
 using System;
 using Xunit;

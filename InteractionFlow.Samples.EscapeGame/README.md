@@ -36,7 +36,7 @@ ExternalPorts / Externals / Interactionsは、Aspects配下にContext依存を�
 例えばAspects.Gameplay.Interactions、Aspects.View.Externals、Aspects.Lifetime.Interactions、Aspects.Application.ExternalPortsです。
 GameplayとViewの両方が必要な入力Port / ExternalだけをApplicationへ置きます。
 Lifetimeは両者の基底なので、Lifetimeも使うだけでは所属を広げません。
-IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通Handlerは既存Externals直下です。
+IWindowReaction系はView、IGameLifetimeReaction系はGameplay、共通HandlerはShared.Externalsへ置きます。
 FrameStateとWindowStateはAspects.View.Entitiesへ置きます。
 ゲーム規則のWorldRules・ActionEffectと論理状態5型はAspects.Gameplay.Entitiesへ置きます。
 Context契約4型はShared.Entities.Contexts、具体Contextは各範囲のEntities.Contextsへ置きます。
@@ -48,8 +48,12 @@ partialは本体と、Access契約に対応するGameplay・View・Lifetimeの4�
 Aspect間で共有する値型はAspects.Shared.Entitiesへ置き、GameValues・ExecutionMode・PresentationValues・ViewSnapshotに分けます。
 盤面定義・終了情報・失敗収集もShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置きます。
 Applicationは集約・接続・共有状態管理、Sharedは共有契約・値・補助処理を担当します。
-SystemFlows・Buildersと共通HandlerはAspectsの外に置きます。
+SystemFlowsと全体合成用BuildersはAspectsの外に置きます。
 分類表と依存方向の扱いは[名前空間と配置](../docs/design-notes/ESCAPE_GAME_NAMESPACE_LAYOUT.md)を参照してください。
+
+各AspectのBuildersに登録用Profileを置き、EscapeGameProfileが5つのProfileをApplyして全体を構成します。
+ゲーム進行の3つのSystemFlowはEscapeGameProfile自身で登録し、SharedProfileは共通例外・取消Handlerを登録します。
+各Profileは自身の要素だけを登録し、他Aspectの依存は全体の合成時に満たします。
 
 Programは構成と起動を担当し、WindowSystemFlowがメインスレッドのフレームと背景のゲーム進行を所有します。
 GamePlaySystemFlowはセッションの割り当て・開始・終了とリトライを管理します。

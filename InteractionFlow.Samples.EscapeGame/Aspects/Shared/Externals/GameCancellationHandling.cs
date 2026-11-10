@@ -7,7 +7,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using System.Threading.Tasks;
 using System;
 
-namespace InteractionFlow.Samples.EscapeGame.Externals;
+namespace InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 
 public sealed class GameCancellationHandling : CancellationHandling
 {

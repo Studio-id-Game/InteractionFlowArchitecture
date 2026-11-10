@@ -41,11 +41,20 @@ IGameLifetimeReaction / GameLifetimeReactionはGameplay、IWindowReaction / Rayl
 | Aspects.Shared.Entities.Access | IGameplayAccess、IViewAccess、ILifetimeAccess |
 | Aspects.Shared.Entities.Contexts | ILifetimeContext、IGameplayContext、IViewContext、IApplicationContext、ContextAccessValidation |
 | Aspects.Application.Entities.Access | EscapeAccess（4つのpartialファイルとprivateなSessionRuntime・DisplayState・PresentationRuntime） |
-| Externals（既存位置） | GameExceptionHandling、GameCancellationHandling |
+| Aspects.Shared.Externals | GameExceptionHandling、GameCancellationHandling |
+| Aspects.Gameplay.Builders | GameplayProfile（Reaction・Interactionを登録） |
+| Aspects.View.Builders | ViewProfile |
+| Aspects.Lifetime.Builders | LifetimeProfile |
+| Aspects.Application.Builders | ApplicationProfile（入力接続を登録） |
+| Aspects.Shared.Builders | SharedProfile（Shared.Externalsの共通Handlerを登録） |
 
 各名前空間はInteractionFlow.Samples.EscapeGameを先頭とする。ディレクトリーも同じ順に揃える。
 Aspectsは範囲別の機能をまとめる配置上の階層であり、新しい依存範囲やレイヤーではない。
-SystemFlows、Buildersと分類外の共通Handlerは既存位置に置く。ルートのEntitiesはShared.Entitiesへ移す。
+SystemFlowsと全体合成用Buildersは既存位置に置く。ルートのEntitiesはShared.Entities、共通HandlerはShared.Externalsへ移す。
+ルートBuildersには全体合成のEscapeGameProfileを残し、各Aspectの登録はその配下のBuildersへ分ける。
+EscapeGameProfileはShared・Application・Gameplay・View・Lifetimeの各ProfileをApplyする。
+ゲーム進行の3つのSystemFlowは全体構成としてEscapeGameProfile自身が登録する。
+各Profileは他Aspectを再適用せず、自身の登録だけを担当する。全体合成後に依存を解決し、従来どおり後続登録でPortを差し替えられる。
 FrameStateとWindowStateは画面側で扱う状態としてAspects.View.Entitiesへまとめる。
 ゲーム規則と内部の論理状態7型はAspects.Gameplay.Entitiesへ置く。
 これらはApplicationのEscapeAccessとSessionRuntimeから利用する。
@@ -63,7 +72,7 @@ Aspect間の共有契約・値はSharedへ置き、集約・接続・共有状�
 RoomDefinition・終了情報・失敗収集はShared.Entities、Contextの共通検証処理はShared.Entities.Contextsへ置く。
 要素のないレイヤーは作らない。複数範囲を扱う既存Port / Externalを、配置のためだけに分割しない。
 専用ヘルパーは補助対象に従い、GameUpdateValidationはGameplay、RaylibLayoutはViewへ置く。
-IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契約を入口にしない共通処理として既存位置に残す。
+IFlowContextを受け取る共通例外・取消Handlerは、特定のContext契約を入口にしない共通処理としてShared.Externalsへ置く。
 
 ## 依存の意味
 

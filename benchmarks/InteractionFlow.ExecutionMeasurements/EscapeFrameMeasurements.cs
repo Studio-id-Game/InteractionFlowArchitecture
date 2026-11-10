@@ -9,7 +9,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
-using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using System;
 using AC = InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
 using E = InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;

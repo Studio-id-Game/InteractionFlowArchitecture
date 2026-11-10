@@ -10,7 +10,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using InteractionFlow.Samples.EscapeGame.Externals;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Externals;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;

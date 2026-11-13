@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
@@ -24,30 +23,6 @@ internal static class GameplayCheckpoint
         catch (OperationCanceledException) when (context.Lifetime.ShutdownRequested)
         {
             return false;
-        }
-    }
-
-    internal static async ValueTask<Result> WaitToContinueResultAsync(IGameplayContext context, ReactionEnd end)
-    {
-        if (end.HasException)
-        {
-            return end.Result;
-        }
-
-        if (IsEnd(context))
-            return new InvalidCastException("Game end");
-
-        try
-        {
-            var sessionId = context.SessionId;
-            var cancellation = context.Cancellation;
-            return await context.Gameplay.WaitForActiveAsync(sessionId, cancellation.GetToken()) && !IsEnd(context) ?
-                Result.Success :
-                new InvalidCastException("Game end");
-        }
-        catch (OperationCanceledException e) when (context.Lifetime.ShutdownRequested)
-        {
-            return e;
         }
     }
 

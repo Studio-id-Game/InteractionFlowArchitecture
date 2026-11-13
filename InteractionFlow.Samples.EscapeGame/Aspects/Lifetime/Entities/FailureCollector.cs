@@ -11,16 +11,29 @@ internal sealed class FailureCollector
 
     public bool HasFailure => failures is { Count: > 0 };
 
-    public void Add(Exception failure)
+    public Exception Add(Exception failure)
     {
         failures ??= [];
         failures.Add(failure);
+
+        return failure;
     }
 
-    public void Add(Result result)
+    public Result Add(Result result)
     {
         if (!result.Try(out var failure))
+        {
             Add(failure);
+        }
+
+        return result;
+    }
+
+    // 終了手順だけを継続可能にします。記録した失敗はToResultで最終結果へ戻します。
+    public Result RecordAndContinue(Exception failure)
+    {
+        Add(failure);
+        return Result.Success;
     }
 
     public Result ToResult()

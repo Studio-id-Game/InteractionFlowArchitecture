@@ -118,10 +118,13 @@ PlayTurnは選択開始・入力反復・プレイヤー行動・敵行動の提
 HandleResultは結果提示・受付開始・リトライ入力までを扱います。
 段階間とフロー間の停止・再開確認はGameplay内のGameplayCheckpointで共有します。
 
-GamePlaySystemFlowは各実行の終了結果を読み、明示的な分岐でセッション進行・終了・リトライを判断します。
+GamePlaySystemFlowは開始・継続確認からセッション実行へThenAsyncで接続し、送出例外は各段で捕捉します。
+セッション実行のResult<bool>はリトライ意図を渡します。
+ResolveAsyncで成功・失敗の両方をEndSessionへ接続し、終了失敗時は再試行しません。
 PlayTurn / HandleResultは各Reaction後に継続を明示的に判定し、失敗・正常停止ではそのReactionEndを直接返します。
-SystemFlowと両InteractionのResultチェーン化は、記述量と終了処理の負担に見合う利点が得られず撤回しました。
-WindowSystemFlowはtry/catch/finallyとFailureCollectorで停止・合流・閉鎖と失敗の保持を調整します。
+両Interactionのチェーン化は撤回し、終了トークンの直接返却を維持しています。
+WindowSystemFlowはThen/ThenErrorで実行・停止・合流を接続し、集約したResultをCloseWindowへ直接渡します。
+ThenErrorは失敗をFailureCollectorに保持して後始末へ回復し、Closeの前に蓄積した失敗を最終結果へ戻します。
 OpenからCloseまで呼び出し元スレッドを維持します。
 局所検証と適用判断の詳細は[Result APIの利用調査と実装結果](../docs/design-notes/ESCAPE_GAME_RESULT_API_REVIEW.md)を参照してください。
 
@@ -147,7 +150,7 @@ CleanupInfoで先行結果と終了種別を渡し、終了処理自身の失敗
 
 ## 検証
 
-今回の見直しではEscapeGame151件と他470件の全621テストを確認しています。
+今回の見直しではEscapeGame155件と他470件の全625テストを確認しています。
 開始・結果提示・入力受付の失敗Resultについて、後続の打ち切りと元の失敗結果の保持を確認しています。
 範囲・不足への対応・維持した重複の理由は[テスト点検](../docs/design-notes/ESCAPE_GAME_TEST_COVERAGE.md)を参照してください。
 ゲームの解法・勝敗・リトライ、ポーズ・キャンセル・終了の競合、古い提示への通知に加え、

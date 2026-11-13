@@ -29,5 +29,11 @@ namespace InteractionFlow.Core.Entities.Contexts
             if (context.TryGet<T>(out var value)) return value;
             throw new RequiredContextValueNotFoundException(typeof(T), memberName, filePath, lineNumber);
         }
+
+        /// <inheritdoc cref="FlowContext.With{T}(T)"/>
+        public static TContext WithT<TContext, T>(this TContext context, T value) where TContext : FlowContext
+        {
+            return (TContext)context.With(value);
+        }
     }
 }

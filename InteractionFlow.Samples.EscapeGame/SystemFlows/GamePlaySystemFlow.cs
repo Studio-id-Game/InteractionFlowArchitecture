@@ -1,64 +1,135 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
-using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
+using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using System.Threading.Tasks;
 using System;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
-public sealed class GamePlaySystemFlow(BeginSession begin, GameSessionSystemFlow sessionFlow, EndSession endSession)
-    : SystemFlow<IGameplayContext>(begin, sessionFlow, endSession)
+public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSystemFlow gameSessionFlow, EndSession endSession)
+    : SystemFlow<IGameplayContext>(beginSession, gameSessionFlow, endSession)
 {
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IGameplayContext context)
     {
         while (true)
         {
-            if (!context.Gameplay.TryAllocateSession(out var id))
+            var run = new RunData(beginSession, gameSessionFlow, endSession);
+
+            if (!await run.CheckStartAsync(context))
             {
-                // ウィンドウ停止とセッション生成が競合した通常終了です。
-                using var stopped = new GameplayContext(context, ContextInheritance.None);
-                stopped.With(new CleanupInfo(CleanupKind.EndSession, Result.Success));
-                return await endSession.ExecuteAsync(stopped);
+                return run.LastEnd;
             }
 
-            using var session = new GameplayContext(context, id, ContextInheritance.All);
-            Result outcome;
-            var retry = false;
+            if (!await run.PlayAndCheckContinueAsync(context))
+            {
+                return run.LastEnd;
+            }
+        }
+    }
+
+    private class RunData(BeginSession beginSession, GameSessionSystemFlow gameSessionFlow, EndSession endSession)
+    {
+        private long sessionId;
+
+        private bool isCanceled;
+
+        private InteractionEnd? lastEnd;
+
+        public InteractionEnd LastEnd
+        {
+            get => lastEnd ?? throw new NullReferenceException("GamePlaySystemFlow.RunData.LastEnd");
+            set => lastEnd = value;
+        }
+
+        public async Task<bool> CheckStartAsync(IGameplayContext rootContext)
+        {
+            if (rootContext.Gameplay.TryAllocateSession(out sessionId))
+                return true;
+
+            // ウィンドウ停止とセッション生成が競合した通常終了です。
+            await EndSessionAsync(rootContext, Result.Success);
+            return false;
+        }
+
+        public async Task<bool> PlayAndCheckContinueAsync(IGameplayContext rootContext)
+        {
+            using var sessionContext = new GameplayContext(rootContext, sessionId, ContextInheritance.All);
+
+            return await sessionContext
+                .AsResultAsync()
+                .ThenAsync(async context => await ExecuteAsync(context, beginSession.ExecuteAsync))
+                .ThenAsync(async context => await ExecuteAsync(context, async context =>
+                    {
+                        return (await GameplayCheckpoint.WaitToContinueResultAsync(context, LastEnd.End))
+                        .Resolve(
+                            () => context.AsResult(),
+                            e => { isCanceled = true; return e; }
+                        );
+                    })
+                )
+                .ThenAsync(async context => await ExecuteAsync(context, gameSessionFlow.ExecuteAsync))
+                .ResolveAsync(
+                    async context =>
+                    {
+                        var retryRequested = context.Gameplay.ReadGameState(context.SessionId).State.RetryRequested;
+                        await EndSessionAsync(context, Result.Success);
+                        return !LastEnd.HasException && retryRequested && !context.Lifetime.ShutdownRequested;
+                    },
+                    async error =>
+                    {
+                        await EndSessionAsync(sessionContext, isCanceled ? Result.Success : error);
+                        return false;
+                    }
+                );
+        }
+
+        private async Task EndSessionAsync(IGameplayContext context, Result sessionResult)
+        {
+            // 旧セッションの待機を閉じてから、新しいセッションを作成・公開します。
+            using var cleanupContext = new GameplayContext(context, ContextInheritance.None);
+            cleanupContext.With(new CleanupInfo(CleanupKind.EndSession, sessionResult));
+
             try
             {
-                var end = await begin.ExecuteAsync(session);
-                if (await GameplayCheckpoint.WaitToContinueAsync(session, end.End))
-                    end = await sessionFlow.ExecuteAsync(session);
-                outcome = end.Result;
-                retry = !end.HasException && session.Gameplay.ReadGameState(session.SessionId).State.RetryRequested;
+                LastEnd = await endSession.ExecuteAsync(cleanupContext);
             }
-            // Interaction間の再開待機も、実行自身へのキャンセルなら通常停止です。
-            catch (OperationCanceledException) when (session.Lifetime.ShutdownRequested
-                || session.Cancellation.IsCancellationRequested)
+            catch (Exception error) when (!sessionResult.Try(out var sessionError))
             {
-                outcome = Result.Success;
+                throw new AggregateException(sessionError, error);
             }
-            catch (Exception error)
-            {
-                outcome = error;
-            }
+        }
 
-            // 旧セッションの待機を閉じてから、新しいセッションを作成・公開します。
-            using var cleanup = new GameplayContext(session, ContextInheritance.None);
-            cleanup.With(new CleanupInfo(CleanupKind.EndSession, outcome));
-            InteractionEnd ended;
-            try { ended = await endSession.ExecuteAsync(cleanup); }
-            catch (Exception error) when (!outcome.Try(out _))
+        private async Task<Result<TContext>> ExecuteAsync<TContext>(TContext context, Func<TContext, Task<InteractionEnd>> interaction)
+            where TContext : IGameplayContext
+        {
+            return await ExecuteAsync(context, async c =>
             {
-                throw FailureCollector.Append(outcome, error);
-            }
+                LastEnd = await interaction(context);
+                return LastEnd.Result.Then(() => context.AsResult());
+            });
+        }
 
-            if (ended.HasException || !retry || context.Lifetime.ShutdownRequested)
-                return ended;
+        private async Task<Result<TContext>> ExecuteAsync<TContext>(TContext context, Func<TContext, Task<Result<TContext>>> action)
+            where TContext : IGameplayContext
+        {
+            try
+            {
+                return await action(context);
+            }
+            catch (OperationCanceledException e)
+                when (context.Lifetime.ShutdownRequested || context.Cancellation.IsCancellationRequested)
+            {
+                isCanceled = true;
+                return e;
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
     }
 }

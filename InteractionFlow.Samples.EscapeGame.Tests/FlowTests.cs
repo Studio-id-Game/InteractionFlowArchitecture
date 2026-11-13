@@ -33,6 +33,104 @@ namespace InteractionFlow.Samples.EscapeGame.Tests;
 
 public sealed class FlowTests
 {
+    [Fact]
+    public async Task DeferredCloseFailureKeepsParentContextAliveAndPreservesEarlierFailure()
+    {
+        using var fixture = new Fixture(deferCloseFailure: true);
+        var handler = Assert.IsType<DeferredCloseFailureHandler>(fixture.Exceptions);
+        var opened = TrackingGameplayReaction.Failed(new InvalidOperationException("open failed"));
+        var closeError = new FormatException("close failed");
+        fixture.Window.OpenFailure = opened;
+        fixture.Window.CloseFailure = closeError;
+        var timeout = TimeSpan.FromSeconds(5);
+        var token = TestContext.Current.CancellationToken;
+        var invocation = Task.Factory.StartNew(() => fixture.Flow.ExecuteAsync(fixture.Context),
+            token, TaskCreationOptions.None, TaskScheduler.Default);
+
+        try
+        {
+            var execution = await invocation.WaitAsync(timeout, token);
+            Assert.False(execution.IsCompleted);
+            handler.Resume.TrySetResult(true);
+
+            var aggregate = await Assert.ThrowsAsync<AggregateException>(() => execution.WaitAsync(timeout, token));
+            Assert.False(opened.Result.Try(out var openWrapper));
+            Assert.Equal(2, aggregate.InnerExceptions.Count);
+            Assert.Same(openWrapper, aggregate.InnerExceptions[0]);
+            Assert.Same(closeError, aggregate.InnerExceptions[1]);
+        }
+        finally
+        {
+            handler.Resume.TrySetResult(true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CleanupKeepsFailureIdentityAndOrderAndDoesNotRunTwice(bool throwStop)
+    {
+        using var fixture = new Fixture();
+        fixture.Exceptions.ThrowException = true;
+        var opened = TrackingGameplayReaction.Failed(new InvalidOperationException("open returned failure"));
+        var stopped = TrackingGameplayReaction.Failed(new FormatException("stop returned failure"));
+        var stopError = new ArgumentException("stop threw");
+        var closeError = new Exception("close threw");
+        fixture.Window.OpenFailure = opened;
+        if (throwStop) fixture.Shutdown.Failure = stopError;
+        else fixture.Shutdown.ReturnedFailure = stopped;
+        fixture.Window.CloseFailure = closeError;
+
+        var aggregate = await Assert.ThrowsAsync<AggregateException>(() => fixture.Flow.ExecuteAsync(fixture.Context));
+
+        Assert.False(opened.Result.Try(out var openWrapper));
+        Assert.False(stopped.Result.Try(out var stopWrapper));
+        Assert.Equal(3, aggregate.InnerExceptions.Count);
+        Assert.Same(openWrapper, aggregate.InnerExceptions[0]);
+        Assert.Same(throwStop ? stopError : stopWrapper, aggregate.InnerExceptions[1]);
+        Assert.Same(closeError, aggregate.InnerExceptions[2]);
+        Assert.Equal(1, fixture.Shutdown.Calls);
+        Assert.Equal(new[] { "open", "close" }, fixture.Window.Events);
+        Assert.Null(fixture.Game.Cancellation);
+    }
+
+    [Fact]
+    public async Task CancellationCallbackFailureStillJoinsGameplayAndCloses()
+    {
+        var stopFailure = new InvalidOperationException("stop failed before cancellation");
+        var cancelFailure = new FormatException("cancellation callback failed");
+        using var fixture = new Fixture(stopFailure);
+        fixture.Exceptions.ThrowException = true;
+        var registered = 0;
+        CancellationTokenRegistration registration = default;
+        fixture.Game.AfterBegin = context =>
+        {
+            registration = context.Cancellation.GetToken().Register(() => throw cancelFailure);
+            Volatile.Write(ref registered, 1);
+        };
+        fixture.Input.PollFrame = frames =>
+        {
+            if (Volatile.Read(ref registered) == 1)
+                frames.GetRequired<FrameState>().ShutdownRequested = true;
+        };
+
+        try
+        {
+            var end = await fixture.Flow.ExecuteAsync(fixture.Context);
+
+            Assert.True(Contains(end.Exception, stopFailure));
+            Assert.True(Contains(end.Exception, cancelFailure));
+            Assert.True(fixture.Session.Ended);
+            Assert.Equal(1, fixture.Shutdown.Calls);
+            Assert.Equal("close", fixture.Window.Events[^1]);
+            Assert.False(fixture.Game.Cancellation!.HasTask);
+        }
+        finally
+        {
+            registration.Dispose();
+        }
+    }
+
     [Theory]
     [InlineData("open", false)]
     [InlineData("open", true)]
@@ -583,9 +681,10 @@ public sealed class FlowTests
         public HeadlessWindowReaction Window { get; }
         public TrackingGameplayReaction Game { get; }
         public TrackingGameSessionReaction Session { get; }
-        public GameExceptionHandling Exceptions { get; }
+        public ExceptionHandling Exceptions { get; }
+        public TrackingShutdownReaction Shutdown { get; }
 
-        public Fixture(Exception? stopFailure = null)
+        public Fixture(Exception? stopFailure = null, bool deferCloseFailure = false)
         {
             var builder = new ScopeBuilder();
             builder.Apply(new EscapeGameProfile())
@@ -594,6 +693,8 @@ public sealed class FlowTests
                 .UseFunction<IGameplayReaction, TrackingGameplayReaction>()
                 .UseFunction<IGameSessionReaction, TrackingGameSessionReaction>()
                 .UseFunction<IShutdownReaction, TrackingShutdownReaction>();
+            if (deferCloseFailure)
+                builder.UseFunction<IExceptionPort<Exception>, DeferredCloseFailureHandler>();
             scope = builder.BuildScope();
             Context = new EscapeApplicationContext();
             Context.With("application-only value");
@@ -601,8 +702,9 @@ public sealed class FlowTests
             Window = Assert.IsType<HeadlessWindowReaction>(scope.GetRequiredService<IWindowReaction>());
             Game = Assert.IsType<TrackingGameplayReaction>(scope.GetRequiredService<IGameplayReaction>());
             Session = Assert.IsType<TrackingGameSessionReaction>(scope.GetRequiredService<IGameSessionReaction>());
-            Exceptions = Assert.IsType<GameExceptionHandling>(scope.GetRequiredService<IExceptionPort<Exception>>());
-            Assert.IsType<TrackingShutdownReaction>(scope.GetRequiredService<IShutdownReaction>()).Failure = stopFailure;
+            Exceptions = Assert.IsAssignableFrom<ExceptionHandling>(scope.GetRequiredService<IExceptionPort<Exception>>());
+            Shutdown = Assert.IsType<TrackingShutdownReaction>(scope.GetRequiredService<IShutdownReaction>());
+            Shutdown.Failure = stopFailure;
             Flow = scope.BuildSystemFlow<WindowSystemFlow, IApplicationContext>();
         }
 
@@ -611,6 +713,20 @@ public sealed class FlowTests
             Flow.Dispose();
             scope.Dispose();
             Context.Dispose();
+        }
+    }
+
+    public sealed class DeferredCloseFailureHandler : ExceptionHandling
+    {
+        public TaskCompletionSource<bool> Resume { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override void ForceResetMemoryState() => ThrowException = false;
+
+        protected override async ValueTask<ReactionEnd> HandleExceptionCoreAsync(IFlowContext context, Exception exception)
+        {
+            await Resume.Task.ConfigureAwait(false);
+            Assert.Equal(CleanupKind.CloseWindow, context.GetRequired<CleanupInfo>().Kind);
+            Assert.True(context.TryGet<WindowState>(out _));
+            throw exception;
         }
     }
 
@@ -705,11 +821,16 @@ public sealed class FlowTests
     public sealed class TrackingShutdownReaction : Reaction, IShutdownReaction
     {
         public Exception? Failure { get; set; }
+        public ReactionEnd? ReturnedFailure { get; set; }
+        public int Calls { get; private set; }
         public override void ForceResetMemoryState() { }
         public ReactionEnd RequestShutdown(ILifetimeContext context)
         {
+            Calls++;
             if (Failure is not null)
                 throw Failure;
+            if (ReturnedFailure is { } failed)
+                return failed;
             context.Lifetime.RequestShutdown();
             return GetEnd();
         }

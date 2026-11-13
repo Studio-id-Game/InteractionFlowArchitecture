@@ -160,8 +160,12 @@ Resultチェーン化は記述量と終了トークン保持の負担に見合�
 反復の境界を保ち、送出例外とTaskキャンセルは既存のInteraction基底へ伝播する。
 セッション確保はTryAllocateSessionで停止との競合を同じlock内で判定し、停止後はfalseとID 0を返す。
 実行所有者であるSystemFlowは、返却失敗とフローまで伝播した例外を終了結果へ保持し、後始末を試みる。
-SystemFlowのResultチェーン化も撤回し、実行・停止・終了の分岐とtry/catch/finallyを維持する。
-WindowSystemFlowはFailureCollectorで失敗を保持し、停止・合流・閉鎖を呼び出し元スレッドで進める。
+SystemFlowは段階間の成功値をResultで渡す。GamePlaySystemFlowは開始結果からセッションを実行し、
+リトライ意図をResult<bool>で返して、ResolveAsyncで成功・失敗の両方を終了処理へ接続する。
+WindowSystemFlowはThenErrorで失敗をFailureCollectorに記録して終了手順へ回復し、
+停止・合流後に蓄積した失敗をResultへ戻してCloseへ渡す。描画と閉鎖Reactionは呼び出し元スレッドで行う。
+閉鎖Interactionの完了をawaitする間は、閉鎖用Contextとその親Contextを保持する。
+送出例外の所有境界と、失敗時にも必要なTaskの所有はチェーンから独立して維持する。
 Interactionは別のInteractionを実行せず、ゲーム状態の更新は引き続きReaction / Operationが行う。
 例外・キャンセルの処理と実行登録は1ターンまたは結果確認の単位となり、個々のPort呼び出しごとには行わない。
 入力・提示待機の同期契約、ポーズと省略の独立した制御経路、終了時の停止・合流の順序は維持する。

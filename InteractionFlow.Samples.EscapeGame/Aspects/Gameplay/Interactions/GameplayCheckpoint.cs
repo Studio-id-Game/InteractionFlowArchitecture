@@ -1,8 +1,9 @@
-using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
-using System.Threading.Tasks;
+using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using System;
+using System.Threading.Tasks;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 
@@ -11,17 +12,47 @@ internal static class GameplayCheckpoint
 {
     internal static async ValueTask<bool> WaitToContinueAsync(IGameplayContext context, ReactionEnd end)
     {
-        if (end.HasException || context.Gameplay.ReadGameState(context.SessionId).Info == ExecutionMode.Stopping)
+        if (end.HasException || IsEnd(context))
             return false;
 
         try
         {
-            return await context.Gameplay.WaitForActiveAsync(context.SessionId, context.Cancellation.GetToken())
-                && context.Gameplay.ReadGameState(context.SessionId).Info != ExecutionMode.Stopping;
+            var sessionId = context.SessionId;
+            var cancellation = context.Cancellation;
+            return await context.Gameplay.WaitForActiveAsync(sessionId, cancellation.GetToken()) && !IsEnd(context);
         }
         catch (OperationCanceledException) when (context.Lifetime.ShutdownRequested)
         {
             return false;
         }
+    }
+
+    internal static async ValueTask<Result> WaitToContinueResultAsync(IGameplayContext context, ReactionEnd end)
+    {
+        if (end.HasException)
+        {
+            return end.Result;
+        }
+
+        if (IsEnd(context))
+            return new InvalidCastException("Game end");
+
+        try
+        {
+            var sessionId = context.SessionId;
+            var cancellation = context.Cancellation;
+            return await context.Gameplay.WaitForActiveAsync(sessionId, cancellation.GetToken()) && !IsEnd(context) ?
+                Result.Success :
+                new InvalidCastException("Game end");
+        }
+        catch (OperationCanceledException e) when (context.Lifetime.ShutdownRequested)
+        {
+            return e;
+        }
+    }
+
+    private static bool IsEnd(IGameplayContext context)
+    {
+        return context.Gameplay.ReadGameState(context.SessionId).Info == ExecutionMode.Stopping;
     }
 }

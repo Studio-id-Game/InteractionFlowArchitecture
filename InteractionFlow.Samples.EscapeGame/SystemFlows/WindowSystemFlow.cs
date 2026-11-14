@@ -23,29 +23,27 @@ public sealed class WindowSystemFlow(
     GamePlaySystemFlow gamePlaySystem)
     : SystemFlow<IApplicationContext>(openWindow, presentFrame, controlInput, requestShutdown, closeWindow, gamePlaySystem)
 {
-    private class RunData : IDisposable
+    private class RunContext : IDisposable
     {
-        private readonly IApplicationContext context;
-        private readonly FailureCollector failures;
-        private readonly WindowState windowState;
+        private FailureCollector Failures { get; }
 
-        public FrameState FrameState { get; }
+        public IApplicationContext Context { get; }
 
         public ViewContext WindowContext { get; }
-
         public GameplayContext GameContext { get; }
+        public FrameState FrameState { get; }
+        public Task<InteractionEnd>? GameTask { get; set; }
 
-        public RunData(IApplicationContext context)
+        public InteractionEnd? End { get; set; }
+
+        public RunContext(IApplicationContext context)
         {
-            this.context = context;
-
-            failures = new();
+            Context = context;
+            Failures = new FailureCollector();
             FrameState = new FrameState();
-            windowState = new WindowState();
-
             WindowContext = new ViewContext(context, ContextInheritance.None)
                 .WithT(FrameState)
-                .WithT(windowState);
+                .WithT(new WindowState());
             GameContext = new GameplayContext(context, ContextInheritance.Cancellation);
         }
 
@@ -55,238 +53,181 @@ public sealed class WindowSystemFlow(
             GameContext.Dispose();
         }
 
-        public GameplayContext CreateGameplayContext()
+        public Result CollectedErrors => Failures.ToResult();
+
+        public AggregateException AggregateErrors() => Failures.ToAggregate();
+
+        public Result<RunContext> CollectError(Exception error)
         {
-            return new GameplayContext(context, ContextInheritance.None);
-        }
-
-        public ViewContext CreateShutdownContext()
-        {
-            return new ViewContext(WindowContext, ContextInheritance.None); ;
-        }
-
-        public ViewContext CreateCloseContext()
-        {
-            var cleanupInfo = new CleanupInfo(CleanupKind.CloseWindow, failures.ToResult());
-            return new ViewContext(WindowContext, ContextInheritance.All)
-                .WithT(cleanupInfo);
-        }
-
-        private Task<InteractionEnd>? gameTask;
-
-        private InteractionEnd? end;
-
-        public Task<InteractionEnd>? GameTask => gameTask;
-
-        private Result Result => end == null ? Result.Success : end.Result;
-
-        public bool HasException => !Result.Try(out _);
-
-        public InteractionEnd End => end!;
-
-        public RunData SetGameTask(Task<InteractionEnd> value)
-        {
-            gameTask = value;
+            Failures.Add(error);
             return this;
-        }
-
-        public RunData SetEnd(InteractionEnd value)
-        {
-            end = value;
-            return this;
-        }
-
-        public Result<RunData> AsEndResult()
-        {
-            return Result.Try(out var e) ? this : e;
-        }
-
-        public RunData CatchError(Exception e)
-        {
-            failures.Add(e);
-            return this;
-        }
-
-        public Exception AddError(Exception e)
-        {
-            return failures.Add(e);
-        }
-
-        public void AddEndError()
-        {
-            failures.Add(End.Result);
-        }
-
-        public bool HasError => failures.HasFailure;
-
-        public AggregateException GetErrorException()
-        {
-            return failures.ToAggregate();
         }
     }
 
     protected override async Task<InteractionEnd> ExecuteCoreAsync(IApplicationContext context)
     {
-        using var data = new RunData(context);
-        return await data.AsResultAsync()
+        using var runContext = new RunContext(context);
+
+        return await runContext.AsResultAsync()
             .ThenAsync(StartGameAsync)
             .ThenAsync(StopGameAsync)
             .ThenAsync(CloseWindowAsync)
-            .ResolveAsync(async data => data.End, async e => throw e);
+            .ResolveAsync(
+                completed => completed.End == null ?
+                    throw completed.AggregateErrors() :
+                    Task.FromResult(completed.End),
+                error => throw error
+            );
     }
 
-    private async Task<Result<RunData>> StartGameAsync(RunData data)
-    {
-        var inputState = data.FrameState;
-        var windowContext = data.WindowContext;
-        var gameContext = data.GameContext;
-
-        return await data
-            .AsResultAsync()
-            .ThenAsync(OpenWindow)
-            .ThenAsync(RunGame)
-            .ThenAsync(FrameLoop)
-            .ThenErrorAsync(_ => data.AsResultAsync());
-
-        async Task<Result<RunData>> OpenWindow(RunData data)
-        {
-            try
-            {
-                return data
-                    .SetEnd(await openWindow.ExecuteAsync(windowContext))
-                    .AsEndResult()
-                    .ThenError(e => data.AddError(e));
-            }
-            catch (Exception e)
-            {
-                return data.AddError(e);
-            }
-        }
-
-        async Task<Result<RunData>> RunGame(RunData data)
-        {
-            try
-            {
-                return data
-                    .SetGameTask(gamePlaySystem.ExecuteAsync(gameContext))
-                    .AsEndResult();
-            }
-            catch (Exception e)
-            {
-                return data.AddError(e);
-            }
-        }
-
-        async Task<Result<RunData>> FrameLoop(RunData data)
-        {
-            try
-            {
-                using var controlContext = data.CreateGameplayContext();
-
-                var gameTask = data.GameTask!;
-                while (!gameTask.IsCompleted && !windowContext.Lifetime.ShutdownRequested)
-                {
-                    data.SetEnd(await presentFrame.ExecuteAsync(windowContext));
-
-                    if (data.HasException)
-                        return data.AsEndResult().ThenError(e => data.AddError(e));
-
-                    if (inputState.ShutdownRequested)
-                        return data.AsEndResult();
-
-                    // ゲーム入力/提示待機から独立した制御経路です。通常入力は同フレームで配送しません。
-                    if (!inputState.PauseRequested && !inputState.SkipRequested)
-                        continue;
-
-                    data.SetEnd(await controlInput.ExecuteAsync(controlContext));
-
-                    if (data.HasException)
-                        return data.AsEndResult().ThenError(e => data.AddError(e));
-                }
-
-                return data.AsEndResult();
-            }
-            catch (Exception e)
-            {
-                return data.AddError(e);
-            }
-        }
-    }
-
-    private async Task<Result<RunData>> StopGameAsync(RunData data)
-    {
-        // Stop は提示・入力・再開待機を解除します。失敗しても cancel/join/close を続けます。
-
-        var gameContext = data.GameContext;
-
-        return await data
-            .AsResultAsync()
-            .ThenAsync(ShutdownRequest)
-            .ThenAsync(GameCancel)
-            .ThenAsync(WaitGameEnd)
-            .ThenErrorAsync(async e => data.CatchError(e));
-
-        async Task<Result<RunData>> ShutdownRequest(RunData data)
-        {
-            try
-            {
-                using var shutdownContext = data.CreateShutdownContext();
-
-                return data.SetEnd(await requestShutdown.ExecuteAsync(shutdownContext))
-                    .AsEndResult()
-                    .ThenError(e => data.CatchError(e));
-            }
-            catch (Exception e)
-            {
-                return data.CatchError(e);
-            }
-        }
-
-        async Task<Result<RunData>> GameCancel(RunData data)
-        {
-            var gameTask = data.GameTask;
-
-            if (gameTask != null && !gameTask.IsCompleted)
-            {
-                try { gameContext.Cancellation.Cancel(); }
-                catch (Exception e) { data.AddError(e); }
-            }
-
-            return data.AsResult();
-        }
-
-        async Task<Result<RunData>> WaitGameEnd(RunData data)
-        {
-            var gameTask = data.GameTask;
-
-            if (gameTask != null)
-            {
-                try
-                {
-                    data.SetEnd(gameTask.GetAwaiter().GetResult());
-                    data.AddEndError();
-                }
-                catch (Exception e)
-                {
-                    data.AddError(e);
-                }
-            }
-
-            return data.AsResult();
-        }
-    }
-
-    private async Task<Result<RunData>> CloseWindowAsync(RunData data)
+    private async Task<Result<RunContext>> StartGameAsync(RunContext context)
     {
         try
         {
-            using var closeContext = data.CreateCloseContext();
-            return data.SetEnd(await closeWindow.ExecuteAsync(closeContext));
+            return await context.AsResultAsync()
+                .ThenAsync(OpenWindowAsync)
+                .ThenAsync(RunGameAsync)
+                .ThenAsync(FrameLoopAsync)
+                .ThenErrorAsync(async error => context.CollectError(error));
         }
-        catch (Exception error) when (data.HasError)
+        catch (Exception error)
         {
-            data.AddError(error);
-            throw data.GetErrorException();
+            return context.CollectError(error);
+        }
+
+        async Task<Result<RunContext>> OpenWindowAsync(RunContext context)
+        {
+            var end = await openWindow.ExecuteAsync(context.WindowContext);
+            return end.Result.Then(() => context.AsResult());
+        }
+
+        async Task<Result<RunContext>> RunGameAsync(RunContext context)
+        {
+            context.GameTask = gamePlaySystem.ExecuteAsync(context.GameContext);
+            return context;
+        }
+
+        async Task<Result<RunContext>> FrameLoopAsync(RunContext context)
+        {
+            using var controlContext = new GameplayContext(context.Context, ContextInheritance.None);
+            var windowContext = context.WindowContext;
+            var frameState = context.FrameState;
+            var gameTask = context.GameTask!;
+
+            var result = Result.Success;
+
+            while (!gameTask.IsCompleted && !windowContext.Lifetime.ShutdownRequested)
+            {
+                var frame = await presentFrame.ExecuteAsync(windowContext);
+                if (frame.HasException || frameState.ShutdownRequested)
+                {
+                    result = frame.Result;
+                    break;
+                }
+
+                if (!frameState.PauseRequested && !frameState.SkipRequested)
+                {
+                    continue;
+                }
+
+                var control = await controlInput.ExecuteAsync(controlContext);
+                if (control.HasException)
+                {
+                    result = control.Result;
+                    break;
+                }
+            }
+
+            return result.Then(() => context.AsResult());
+        }
+    }
+
+    private async Task<Result<RunContext>> StopGameAsync(RunContext context)
+    {
+        // Stop は提示・入力・再開待機を解除します。失敗しても cancel/join/close を続けます。
+        return (await context.AsResultAsync()
+            .ThenAsync(ShutdownRequestAsync))
+            .Then(GameCancel)
+            .Then(WaitGameEnd);
+
+        async Task<Result<RunContext>> ShutdownRequestAsync(RunContext context)
+        {
+            var windowContext = context.WindowContext;
+
+            try
+            {
+                using var shutdownContext = new ViewContext(windowContext, ContextInheritance.None);
+                var end = await requestShutdown.ExecuteAsync(shutdownContext);
+                return end.Result.Resolve(() => context, context.CollectError);
+            }
+            catch (Exception error)
+            {
+                return context.CollectError(error);
+            }
+        }
+
+        Result<RunContext> GameCancel(RunContext context)
+        {
+            var gameContext = context.GameContext;
+            var gameTask = context.GameTask;
+
+            if (gameTask == null || gameTask.IsCompleted)
+            {
+                return context;
+            }
+
+            try
+            {
+                gameContext.Cancellation.Cancel();
+                return context;
+            }
+            catch (Exception error)
+            {
+                return context.CollectError(error);
+            }
+        }
+
+        Result<RunContext> WaitGameEnd(RunContext context)
+        {
+            var gameTask = context.GameTask;
+
+            if (gameTask == null)
+            {
+                return context;
+            }
+
+            try
+            {
+                var end = gameTask.GetAwaiter().GetResult();
+                return end.Result.Resolve(() => context, context.CollectError);
+            }
+            catch (Exception error)
+            {
+                return context.CollectError(error);
+            }
+        }
+    }
+
+    private async Task<Result<RunContext>> CloseWindowAsync(RunContext context)
+    {
+        var windowContext = context.WindowContext;
+        var errors = context.CollectedErrors;
+
+        try
+        {
+            var cleanupInfo = new CleanupInfo(CleanupKind.CloseWindow, errors);
+            InteractionEnd end;
+            using (var closeContext = new ViewContext(windowContext, ContextInheritance.All).WithT(cleanupInfo))
+            {
+                end = await closeWindow.ExecuteAsync(closeContext);
+            }
+
+            context.End = end;
+            return context;
+        }
+        catch (Exception error) when (!errors.Try(out _))
+        {
+            return context.CollectError(error);
         }
     }
 }

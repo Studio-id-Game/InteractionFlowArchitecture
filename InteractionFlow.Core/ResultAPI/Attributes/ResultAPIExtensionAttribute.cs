@@ -3,27 +3,27 @@ using System;
 namespace InteractionFlow.Core.ResultAPI.Attributes;
 
 /// <summary>
-/// ResultAPIのコードジェネレータで利用するために、コードの生成先をマークします。
+/// Result 拡張メソッドの生成先を指定します。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
 public sealed class ResultAPIExtensionAttribute : Attribute
 {
     /// <summary>
-    /// 同期関数コンストラクタ
+    /// 同期版の生成先を指定します。
     /// </summary>
-    /// <param name="template">生成内容を決めるテンプレートをタイプで指定します</param>
+    /// <param name="template">生成に使うテンプレート型。</param>
     public ResultAPIExtensionAttribute(Type template)
     {
         Template = template;
     }
 
     /// <summary>
-    /// 非同期関数コンストラクタ。<see cref="ResultAPIFuncAttribute"/> のフラグと連携します。
+    /// 非同期版の生成先を指定します。
     /// </summary>
-    /// <param name="template">生成内容を決めるテンプレートをタイプで指定します</param>
-    /// <param name="awaitableFuncType">Func系コールバックに利用するジェネリック型をタイプで指定します</param>
-    /// <param name="awaitableActionType">Action系コールバックに利用するジェネリック型をタイプで指定します</param>
-    /// <param name="suffix">関数名のサフィックスを指定します</param>
+    /// <param name="template">生成に使うテンプレート型。</param>
+    /// <param name="awaitableFuncType">結果値を持つ待機可能型。例は <c>Task&lt;&gt;</c> です。</param>
+    /// <param name="awaitableActionType">結果値を持たない待機可能型。例は <c>Task</c> です。</param>
+    /// <param name="suffix">生成メソッド名の接尾辞。</param>
     public ResultAPIExtensionAttribute(Type template, Type awaitableFuncType, Type awaitableActionType, string suffix)
     {
         Template = template;
@@ -33,19 +33,19 @@ public sealed class ResultAPIExtensionAttribute : Attribute
     }
 
     /// <summary>
-    /// 生成内容を決めるテンプレートをタイプで指定します
+    /// テンプレート型を取得します。
     /// </summary>
     public Type Template { get; }
     /// <summary>
-    /// Func系コールバックに利用するジェネリック型をタイプで指定します
+    /// 結果値を持つ待機可能型を取得します。
     /// </summary>
     public Type? AwaitableFuncType { get; }
     /// <summary>
-    /// Action系コールバックに利用するジェネリック型をタイプで指定します
+    /// 結果値を持たない待機可能型を取得します。
     /// </summary>
     public Type? AwaitableActionType { get; }
     /// <summary>
-    /// 関数名のサフィックスを指定します
+    /// 生成メソッド名の接尾辞を取得します。
     /// </summary>
     public string? Suffix { get; }
 }

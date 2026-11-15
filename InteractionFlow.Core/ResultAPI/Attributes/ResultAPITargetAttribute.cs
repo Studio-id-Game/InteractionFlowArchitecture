@@ -28,7 +28,7 @@ public sealed class ResultAPITargetAttribute : Attribute
     }
 
     /// <summary>
-    /// Self to Self のパターンを候補に追加します。
+    /// Self → Self のパターンを追加します。Self のみを参照するテンプレートにはこの形式を使います。
     /// </summary>
     /// <param name="self"> Self を置き換える <see cref="ResultAPIResultAttribute"/> でマークされた型を指定します。 </param>
     /// <param name="selfArg"> <paramref name="self"/> の型引数定義名を "," 区切りで指定します。 </param>

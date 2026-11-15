@@ -6,8 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace InteractionFlow.Core.ResultAPI;
 
 /// <summary>
-/// 値を持たない処理結果を表し、成功または例外による失敗を保持します。
-/// <see langword="default"/> の <see cref="Result"/> は成功として扱われます。
+/// 値なしの処理結果です。<see langword="default"/> は成功です。
 /// </summary>
 [ResultAPIResult]
 public readonly struct Result
@@ -32,12 +31,12 @@ public readonly struct Result
     }
 
     /// <summary>
-    /// trueの時、操作や状態の成功を意味します
+    /// 成功したかどうかを取得します。
     /// </summary>
     public bool IsSuccess => Error == default;
 
     /// <summary>
-    /// 失敗の原因となった例外
+    /// 失敗時に保持する例外です。成功時は <see langword="null"/> です。
     /// </summary>
     [ResultAPICallbackArgument(onSuccess: false)]
     public ResultException? Error { get; }
@@ -66,8 +65,7 @@ public readonly struct Result
     /// <summary>
     /// エラーから失敗結果を作成します。
     /// </summary>
-    /// <param name="Error"></param>
-    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"><paramref name="Error"/> が <see langword="null"/> です。</exception>
     public static Result CreateFailure(Exception Error)
     {
         if (Error is null) throw new ArgumentNullException(nameof(Error));
@@ -77,7 +75,6 @@ public readonly struct Result
     /// <summary>
     /// 成功結果を作成します。
     /// </summary>
-    /// <returns></returns>
     public static Result CreateSuccess() => default;
 
     /// <summary>
@@ -86,16 +83,13 @@ public readonly struct Result
     public static Result Success { get; } = CreateSuccess();
 
     /// <summary>
-    /// 例外を失敗結果へ変換します。
+    /// <see cref="CreateFailure(Exception)"/> で失敗結果を作成します。
     /// </summary>
-    /// <param name="exception">失敗として保持する例外。</param>
-    public static implicit operator Result(Exception exception) => new(exception);
+    public static implicit operator Result(Exception exception) => CreateFailure(exception);
 }
 
 /// <summary>
-/// 値を持つ処理結果を表し、成功時の非 null の値または例外による失敗を保持します。
-/// <see langword="default"/> の <see cref="Result{TValue}"/> は未初期化のため操作時に例外を送出します。
-/// また、<see langword="null"/> と <see cref="Exception"/> 派生型の値は成功値として使用できません。
+/// 値付きの処理結果です。<see langword="default"/> は未初期化で、操作すると <see cref="ResultException"/> を送出します。
 /// </summary>
 /// <typeparam name="T">成功時に保持する値の型。</typeparam>
 [ResultAPIResult]
@@ -130,7 +124,7 @@ public readonly struct Result<T>
     }
 
     /// <summary>
-    /// trueの時、操作や状態の成功を意味します
+    /// 成功したかどうかを取得します。
     /// </summary>
     public bool IsSuccess
     {
@@ -142,7 +136,7 @@ public readonly struct Result<T>
     }
 
     /// <summary>
-    /// 失敗の原因となった例外
+    /// 失敗時に保持する例外です。成功時は <see langword="null"/> です。
     /// </summary>
     [ResultAPICallbackArgument(onSuccess: false)]
     public ResultException? Error
@@ -155,7 +149,7 @@ public readonly struct Result<T>
     }
 
     /// <summary>
-    /// 成功時の値
+    /// 成功時に保持する値です。失敗時は <c>default(T)</c> です。
     /// </summary>
     [ResultAPICallbackArgument(onSuccess: true)]
     public T? Value
@@ -168,7 +162,7 @@ public readonly struct Result<T>
     }
 
     /// <summary>
-    /// 値を取り除いた成功または失敗の結果を取得します。
+    /// 成功値を除き、結果の状態と例外を引き継ぎます。
     /// </summary>
     public readonly Result WithoutValue
     {
@@ -187,7 +181,7 @@ public readonly struct Result<T>
     /// <summary>
     /// 失敗結果の場合、保持している例外を送出します。
     /// </summary>
-    /// <exception cref="ResultException">この結果が失敗を表している場合に発生します。</exception>
+    /// <exception cref="ResultException">結果が失敗または未初期化です。</exception>
     public readonly void ThrowIfError()
     {
         CheckInitialized();
@@ -205,7 +199,7 @@ public readonly struct Result<T>
     /// <summary>
     /// 値を保持しているかどうかを判定し、取得します。
     /// </summary>
-    /// <param name="value">成功時に保持されている値。失敗時は <see langword="null"/>。</param>
+    /// <param name="value">成功時に保持する値。失敗時は <c>default(T)</c>。</param>
     /// <returns>値を保持している場合は <see langword="true"/>、それ以外は <see langword="false"/>。</returns>
     public readonly bool HasValue([MaybeNullWhen(false)] out T value)
     {
@@ -217,38 +211,34 @@ public readonly struct Result<T>
     /// <summary>
     /// エラーから失敗結果を作成します。
     /// </summary>
-    /// <param name="Error"></param>
-    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"><paramref name="Error"/> が <see langword="null"/> です。</exception>
     public static Result<T> CreateFailure(Exception Error) => new(Error);
 
     /// <summary>
     /// 値から成功結果を作成します。
     /// </summary>
-    /// <param name="Value"></param>
-    /// <returns></returns>
+    /// <exception cref="ResultException">
+    /// <paramref name="Value"/> が <see langword="null"/> または <see cref="Exception"/> のインスタンスです。
+    /// </exception>
     public static Result<T> CreateSuccess(T Value) => new(Value);
 
     /// <summary>
-    /// 非 null の値を成功結果へ変換します。
+    /// <see cref="CreateSuccess(T)"/> で成功結果を作成します。
     /// </summary>
-    /// <param name="value">成功結果として保持する値。<see langword="null"/> と <see cref="Exception"/> 派生型の値は指定できません。</param>
-    /// <exception cref="ResultException">
-    /// <paramref name="value"/> が <see langword="null"/>、または <see cref="Exception"/> 派生型の場合に発生します。
-    /// </exception>
-    public static implicit operator Result<T>(T value) => new(value);
+    public static implicit operator Result<T>(T value) => CreateSuccess(value);
 
     /// <summary>
-    /// 例外を失敗結果へ変換します。
+    /// <see cref="CreateFailure(Exception)"/> で失敗結果を作成します。
     /// </summary>
-    /// <param name="exception">失敗として保持する例外。<typeparamref name="T"/> が <see cref="Exception"/> 派生型の場合も、成功値ではなく失敗として扱います。</param>
-    public static implicit operator Result<T>(Exception exception) => new(exception);
+    public static implicit operator Result<T>(Exception exception) => CreateFailure(exception);
 }
 
 /// <summary>
-/// 
+/// 値付きの処理結果です。失敗時は例外と失敗値を保持します。
+/// <see langword="default"/> は未初期化で、操作すると <see cref="ResultException"/> を送出します。
 /// </summary>
-/// <typeparam name="T"></typeparam>
-/// <typeparam name="TError"></typeparam>
+/// <typeparam name="T">成功値の型。</typeparam>
+/// <typeparam name="TError">失敗値の型。</typeparam>
 [ResultAPIResult]
 public readonly struct Result<T, TError>
 {
@@ -277,27 +267,20 @@ public readonly struct Result<T, TError>
         this.errorValue = errorValue;
     }
 
-    /// <summary>
-    /// trueの時、操作や状態の成功を意味します
-    /// </summary>
+    /// <inheritdoc cref="Result{T}.IsSuccess"/>
     public bool IsSuccess => result.IsSuccess;
 
-    /// <summary>
-    /// 失敗の原因となった例外
-    /// </summary>
+    /// <inheritdoc cref="Result{T}.Error"/>
     [ResultAPICallbackArgument(onSuccess: false)]
     public ResultException? Error => result.Error;
 
-    /// <summary>
-    /// 成功時の値
-    /// </summary>
+    /// <inheritdoc cref="Result{T}.Value"/>
     [ResultAPICallbackArgument(onSuccess: true)]
     public T? Value => result.Value;
 
     /// <summary>
-    /// 失敗時の値
+    /// 失敗時に保持する値です。成功時は <c>default(TError)</c> です。
     /// </summary>
-
     [ResultAPICallbackArgument(onSuccess: false)]
     public TError? ErrorValue
     {
@@ -308,11 +291,13 @@ public readonly struct Result<T, TError>
         }
     }
 
-    /// <inheritdoc cref="Result{T}.WithoutValue"/>
+    /// <summary>
+    /// 成功値と失敗値を除き、結果の状態と例外を引き継ぎます。
+    /// </summary>
     public readonly Result WithoutValue => result.WithoutValue;
 
     /// <summary>
-    /// 失敗値を取り除いた成功または失敗の結果を取得します。
+    /// 失敗値を除き、成功値と例外を引き継ぎます。
     /// </summary>
     public readonly Result<T> WithoutErrorValue
     {
@@ -339,7 +324,7 @@ public readonly struct Result<T, TError>
     /// 例外と失敗値を保持しているかどうかを判定し、取得します。
     /// </summary>
     /// <param name="e">失敗時に保持されている例外。成功時は <see langword="null"/>。</param>
-    /// <param name="errorValue">失敗時に保持されている失敗値。成功時は <see langword="null"/>。</param>
+    /// <param name="errorValue">失敗時に保持する失敗値。成功時は <c>default(TError)</c>。</param>
     /// <returns>例外と失敗値を保持している場合は <see langword="true"/>、それ以外は <see langword="false"/>。</returns>
     public readonly bool HasError([MaybeNullWhen(false)] out ResultException e, [MaybeNullWhen(false)] out TError errorValue)
     {
@@ -356,29 +341,23 @@ public readonly struct Result<T, TError>
     /// <summary>
     /// エラーとエラー値から失敗結果を作成します。
     /// </summary>
-    /// <param name="Error"></param>
-    /// <param name="ErrorValue"></param>
-    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"><paramref name="Error"/> が <see langword="null"/> です。</exception>
+    /// <exception cref="ResultException">
+    /// <paramref name="ErrorValue"/> が <see langword="null"/> または <see cref="Exception"/> のインスタンスです。
+    /// </exception>
     public static Result<T, TError> CreateFailure(Exception Error, TError ErrorValue) => new(Error, ErrorValue);
 
-    /// <summary>
-    /// 値から成功結果を作成します。
-    /// </summary>
-    /// <param name="Value"></param>
-    /// <returns></returns>
+    /// <inheritdoc cref="Result{T}.CreateSuccess(T)"/>
     public static Result<T, TError> CreateSuccess(T Value) => new(Value);
 
     /// <summary>
-    /// 非 null の値を成功結果へ変換します。
+    /// <see cref="CreateSuccess(T)"/> で成功結果を作成します。
     /// </summary>
-    /// <param name="value">成功結果として保持する値。<see langword="null"/> と <see cref="Exception"/> 派生型の値は指定できません。</param>
-    /// <exception cref="ResultException">
-    /// <paramref name="value"/> が <see langword="null"/>、または <see cref="Exception"/> 派生型の場合に発生します。
-    /// </exception>
-    public static implicit operator Result<T, TError>(T value) => new(value);
+    public static implicit operator Result<T, TError>(T value) => CreateSuccess(value);
 
     /// <summary>
-    /// 例外とエラー値のタプルを失敗結果へ変換します。
+    /// タプルの例外と失敗値から <see cref="CreateFailure(Exception, TError)"/> で失敗結果を作成します。
     /// </summary>
-    public static implicit operator Result<T, TError>((Exception exception, TError errorValue) error) => new(error.exception, error.errorValue);
+    public static implicit operator Result<T, TError>((Exception exception, TError errorValue) error)
+        => CreateFailure(error.exception, error.errorValue);
 }

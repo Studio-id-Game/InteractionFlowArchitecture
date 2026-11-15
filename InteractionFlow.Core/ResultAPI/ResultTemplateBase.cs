@@ -4,98 +4,86 @@ using System;
 namespace InteractionFlow.Core.ResultAPI;
 
 /// <summary>
-/// コードジェネレーターで生成される拡張メソッドのテンプレート基盤です。
-/// ここで定義したクラスとメソッドは、ジェネレータによって解決・置換される特別なキーワードとして利用されます。
+/// Result 拡張メソッドの生成時に置換する型とメンバーを定義します。
 /// </summary>
 [ResultAPITemplate]
 public abstract class ResultTemplateBase
 {
     /// <summary>
-    /// 現在の値のダミー構文
+    /// 受け手の Result 型を表します。
     /// </summary>
     protected class Self
     {
         /// <summary>
-        /// Resultの成功・失敗をチェックするダミー構文
+        /// 受け手の成功判定に置換されます。
         /// </summary>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接参照しました。</exception>
         public bool IsSuccess => throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 結果値のダミー構文
+    /// 変換先の Result 型を表します。
     /// </summary>
     protected class Other
     {
         /// <summary>
-        /// 現在の値から成功値を作成するダミー構文
+        /// 受け手の成功値を使う変換先のファクトリ呼び出しに置換されます。
         /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public static Other CreateSuccess(Self value) => throw new NotSupportedException();
 
         /// <summary>
-        /// 現在の値から失敗値を作成するダミー構文
+        /// 受け手の失敗情報を使う変換先のファクトリ呼び出しに置換されます。
         /// </summary>
-        /// <param name="self"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public static Other CreateFailure(Self self) => throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 戻り値のある成功時コールバックのダミー構文
+    /// 戻り値のある成功時コールバックを表します。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     protected class OnSuccessFunc<T>
     {
         /// <summary>
-        /// 戻り値のある成功時コールバックを実行するダミー構文
+        /// 成功時コールバックの呼び出しに置換されます。
         /// </summary>
-        /// <param name="self"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public T Invoke(Self self) => throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 戻り値のある失敗時コールバックのダミー構文
+    /// 戻り値のある失敗時コールバックを表します。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     protected class OnErrorFunc<T>
     {
         /// <summary>
-        /// 戻り値のある失敗時コールバックを実行するダミー構文
+        /// 失敗時コールバックの呼び出しに置換されます。
         /// </summary>
-        /// <param name="self"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public T Invoke(Self self) => throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 成功時コールバックのダミー構文
+    /// 戻り値のない成功時コールバックを表します。
     /// </summary>
     protected class OnSuccessAction
     {
         /// <summary>
-        /// 成功時コールバックを実行するダミー構文
+        /// 成功時コールバックの呼び出しに置換されます。
         /// </summary>
-        /// <param name="self"></param>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public void Invoke(Self self) => throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 失敗時コールバックのダミー構文
+    /// 戻り値のない失敗時コールバックを表します。
     /// </summary>
     protected class OnErrorAction
     {
         /// <summary>
-        /// 失敗時コールバックを実行するダミー構文
+        /// 失敗時コールバックの呼び出しに置換されます。
         /// </summary>
-        /// <param name="self"></param>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public void Invoke(Self self) => throw new NotSupportedException();
     }
 }

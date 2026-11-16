@@ -6,7 +6,8 @@ internal readonly record struct AnalyzedParameter(
     string TypeName,
     string? AwaitedTypeName = null,
     string? TypeKey = null,
-    string? AwaitedTypeKey = null)
+    string? AwaitedTypeKey = null,
+    bool UseConfigureAwait = false)
 {
     public string Name { get; } = Name;
     public string TypeName { get; } = TypeName;
@@ -15,6 +16,7 @@ internal readonly record struct AnalyzedParameter(
     public string? AwaitedTypeName { get; } = AwaitedTypeName;
     public string TypeKey { get; } = TypeKey ?? TypeName;
     public string? AwaitedTypeKey { get; } = AwaitedTypeKey ?? AwaitedTypeName;
+    public bool UseConfigureAwait { get; } = UseConfigureAwait;
 
     public (string TypeName, string TypeKey) GetTypeNames(bool awaited) =>
         awaited ? (AwaitedTypeName ?? TypeName, AwaitedTypeKey ?? TypeKey) : (TypeName, TypeKey);

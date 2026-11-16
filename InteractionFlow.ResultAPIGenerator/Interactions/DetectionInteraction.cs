@@ -56,28 +56,32 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         if (!SymbolEqualityComparer.Default.Equals(template.ContainingAssembly, compilation.Assembly))
             return Invalid("The Result API template must belong to this compilation.");
 
+        var @namespace = destination.ContainingNamespace.IsGlobalNamespace
+            ? string.Empty
+            : destination.ContainingNamespace.ToDisplayString(
+                SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted));
+        var extensionClass = new ExtensionClass(@namespace, declaration.Identifier.Text, destination.Name);
         AwaitableTypes? awaitables = null;
         var suffix = string.Empty;
         if (arguments.Length == 4)
         {
             var withResult = GetType(arguments[1]);
             var withoutResult = GetType(arguments[2]);
-            if (withResult is null || withoutResult is null || arguments[3].Value is not string asyncSuffix
-                || !IsAwaitablePair(compilation, withResult, withoutResult))
+            if (withResult is null || withoutResult is null || arguments[3].Value is not string asyncSuffix)
+                return Invalid("Specify the result-bearing type, the resultless type, and a method suffix.");
+
+            awaitables = AwaitableTypeRules.Resolve(compilation, destination, extensionClass,
+                withResult, withoutResult, (CSharpParseOptions)declaration.SyntaxTree.Options, cancellationToken);
+            if (awaitables is null)
             {
-                return Invalid("Specify an open Task<>/Task or ValueTask<>/ValueTask pair and a method suffix.");
+                return Invalid("Specify an open generic async return type that awaits to its type argument "
+                    + "and a resultless async return type that awaits to void.");
             }
 
-            awaitables = new AwaitableTypes(withResult, withoutResult);
             suffix = asyncSuffix;
         }
 
-        var @namespace = destination.ContainingNamespace.IsGlobalNamespace
-            ? string.Empty
-            : destination.ContainingNamespace.ToDisplayString(
-                SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted));
-        var definition = new ExtensionDefinition(
-            new ExtensionClass(@namespace, declaration.Identifier.Text, destination.Name), template, awaitables, suffix);
+        var definition = new ExtensionDefinition(extensionClass, template, awaitables, suffix);
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
         var targets = ReadTargets(template, destination, diagnostics, cancellationToken);
         return new InteractionResult<DetectedExtension?>(
@@ -91,18 +95,6 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         constant.Kind == TypedConstantKind.Type && constant.Value is INamedTypeSymbol { TypeKind: not TypeKind.Error } type
             ? type
             : null;
-
-    private static bool IsAwaitablePair(Compilation compilation, INamedTypeSymbol withResult, INamedTypeSymbol withoutResult)
-    {
-        if (!withResult.IsUnboundGenericType)
-            return false;
-
-        return Matches("System.Threading.Tasks.Task") || Matches("System.Threading.Tasks.ValueTask");
-
-        bool Matches(string name) =>
-            SymbolEqualityComparer.Default.Equals(withResult.OriginalDefinition, compilation.GetTypeByMetadataName(name + "`1"))
-            && SymbolEqualityComparer.Default.Equals(withoutResult, compilation.GetTypeByMetadataName(name));
-    }
 
     private static ImmutableArray<ResultTarget> ReadTargets(
         INamedTypeSymbol template,

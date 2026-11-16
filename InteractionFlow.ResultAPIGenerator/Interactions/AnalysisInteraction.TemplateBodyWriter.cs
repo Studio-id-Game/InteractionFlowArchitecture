@@ -9,14 +9,19 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
 internal sealed partial class AnalysisInteraction
 {
+    private readonly struct TemplateCall(string expression, string? awaitedExpression = null, bool forwardsReceiver = false)
+    {
+        public string Expression { get; } = expression;
+        public string? AwaitedExpression { get; } = awaitedExpression;
+        public bool ForwardsReceiver { get; } = forwardsReceiver;
+    }
+
     private sealed class TemplateBodyWriter(
         TemplatePlaceholders placeholders,
         IParameterSymbol receiver,
-        IReadOnlyDictionary<IInvocationOperation, (string Expression, TemplateBodyWriter.CallKind Kind)> calls,
+        IReadOnlyDictionary<IInvocationOperation, TemplateCall> calls,
         bool awaitCallbacks)
     {
-        internal enum CallKind { Factory, Callback, ForwardReceiver }
-
         private readonly StringBuilder source = new();
 
         public string? Write(IOperation body) => WriteStatement(body, 0) ? source.ToString() : null;
@@ -49,7 +54,7 @@ internal sealed partial class AnalysisInteraction
                     Line(depth, $"return {expression};");
                     return true;
                 case IExpressionStatementOperation { Operation: IInvocationOperation call }
-                    when calls.TryGetValue(call, out var resolved) && resolved.Kind == CallKind.ForwardReceiver:
+                    when calls.TryGetValue(call, out var resolved) && resolved.ForwardsReceiver:
                     return true;
                 case IExpressionStatementOperation statement when WriteExpression(statement.Operation) is { } expression:
                     Line(depth, expression + ";");
@@ -79,9 +84,7 @@ internal sealed partial class AnalysisInteraction
             IUnaryOperation { OperatorKind: UnaryOperatorKind.Not, OperatorMethod: null } not
                 when WriteExpression(not.Operand) is { } operand => $"!({operand})",
             IInvocationOperation call when calls.TryGetValue(call, out var resolved)
-                => awaitCallbacks && resolved.Kind == CallKind.Callback
-                    ? $"await {resolved.Expression}.ConfigureAwait(false)"
-                    : resolved.Expression,
+                => awaitCallbacks ? resolved.AwaitedExpression ?? resolved.Expression : resolved.Expression,
             _ => null,
         };
 

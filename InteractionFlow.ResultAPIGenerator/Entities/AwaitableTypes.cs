@@ -4,7 +4,8 @@ using Microsoft.CodeAnalysis;
 namespace InteractionFlow.ResultAPIGenerator.Entities;
 
 /// <summary>結果値ありと結果値なしの待機可能型を表します。</summary>
-internal sealed class AwaitableTypes(INamedTypeSymbol withResult, INamedTypeSymbol withoutResult)
+internal sealed class AwaitableTypes(
+    INamedTypeSymbol withResult, INamedTypeSymbol withoutResult, bool configureWithResult, bool configureWithoutResult)
 {
     private readonly INamedTypeSymbol resultDefinition =
         withResult.IsUnboundGenericType ? withResult.OriginalDefinition : withResult.ConstructedFrom;
@@ -12,9 +13,15 @@ internal sealed class AwaitableTypes(INamedTypeSymbol withResult, INamedTypeSymb
     /// <summary>戻り値型を待機可能型に包みます。戻り値型の指定がない場合と void には、結果値なしの型を使います。</summary>
     public INamedTypeSymbol Wrap(ITypeSymbol? returnType)
     {
-        if (returnType is null || returnType.SpecialType == SpecialType.System_Void)
+        if (GetResultType(returnType) is not { } result)
             return withoutResult;
 
-        return resultDefinition.Construct(ImmutableArray.Create(returnType), ImmutableArray.Create(returnType.NullableAnnotation));
+        return resultDefinition.Construct(ImmutableArray.Create(result), ImmutableArray.Create(result.NullableAnnotation));
     }
+
+    public bool UsesConfigureAwait(ITypeSymbol? returnType) =>
+        GetResultType(returnType) is null ? configureWithoutResult : configureWithResult;
+
+    private static ITypeSymbol? GetResultType(ITypeSymbol? returnType) =>
+        returnType?.SpecialType == SpecialType.System_Void ? null : returnType;
 }

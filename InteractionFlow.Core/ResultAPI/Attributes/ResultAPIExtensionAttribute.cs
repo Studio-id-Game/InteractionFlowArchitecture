@@ -21,8 +21,8 @@ public sealed class ResultAPIExtensionAttribute : Attribute
     /// 非同期版の生成先を指定します。
     /// </summary>
     /// <param name="template">生成に使うテンプレート型。</param>
-    /// <param name="awaitableFuncType">結果値を持つ待機可能型。例は <c>Task&lt;&gt;</c> です。</param>
-    /// <param name="awaitableActionType">結果値を持たない待機可能型。例は <c>Task</c> です。</param>
+    /// <param name="awaitableFuncType">待機時に型引数の値を返す、未構築の非同期戻り値型。</param>
+    /// <param name="awaitableActionType">待機時に値を返さない非同期戻り値型。</param>
     /// <param name="suffix">生成メソッド名の接尾辞。</param>
     public ResultAPIExtensionAttribute(Type template, Type awaitableFuncType, Type awaitableActionType, string suffix)
     {
@@ -37,11 +37,11 @@ public sealed class ResultAPIExtensionAttribute : Attribute
     /// </summary>
     public Type Template { get; }
     /// <summary>
-    /// 結果値を持つ待機可能型を取得します。
+    /// 結果値を持つ非同期戻り値型を取得します。
     /// </summary>
     public Type? AwaitableFuncType { get; }
     /// <summary>
-    /// 結果値を持たない待機可能型を取得します。
+    /// 結果値を持たない非同期戻り値型を取得します。
     /// </summary>
     public Type? AwaitableActionType { get; }
     /// <summary>

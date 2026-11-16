@@ -59,11 +59,119 @@ public class ResultApiGeneratorTests
         Assert.Contains(alias, valueTasks);
         Assert.Contains("Tasks.Task<Result<T>>", tasks);
         Assert.Contains("Tasks.ValueTask<Result<T>>", valueTasks);
+        Assert.Contains("await selfTask.ConfigureAwait(false)", tasks);
+        Assert.Contains("await onSuccess(self.Value!).ConfigureAwait(false)", valueTasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.Task", tasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.ValueTask", valueTasks);
         Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsAsync"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsValueAsync"));
+    }
+
+    [Fact]
+    public void AsyncTargets_AcceptCustomTaskLikeTypesWithoutConfigureAwait()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using System;
+            using System.Runtime.CompilerServices;
+            using System.Threading.Tasks;
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            [AsyncMethodBuilder(typeof(DeferredBuilder<>))]
+            public readonly struct Deferred<T>(Task<T> task)
+            {
+                public TaskAwaiter<T> GetAwaiter() => task.GetAwaiter();
+            }
+
+            [AsyncMethodBuilder(typeof(DeferredBuilder))]
+            public readonly struct Deferred(Task task)
+            {
+                public TaskAwaiter GetAwaiter() => task.GetAwaiter();
+            }
+
+            public struct DeferredBuilder<T>
+            {
+                private AsyncTaskMethodBuilder<T> builder;
+                public static DeferredBuilder<T> Create() => new() { builder = AsyncTaskMethodBuilder<T>.Create() };
+                public Deferred<T> Task => new(builder.Task);
+                public void SetResult(T value) => builder.SetResult(value);
+                public void SetException(Exception error) => builder.SetException(error);
+                public void SetStateMachine(IAsyncStateMachine state) => builder.SetStateMachine(state);
+                public void Start<TState>(ref TState state) where TState : IAsyncStateMachine => builder.Start(ref state);
+                public void AwaitOnCompleted<TAwaiter, TState>(ref TAwaiter awaiter, ref TState state)
+                    where TAwaiter : INotifyCompletion where TState : IAsyncStateMachine
+                    => builder.AwaitOnCompleted(ref awaiter, ref state);
+                public void AwaitUnsafeOnCompleted<TAwaiter, TState>(ref TAwaiter awaiter, ref TState state)
+                    where TAwaiter : ICriticalNotifyCompletion where TState : IAsyncStateMachine
+                    => builder.AwaitUnsafeOnCompleted(ref awaiter, ref state);
+            }
+
+            public struct DeferredBuilder
+            {
+                private AsyncTaskMethodBuilder builder;
+                public static DeferredBuilder Create() => new() { builder = AsyncTaskMethodBuilder.Create() };
+                public Deferred Task => new(builder.Task);
+                public void SetResult() => builder.SetResult();
+                public void SetException(Exception error) => builder.SetException(error);
+                public void SetStateMachine(IAsyncStateMachine state) => builder.SetStateMachine(state);
+                public void Start<TState>(ref TState state) where TState : IAsyncStateMachine => builder.Start(ref state);
+                public void AwaitOnCompleted<TAwaiter, TState>(ref TAwaiter awaiter, ref TState state)
+                    where TAwaiter : INotifyCompletion where TState : IAsyncStateMachine
+                    => builder.AwaitOnCompleted(ref awaiter, ref state);
+                public void AwaitUnsafeOnCompleted<TAwaiter, TState>(ref TAwaiter awaiter, ref TState state)
+                    where TAwaiter : ICriticalNotifyCompletion where TState : IAsyncStateMachine
+                    => builder.AwaitUnsafeOnCompleted(ref awaiter, ref state);
+            }
+
+            [ResultAPIExtension(typeof(ResultTemplate), typeof(Deferred<>), typeof(Deferred), "DeferredAsync")]
+            public static partial class DeferredExtensions;
+
+            internal static class DeferredCaller
+            {
+                public static async Deferred<Result<int>> Run(Deferred<Result<int>> source)
+                {
+                    var result = await source.ThenDeferredAsync(async value =>
+                    {
+                        await Task.Yield();
+                        return Result<int>.CreateSuccess(value + 1);
+                    });
+                    return await result.IfSuccessDeferredAsync(async value => await Task.Yield());
+                }
+            }
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        using var assembly = new MemoryStream();
+        var emitted = updated.Emit(assembly, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Empty(Problems(emitted.Diagnostics));
+        Assert.True(emitted.Success);
+        var source = GetGeneratedSource(result, "DeferredExtensions");
+        Assert.Contains("var self = await selfTask;", source);
+        Assert.Contains("await onSuccess(self.Value!);", source);
+        Assert.DoesNotContain("ConfigureAwait", source);
+    }
+
+    [Fact]
+    public void AsyncTargets_ReportAwaitableThatCannotBeAnAsyncReturnType()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using System.Runtime.CompilerServices;
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            [ResultAPIExtension(typeof(ResultTemplate), typeof(ConfiguredTaskAwaitable<>), typeof(ConfiguredTaskAwaitable), "Configured")]
+            public static partial class ConfiguredExtensions;
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Equal("IFRESULT001", Assert.Single(Problems(result.Diagnostics)).Id);
+        Assert.DoesNotContain(Assert.Single(result.Results).GeneratedSources, source =>
+            source.HintName.EndsWith(".ConfiguredExtensions.g.cs", StringComparison.Ordinal));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
     }
 
     [Theory]

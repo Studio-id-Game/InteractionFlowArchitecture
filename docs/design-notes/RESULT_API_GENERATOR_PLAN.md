@@ -138,7 +138,7 @@ public static Result<R, E> Then<T, E, R>(
 
 この例の `!` は、各分岐で対応する値が非 null になる契約に基づきます。`Other` が `Result<R, F>` の場合は `F` を供給できず、メソッド本体の組み立ての前にスキップします。
 
-### Task と ValueTask の展開
+### 非同期版の展開
 
 | 生成する形 | 受け手 | コールバック | 戻り値 |
 | --- | --- | --- | --- |
@@ -147,9 +147,9 @@ public static Result<R, E> Then<T, E, R>(
 | `asyncCallback` | `Self` | `Func<…, Task<TResult>>` / `Func<…, Task>` と `ValueTask` 相当 | `Task<TResult>` / `ValueTask<TResult>` |
 | 両方 | `Task<Self>` / `ValueTask<Self>` | 同じ種類の非同期コールバック | `Task<TResult>` / `ValueTask<TResult>` |
 
-`TResult` は各テンプレートを具体化した戻り値型です。同期の生成先ではフラグにかかわらず同期版を生成します。非同期の生成先では、有効なフラグに対応する版と、両方が有効な場合の組み合わせを生成します。初版の待機可能型は `Task<>` / `Task` と `ValueTask<>` / `ValueTask` の組に限定します。
+`TResult` は各テンプレートを具体化した戻り値型です。同期の生成先ではフラグにかかわらず同期版を生成します。非同期の生成先では、有効なフラグに対応する版と、両方が有効な場合の組み合わせを生成します。属性に指定する型は、生成する `async` メソッドの戻り値に使え、待機時に型引数の値または `void` を返す必要があります。現在の Core は `Task<>` / `Task` と `ValueTask<>` / `ValueTask` を指定しています。
 
-非同期の受け手は先頭で 1 回だけ待ち、コールバックは選ばれた分岐で 1 回だけ呼び出します。`await` には `ConfigureAwait(false)` を使い、例外とキャンセルは伝播させます。`Resolve` / `IfElse` の両コールバックは同じ同期区分にそろえ、混在版は必要に応じて手書きで追加します。`Task` と `ValueTask` は `Async` / `ValueAsync` で名前を分けます。 [現行の非同期契約](../RESULT.md#非同期版)
+非同期の受け手は先頭で 1 回だけ待ち、コールバックは選ばれた分岐で 1 回だけ呼び出します。`ConfigureAwait(false)` を呼び出し、同じ結果型として待てる場合はその形を使います。それ以外は直接 `await` します。例外とキャンセルは伝播させます。`Resolve` / `IfElse` の両コールバックは同じ同期区分にそろえ、混在版は必要に応じて手書きで追加します。`Task` と `ValueTask` は `Async` / `ValueAsync` で名前を分けます。 [現行の非同期契約](../RESULT.md#非同期版)
 
 ### 手書きコードとの共存
 

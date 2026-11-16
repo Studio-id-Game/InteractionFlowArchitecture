@@ -147,7 +147,8 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         var xml = method.GetDocumentationCommentXml(cancellationToken: context.CancellationToken);
         var candidate = new AnalyzedCandidate(
             TypeNames.Escape(template.GeneratedName),
-            bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, awaitedReceiver),
+            bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, awaitedReceiver,
+                useConfigureAwait: awaitedReceiver is not null && awaitables?.UsesConfigureAwait(boundTarget.Self) == true),
             bindings.FormatType(resolvedReturn), awaitedResult is null ? null : bindings.FormatType(awaitedResult),
             bindings.TypeParameters, bindings.Parameters.MoveToImmutable(), body, awaitedBody, xml,
             returnTypeKey: bindings.FormatType(resolvedReturn, forSignature: true),
@@ -187,11 +188,16 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
             var name = TypeNames.Escape(parameter.Name);
             bindings.Parameters.Add(bindings.DescribeParameter(name, delegateType, awaitedDelegate));
             var arguments = string.Join(", ", properties.Select(bindings.FormatProperty));
+            var expression = $"{name}({arguments})";
+            var awaitedExpression = awaitedDelegate is not null
+                ? AwaitableTypeRules.FormatAwait(expression, awaitables?.UsesConfigureAwait(returnType) == true)
+                : null;
+            var callback = new TemplateCall(expression, awaitedExpression);
             foreach (var call in template.CallbackCalls[parameter])
             {
                 if (call.TargetMethod.Name != "Invoke" || !UsesReceiver(call, receiver))
                     return $"The callback '{parameter.Name}' must be invoked with the template receiver.";
-                bindings.AddCallback(call, $"{name}({arguments})");
+                bindings.AddCallback(call, callback);
             }
         }
 
@@ -201,7 +207,7 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
     private sealed class CandidateBindings
     {
         private readonly Dictionary<ITypeParameterSymbol, string> typeNames = new(SymbolEqualityComparer.Default);
-        private readonly Dictionary<IInvocationOperation, (string Expression, TemplateBodyWriter.CallKind Kind)> calls = new();
+        private readonly Dictionary<IInvocationOperation, TemplateCall> calls = new();
 
         public CandidateBindings(ParsedTemplate template, BoundTarget target)
         {
@@ -239,19 +245,19 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         public ImmutableArray<string> TypeParameters { get; }
         public ImmutableArray<AnalyzedParameter>.Builder Parameters { get; }
         public bool CanAwaitCallbacks =>
-            calls.Values.Any(static call => call.Kind == TemplateBodyWriter.CallKind.Callback)
+            calls.Values.Any(static call => call.AwaitedExpression is not null)
             && Parameters.All(static parameter => parameter.AwaitedTypeName is not null);
 
         public void AddFactory(ResolvedFactoryCall factory)
         {
             var resolved = factory.ForwardsReceiver
-                ? (ReceiverName, TemplateBodyWriter.CallKind.ForwardReceiver)
-                : (factory.Format(FormatType(Target.Other), FormatProperty), TemplateBodyWriter.CallKind.Factory);
+                ? new TemplateCall(ReceiverName, forwardsReceiver: true)
+                : new TemplateCall(factory.Format(FormatType(Target.Other), FormatProperty));
             calls.Add(factory.Call, resolved);
         }
 
-        public void AddCallback(IInvocationOperation call, string expression) =>
-            calls.Add(call, (expression, TemplateBodyWriter.CallKind.Callback));
+        public void AddCallback(IInvocationOperation call, TemplateCall callback) =>
+            calls.Add(call, callback);
 
         public string? WriteBody(bool awaitCallbacks) =>
             new TemplateBodyWriter(Template.Placeholders, Receiver, calls, awaitCallbacks).Write(Template.Body);
@@ -259,9 +265,10 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         public ITypeSymbol BindType(ITypeSymbol type) =>
             Template.Placeholders.IsSelf(type) ? Target.Self : Template.Placeholders.IsOther(type) ? Target.Other : type;
 
-        public AnalyzedParameter DescribeParameter(string name, ITypeSymbol type, ITypeSymbol? awaitedType) =>
+        public AnalyzedParameter DescribeParameter(
+            string name, ITypeSymbol type, ITypeSymbol? awaitedType, bool useConfigureAwait = false) =>
             new(name, FormatType(type), awaitedType is null ? null : FormatType(awaitedType),
-                FormatType(type, true), awaitedType is null ? null : FormatType(awaitedType, true));
+                FormatType(type, true), awaitedType is null ? null : FormatType(awaitedType, true), useConfigureAwait);
 
         public string FormatProperty(IPropertySymbol property)
         {

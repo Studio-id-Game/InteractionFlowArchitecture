@@ -3,7 +3,7 @@ using System;
 namespace InteractionFlow.Core.ResultAPI.Attributes;
 
 /// <summary>
-/// <see cref="ResultAPIResultAttribute"/> が付いた型で、コールバック引数と同名のプロパティを対応付けます。
+/// コールバック引数と同名のプロパティを候補にします。
 /// </summary>
 /// <param name="onSuccess"><see langword="true"/> は成功時、<see langword="false"/> は失敗時です。</param>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]

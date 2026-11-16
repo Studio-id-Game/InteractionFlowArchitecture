@@ -17,19 +17,14 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var definition = extension.Definition;
-        var destination = extension.DestinationSymbol;
-        var (templates, analyzedTargets, handwrittenMethods, templateDiagnostics) = AnalyzeTemplatesAndTargets(
-            definition,
-            extension.Targets,
-            destination,
-            compilation,
-            cancellationToken);
+        var context = new AnalysisContext(extension, compilation, cancellationToken);
+        var destination = extension.Definition.Destination;
+        var (templates, analyzedTargets, handwrittenMethods, templateDiagnostics) = AnalyzeTemplatesAndTargets(context);
 
         if (templates.IsDefaultOrEmpty || analyzedTargets.IsDefaultOrEmpty)
         {
             return new InteractionResult<AnalyzedExtension>(
-                new AnalyzedExtension(definition.Destination, ImmutableArray<AnalyzedCandidate>.Empty, handwrittenMethods),
+                new AnalyzedExtension(destination, ImmutableArray<AnalyzedCandidate>.Empty, handwrittenMethods),
                 templateDiagnostics);
         }
 
@@ -37,36 +32,20 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
         AddDiagnostics(templateDiagnostics);
 
-        foreach (var (template, body) in templates)
+        foreach (var template in templates)
         {
             foreach (var target in analyzedTargets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!template.CanApplyTo(target) || BindResultTypes(target) is not { } boundTypes)
+                if (!template.Method.CanApplyTo(target) || BindResultTypes(target) is not { } boundTarget)
                     continue;
 
-                var (factories, factoryDiagnostics) = ResolveFactories(
-                    template,
-                    body,
-                    target,
-                    boundTypes,
-                    destination,
-                    compilation,
-                    cancellationToken);
+                var (factories, factoryDiagnostics) = ResolveFactories(context, template, boundTarget);
                 AddDiagnostics(factoryDiagnostics);
 
                 var (candidate, candidateDiagnostics) = factories.IsDefault
                     ? SkipCandidate()
-                    : AnalyzeCallbackArguments(
-                        definition,
-                        template,
-                        body,
-                        target,
-                        boundTypes,
-                        factories,
-                        destination,
-                        compilation,
-                        cancellationToken);
+                    : AnalyzeCallbackArguments(context, template, boundTarget, factories);
                 AddDiagnostics(candidateDiagnostics);
 
                 if (candidate is not null)
@@ -75,7 +54,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         }
 
         return new InteractionResult<AnalyzedExtension>(
-            new AnalyzedExtension(definition.Destination, candidates.ToImmutable(), handwrittenMethods),
+            new AnalyzedExtension(destination, candidates.ToImmutable(), handwrittenMethods),
             diagnostics.ToImmutable());
 
         void AddDiagnostics(ImmutableArray<Diagnostic> items)
@@ -85,47 +64,68 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         }
     }
 
-    private static (ImmutableArray<(TemplateMethod Method, IOperation Body)> Templates,
+    private static (ImmutableArray<ParsedTemplate> Templates,
         ImmutableArray<ResultTarget> Targets, ImmutableArray<HandwrittenMethod> HandwrittenMethods,
         ImmutableArray<Diagnostic> Diagnostics) AnalyzeTemplatesAndTargets(
-        ExtensionDefinition definition,
-        ImmutableArray<ResultTarget> targets,
-        INamedTypeSymbol destination,
-        Compilation compilation,
-        CancellationToken cancellationToken)
+        AnalysisContext context)
         => throw new NotImplementedException();
 
-    private static (INamedTypeSymbol Self, INamedTypeSymbol Other,
-        IReadOnlyDictionary<string, ITypeSymbol> TypeArguments)? BindResultTypes(ResultTarget target)
+    private static BoundTarget? BindResultTypes(ResultTarget target)
         => throw new NotImplementedException();
 
     /// <summary>成立しなければ Factories は default、ファクトリが不要なら空です。</summary>
-    private static (ImmutableArray<(IInvocationOperation Call, IMethodSymbol Factory,
-        ImmutableArray<IPropertySymbol> Arguments)> Factories, ImmutableArray<Diagnostic> Diagnostics) ResolveFactories(
-        TemplateMethod template,
-        IOperation body,
-        ResultTarget target,
-        (INamedTypeSymbol Self, INamedTypeSymbol Other,
-            IReadOnlyDictionary<string, ITypeSymbol> TypeArguments) boundTypes,
-        INamedTypeSymbol destination,
-        Compilation compilation,
-        CancellationToken cancellationToken)
+    private static (ImmutableArray<ResolvedFactoryCall> Factories,
+        ImmutableArray<Diagnostic> Diagnostics) ResolveFactories(
+        AnalysisContext context,
+        ParsedTemplate template,
+        BoundTarget boundTarget)
         => throw new NotImplementedException();
 
     private static (AnalyzedCandidate? Candidate, ImmutableArray<Diagnostic> Diagnostics) SkipCandidate()
         => throw new NotImplementedException();
 
     private static (AnalyzedCandidate? Candidate, ImmutableArray<Diagnostic> Diagnostics) AnalyzeCallbackArguments(
-        ExtensionDefinition definition,
-        TemplateMethod template,
-        IOperation body,
-        ResultTarget target,
-        (INamedTypeSymbol Self, INamedTypeSymbol Other,
-            IReadOnlyDictionary<string, ITypeSymbol> TypeArguments) boundTypes,
-        ImmutableArray<(IInvocationOperation Call, IMethodSymbol Factory,
-            ImmutableArray<IPropertySymbol> Arguments)> factories,
-        INamedTypeSymbol destination,
+        AnalysisContext context,
+        ParsedTemplate template,
+        BoundTarget boundTarget,
+        ImmutableArray<ResolvedFactoryCall> factories)
+        => throw new NotImplementedException();
+
+    private readonly struct AnalysisContext(
+        DetectedExtension extension,
         Compilation compilation,
         CancellationToken cancellationToken)
-        => throw new NotImplementedException();
+    {
+        public DetectedExtension Extension { get; } = extension;
+        public Compilation Compilation { get; } = compilation;
+        public CancellationToken CancellationToken { get; } = cancellationToken;
+    }
+
+    private readonly struct ParsedTemplate(TemplateMethod method, IOperation body)
+    {
+        public TemplateMethod Method { get; } = method;
+        public IOperation Body { get; } = body;
+    }
+
+    private sealed class BoundTarget(
+        ResultTarget target,
+        INamedTypeSymbol self,
+        INamedTypeSymbol other,
+        IReadOnlyDictionary<string, ITypeSymbol> typeArguments)
+    {
+        public ResultTarget Target { get; } = target;
+        public INamedTypeSymbol Self { get; } = self;
+        public INamedTypeSymbol Other { get; } = other;
+        public IReadOnlyDictionary<string, ITypeSymbol> TypeArguments { get; } = typeArguments;
+    }
+
+    private sealed class ResolvedFactoryCall(
+        IInvocationOperation call,
+        IMethodSymbol factory,
+        ImmutableArray<IPropertySymbol> arguments)
+    {
+        public IInvocationOperation Call { get; } = call;
+        public IMethodSymbol Factory { get; } = factory;
+        public ImmutableArray<IPropertySymbol> Arguments { get; } = arguments;
+    }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -121,21 +120,12 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         ImmutableArray<Diagnostic>.Builder diagnostics,
         CancellationToken cancellationToken)
     {
-        var patterns = new List<ResultTarget>();
-        var arguments = new List<(ResultTypePattern Self, ImmutableArray<string> Success, ImmutableArray<string> Failure)>();
+        var patterns = ImmutableArray.CreateBuilder<ResultTarget>();
         for (INamedTypeSymbol? type = template; type is not null; type = type.BaseType)
             ReadAttributes(type);
         ReadAttributes(destination);
 
-        var targets = ImmutableArray.CreateBuilder<ResultTarget>(patterns.Count);
-        foreach (var pattern in patterns)
-        {
-            var names = arguments.FirstOrDefault(entry => entry.Self.HasSameShape(pattern.Self));
-            targets.Add(new ResultTarget(
-                pattern.Self, pattern.Other, pattern.AppliesToSelfOnlyTemplates, names.Success, names.Failure));
-        }
-
-        return targets.MoveToImmutable();
+        return patterns.ToImmutable();
 
         void ReadAttributes(INamedTypeSymbol type)
         {
@@ -160,29 +150,6 @@ internal sealed class DetectionInteraction : IDetectionInteraction
                     continue;
                 }
 
-                if (same)
-                {
-                    var success = ReadNames(attribute, "SuccessArguments");
-                    var failure = ReadNames(attribute, "FailureArguments");
-                    var index = arguments.FindIndex(entry => entry.Self.HasSameShape(self));
-                    if (index < 0)
-                    {
-                        arguments.Add((self, success, failure));
-                    }
-                    else
-                    {
-                        var previous = arguments[index];
-                        if (Conflicts(previous.Success, success) || Conflicts(previous.Failure, failure))
-                        {
-                            Report("Conflicting callback argument names for the same receiver pattern.");
-                            continue;
-                        }
-
-                        arguments[index] = (previous.Self, previous.Success.IsDefault ? success : previous.Success,
-                            previous.Failure.IsDefault ? failure : previous.Failure);
-                    }
-                }
-
                 patterns.Add(new ResultTarget(self, other, same));
                 if (!same && values[4].Value is true)
                     patterns.Add(new ResultTarget(other, self, false));
@@ -194,21 +161,6 @@ internal sealed class DetectionInteraction : IDetectionInteraction
                 }
             }
         }
-    }
-
-    private static bool Conflicts(ImmutableArray<string> first, ImmutableArray<string> second) =>
-        !first.IsDefault && !second.IsDefault && !first.SequenceEqual(second, StringComparer.Ordinal);
-
-    private static ImmutableArray<string> ReadNames(AttributeData attribute, string name)
-    {
-        foreach (var argument in attribute.NamedArguments)
-        {
-            var value = argument.Value;
-            if (argument.Key == name && value.Kind == TypedConstantKind.Array && !value.IsNull)
-                return value.Values.Select(static item => item.Value as string ?? string.Empty).ToImmutableArray();
-        }
-
-        return default;
     }
 
     private static ResultTypePattern? ReadPattern(TypedConstant typeArgument, TypedConstant namesArgument)

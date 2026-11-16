@@ -267,11 +267,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
             if (!template.Placeholders.TryGetCallback(parameter.Type, out var forSuccess, out var callbackReturn))
                 return $"Unsupported template parameter '{parameter.Name}'.";
 
-            var matches = boundTarget.Target.MatchCallbackArguments(forSuccess, boundTarget.GetProperties(forSuccess));
-            if (matches.IsDefault || matches.Any(static match => match is null))
-                return $"Callback argument names for '{parameter.Name}' cannot be resolved on '{boundTarget.Self}'.";
-
-            var properties = matches.Select(static property => property!).ToImmutableArray();
+            var properties = boundTarget.GetProperties(forSuccess);
             var argumentTypes = properties.Select(boundTarget.GetPropertyType).ToImmutableArray();
             var returnType = callbackReturn is null ? null : bindings.BindType(callbackReturn);
             var delegateType = GetDelegateType(compilation, argumentTypes, returnType);
@@ -384,8 +380,8 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
     private static (ImmutableArray<IPropertySymbol> Success, ImmutableArray<IPropertySymbol> Failure)
         ReadProperties(AnalysisContext context, INamedTypeSymbol self)
     {
-        var successProperties = ImmutableArray.CreateBuilder<IPropertySymbol>();
-        var failureProperties = ImmutableArray.CreateBuilder<IPropertySymbol>();
+        var successProperties = new List<(IPropertySymbol Property, int? Index)>();
+        var failureProperties = new List<(IPropertySymbol Property, int? Index)>();
         var shadowedNames = new HashSet<string>(System.StringComparer.Ordinal);
         for (INamedTypeSymbol? type = self; type is not null; type = type.BaseType)
         {
@@ -395,18 +391,27 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
                 if (!shadowedNames.Contains(property.Name)
                     && property is { IsStatic: false, IsIndexer: false, GetMethod: { } getter }
                     && ResultApiAttributes.Find(property, ResultApiAttributes.CallbackArgument) is { } attribute
-                    && attribute.ConstructorArguments.Length == 1
+                    && attribute.ConstructorArguments.Length is 1 or 2
                     && attribute.ConstructorArguments[0].Value is bool success
                     && context.Compilation.IsSymbolAccessibleWithin(getter, context.Extension.DestinationSymbol, self))
                 {
-                    (success ? successProperties : failureProperties).Add(property);
+                    var arguments = attribute.ConstructorArguments;
+                    int? index = arguments.Length == 2 && arguments[1].Value is int value ? value : null;
+                    (success ? successProperties : failureProperties).Add((property, index));
                 }
             }
             foreach (var member in members)
                 shadowedNames.Add(member.Name);
         }
 
-        return (successProperties.ToImmutable(), failureProperties.ToImmutable());
+        return (OrderArguments(successProperties), OrderArguments(failureProperties));
+
+        static ImmutableArray<IPropertySymbol> OrderArguments(List<(IPropertySymbol Property, int? Index)> properties) =>
+            properties.OrderBy(static item => item.Index is null)
+                .ThenBy(static item => item.Index)
+                .ThenBy(static item => item.Property.Name, System.StringComparer.Ordinal)
+                .Select(static item => item.Property)
+                .ToImmutableArray();
     }
 
     private static INamedTypeSymbol? GetDelegateType(

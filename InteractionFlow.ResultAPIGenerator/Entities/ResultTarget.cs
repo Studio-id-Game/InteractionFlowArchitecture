@@ -9,21 +9,13 @@ namespace InteractionFlow.ResultAPIGenerator.Entities;
 internal sealed class ResultTarget(
     ResultTypePattern self,
     ResultTypePattern other,
-    bool appliesToSelfOnlyTemplates,
-    ImmutableArray<string> successArguments = default,
-    ImmutableArray<string> failureArguments = default)
+    bool appliesToSelfOnlyTemplates)
 {
     public ResultTypePattern Self { get; } = self;
     public ResultTypePattern Other { get; } = other;
 
     /// <summary>Self だけを使うテンプレートに適用できるかを表します。</summary>
     public bool AppliesToSelfOnlyTemplates { get; } = appliesToSelfOnlyTemplates;
-
-    /// <summary>成功時の引数名を宣言順に保持します。default は未指定です。</summary>
-    public ImmutableArray<string> SuccessArguments { get; } = successArguments;
-
-    /// <summary>失敗時の引数名を宣言順に保持します。default は未指定です。</summary>
-    public ImmutableArray<string> FailureArguments { get; } = failureArguments;
 
     /// <summary>Self、Other の順に型引数名を取り出し、共有名をまとめます。</summary>
     public ImmutableArray<string> GetTypeParameterNames()
@@ -45,39 +37,6 @@ internal sealed class ResultTarget(
                     names.Add(name);
             }
         }
-    }
-
-    /// <summary>分岐で利用できるプロパティを引数名順に照合します。解決できない位置は null です。</summary>
-    /// <returns>コールバック引数名の一覧が未指定の場合は default。</returns>
-    public ImmutableArray<IPropertySymbol?> MatchCallbackArguments(
-        bool forSuccess,
-        ImmutableArray<IPropertySymbol> availableProperties)
-    {
-        var names = forSuccess ? SuccessArguments : FailureArguments;
-        if (names.IsDefault)
-            return default;
-
-        if (names.IsEmpty)
-            return ImmutableArray<IPropertySymbol?>.Empty;
-
-        var properties = new Dictionary<string, IPropertySymbol?>(StringComparer.Ordinal);
-        if (!availableProperties.IsDefaultOrEmpty)
-        {
-            foreach (var property in availableProperties)
-            {
-                if (IsReadableInstanceProperty(property))
-                    properties[property.Name] = properties.ContainsKey(property.Name) ? null : property;
-            }
-        }
-
-        var arguments = ImmutableArray.CreateBuilder<IPropertySymbol?>(names.Length);
-        var requestedNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var name in names)
-        {
-            arguments.Add(requestedNames.Add(name) && properties.TryGetValue(name, out var property) ? property : null);
-        }
-
-        return arguments.MoveToImmutable();
     }
 
     /// <summary>Other の適合するファクトリと、引数順に対応する Self のプロパティを列挙します。</summary>

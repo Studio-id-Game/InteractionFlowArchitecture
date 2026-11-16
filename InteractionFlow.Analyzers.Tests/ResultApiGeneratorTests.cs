@@ -97,16 +97,39 @@ public class ResultApiGeneratorTests
     }
 
     [Fact]
-    public void UnknownCallbackArgument_ReportsDeclarationAndKeepsOtherCandidates()
+    public void CallbackArguments_UseIndexedOrderThenPropertyName()
     {
-        var compilation = CreateCompilation(transformTemplate: static source => source.Replace(
-            "SuccessArguments = new string[0]", "SuccessArguments = new[] { \"Missing\" }", StringComparison.Ordinal));
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public readonly struct MultipleArguments
+            {
+                public bool IsSuccess => false;
+                [ResultAPICallbackArgument(onSuccess: false)] public byte Zulu => 1;
+                [ResultAPICallbackArgument(onSuccess: false, index: int.MaxValue)] public long LastIndexed => 2;
+                [ResultAPICallbackArgument(onSuccess: false, index: 0)] public bool IndexedZ => true;
+                [ResultAPICallbackArgument(onSuccess: false)] public int Alpha => 3;
+                [ResultAPICallbackArgument(onSuccess: false, index: 0)] public string IndexedA => "first";
+            }
+
+            [ResultAPITarget(typeof(MultipleArguments), null)]
+            public static partial class ResultExtensions
+            {
+                public static void Check(MultipleArguments self)
+                {
+                    self.IfSuccess(() => { });
+                    self.IfError((string indexedA, bool indexedZ, long lastIndexed, int alpha, byte zulu) => { });
+                }
+            }
+            """));
         var (result, updated) = Run(compilation);
 
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "IFRESULT001"
-            && diagnostic.Location.IsInSource && diagnostic.GetMessage().Contains("Callback argument"));
-        Assert.Equal(3, Assert.Single(result.Results).GeneratedSources.Length);
+        Assert.Empty(Problems(result.Diagnostics));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        Assert.Contains(Assert.Single(result.Results).GeneratedSources, source =>
+            source.SourceText.ToString().Contains("onError(self.IndexedA, self.IndexedZ, self.LastIndexed, self.Alpha, self.Zulu)"));
     }
 
     [Fact]
@@ -140,7 +163,7 @@ public class ResultApiGeneratorTests
                 .SelectMany(step => step.Outputs).Select(output => output.Reason).ToArray();
     }
 
-    private static CSharpCompilation CreateCompilation(Func<string, string>? transformTemplate = null)
+    private static CSharpCompilation CreateCompilation()
     {
         var assembly = typeof(ResultApiGeneratorTests).Assembly;
         var trees = assembly.GetManifestResourceNames()
@@ -149,10 +172,7 @@ public class ResultApiGeneratorTests
             .Select(name =>
             {
                 using var reader = new StreamReader(assembly.GetManifestResourceStream(name)!);
-                var source = reader.ReadToEnd();
-                if (name == "ResultApiSources.ResultTemplate.cs" && transformTemplate is not null)
-                    source = transformTemplate(source);
-                return Parse(source, name);
+                return Parse(reader.ReadToEnd(), name);
             });
         return CSharpCompilation.Create("ResultApiFixture", trees, References,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,

@@ -10,12 +10,9 @@ internal sealed class TemplateMethod(
     bool allowAwaitedCallbacks)
 {
     public IMethodSymbol Method { get; } = method;
-    public bool UsesOther { get; } = usesOther;
+    public bool AllowAwaitedReceiver { get; } = allowAwaitedReceiver;
+    public bool AllowAwaitedCallbacks { get; } = allowAwaitedCallbacks;
 
     /// <summary>Self と Other の参照に基づいて、対象の組を展開候補にできるかを判定します。</summary>
-    public bool CanApplyTo(ResultTarget target) => UsesOther || target.AppliesToSelfOnlyTemplates;
-
-    /// <summary>指定された受け手とコールバックの待機の組み合わせを許可するかを判定します。</summary>
-    public bool SupportsAwait(bool awaitReceiver, bool awaitCallbacks) =>
-        (!awaitReceiver || allowAwaitedReceiver) && (!awaitCallbacks || allowAwaitedCallbacks);
+    public bool CanApplyTo(ResultTarget target) => usesOther || target.AppliesToSelfOnlyTemplates;
 }

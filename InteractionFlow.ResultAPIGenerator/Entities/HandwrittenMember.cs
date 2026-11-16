@@ -11,5 +11,7 @@ internal readonly record struct HandwrittenMember(
     public string? SignatureKey { get; } = SignatureKey;
     public string? ReturnTypeKey { get; } = ReturnTypeKey;
     public bool CanReplaceGeneratedMethod { get; } = CanReplaceGeneratedMethod;
-    public bool ConflictsWithName => SignatureKey is null;
+    public bool MatchesOverload(string signatureKey) => SignatureKey is null || SignatureKey == signatureKey;
+
+    public bool CanReplace(string returnTypeKey) => CanReplaceGeneratedMethod && ReturnTypeKey == returnTypeKey;
 }

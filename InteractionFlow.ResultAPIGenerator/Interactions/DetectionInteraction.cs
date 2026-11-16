@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -47,7 +46,8 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         }
 
         if (arguments.Length is not (1 or 4) || GetType(arguments[0]) is not { } template
-            || template.IsUnboundGenericType || template.DeclaringSyntaxReferences.IsEmpty || !HasTemplateMarker(template))
+            || template.IsUnboundGenericType || template.DeclaringSyntaxReferences.IsEmpty
+            || !ResultApiAttributes.GetTemplateOwners(template).Any())
         {
             return Invalid("The Result API template must be a marked source type in this compilation.");
         }
@@ -91,17 +91,6 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         constant.Kind == TypedConstantKind.Type && constant.Value is INamedTypeSymbol { TypeKind: not TypeKind.Error } type
             ? type
             : null;
-
-    private static bool HasTemplateMarker(INamedTypeSymbol template)
-    {
-        for (INamedTypeSymbol? type = template; type is not null; type = type.BaseType)
-        {
-            if (ResultApiAttributes.Find(type, ResultApiAttributes.Template) is not null)
-                return true;
-        }
-
-        return false;
-    }
 
     private static bool IsAwaitablePair(Compilation compilation, INamedTypeSymbol withResult, INamedTypeSymbol withoutResult)
     {
@@ -187,12 +176,10 @@ internal sealed class DetectionInteraction : IDetectionInteraction
         var parsed = ImmutableArray.CreateBuilder<string>(parameters.Length);
         foreach (var parameter in parameters)
         {
-            var name = parameter.Trim();
-            var token = SyntaxFactory.ParseToken(name);
-            if (!token.IsKind(SyntaxKind.IdentifierToken) || token.Text != name || token.ContainsDiagnostics)
+            if (!TypeNames.TryParseIdentifier(parameter.Trim(), out var name))
                 return null;
 
-            parsed.Add(token.ValueText);
+            parsed.Add(name);
         }
 
         return new ResultTypePattern(type, parsed.MoveToImmutable());

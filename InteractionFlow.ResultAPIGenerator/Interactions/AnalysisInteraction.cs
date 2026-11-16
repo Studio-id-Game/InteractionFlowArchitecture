@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -21,25 +22,18 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
 
         var context = new AnalysisContext(extension, compilation, cancellationToken);
         var destination = extension.Definition.Destination;
-        var analysis = AnalyzeTemplates(context);
-        var templates = analysis.Value;
-        if (templates.IsDefaultOrEmpty || extension.Targets.IsDefaultOrEmpty)
+        var templates = AnalyzeTemplates(context);
+        if (templates.Value.IsEmpty || extension.Targets.IsDefaultOrEmpty)
             return new InteractionResult<AnalyzedExtension>(new AnalyzedExtension(destination, default, default),
-                analysis.Diagnostics);
+                templates.Diagnostics);
 
         var candidates = ImmutableArray.CreateBuilder<AnalyzedCandidate>();
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        AddDiagnostics(analysis.Diagnostics);
+        diagnostics.AddRange(templates.Diagnostics);
 
-        var boundTargets = ImmutableArray.CreateBuilder<BoundTarget>();
-        foreach (var target in extension.Targets)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (BindResultTypes(target, context) is { } boundTarget)
-                boundTargets.Add(boundTarget);
-        }
+        var boundTargets = BindTargets(context);
 
-        foreach (var template in templates)
+        foreach (var template in templates.Value)
         {
             foreach (var boundTarget in boundTargets)
             {
@@ -47,40 +41,34 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
                 if (!template.Method.CanApplyTo(boundTarget.Target))
                     continue;
 
-                var (factories, factoryDiagnostics) = ResolveFactories(context, template, boundTarget);
-                AddDiagnostics(factoryDiagnostics);
+                var factories = ResolveFactories(context, template, boundTarget);
+                diagnostics.AddRange(factories.Diagnostics);
+                if (factories.Value.IsDefault)
+                    continue;
 
-                var (candidate, candidateDiagnostics) = factories.IsDefault
-                    ? SkipCandidate()
-                    : AnalyzeCallbackArguments(context, template, boundTarget, factories);
-                AddDiagnostics(candidateDiagnostics);
-
-                if (candidate is not null)
+                var analyzed = AnalyzeCandidate(context, template, boundTarget, factories.Value);
+                diagnostics.AddRange(analyzed.Diagnostics);
+                if (analyzed.Value is { } candidate)
                     candidates.Add(candidate);
             }
         }
 
         var handwrittenMembers = extension.DestinationSymbol.GetMembers()
             .Where(static member => member is not IMethodSymbol or IMethodSymbol { MethodKind: MethodKind.Ordinary })
-            .Select(HandwrittenSignatures.Describe)
+            .Select(MethodSignatures.DescribeHandwritten)
             .ToImmutableArray();
         return new InteractionResult<AnalyzedExtension>(
             new AnalyzedExtension(destination, candidates.ToImmutable(), handwrittenMembers),
             diagnostics.ToImmutable());
-
-        void AddDiagnostics(ImmutableArray<Diagnostic> items)
-        {
-            if (!items.IsDefaultOrEmpty)
-                diagnostics.AddRange(items);
-        }
     }
 
     private static InteractionResult<ImmutableArray<ParsedTemplate>> AnalyzeTemplates(AnalysisContext context)
     {
         var templates = ImmutableArray.CreateBuilder<ParsedTemplate>();
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        var placeholders = TemplatePlaceholders.Find(context.Extension.Definition.Template);
-        foreach (var method in context.Extension.Definition.Template.GetMembers().OfType<IMethodSymbol>())
+        var definition = context.Extension.Definition;
+        var placeholders = TemplatePlaceholders.Find(definition.Template);
+        foreach (var method in definition.Template.GetMembers().OfType<IMethodSymbol>())
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             if (ResultApiAttributes.Find(method, ResultApiAttributes.Function) is not { } attribute)
@@ -88,11 +76,12 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
 
             var syntax = method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(context.CancellationToken);
             var arguments = attribute.ConstructorArguments;
+            var generatedName = definition.GetMethodName(method);
             if (placeholders is null || syntax is not MethodDeclarationSyntax { Body: { } } declaration
                 || !method.IsStatic || method.Parameters.IsEmpty || !placeholders.IsSelf(method.Parameters[0].Type)
                 || method.ReturnsByRef || method.ReturnsByRefReadonly
                 || method.TypeParameters.Any(TypeNames.HasConstraints)
-                || !TypeNames.IsIdentifier(method.Name + context.Extension.Definition.Suffix)
+                || !TypeNames.IsIdentifier(generatedName)
                 || method.Parameters.Any(static parameter => parameter.RefKind != RefKind.None)
                 || arguments.Length != 2 || arguments[0].Value is not bool asyncSelf
                 || arguments[1].Value is not bool asyncCallback)
@@ -119,111 +108,20 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
                 || !factories.IsEmpty;
             templates.Add(new ParsedTemplate(
                 new TemplateMethod(method, usesOther, asyncSelf, asyncCallback),
-                body, placeholders, factories, invocations, operations.OfType<IPropertyReferenceOperation>()
+                generatedName, body, placeholders, factories, invocations, operations.OfType<IPropertyReferenceOperation>()
                     .Any(property => placeholders.IsSuccessProperty(property.Property))));
         }
 
         return new InteractionResult<ImmutableArray<ParsedTemplate>>(templates.ToImmutable(), diagnostics.ToImmutable());
     }
 
-    private static BoundTarget? BindResultTypes(ResultTarget target, AnalysisContext context)
-    {
-        var names = target.GetTypeParameterNames();
-        var typeArguments = new Dictionary<string, ITypeSymbol>(names.Length, System.StringComparer.Ordinal);
-        // Use distinct unconstrained symbols from this compilation for generated type variables.
-        var variables = context.TypeVariables;
-        if (!names.IsEmpty && (variables.IsDefault || names.Length > variables.Length))
-            return null;
-
-        for (var index = 0; index < names.Length; index++)
-            typeArguments.Add(names[index], variables[index]);
-
-        return target.Self.Bind(typeArguments) is { } self && target.Other.Bind(typeArguments) is { } other
-            ? new BoundTarget(target, self, other, typeArguments, context)
-            : null;
-    }
-
-    /// <summary>不成立なら Factories は default、テンプレートに Create 呼び出しがなければ空です。</summary>
-    private static (ImmutableArray<ResolvedFactoryCall> Factories,
-        ImmutableArray<Diagnostic> Diagnostics) ResolveFactories(
-        AnalysisContext context,
-        ParsedTemplate template,
-        BoundTarget boundTarget)
-    {
-        var factories = ImmutableArray.CreateBuilder<ResolvedFactoryCall>(template.Factories.Length);
-        foreach (var call in template.Factories)
-        {
-            context.CancellationToken.ThrowIfCancellationRequested();
-            if (!UsesReceiver(call, template.Method.Method.Parameters[0])
-                || !call.TargetMethod.IsStatic
-                || call.TargetMethod.Name is not ("CreateSuccess" or "CreateFailure"))
-            {
-                return Invalid("A factory placeholder must receive only the template receiver.");
-            }
-
-            if (boundTarget.HasSameResultType)
-            {
-                factories.Add(new ResolvedFactoryCall(call));
-                continue;
-            }
-
-            var matches = boundTarget.FindFactories(call.TargetMethod, call.TargetMethod.Name == "CreateSuccess");
-            if (matches.IsEmpty)
-                return default;
-
-            var best = matches.Length == 1
-                ? matches[0]
-                : matches.SingleOrDefault(candidate => matches.All(other =>
-                    SymbolEqualityComparer.Default.Equals(candidate.Factory, other.Factory)
-                    || IsBetterFactory(candidate.Factory, other.Factory, context.Compilation)));
-            if (best.Factory is null)
-                return Invalid($"Factory '{call.TargetMethod.Name}' is ambiguous for '{boundTarget.Other}'.");
-
-            factories.Add(new ResolvedFactoryCall(call, best.Factory, best.Arguments));
-
-            (ImmutableArray<ResolvedFactoryCall>, ImmutableArray<Diagnostic>) Invalid(string message) =>
-                (default, ImmutableArray.Create(GeneratorDiagnostics.Create(call.Syntax.GetLocation(), message)));
-        }
-
-        return (factories.MoveToImmutable(), default);
-    }
-
-    private static bool IsBetterFactory(IMethodSymbol candidate, IMethodSymbol other, Compilation compilation)
-    {
-        if (candidate.Parameters.Length != other.Parameters.Length)
-            return false;
-
-        var strictlyBetter = false;
-        foreach (var parameter in candidate.Parameters)
-        {
-            var counterpart = other.Parameters.FirstOrDefault(item => item.Name == parameter.Name);
-            if (counterpart is null)
-                return false;
-
-            var conversion = compilation.ClassifyCommonConversion(parameter.Type, counterpart.Type);
-            if (conversion.IsIdentity)
-                continue;
-            if (!conversion.IsImplicit || !conversion.IsReference)
-                return false;
-            strictlyBetter = true;
-        }
-
-        return strictlyBetter;
-    }
-
-    private static (AnalyzedCandidate? Candidate, ImmutableArray<Diagnostic> Diagnostics) SkipCandidate()
-        => (null, ImmutableArray<Diagnostic>.Empty);
-
-    private static (AnalyzedCandidate? Candidate, ImmutableArray<Diagnostic> Diagnostics) AnalyzeCallbackArguments(
+    private static InteractionResult<AnalyzedCandidate?> AnalyzeCandidate(
         AnalysisContext context,
         ParsedTemplate template,
         BoundTarget boundTarget,
         ImmutableArray<ResolvedFactoryCall> factories)
     {
         var method = template.Method.Method;
-        var placeholders = template.Placeholders;
-        var receiver = method.Parameters[0];
-        var receiverName = TypeNames.Escape(receiver.Name);
         var definition = context.Extension.Definition;
         var awaitables = definition.Awaitables;
         if (template.UsesIsSuccess && !boundTarget.HasSuccessCheck)
@@ -243,22 +141,23 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
 
         var resolvedReturn = bindings.BindType(method.ReturnType);
         var awaitedResult = awaitables?.Wrap(resolvedReturn);
-        var awaitedReceiver = template.Method.SupportsAwait(awaitReceiver: true, awaitCallbacks: false)
+        var awaitedReceiver = template.Method.AllowAwaitedReceiver
             ? awaitables?.Wrap(boundTarget.Self) : null;
         var awaitedBody = bindings.CanAwaitCallbacks ? bindings.WriteBody(awaitCallbacks: true) : null;
         var xml = method.GetDocumentationCommentXml(cancellationToken: context.CancellationToken);
-        return (new AnalyzedCandidate(
-            TypeNames.Escape(definition.GetMethodName(template.Method)),
-            bindings.DescribeParameter(receiverName, boundTarget.Self, awaitedReceiver),
+        var candidate = new AnalyzedCandidate(
+            TypeNames.Escape(template.GeneratedName),
+            bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, awaitedReceiver),
             bindings.FormatType(resolvedReturn), awaitedResult is null ? null : bindings.FormatType(awaitedResult),
             bindings.TypeParameters, bindings.Parameters.MoveToImmutable(), body, awaitedBody, xml,
-            bindings.FormatType(resolvedReturn, forSignature: true),
-            awaitedResult is null ? null : bindings.FormatType(awaitedResult, forSignature: true),
-            template.Id, boundTarget.HasSameResultType && !factories.IsEmpty),
-            default);
+            returnTypeKey: bindings.FormatType(resolvedReturn, forSignature: true),
+            awaitedReturnTypeKey: awaitedResult is null ? null : bindings.FormatType(awaitedResult, forSignature: true),
+            templateId: template.Id,
+            forwardsReceiver: boundTarget.HasSameResultType && !factories.IsEmpty);
+        return new InteractionResult<AnalyzedCandidate?>(candidate);
 
-        (AnalyzedCandidate?, ImmutableArray<Diagnostic>) Invalid(string message) =>
-            (null, ImmutableArray.Create(GeneratorDiagnostics.Create(method.Locations.FirstOrDefault(), message)));
+        InteractionResult<AnalyzedCandidate?> Invalid(string message) =>
+            new(null, ImmutableArray.Create(GeneratorDiagnostics.Create(method.Locations.FirstOrDefault(), message)));
     }
 
     private static string? BindCallbacks(
@@ -267,9 +166,6 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         var template = bindings.Template;
         var boundTarget = bindings.Target;
         var receiver = bindings.Receiver;
-        var callbackCalls = template.Invocations
-            .Where(static call => call.Instance is IParameterReferenceOperation)
-            .ToLookup(call => ((IParameterReferenceOperation)call.Instance!).Parameter, SymbolEqualityComparer.Default);
         foreach (var parameter in template.Method.Method.Parameters.Skip(1))
         {
             if (!template.Placeholders.TryGetCallback(parameter.Type, out var forSuccess, out var callbackReturn))
@@ -283,16 +179,15 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
                 return $"The callback '{parameter.Name}' cannot be represented by a delegate.";
 
             INamedTypeSymbol? awaitedDelegate = null;
-            if (awaitables is not null && template.Method.SupportsAwait(awaitReceiver: false, awaitCallbacks: true))
+            if (awaitables is not null && template.Method.AllowAwaitedCallbacks)
             {
-                var awaitedReturn = returnType is null ? awaitables.WithoutResult : awaitables.Wrap(returnType);
-                awaitedDelegate = GetDelegateType(compilation, argumentTypes, awaitedReturn);
+                awaitedDelegate = GetDelegateType(compilation, argumentTypes, awaitables.Wrap(returnType));
             }
 
             var name = TypeNames.Escape(parameter.Name);
             bindings.Parameters.Add(bindings.DescribeParameter(name, delegateType, awaitedDelegate));
             var arguments = string.Join(", ", properties.Select(bindings.FormatProperty));
-            foreach (var call in callbackCalls[parameter])
+            foreach (var call in template.CallbackCalls[parameter])
             {
                 if (call.TargetMethod.Name != "Invoke" || !UsesReceiver(call, receiver))
                     return $"The callback '{parameter.Name}' must be invoked with the template receiver.";
@@ -314,24 +209,33 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
             Target = target;
             var method = template.Method.Method;
             Receiver = method.Parameters[0];
+            ReceiverName = TypeNames.Escape(Receiver.Name);
             Parameters = ImmutableArray.CreateBuilder<AnalyzedParameter>(method.Parameters.Length - 1);
-            var typeParameters = target.Target.GetTypeParameterNames().ToBuilder();
-            foreach (var argument in target.TypeArguments)
-                typeNames.Add((ITypeParameterSymbol)argument.Value, argument.Key);
-            foreach (var parameter in method.TypeParameters)
+            var names = target.Target.TypeParameterNames;
+            var typeParameters = ImmutableArray.CreateBuilder<string>(names.Length + method.TypeParameters.Length);
+            var usedNames = new HashSet<string>(method.Parameters.Select(static parameter => parameter.Name), StringComparer.Ordinal)
             {
-                var name = parameter.Name;
-                while (typeParameters.Contains(name))
+                template.GeneratedName,
+            };
+            for (var index = 0; index < names.Length; index++)
+                AddTypeParameter(target.TypeVariables[index], names[index]);
+            foreach (var parameter in method.TypeParameters)
+                AddTypeParameter(parameter, parameter.Name);
+            TypeParameters = typeParameters.MoveToImmutable();
+
+            void AddTypeParameter(ITypeParameterSymbol parameter, string name)
+            {
+                while (!usedNames.Add(name))
                     name += "_";
                 typeParameters.Add(name);
                 typeNames.Add(parameter, name);
             }
-            TypeParameters = typeParameters.ToImmutable();
         }
 
         public ParsedTemplate Template { get; }
         public BoundTarget Target { get; }
         public IParameterSymbol Receiver { get; }
+        public string ReceiverName { get; }
         public ImmutableArray<string> TypeParameters { get; }
         public ImmutableArray<AnalyzedParameter>.Builder Parameters { get; }
         public bool CanAwaitCallbacks =>
@@ -341,7 +245,7 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         public void AddFactory(ResolvedFactoryCall factory)
         {
             var resolved = factory.ForwardsReceiver
-                ? (TypeNames.Escape(Receiver.Name), TemplateBodyWriter.CallKind.ForwardReceiver)
+                ? (ReceiverName, TemplateBodyWriter.CallKind.ForwardReceiver)
                 : (factory.Format(FormatType(Target.Other), FormatProperty), TemplateBodyWriter.CallKind.Factory);
             calls.Add(factory.Call, resolved);
         }
@@ -363,69 +267,16 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         {
             var suppression = property.NullableAnnotation == NullableAnnotation.Annotated
                 && Target.GetPropertyType(property).NullableAnnotation == NullableAnnotation.NotAnnotated ? "!" : "";
-            return $"{TypeNames.Escape(Receiver.Name)}.{TypeNames.Escape(property.Name)}{suppression}";
+            return $"{ReceiverName}.{TypeNames.Escape(property.Name)}{suppression}";
         }
 
         public string FormatType(ITypeSymbol type, bool forSignature = false) =>
             TypeNames.Format(type, typeNames, forSignature);
     }
 
-    private static bool HasSuccessProperty(AnalysisContext context, INamedTypeSymbol self)
-    {
-        for (INamedTypeSymbol? type = self; type is not null; type = type.BaseType)
-        {
-            var members = type.GetMembers("IsSuccess");
-            if (!members.IsEmpty)
-            {
-                return members.Length == 1 && members[0] is IPropertySymbol { IsStatic: false, IsIndexer: false,
-                    Type.SpecialType: SpecialType.System_Boolean, GetMethod: { } getter }
-                    && context.Compilation.IsSymbolAccessibleWithin(getter, context.Extension.DestinationSymbol, self);
-            }
-        }
-
-        return false;
-    }
-
     private static bool UsesReceiver(IInvocationOperation call, IParameterSymbol receiver) =>
         call.Arguments.Length == 1 && call.Arguments[0].Value is IParameterReferenceOperation parameter
         && SymbolEqualityComparer.Default.Equals(parameter.Parameter, receiver);
-
-    private static (ImmutableArray<IPropertySymbol> Success, ImmutableArray<IPropertySymbol> Failure)
-        ReadProperties(AnalysisContext context, INamedTypeSymbol self)
-    {
-        var successProperties = new List<(IPropertySymbol Property, int? Index)>();
-        var failureProperties = new List<(IPropertySymbol Property, int? Index)>();
-        var shadowedNames = new HashSet<string>(System.StringComparer.Ordinal);
-        for (INamedTypeSymbol? type = self; type is not null; type = type.BaseType)
-        {
-            var members = type.GetMembers();
-            foreach (var property in members.OfType<IPropertySymbol>())
-            {
-                if (!shadowedNames.Contains(property.Name)
-                    && property is { IsStatic: false, IsIndexer: false, GetMethod: { } getter }
-                    && ResultApiAttributes.Find(property, ResultApiAttributes.CallbackArgument) is { } attribute
-                    && attribute.ConstructorArguments.Length is 1 or 2
-                    && attribute.ConstructorArguments[0].Value is bool success
-                    && context.Compilation.IsSymbolAccessibleWithin(getter, context.Extension.DestinationSymbol, self))
-                {
-                    var arguments = attribute.ConstructorArguments;
-                    int? index = arguments.Length == 2 && arguments[1].Value is int value ? value : null;
-                    (success ? successProperties : failureProperties).Add((property, index));
-                }
-            }
-            foreach (var member in members)
-                shadowedNames.Add(member.Name);
-        }
-
-        return (OrderArguments(successProperties), OrderArguments(failureProperties));
-
-        static ImmutableArray<IPropertySymbol> OrderArguments(List<(IPropertySymbol Property, int? Index)> properties) =>
-            properties.OrderBy(static item => item.Index is null)
-                .ThenBy(static item => item.Index)
-                .ThenBy(static item => item.Property.Name, System.StringComparer.Ordinal)
-                .Select(static item => item.Property)
-                .ToImmutableArray();
-    }
 
     private static INamedTypeSymbol? GetDelegateType(
         Compilation compilation, ImmutableArray<ITypeSymbol> arguments, ITypeSymbol? returnType)
@@ -452,6 +303,7 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
 
     private readonly struct ParsedTemplate(
         TemplateMethod method,
+        string generatedName,
         IOperation body,
         TemplatePlaceholders placeholders,
         ImmutableArray<IInvocationOperation> factories,
@@ -459,67 +311,15 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         bool usesIsSuccess)
     {
         public TemplateMethod Method { get; } = method;
+        public string GeneratedName { get; } = generatedName;
         public string? Id { get; } = method.Method.GetDocumentationCommentId();
         public IOperation Body { get; } = body;
         public TemplatePlaceholders Placeholders { get; } = placeholders;
         public ImmutableArray<IInvocationOperation> Factories { get; } = factories;
-        public ImmutableArray<IInvocationOperation> Invocations { get; } = invocations;
+        public ILookup<IParameterSymbol, IInvocationOperation> CallbackCalls { get; } = invocations
+            .Where(static call => call.Instance is IParameterReferenceOperation)
+            .ToLookup<IInvocationOperation, IParameterSymbol>(
+                static call => ((IParameterReferenceOperation)call.Instance!).Parameter, SymbolEqualityComparer.Default);
         public bool UsesIsSuccess { get; } = usesIsSuccess;
-    }
-
-    private sealed class BoundTarget(
-        ResultTarget target,
-        INamedTypeSymbol self,
-        INamedTypeSymbol other,
-        IReadOnlyDictionary<string, ITypeSymbol> typeArguments,
-        AnalysisContext context)
-    {
-        private readonly (ImmutableArray<IPropertySymbol> Success, ImmutableArray<IPropertySymbol> Failure) properties =
-            ReadProperties(context, self);
-        private readonly AnalysisContext analysisContext = context;
-        private readonly bool guaranteesNonNullBranchValues =
-            self.ContainingNamespace.ToDisplayString() == "InteractionFlow.Core.ResultAPI"
-            && self.Name == "Result" && self.Arity <= 2;
-
-        public ResultTarget Target { get; } = target;
-        public INamedTypeSymbol Self { get; } = self;
-        public INamedTypeSymbol Other { get; } = other;
-        public IReadOnlyDictionary<string, ITypeSymbol> TypeArguments { get; } = typeArguments;
-        public bool HasSuccessCheck { get; } = HasSuccessProperty(context, self);
-        public bool HasSameResultType { get; } = SymbolEqualityComparer.IncludeNullability.Equals(self, other);
-
-        public ImmutableArray<IPropertySymbol> GetProperties(bool forSuccess) =>
-            forSuccess ? properties.Success : properties.Failure;
-
-        public ITypeSymbol GetPropertyType(IPropertySymbol property) =>
-            property.Type.WithNullableAnnotation(
-                guaranteesNonNullBranchValues && property.NullableAnnotation == NullableAnnotation.Annotated
-                    ? NullableAnnotation.NotAnnotated
-                    : property.NullableAnnotation);
-
-        public ImmutableArray<(IMethodSymbol Factory, ImmutableArray<IPropertySymbol> Arguments)> FindFactories(
-            IMethodSymbol placeholder, bool forSuccess)
-        {
-            var arguments = GetProperties(forSuccess).Select(property => (property, GetPropertyType(property)))
-                .ToImmutableArray();
-            return ResultTarget.FindFactoryMatches(
-                placeholder, Self, Other, arguments, analysisContext.Compilation, analysisContext.Extension.DestinationSymbol);
-        }
-    }
-
-    private sealed class ResolvedFactoryCall(
-        IInvocationOperation call,
-        IMethodSymbol? factory = null,
-        ImmutableArray<IPropertySymbol> arguments = default)
-    {
-        public IInvocationOperation Call { get; } = call;
-        public bool ForwardsReceiver => factory is null;
-
-        public string Format(string targetType, System.Func<IPropertySymbol, string> formatArgument)
-        {
-            var values = factory!.Parameters.Zip(arguments,
-                (parameter, argument) => $"{TypeNames.Escape(parameter.Name)}: {formatArgument(argument)}");
-            return $"{targetType}.{TypeNames.Escape(factory.Name)}({string.Join(", ", values)})";
-        }
     }
 }

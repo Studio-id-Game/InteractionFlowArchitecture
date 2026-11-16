@@ -15,4 +15,7 @@ internal readonly record struct AnalyzedParameter(
     public string? AwaitedTypeName { get; } = AwaitedTypeName;
     public string TypeKey { get; } = TypeKey ?? TypeName;
     public string? AwaitedTypeKey { get; } = AwaitedTypeKey ?? AwaitedTypeName;
+
+    public (string TypeName, string TypeKey) GetTypeNames(bool awaited) =>
+        awaited ? (AwaitedTypeName ?? TypeName, AwaitedTypeKey ?? TypeKey) : (TypeName, TypeKey);
 }

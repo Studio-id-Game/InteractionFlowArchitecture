@@ -93,13 +93,11 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             cancellationToken.ThrowIfCancellationRequested();
             var representative = group.First();
             var handwritten = existing[representative.Name]
-                .Where(member => member.ConflictsWithName || member.SignatureKey == group.Key)
+                .Where(member => member.MatchesOverload(group.Key))
                 .ToImmutableArray();
             if (!handwritten.IsEmpty)
             {
-                if (handwritten.Length != 1 || !handwritten[0].CanReplaceGeneratedMethod
-                    || handwritten[0].ReturnTypeKey != representative.ReturnTypeKey
-                    || group.Any(method => method.ReturnTypeKey != representative.ReturnTypeKey))
+                if (handwritten.Length != 1 || group.Any(method => !handwritten[0].CanReplace(method.ReturnTypeKey)))
                 {
                     diagnostics.Add(GeneratorDiagnostics.Create(diagnosticLocation,
                         $"A handwritten member conflicts with '{representative.Declaration}'."));
@@ -201,22 +199,16 @@ internal sealed class GenerationInteraction : IGenerationInteraction
 
         public static ExpandedMethod Create(AnalyzedCandidate candidate, bool awaitReceiver, bool awaitCallbacks)
         {
-            var typeParameters = HandwrittenSignatures.GetTypeParameters(candidate.TypeParameterNames);
+            var typeParameters = MethodSignatures.CreateTypeParameterKeys(candidate.TypeParameterNames);
             var isAsync = awaitReceiver || awaitCallbacks;
             var returnType = isAsync ? candidate.AwaitedReturnTypeName! : candidate.ReturnTypeName;
             var returnTypeKey = isAsync ? candidate.AwaitedReturnTypeKey! : candidate.ReturnTypeKey;
-            var receiver = awaitReceiver ? candidate.Receiver.AwaitedTypeName! : candidate.Receiver.TypeName;
-            var receiverKey = awaitReceiver ? candidate.Receiver.AwaitedTypeKey! : candidate.Receiver.TypeKey;
             var parameterName = awaitReceiver ? GetAwaitedReceiverName(candidate) : candidate.Receiver.Name;
-            var parameters = new List<string> { $"this {receiver} {parameterName}" };
-            var parameterKeys = new List<(string, bool)> { (Key(receiverKey), false) };
+            var parameters = new List<string>();
+            var parameterKeys = new List<(string, bool)>();
+            AddParameter(candidate.Receiver, awaitReceiver, receiverName: parameterName);
             foreach (var parameter in candidate.Parameters)
-            {
-                var type = awaitCallbacks ? parameter.AwaitedTypeName ?? parameter.TypeName : parameter.TypeName;
-                var key = awaitCallbacks ? parameter.AwaitedTypeKey ?? parameter.TypeKey : parameter.TypeKey;
-                parameters.Add($"{type} {parameter.Name}");
-                parameterKeys.Add((Key(key), false));
-            }
+                AddParameter(parameter, awaitCallbacks);
 
             var generic = candidate.TypeParameterNames.IsEmpty
                 ? ""
@@ -230,11 +222,18 @@ internal sealed class GenerationInteraction : IGenerationInteraction
                     $"    var {candidate.Receiver.Name} = await {parameterName}.ConfigureAwait(false);\n");
             }
 
-            var signature = HandwrittenSignatures.CreateKey(candidate.MethodName, typeParameters.Count, parameterKeys);
+            var signature = MethodSignatures.CreateKey(candidate.MethodName, typeParameters.Count, parameterKeys);
             return new ExpandedMethod(candidate.MethodName.TrimStart('@'), signature, Key(returnTypeKey), declaration, body,
                 ReadDocumentation(candidate, parameterName));
 
             string Key(string type) => TypeNames.ReplaceTypeParameters(type, typeParameters);
+
+            void AddParameter(AnalyzedParameter parameter, bool awaited, string? receiverName = null)
+            {
+                var (type, key) = parameter.GetTypeNames(awaited);
+                parameters.Add(receiverName is null ? $"{type} {parameter.Name}" : $"this {type} {receiverName}");
+                parameterKeys.Add((Key(key), false));
+            }
         }
 
         public void AppendTo(StringBuilder source)

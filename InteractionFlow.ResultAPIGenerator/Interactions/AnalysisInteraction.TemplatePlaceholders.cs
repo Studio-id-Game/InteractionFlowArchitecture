@@ -19,13 +19,10 @@ internal sealed partial class AnalysisInteraction
 
         public static TemplatePlaceholders? Find(INamedTypeSymbol template)
         {
-            for (INamedTypeSymbol? type = template; type is not null; type = type.BaseType)
+            foreach (var owner in ResultApiAttributes.GetTemplateOwners(template))
             {
-                if (ResultApiAttributes.Find(type, ResultApiAttributes.Template) is not null
-                    && FindType(type, "Self", 0) is { } self)
-                {
-                    return new TemplatePlaceholders(type, self);
-                }
+                if (FindType(owner, "Self", 0) is { } self)
+                    return new TemplatePlaceholders(owner, self);
             }
 
             return null;

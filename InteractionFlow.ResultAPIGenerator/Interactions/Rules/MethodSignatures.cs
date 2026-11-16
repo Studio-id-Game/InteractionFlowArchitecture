@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis;
 
 namespace InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 
-internal static class HandwrittenSignatures
+internal static class MethodSignatures
 {
-    public static HandwrittenMember Describe(ISymbol member)
+    public static HandwrittenMember DescribeHandwritten(ISymbol member)
     {
         if (member is not IMethodSymbol method)
             return new HandwrittenMember(member.Name);
@@ -30,7 +30,7 @@ internal static class HandwrittenSignatures
     public static string CreateKey(string name, int arity, IEnumerable<(string Type, bool ByRef)> parameters) =>
         $"{name.TrimStart('@')}`{arity}({string.Join(",", parameters.Select(p => p.ByRef ? "&" + p.Type : p.Type))})";
 
-    public static Dictionary<string, string> GetTypeParameters(ImmutableArray<string> names)
+    public static Dictionary<string, string> CreateTypeParameterKeys(ImmutableArray<string> names)
     {
         var keys = new Dictionary<string, string>(names.Length, System.StringComparer.Ordinal);
         for (var index = 0; index < names.Length; index++)

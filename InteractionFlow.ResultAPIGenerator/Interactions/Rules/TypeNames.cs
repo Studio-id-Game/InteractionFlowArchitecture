@@ -41,10 +41,14 @@ internal static class TypeNames
         || parameter.HasValueTypeConstraint || parameter.HasNotNullConstraint
         || parameter.HasUnmanagedTypeConstraint || parameter.HasConstructorConstraint;
 
-    public static bool IsIdentifier(string name)
+    public static bool IsIdentifier(string name) =>
+        TryParseIdentifier(Escape(name), out var identifier) && identifier == name;
+
+    public static bool TryParseIdentifier(string text, out string name)
     {
-        var token = SyntaxFactory.ParseToken(Escape(name));
-        return token.IsKind(SyntaxKind.IdentifierToken) && token.ValueText == name && !token.ContainsDiagnostics;
+        var token = SyntaxFactory.ParseToken(text);
+        name = token.ValueText;
+        return token.IsKind(SyntaxKind.IdentifierToken) && token.Text == text && !token.ContainsDiagnostics;
     }
 
     public static string ReplaceTypeParameters(string text, IReadOnlyDictionary<string, string> substitutions, bool isBody = false)

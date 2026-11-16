@@ -137,6 +137,53 @@ public class ResultApiGeneratorTests
         Assert.Contains("this Result self", source);
     }
 
+    [Theory]
+    [InlineData("onSuccess", "IfSuccess")]
+    [InlineData("Then", "Then")]
+    public void TypeParameters_AvoidOtherNamesInGeneratedDeclaration(string typeParameter, string method)
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse($$"""
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public readonly struct ParameterNameResult<T>
+            {
+                public bool IsSuccess => true;
+                [ResultAPICallbackArgument(onSuccess: true)]
+                public T Value => default!;
+            }
+
+            [ResultAPITarget(typeof(ParameterNameResult<>), "{{typeParameter}}")]
+            public static partial class ResultExtensions;
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        Assert.Contains($"{method}<{typeParameter}_>(this ParameterNameResult<{typeParameter}_> self",
+            GetGeneratedSource(result, "ResultExtensions"));
+    }
+
+    [Fact]
+    public void EquivalentResultTargets_ShareTheSameGeneratedOverloads()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            [ResultAPITarget(typeof(Result<>), "Renamed")]
+            [ResultAPITarget(typeof(Result<>), "Renamed", typeof(Result<>), "Renamed", twoWay: false)]
+            public static partial class ResultExtensions;
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
+    }
+
     [Fact]
     public void SameTypeFactories_ForwardReceiverWithoutFactoryMethods()
     {

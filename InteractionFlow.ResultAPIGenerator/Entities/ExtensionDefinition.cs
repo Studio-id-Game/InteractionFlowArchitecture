@@ -1,4 +1,3 @@
-using System;
 using Microsoft.CodeAnalysis;
 
 namespace InteractionFlow.ResultAPIGenerator.Entities;
@@ -16,8 +15,8 @@ internal sealed class ExtensionDefinition(
     public string Suffix { get; } = suffix;
 
     /// <summary>待機を伴うオーバーロードの生成先かどうかを表します。</summary>
-    public bool IsAsynchronous => throw new NotImplementedException();
+    public bool IsAsynchronous => Awaitables is not null;
 
     /// <summary>テンプレートメソッド名に生成先の接尾辞を適用します。</summary>
-    public string GetMethodName(TemplateMethod template) => throw new NotImplementedException();
+    public string GetMethodName(TemplateMethod template) => template.Method.Name + Suffix;
 }

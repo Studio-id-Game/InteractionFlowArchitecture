@@ -3,13 +3,14 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using InteractionFlow.ResultAPIGenerator.Entities;
+using InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
 namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
-internal sealed class AnalysisInteraction : IAnalysisInteraction
+internal sealed partial class AnalysisInteraction : IAnalysisInteraction
 {
     public InteractionResult<AnalyzedExtension> Analyze(
         DetectedExtension extension,

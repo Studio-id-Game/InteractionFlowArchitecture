@@ -1,5 +1,6 @@
 using InteractionFlow.ResultAPIGenerator.Entities;
 using InteractionFlow.ResultAPIGenerator.Interactions;
+using InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 

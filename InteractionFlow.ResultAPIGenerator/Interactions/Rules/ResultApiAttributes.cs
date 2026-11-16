@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace InteractionFlow.ResultAPIGenerator.Interactions;
+namespace InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 
 internal static class ResultApiAttributes
 {

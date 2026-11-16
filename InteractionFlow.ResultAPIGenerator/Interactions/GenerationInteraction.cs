@@ -1,4 +1,5 @@
 using InteractionFlow.ResultAPIGenerator.Entities;
+using InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;

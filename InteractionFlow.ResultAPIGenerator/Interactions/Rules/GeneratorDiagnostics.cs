@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace InteractionFlow.ResultAPIGenerator.Interactions;
+namespace InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 
 internal static class GeneratorDiagnostics
 {

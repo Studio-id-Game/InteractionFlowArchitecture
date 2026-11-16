@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace InteractionFlow.ResultAPIGenerator.Interactions;
+namespace InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 
 internal static class GeneratedTypeShortener
 {

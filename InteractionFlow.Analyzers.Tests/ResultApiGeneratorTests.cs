@@ -46,10 +46,62 @@ public class ResultApiGeneratorTests
         var (result, updated) = Run(compilation);
         Assert.Empty(Problems(result.Diagnostics));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
-        Assert.Equal(3, Assert.Single(result.Results).GeneratedSources.Length);
+        var sources = Assert.Single(result.Results).GeneratedSources;
+        Assert.Equal(3, sources.Length);
+        Assert.All(sources, source =>
+            Assert.DoesNotContain("global::InteractionFlow.Core.ResultAPI.", source.SourceText.ToString()));
+        var taskSource = Assert.Single(sources, source => source.HintName.EndsWith(".ResultExtensionsAsync.g.cs", StringComparison.Ordinal));
+        Assert.Contains("global::System.Threading.Tasks.Task<Result<T>>", taskSource.SourceText.ToString());
         Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsAsync"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsValueAsync"));
+    }
+
+    [Fact]
+    public void TypeNames_KeepQualificationForHandwrittenTypeAndGeneratedTypeParameter()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public static partial class ResultExtensions
+            {
+                private class Result<T>;
+            }
+            """));
+        var template = compilation.SyntaxTrees.Single(tree => tree.FilePath == "ResultApiSources.ResultTemplate.cs");
+        compilation = compilation.ReplaceSyntaxTree(template, Parse(
+            template.ToString().Replace("TResolved", "Result", StringComparison.Ordinal), template.FilePath));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        var source = Assert.Single(Assert.Single(result.Results).GeneratedSources,
+            source => source.HintName.EndsWith(".ResultExtensions.g.cs", StringComparison.Ordinal)).SourceText.ToString();
+        Assert.Contains("this global::InteractionFlow.Core.ResultAPI.Result<T> self", source);
+        Assert.Contains("Resolve<Result>(this global::InteractionFlow.Core.ResultAPI.Result self", source);
+        Assert.Contains("Result<R>.CreateFailure(", Assert.Single(Assert.Single(result.Results).GeneratedSources,
+            source => source.HintName.EndsWith(".ResultExtensionsAsync.g.cs", StringComparison.Ordinal)).SourceText.ToString());
+    }
+
+    [Fact]
+    public void TypeNames_KeepQualificationForShadowedFactoryReceiver()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public static partial class ResultExtensions
+            {
+                private static int Result => 0;
+            }
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        var source = Assert.Single(Assert.Single(result.Results).GeneratedSources,
+            source => source.HintName.EndsWith(".ResultExtensions.g.cs", StringComparison.Ordinal)).SourceText.ToString();
+        Assert.Contains("return global::InteractionFlow.Core.ResultAPI.Result.CreateFailure(", source);
+        Assert.Contains("this Result self", source);
     }
 
     [Fact]

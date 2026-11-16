@@ -106,7 +106,7 @@ flowchart TD
 | 具体化 | メソッドの引数・戻り値・本体で `Self` / `Other` を使っているか判定し、必要な型の組だけを束縛します。テンプレート自身の `TResolved` も含め、公開シグネチャに現れる型変数を安定した順で列挙します。受け手を `this` 引数へ置換し、属性で選んだプロパティの順序と型を `Func` / `Action` の宣言および呼び出しに反映します。型変数が戻り値だけに現れ、通常の呼び出しで推論できない形は公開前の検証で捕捉します。 |
 | 非同期展開 | 同期の成立判定を共有し、フラグに応じて受け手のみ・コールバックのみ・両方を非同期化します。`Resolve` の `TResolved` と `If*` の `Self` を含め、実際の戻り値型を包みます。 |
 | 衝突判定 | 生成先ごとにメソッド名・型引数数・引数型と受け渡し方法を比較します。型引数名を宣言順の番号で正規化し、戻り型や nullable 注釈だけが異なる候補も衝突として扱います。同一宣言に帰着する候補はまとめ、実装が異なる生成候補には診断を出します。手書きメソッドの扱いは次節の規則に従います。 |
-| ソース化と出力 | 生成操作が `#nullable enable` と `global::` を使い、生成後の名前に合わせた XML コメントを含む `.g.cs` を組み立てます。出力操作が決定的なヒント名と本文を `AddSource` に渡します。 |
+| ソース化と出力 | 生成操作が `#nullable enable` と完全修飾型名を使い、XML コメントを含む `.g.cs` を組み立てます。出力前に、生成先と同じ名前空間の型名を、その箇所で同じシンボルに解決される場合だけ短縮します。出力操作が決定的なヒント名と本文を `AddSource` に渡します。 |
 
 Roslyn と C# の参照先は [属性を起点とする増分処理](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.syntaxvalueprovider.forattributewithmetadataname) と [メソッドのシグネチャ](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/basic-concepts#75-signatures-and-overloading) です。
 

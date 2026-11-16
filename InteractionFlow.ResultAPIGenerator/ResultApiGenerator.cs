@@ -52,7 +52,10 @@ public sealed class ResultApiGenerator : IIncrementalGenerator
             .WithTrackingName("ResultApiGeneration");
         var sources = generated
             .Where(static result => result.Value.HasValue)
-            .Select(static (result, _) => result.Value.GetValueOrDefault());
+            .Select(static (result, _) => result.Value.GetValueOrDefault())
+            .Combine(context.CompilationProvider)
+            .Select(static (input, cancellationToken) =>
+                SameNamespaceTypeShortener.Shorten(input.Left, input.Right, cancellationToken));
 
         context.RegisterSourceOutput(sources, output.AddSource);
         context.RegisterSourceOutput(analyzedExtensions.SelectMany(static (result, _) => result.Diagnostics), output.ReportDiagnostic);

@@ -8,19 +8,19 @@ namespace InteractionFlow.ResultAPIGenerator.Entities;
 internal sealed class AnalyzedExtension(
     ExtensionClass destination,
     ImmutableArray<AnalyzedCandidate> candidates,
-    ImmutableArray<HandwrittenMethod> handwrittenMethods) : IEquatable<AnalyzedExtension>
+    ImmutableArray<HandwrittenMember> handwrittenMembers) : IEquatable<AnalyzedExtension>
 {
     public ExtensionClass Destination { get; } = destination;
     public ImmutableArray<AnalyzedCandidate> Candidates { get; } =
         candidates.IsDefault ? ImmutableArray<AnalyzedCandidate>.Empty : candidates;
-    public ImmutableArray<HandwrittenMethod> HandwrittenMethods { get; } =
-        handwrittenMethods.IsDefault ? ImmutableArray<HandwrittenMethod>.Empty : handwrittenMethods;
+    public ImmutableArray<HandwrittenMember> HandwrittenMembers { get; } =
+        handwrittenMembers.IsDefault ? ImmutableArray<HandwrittenMember>.Empty : handwrittenMembers;
 
     public bool Equals(AnalyzedExtension? other) =>
         ReferenceEquals(this, other) ||
         (other is not null && Destination.Equals(other.Destination)
             && Candidates.SequenceEqual(other.Candidates)
-            && HandwrittenMethods.SequenceEqual(other.HandwrittenMethods));
+            && HandwrittenMembers.SequenceEqual(other.HandwrittenMembers));
 
     public override bool Equals(object? obj) => Equals(obj as AnalyzedExtension);
 
@@ -31,8 +31,8 @@ internal sealed class AnalyzedExtension(
             var hash = Destination.GetHashCode();
             foreach (var candidate in Candidates)
                 hash = hash * 31 + candidate.GetHashCode();
-            foreach (var method in HandwrittenMethods)
-                hash = hash * 31 + method.GetHashCode();
+            foreach (var member in HandwrittenMembers)
+                hash = hash * 31 + member.GetHashCode();
             return hash;
         }
     }

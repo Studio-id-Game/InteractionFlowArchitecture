@@ -59,4 +59,10 @@ public sealed class ResultAPITargetAttribute : Attribute
     /// Other と Self を入れ変えたパターンも候補に加えます
     /// </summary>
     public bool TwoWay { get; }
+
+    /// <summary>成功コールバックへ渡すプロパティ名を引数順に指定します。</summary>
+    public string[]? SuccessArguments { get; set; }
+
+    /// <summary>失敗コールバックへ渡すプロパティ名を引数順に指定します。</summary>
+    public string[]? FailureArguments { get; set; }
 }

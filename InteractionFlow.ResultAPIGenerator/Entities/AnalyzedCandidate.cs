@@ -14,12 +14,16 @@ internal sealed class AnalyzedCandidate(
     ImmutableArray<AnalyzedParameter> parameters,
     string body,
     string? awaitedCallbacksBody,
-    string? xmlDocumentation) : IEquatable<AnalyzedCandidate>
+    string? xmlDocumentation,
+    string? returnTypeKey = null,
+    string? awaitedReturnTypeKey = null) : IEquatable<AnalyzedCandidate>
 {
     public string MethodName { get; } = methodName;
     public AnalyzedParameter Receiver { get; } = receiver;
     public string ReturnTypeName { get; } = returnTypeName;
     public string? AwaitedReturnTypeName { get; } = awaitedReturnTypeName;
+    public string ReturnTypeKey { get; } = returnTypeKey ?? returnTypeName;
+    public string? AwaitedReturnTypeKey { get; } = awaitedReturnTypeKey ?? awaitedReturnTypeName;
 
     public ImmutableArray<string> TypeParameterNames { get; } =
         typeParameterNames.IsDefault ? ImmutableArray<string>.Empty : typeParameterNames;
@@ -35,8 +39,9 @@ internal sealed class AnalyzedCandidate(
 
     public string? XmlDocumentation { get; } = xmlDocumentation;
 
-    private (string, AnalyzedParameter, string, string?, string, string?, string?) ScalarValues =>
-        (MethodName, Receiver, ReturnTypeName, AwaitedReturnTypeName, Body, AwaitedCallbacksBody, XmlDocumentation);
+    private (string, AnalyzedParameter, string, string?, string, string?, string, string?, string?) ScalarValues =>
+        (MethodName, Receiver, ReturnTypeName, AwaitedReturnTypeName, ReturnTypeKey, AwaitedReturnTypeKey,
+            Body, AwaitedCallbacksBody, XmlDocumentation);
 
     public bool Equals(AnalyzedCandidate? other) =>
         ReferenceEquals(this, other) ||

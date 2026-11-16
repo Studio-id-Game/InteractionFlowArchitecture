@@ -8,16 +8,13 @@ namespace InteractionFlow.ResultAPIGenerator;
 [Generator(LanguageNames.CSharp)]
 public sealed class ResultApiGenerator : IIncrementalGenerator
 {
-    private const string ExtensionAttributeName =
-        "InteractionFlow.Core.ResultAPI.Attributes.ResultAPIExtensionAttribute";
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         Initialize(
             context,
-            new TestDetectionInteraction(),
-            new TestAnalysisInteraction(),
-            new TestGenerationInteraction(),
+            new DetectionInteraction(),
+            new AnalysisInteraction(),
+            new GenerationInteraction(),
             new OutputInteraction());
     }
 
@@ -28,38 +25,37 @@ public sealed class ResultApiGenerator : IIncrementalGenerator
         IGenerationInteraction generation,
         IOutputInteraction output)
     {
-        var results = context.SyntaxProvider.ForAttributeWithMetadataName(
-            ExtensionAttributeName,
+        var analyzedExtensions = context.SyntaxProvider.ForAttributeWithMetadataName(
+            ResultApiAttributes.Extension,
             static (node, _) => node is ClassDeclarationSyntax,
             (attributeContext, cancellationToken) =>
             {
                 var detected = detection.Detect(attributeContext, cancellationToken);
                 if (detected.Value is not { } extension)
-                {
-                    return new InteractionResult<GeneratedSource?>(null, detected.Diagnostics);
-                }
+                    return (Extension: (AnalyzedExtension?)null, Location: Location.None, detected.Diagnostics);
 
                 var analyzed = analysis.Analyze(
                     extension,
                     attributeContext.SemanticModel.Compilation,
                     cancellationToken);
 
-                var generated = generation.Generate(
-                    analyzed.Value,
-                    attributeContext.TargetNode.GetLocation(),
-                    cancellationToken);
-
-                return new InteractionResult<GeneratedSource?>(
-                    generated.Value,
-                    detected.Diagnostics.AddRange(analyzed.Diagnostics).AddRange(generated.Diagnostics));
+                return (Extension: (AnalyzedExtension?)analyzed.Value,
+                    Location: attributeContext.TargetNode.GetLocation(),
+                    Diagnostics: detected.Diagnostics.AddRange(analyzed.Diagnostics));
             });
 
-        var sources = results
+        var generationInputs = analyzedExtensions
+            .Where(static result => result.Extension is not null)
+            .Select(static (result, _) => (Extension: result.Extension!, result.Location));
+        var generated = generationInputs.Select((input, cancellationToken) =>
+            generation.Generate(input.Extension, input.Location, cancellationToken))
+            .WithTrackingName("ResultApiGeneration");
+        var sources = generated
             .Where(static result => result.Value.HasValue)
             .Select(static (result, _) => result.Value.GetValueOrDefault());
-        var reportedDiagnostics = results.SelectMany(static (result, _) => result.Diagnostics);
 
         context.RegisterSourceOutput(sources, output.AddSource);
-        context.RegisterSourceOutput(reportedDiagnostics, output.ReportDiagnostic);
+        context.RegisterSourceOutput(analyzedExtensions.SelectMany(static (result, _) => result.Diagnostics), output.ReportDiagnostic);
+        context.RegisterSourceOutput(generated.SelectMany(static (result, _) => result.Diagnostics), output.ReportDiagnostic);
     }
 }

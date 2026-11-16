@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\InteractionFlow.Analyzers\InteractionFlow.Analyzers.csproj" />
+		<ProjectReference Include="..\InteractionFlow.ResultAPIGenerator\InteractionFlow.ResultAPIGenerator.csproj" />
 		<PackageReference Include="coverlet.collector"
 						  Version="10.0.0">
 			<PrivateAssets>all</PrivateAssets>
@@ -30,5 +31,11 @@
 		</PackageReference>
 		<PackageReference Include="xunit.v3"
 						  Version="3.2.2" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="..\InteractionFlow.Core\ResultAPI\*.cs;
+								   ..\InteractionFlow.Core\ResultAPI\Attributes\*.cs;
+								   ..\InteractionFlow.Core\Entities\ResultException.cs"
+						  LogicalName="ResultApiSources.%(Filename)%(Extension)" />
 	</ItemGroup>
 </Project>

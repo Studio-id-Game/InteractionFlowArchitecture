@@ -5,9 +5,13 @@ namespace InteractionFlow.Core.ResultAPI;
 /// <summary>
 /// コードジェネレーターで生成される拡張メソッドのテンプレートです。
 /// </summary>
-[ResultAPITarget(typeof(Result), null)]
-[ResultAPITarget(typeof(Result<>), "T")]
-[ResultAPITarget(typeof(Result<,>), "T, TError")]
+[ResultAPITarget(typeof(Result), null,
+    SuccessArguments = new string[0], FailureArguments = new[] { nameof(Result.Error) })]
+[ResultAPITarget(typeof(Result<>), "T",
+    SuccessArguments = new[] { nameof(Result<int>.Value) }, FailureArguments = new[] { nameof(Result<int>.Error) })]
+[ResultAPITarget(typeof(Result<,>), "T, TError",
+    SuccessArguments = new[] { nameof(Result<int, int>.Value) },
+    FailureArguments = new[] { nameof(Result<int, int>.Error), nameof(Result<int, int>.ErrorValue) })]
 [ResultAPITarget(typeof(Result<>), "T", typeof(Result<>), "R", twoWay: false)]
 [ResultAPITarget(typeof(Result<>), "T", typeof(Result<,>), "R, RError", twoWay: false)]
 [ResultAPITarget(typeof(Result<,>), "T, TError", typeof(Result<,>), "R, RError", twoWay: false)]

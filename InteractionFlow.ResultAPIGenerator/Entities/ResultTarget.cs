@@ -81,17 +81,15 @@ internal sealed class ResultTarget(
     }
 
     /// <summary>Other の適合するファクトリと、引数順に対応する Self のプロパティを列挙します。</summary>
-    public ImmutableArray<(IMethodSymbol Factory, ImmutableArray<IPropertySymbol> Arguments)> FindFactoryMatches(
+    public static ImmutableArray<(IMethodSymbol Factory, ImmutableArray<IPropertySymbol> Arguments)> FindFactoryMatches(
         IMethodSymbol templateFactory,
-        IReadOnlyDictionary<string, ITypeSymbol> typeArguments,
+        INamedTypeSymbol selfType,
+        INamedTypeSymbol otherType,
         ImmutableArray<(IPropertySymbol Property, ITypeSymbol Type)> sourceProperties,
         Compilation compilation,
         INamedTypeSymbol destination)
     {
         var matches = ImmutableArray.CreateBuilder<(IMethodSymbol Factory, ImmutableArray<IPropertySymbol> Arguments)>();
-        if (Self.Bind(typeArguments) is not { } selfType || Other.Bind(typeArguments) is not { } otherType)
-            return matches.ToImmutable();
-
         var properties = new Dictionary<string, (IPropertySymbol Property, ITypeSymbol Type)?>(StringComparer.Ordinal);
         if (!sourceProperties.IsDefaultOrEmpty)
         {

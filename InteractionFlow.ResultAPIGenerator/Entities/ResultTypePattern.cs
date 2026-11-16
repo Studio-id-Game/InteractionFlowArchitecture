@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
@@ -8,7 +9,38 @@ namespace InteractionFlow.ResultAPIGenerator.Entities;
 internal sealed class ResultTypePattern(INamedTypeSymbol typeDefinition, ImmutableArray<string> typeArgumentNames)
 {
     public INamedTypeSymbol TypeDefinition { get; } = typeDefinition;
-    public ImmutableArray<string> TypeArgumentNames { get; } = typeArgumentNames;
+    public ImmutableArray<string> TypeArgumentNames { get; } =
+        typeArgumentNames.IsDefault ? ImmutableArray<string>.Empty : typeArgumentNames;
+
+    public bool HasSameShape(ResultTypePattern other)
+    {
+        if (!SymbolEqualityComparer.Default.Equals(TypeDefinition, other.TypeDefinition)
+            || TypeArgumentNames.Length != other.TypeArgumentNames.Length)
+        {
+            return false;
+        }
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        var assigned = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < TypeArgumentNames.Length; index++)
+        {
+            var name = TypeArgumentNames[index];
+            var counterpart = other.TypeArgumentNames[index];
+            if (names.TryGetValue(name, out var existing))
+            {
+                if (existing != counterpart)
+                    return false;
+            }
+            else
+            {
+                if (!assigned.Add(counterpart))
+                    return false;
+                names.Add(name, counterpart);
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>名前で型引数を束縛します。すべて束縛できない場合は null を返します。</summary>
     public INamedTypeSymbol? Bind(IReadOnlyDictionary<string, ITypeSymbol> typeArguments)

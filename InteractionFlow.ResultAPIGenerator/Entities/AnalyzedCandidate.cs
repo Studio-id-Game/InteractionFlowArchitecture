@@ -20,12 +20,17 @@ internal sealed class AnalyzedCandidate(
     string? templateId = null,
     bool forwardsReceiver = false) : IEquatable<AnalyzedCandidate>
 {
-    public string MethodName { get; } = methodName;
-    public AnalyzedParameter Receiver { get; } = receiver;
-    public string ReturnTypeName { get; } = returnTypeName;
-    public string? AwaitedReturnTypeName { get; } = awaitedReturnTypeName;
-    public string ReturnTypeKey { get; } = returnTypeKey ?? returnTypeName;
-    public string? AwaitedReturnTypeKey { get; } = awaitedReturnTypeKey ?? awaitedReturnTypeName;
+    private readonly ScalarValues scalarValues = new(
+        methodName, receiver, returnTypeName, awaitedReturnTypeName,
+        returnTypeKey ?? returnTypeName, awaitedReturnTypeKey ?? awaitedReturnTypeName,
+        body, awaitedCallbacksBody, xmlDocumentation, templateId, forwardsReceiver);
+
+    public string MethodName => scalarValues.MethodName;
+    public AnalyzedParameter Receiver => scalarValues.Receiver;
+    public string ReturnTypeName => scalarValues.ReturnTypeName;
+    public string? AwaitedReturnTypeName => scalarValues.AwaitedReturnTypeName;
+    public string ReturnTypeKey => scalarValues.ReturnTypeKey;
+    public string? AwaitedReturnTypeKey => scalarValues.AwaitedReturnTypeKey;
 
     public ImmutableArray<string> TypeParameterNames { get; } =
         typeParameterNames.IsDefault ? ImmutableArray<string>.Empty : typeParameterNames;
@@ -34,26 +39,22 @@ internal sealed class AnalyzedCandidate(
         parameters.IsDefault ? ImmutableArray<AnalyzedParameter>.Empty : parameters;
 
     /// <summary>コールバックをそのまま呼び出す場合の本体です。</summary>
-    public string Body { get; } = body;
+    public string Body => scalarValues.Body;
 
     /// <summary>コールバックを待機する場合の本体です。該当する候補がなければ null です。</summary>
-    public string? AwaitedCallbacksBody { get; } = awaitedCallbacksBody;
+    public string? AwaitedCallbacksBody => scalarValues.AwaitedCallbacksBody;
 
-    public string? XmlDocumentation { get; } = xmlDocumentation;
+    public string? XmlDocumentation => scalarValues.XmlDocumentation;
 
-    public string? TemplateId { get; } = templateId;
-    public bool ForwardsReceiver { get; } = forwardsReceiver;
+    public string? TemplateId => scalarValues.TemplateId;
+    public bool ForwardsReceiver => scalarValues.ForwardsReceiver;
 
     public bool IsForwardingVariantOf(AnalyzedCandidate other) =>
         ForwardsReceiver && TemplateId is not null && TemplateId == other.TemplateId;
 
-    private (string, AnalyzedParameter, string, string?, string, string?, string, string?, string?, string?, bool) ScalarValues =>
-        (MethodName, Receiver, ReturnTypeName, AwaitedReturnTypeName, ReturnTypeKey, AwaitedReturnTypeKey,
-            Body, AwaitedCallbacksBody, XmlDocumentation, TemplateId, ForwardsReceiver);
-
     public bool Equals(AnalyzedCandidate? other) =>
         ReferenceEquals(this, other) ||
-        (other is not null && ScalarValues.Equals(other.ScalarValues)
+        (other is not null && scalarValues.Equals(other.scalarValues)
             && TypeParameterNames.SequenceEqual(other.TypeParameterNames)
             && Parameters.SequenceEqual(other.Parameters));
 
@@ -63,12 +64,38 @@ internal sealed class AnalyzedCandidate(
     {
         unchecked
         {
-            var hash = ScalarValues.GetHashCode();
+            var hash = scalarValues.GetHashCode();
             foreach (var name in TypeParameterNames)
                 hash = hash * 31 + name.GetHashCode();
             foreach (var parameter in Parameters)
                 hash = hash * 31 + parameter.GetHashCode();
             return hash;
         }
+    }
+
+    private sealed record ScalarValues(
+        string MethodName,
+        AnalyzedParameter Receiver,
+        string ReturnTypeName,
+        string? AwaitedReturnTypeName,
+        string ReturnTypeKey,
+        string? AwaitedReturnTypeKey,
+        string Body,
+        string? AwaitedCallbacksBody,
+        string? XmlDocumentation,
+        string? TemplateId,
+        bool ForwardsReceiver)
+    {
+        public string MethodName { get; } = MethodName;
+        public AnalyzedParameter Receiver { get; } = Receiver;
+        public string ReturnTypeName { get; } = ReturnTypeName;
+        public string? AwaitedReturnTypeName { get; } = AwaitedReturnTypeName;
+        public string ReturnTypeKey { get; } = ReturnTypeKey;
+        public string? AwaitedReturnTypeKey { get; } = AwaitedReturnTypeKey;
+        public string Body { get; } = Body;
+        public string? AwaitedCallbacksBody { get; } = AwaitedCallbacksBody;
+        public string? XmlDocumentation { get; } = XmlDocumentation;
+        public string? TemplateId { get; } = TemplateId;
+        public bool ForwardsReceiver { get; } = ForwardsReceiver;
     }
 }

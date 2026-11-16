@@ -69,20 +69,35 @@
 
 ```mermaid
 flowchart TD
+  subgraph detect [検出 Interaction]
     A[生成先属性を検出] --> B[テンプレートと Result のシンボルを解決]
-    B --> C[テンプレートの操作と対象パターンを解析]
-    C --> D[Self と Other を束縛]
+  end
+  subgraph analyze [分析 Interaction]
+    C[テンプレートの操作と対象パターンを解析] --> D[Self と Other を束縛]
     D --> E{必要な Create を解決できるか}
-    E -->|成立または不要| K[コールバック引数を名前で解決]
+    E -->|成立または不要| K[コールバック引数を名前で照合]
     E -->|不成立| G[候補をスキップ]
-    K --> L[呼び出しが重なる候補を省く]
-    L --> F[同期・非同期の形を組み立てる]
-    F --> H[重複と手書きメンバーを照合]
-    H --> I[生成先の partial クラスを出力]
-    B -->|宣言の誤り| J[宣言位置に診断]
-    K -->|名前や区分の誤り| J
-    H -->|衝突| J
+  end
+  subgraph build [生成 Interaction]
+    L[呼び出しが重なる候補を整理] --> F[同期・非同期のシグネチャを組み立て]
+    F --> H[生成候補と手書きメンバーを照合]
+    H --> S[確定したメソッドをソース化]
+  end
+  subgraph emit [出力 Interaction]
+    I[AddSource]
+    J[ReportDiagnostic]
+  end
+  B --> C
+  K --> L
+  S --> I
+  B -->|宣言の誤り| J
+  C -->|テンプレートの誤り| J
+  E -->|ファクトリが曖昧| J
+  K -->|名前や区分の誤り| J
+  H -->|シグネチャ衝突| J
 ```
+
+4 段階を操作クラスに分け、`ResultApiGenerator.Initialize` が処理を接続します。検出・分析・生成で見つけた診断は、出力で `ReportDiagnostic` に渡します。通常の不成立では候補をスキップし、診断対象に関係しない候補は処理を続けます。
 
 | 処理 | 実装方針 |
 | --- | --- |
@@ -91,9 +106,19 @@ flowchart TD
 | 具体化 | メソッドの引数・戻り値・本体で `Self` / `Other` を使っているか判定し、必要な型の組だけを束縛します。テンプレート自身の `TResolved` も含め、公開シグネチャに現れる型変数を安定した順で列挙します。受け手を `this` 引数へ置換し、名前で解決したプロパティの順序と型を `Func` / `Action` の宣言および呼び出しに反映します。型変数が戻り値だけに現れ、通常の呼び出しで推論できない形は公開前の検証で捕捉します。 |
 | 非同期展開 | 同期の成立判定を共有し、フラグに応じて受け手のみ・コールバックのみ・両方を非同期化します。`Resolve` の `TResolved` と `If*` の `Self` を含め、実際の戻り値型を包みます。 |
 | 衝突判定 | 生成先ごとにメソッド名・型引数数・引数型と受け渡し方法を比較します。型引数名を宣言順の番号で正規化し、戻り型や nullable 注釈だけが異なる候補も衝突として扱います。同一宣言に帰着する候補はまとめ、実装が異なる生成候補には診断を出します。手書きメソッドの扱いは次節の規則に従います。 |
-| 出力 | 生成先ごとに決定的なヒント名で `.g.cs` を出力します。`#nullable enable` と `global::` で参照を解決し、テンプレートの XML コメントは生成後の型引数と引数名に合わせます。増分ステップ間では値比較できるモデルを渡し、対象外のソース編集で出力が再生成されないことを検証します。 |
+| ソース化と出力 | 生成操作が `#nullable enable` と `global::` を使い、生成後の名前に合わせた XML コメントを含む `.g.cs` を組み立てます。出力操作が決定的なヒント名と本文を `AddSource` に渡します。 |
 
 Roslyn と C# の参照先は [属性を起点とする増分処理](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.syntaxvalueprovider.forattributewithmetadataname) と [メソッドのシグネチャ](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/basic-concepts#75-signatures-and-overloading) です。
+
+### 操作間のデータと増分キャッシュ
+
+- `AnalyzedCandidate` は成立したテンプレートと型の組を表します。束縛済みの型・引数と、分岐・ファクトリ呼び出しを含むメソッド本体の断片を保持します。待機を許可された受け手・コールバック・戻り値には、分析で解決した待機可能型も保持できます。
+- `GeneratedSource` はヒント名とソース本文の組です。診断を別の値として出力に渡し、位置だけが変わった場合も同じソースを再利用します。
+- 生成先の partial クラスを増分キャッシュの単位にします。分析結果をクラスごとにまとめ、衝突判定に必要な手書きメンバーの情報も後続処理の入力に含めます。生成操作内では、メソッド名・型引数の個数・正規化した引数型と受け渡し方法をキーに照合します。
+- 操作クラスと増分ステップの境界は個別に決めます。シンボルと `SemanticModel` は同じコンパイル内で使い、増分ステップには値比較できる結果を渡します。配列は要素と順序を比較します。まず Roslyn のキャッシュを使い、解析の重複は実測を見て同一コンパイル内で再利用します。 [Roslyn のモデル設計指針](https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#pipeline-model-design)
+- `GeneratorDriver` で増分ステップを追跡し、無関係な編集後の再利用と、テンプレート・Result 型・手書きメンバーの変更が必要な出力に反映されることを確認します。
+
+### 同期メソッドの具体化例
 
 `Then` に `Result<T, E> → Result<R, E>` を適用すると、失敗分岐で `Error` と共有した型 `E` の `ErrorValue` をファクトリに渡せます。
 

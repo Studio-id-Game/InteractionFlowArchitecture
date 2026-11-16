@@ -8,7 +8,6 @@ namespace InteractionFlow.Core.ResultAPI;
 /// <summary>
 /// 値なしの処理結果です。<see langword="default"/> は成功です。
 /// </summary>
-[ResultAPIResult]
 public readonly struct Result
 {
     private Result(Exception? error)
@@ -92,7 +91,6 @@ public readonly struct Result
 /// 値付きの処理結果です。<see langword="default"/> は未初期化で、操作すると <see cref="ResultException"/> を送出します。
 /// </summary>
 /// <typeparam name="T">成功時に保持する値の型。</typeparam>
-[ResultAPIResult]
 public readonly struct Result<T>
 {
     private readonly Result result;
@@ -239,7 +237,6 @@ public readonly struct Result<T>
 /// </summary>
 /// <typeparam name="T">成功値の型。</typeparam>
 /// <typeparam name="TError">失敗値の型。</typeparam>
-[ResultAPIResult]
 public readonly struct Result<T, TError>
 {
     private readonly Result<T> result;

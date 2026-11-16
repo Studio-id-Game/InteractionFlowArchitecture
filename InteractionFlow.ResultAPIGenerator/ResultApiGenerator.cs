@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using InteractionFlow.ResultAPIGenerator.Entities;
 using InteractionFlow.ResultAPIGenerator.Interactions;
 using Microsoft.CodeAnalysis;
@@ -34,41 +33,33 @@ public sealed class ResultApiGenerator : IIncrementalGenerator
             static (node, _) => node is ClassDeclarationSyntax,
             (attributeContext, cancellationToken) =>
             {
-                var (definition, targets, detectionDiagnostics) = detection.Detect(attributeContext, cancellationToken);
-                var diagnostics = OrEmpty(detectionDiagnostics);
-                if (definition is null)
+                var detected = detection.Detect(attributeContext, cancellationToken);
+                if (detected.Value is not { } extension)
                 {
-                    return (Source: (GeneratedSource?)null, Diagnostics: diagnostics);
+                    return new InteractionResult<GeneratedSource?>(null, detected.Diagnostics);
                 }
 
-                var (candidates, handwrittenMethods, analysisDiagnostics) = analysis.Analyze(
-                    definition,
-                    OrEmpty(targets),
-                    (INamedTypeSymbol)attributeContext.TargetSymbol,
+                var analyzed = analysis.Analyze(
+                    extension,
                     attributeContext.SemanticModel.Compilation,
                     cancellationToken);
 
-                var (source, generationDiagnostics) = generation.Generate(
-                    definition.Destination,
-                    OrEmpty(candidates),
-                    OrEmpty(handwrittenMethods),
+                var generated = generation.Generate(
+                    analyzed.Value,
                     attributeContext.TargetNode.GetLocation(),
                     cancellationToken);
 
-                return (Source: source,
-                    Diagnostics: diagnostics.AddRange(OrEmpty(analysisDiagnostics))
-                        .AddRange(OrEmpty(generationDiagnostics)));
+                return new InteractionResult<GeneratedSource?>(
+                    generated.Value,
+                    detected.Diagnostics.AddRange(analyzed.Diagnostics).AddRange(generated.Diagnostics));
             });
 
         var sources = results
-            .Where(static result => result.Source.HasValue)
-            .Select(static (result, _) => result.Source.GetValueOrDefault());
+            .Where(static result => result.Value.HasValue)
+            .Select(static (result, _) => result.Value.GetValueOrDefault());
         var reportedDiagnostics = results.SelectMany(static (result, _) => result.Diagnostics);
 
         context.RegisterSourceOutput(sources, output.AddSource);
         context.RegisterSourceOutput(reportedDiagnostics, output.ReportDiagnostic);
     }
-
-    private static ImmutableArray<T> OrEmpty<T>(ImmutableArray<T> values) =>
-        values.IsDefault ? ImmutableArray<T>.Empty : values;
 }

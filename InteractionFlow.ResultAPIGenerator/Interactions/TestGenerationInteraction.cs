@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Threading;
 using InteractionFlow.ResultAPIGenerator.Entities;
 using Microsoft.CodeAnalysis;
@@ -7,13 +6,12 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
 internal sealed class TestGenerationInteraction : IGenerationInteraction
 {
-    public (GeneratedSource? Source, ImmutableArray<Diagnostic> Diagnostics) Generate(
-        ExtensionClass destination,
-        ImmutableArray<AnalyzedCandidate> candidates,
-        ImmutableArray<HandwrittenMethod> handwrittenMethods,
+    public InteractionResult<GeneratedSource?> Generate(
+        AnalyzedExtension extension,
         Location diagnosticLocation,
         CancellationToken cancellationToken)
     {
+        var destination = extension.Destination;
         var namespaceDeclaration = destination.Namespace.Length == 0
             ? string.Empty
             : $"namespace {destination.Namespace};\n\n";
@@ -33,6 +31,6 @@ internal sealed class TestGenerationInteraction : IGenerationInteraction
 
             """);
 
-        return (source, default);
+        return new InteractionResult<GeneratedSource?>(source);
     }
 }

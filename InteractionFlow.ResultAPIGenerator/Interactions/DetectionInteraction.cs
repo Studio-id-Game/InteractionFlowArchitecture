@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Immutable;
 using System.Threading;
 using InteractionFlow.ResultAPIGenerator.Entities;
 using Microsoft.CodeAnalysis;
@@ -8,8 +7,7 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
 internal sealed class DetectionInteraction : IDetectionInteraction
 {
-    public (ExtensionDefinition? Definition, ImmutableArray<ResultTarget> Targets,
-        ImmutableArray<Diagnostic> Diagnostics) Detect(
+    public InteractionResult<DetectedExtension?> Detect(
         GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken)
     {
@@ -17,15 +15,14 @@ internal sealed class DetectionInteraction : IDetectionInteraction
 
         var attribute = FindExtensionAttribute(context);
         return attribute is null
-            ? (null, ImmutableArray<ResultTarget>.Empty, ImmutableArray<Diagnostic>.Empty)
+            ? new InteractionResult<DetectedExtension?>(null)
             : ResolveSymbols(context, attribute, cancellationToken);
     }
 
     private static AttributeData? FindExtensionAttribute(GeneratorAttributeSyntaxContext context)
         => throw new NotImplementedException();
 
-    private static (ExtensionDefinition? Definition, ImmutableArray<ResultTarget> Targets,
-        ImmutableArray<Diagnostic> Diagnostics) ResolveSymbols(
+    private static InteractionResult<DetectedExtension?> ResolveSymbols(
         GeneratorAttributeSyntaxContext context,
         AttributeData extensionAttribute,
         CancellationToken cancellationToken)

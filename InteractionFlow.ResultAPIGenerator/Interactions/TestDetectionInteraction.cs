@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using InteractionFlow.ResultAPIGenerator.Entities;
@@ -13,8 +12,9 @@ internal sealed class TestDetectionInteraction : IDetectionInteraction
     private static readonly SymbolDisplayFormat NamespaceFormat =
         SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted);
 
-    public (ExtensionDefinition? Definition, ImmutableArray<ResultTarget> Targets, ImmutableArray<Diagnostic> Diagnostics)
-        Detect(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    public InteractionResult<DetectedExtension?> Detect(
+        GeneratorAttributeSyntaxContext context,
+        CancellationToken cancellationToken)
     {
         var type = (INamedTypeSymbol)context.TargetSymbol;
         var declaration = (ClassDeclarationSyntax)context.TargetNode;
@@ -25,7 +25,7 @@ internal sealed class TestDetectionInteraction : IDetectionInteraction
             || arguments[0].Kind != TypedConstantKind.Type
             || arguments[0].Value is not INamedTypeSymbol template)
         {
-            return default;
+            return new InteractionResult<DetectedExtension?>(null);
         }
 
         var namespaceName = type.ContainingNamespace.IsGlobalNamespace
@@ -41,6 +41,7 @@ internal sealed class TestDetectionInteraction : IDetectionInteraction
         }
 
         var destination = new ExtensionClass(namespaceName, declarationName, hintName);
-        return (new ExtensionDefinition(destination, template, awaitables: null, suffix: string.Empty), default, default);
+        var definition = new ExtensionDefinition(destination, template, awaitables: null, suffix: string.Empty);
+        return new InteractionResult<DetectedExtension?>(new DetectedExtension(definition, type, default));
     }
 }

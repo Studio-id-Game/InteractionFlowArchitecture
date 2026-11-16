@@ -10,25 +10,28 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
 internal sealed class AnalysisInteraction : IAnalysisInteraction
 {
-    public (ImmutableArray<AnalyzedCandidate> Candidates, ImmutableArray<HandwrittenMethod> HandwrittenMethods,
-        ImmutableArray<Diagnostic> Diagnostics) Analyze(
-        ExtensionDefinition definition,
-        ImmutableArray<ResultTarget> targets,
-        INamedTypeSymbol destination,
+    public InteractionResult<AnalyzedExtension> Analyze(
+        DetectedExtension extension,
         Compilation compilation,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var definition = extension.Definition;
+        var destination = extension.DestinationSymbol;
         var (templates, analyzedTargets, handwrittenMethods, templateDiagnostics) = AnalyzeTemplatesAndTargets(
             definition,
-            targets,
+            extension.Targets,
             destination,
             compilation,
             cancellationToken);
 
         if (templates.IsDefaultOrEmpty || analyzedTargets.IsDefaultOrEmpty)
-            return (ImmutableArray<AnalyzedCandidate>.Empty, handwrittenMethods, templateDiagnostics);
+        {
+            return new InteractionResult<AnalyzedExtension>(
+                new AnalyzedExtension(definition.Destination, ImmutableArray<AnalyzedCandidate>.Empty, handwrittenMethods),
+                templateDiagnostics);
+        }
 
         var candidates = ImmutableArray.CreateBuilder<AnalyzedCandidate>();
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
@@ -71,7 +74,9 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
             }
         }
 
-        return (candidates.ToImmutable(), handwrittenMethods, diagnostics.ToImmutable());
+        return new InteractionResult<AnalyzedExtension>(
+            new AnalyzedExtension(definition.Destination, candidates.ToImmutable(), handwrittenMethods),
+            diagnostics.ToImmutable());
 
         void AddDiagnostics(ImmutableArray<Diagnostic> items)
         {

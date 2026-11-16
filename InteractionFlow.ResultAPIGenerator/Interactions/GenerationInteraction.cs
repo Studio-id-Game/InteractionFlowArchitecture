@@ -8,25 +8,23 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 
 internal sealed class GenerationInteraction : IGenerationInteraction
 {
-    public (GeneratedSource? Source, ImmutableArray<Diagnostic> Diagnostics) Generate(
-        ExtensionClass destination,
-        ImmutableArray<AnalyzedCandidate> candidates,
-        ImmutableArray<HandwrittenMethod> handwrittenMethods,
+    public InteractionResult<GeneratedSource?> Generate(
+        AnalyzedExtension extension,
         Location diagnosticLocation,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var distinctCandidates = RemoveOverlappingCandidates(candidates, cancellationToken);
+        var distinctCandidates = RemoveOverlappingCandidates(extension.Candidates, cancellationToken);
         var overloads = BuildOverloads(distinctCandidates, cancellationToken);
         var (methods, diagnostics) = CheckCollisions(
             overloads,
-            handwrittenMethods,
+            extension.HandwrittenMethods,
             diagnosticLocation,
             cancellationToken);
 
-        var source = methods.IsDefaultOrEmpty ? null : RenderSource(destination, methods, cancellationToken);
-        return (source, diagnostics);
+        var source = methods.IsDefaultOrEmpty ? null : RenderSource(extension.Destination, methods, cancellationToken);
+        return new InteractionResult<GeneratedSource?>(source, diagnostics);
     }
 
     private static ImmutableArray<AnalyzedCandidate> RemoveOverlappingCandidates(

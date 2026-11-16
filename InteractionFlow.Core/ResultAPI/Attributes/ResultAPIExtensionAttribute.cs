@@ -45,6 +45,10 @@ public sealed class ResultAPIExtensionAttribute : Attribute
     /// </summary>
     public Type? AwaitableActionType { get; }
     /// <summary>
+    /// 直接 await する受け手の未構築の型を指定します。
+    /// </summary>
+    public Type? ConfiguredFuncType { get; set; }
+    /// <summary>
     /// 生成メソッド名の接尾辞を取得します。
     /// </summary>
     public string? Suffix { get; }

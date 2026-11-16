@@ -18,15 +18,17 @@ internal sealed class AnalyzedCandidate(
     string? returnTypeKey = null,
     string? awaitedReturnTypeKey = null,
     string? templateId = null,
-    bool forwardsReceiver = false) : IEquatable<AnalyzedCandidate>
+    bool forwardsReceiver = false,
+    AnalyzedParameter? configuredReceiver = null) : IEquatable<AnalyzedCandidate>
 {
     private readonly ScalarValues scalarValues = new(
         methodName, receiver, returnTypeName, awaitedReturnTypeName,
         returnTypeKey ?? returnTypeName, awaitedReturnTypeKey ?? awaitedReturnTypeName,
-        body, awaitedCallbacksBody, xmlDocumentation, templateId, forwardsReceiver);
+        body, awaitedCallbacksBody, xmlDocumentation, templateId, forwardsReceiver, configuredReceiver);
 
     public string MethodName => scalarValues.MethodName;
     public AnalyzedParameter Receiver => scalarValues.Receiver;
+    public AnalyzedParameter? ConfiguredReceiver => scalarValues.ConfiguredReceiver;
     public string ReturnTypeName => scalarValues.ReturnTypeName;
     public string? AwaitedReturnTypeName => scalarValues.AwaitedReturnTypeName;
     public string ReturnTypeKey => scalarValues.ReturnTypeKey;
@@ -84,7 +86,8 @@ internal sealed class AnalyzedCandidate(
         string? AwaitedCallbacksBody,
         string? XmlDocumentation,
         string? TemplateId,
-        bool ForwardsReceiver)
+        bool ForwardsReceiver,
+        AnalyzedParameter? ConfiguredReceiver)
     {
         public string MethodName { get; } = MethodName;
         public AnalyzedParameter Receiver { get; } = Receiver;
@@ -97,5 +100,6 @@ internal sealed class AnalyzedCandidate(
         public string? XmlDocumentation { get; } = XmlDocumentation;
         public string? TemplateId { get; } = TemplateId;
         public bool ForwardsReceiver { get; } = ForwardsReceiver;
+        public AnalyzedParameter? ConfiguredReceiver { get; } = ConfiguredReceiver;
     }
 }

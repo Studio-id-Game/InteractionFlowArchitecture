@@ -61,6 +61,15 @@ internal sealed class DetectionInteraction : IDetectionInteraction
             : destination.ContainingNamespace.ToDisplayString(
                 SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted));
         var extensionClass = new ExtensionClass(@namespace, declaration.Identifier.Text, destination.Name);
+        var configuredArgument = extensionAttribute.NamedArguments.FirstOrDefault(static argument => argument.Key == "ConfiguredFuncType");
+        INamedTypeSymbol? configuredType = null;
+        if (configuredArgument.Key is not null && !configuredArgument.Value.IsNull)
+        {
+            configuredType = GetType(configuredArgument.Value);
+            if (configuredType is null || arguments.Length != 4)
+                return Invalid("ConfiguredFuncType requires an asynchronous Result API extension and a type.");
+        }
+
         AwaitableTypes? awaitables = null;
         var suffix = string.Empty;
         if (arguments.Length == 4)
@@ -70,13 +79,10 @@ internal sealed class DetectionInteraction : IDetectionInteraction
             if (withResult is null || withoutResult is null || arguments[3].Value is not string asyncSuffix)
                 return Invalid("Specify the result-bearing type, the resultless type, and a method suffix.");
 
-            awaitables = AwaitableTypeRules.Resolve(compilation, destination, extensionClass,
-                withResult, withoutResult, (CSharpParseOptions)declaration.SyntaxTree.Options, cancellationToken);
-            if (awaitables is null)
-            {
-                return Invalid("Specify an open generic async return type that awaits to its type argument "
-                    + "and a resultless async return type that awaits to void.");
-            }
+            (awaitables, var error) = AwaitableTypeRules.Resolve(
+                context, extensionClass, withResult, withoutResult, configuredType, cancellationToken);
+            if (error is not null)
+                return Invalid(error);
 
             suffix = asyncSuffix;
         }

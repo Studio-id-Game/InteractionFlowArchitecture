@@ -143,6 +143,8 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         var awaitedResult = awaitables?.Wrap(resolvedReturn);
         var awaitedReceiver = template.Method.AllowAwaitedReceiver
             ? awaitables?.Wrap(boundTarget.Self) : null;
+        var configuredReceiver = template.Method.AllowAwaitedReceiver
+            ? awaitables?.WrapConfiguredReceiver(boundTarget.Self) : null;
         var awaitedBody = bindings.CanAwaitCallbacks ? bindings.WriteBody(awaitCallbacks: true) : null;
         var xml = method.GetDocumentationCommentXml(cancellationToken: context.CancellationToken);
         var candidate = new AnalyzedCandidate(
@@ -154,7 +156,9 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
             returnTypeKey: bindings.FormatType(resolvedReturn, forSignature: true),
             awaitedReturnTypeKey: awaitedResult is null ? null : bindings.FormatType(awaitedResult, forSignature: true),
             templateId: template.Id,
-            forwardsReceiver: boundTarget.HasSameResultType && !factories.IsEmpty);
+            forwardsReceiver: boundTarget.HasSameResultType && !factories.IsEmpty,
+            configuredReceiver: configuredReceiver is null ? null
+                : bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, configuredReceiver));
         return new InteractionResult<AnalyzedCandidate?>(candidate);
 
         InteractionResult<AnalyzedCandidate?> Invalid(string message) =>

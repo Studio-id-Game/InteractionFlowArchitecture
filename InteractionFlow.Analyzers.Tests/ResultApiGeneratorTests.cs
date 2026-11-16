@@ -35,10 +35,13 @@ public class ResultApiGeneratorTests
                     Result<int, int> typedSame = typed.Then(value => Result<int, int>.CreateSuccess(value));
                     Result<int, int> recovered = typed.ThenError((error, detail) => Result<int, int>.CreateSuccess(detail));
 
-                    var chained = await same.ThenAsync(value => Task.FromResult(Result<int>.CreateSuccess(value)));
+                    var chained = await same
+                        .ThenAsync(value => Task.FromResult(Result<int>.CreateSuccess(value)))
+                        .ConfigureAwait(true).ThenAsync(value => Task.FromResult(Result<int>.CreateSuccess(value)));
                     int resolved = await Task.FromResult(chained).ResolveAsync(
                         value => Task.FromResult(value), error => Task.FromResult(-1));
-                    await new ValueTask<Result<int>>(same).IfSuccessValueAsync(async value => await Task.Yield());
+                    await new ValueTask<Result<int>>(same)
+                        .ConfigureAwait(false).IfSuccessValueAsync(async value => await Task.Yield());
                 }
             }
             """));
@@ -61,11 +64,15 @@ public class ResultApiGeneratorTests
         Assert.Contains("Tasks.ValueTask<Result<T>>", valueTasks);
         Assert.Contains("await selfTask.ConfigureAwait(false)", tasks);
         Assert.Contains("await onSuccess(self.Value!).ConfigureAwait(false)", valueTasks);
+        Assert.Contains("ConfiguredTaskAwaitable<Result<T>> selfTask", tasks);
+        Assert.Contains("ConfiguredValueTaskAwaitable<Result<T>> selfTask", valueTasks);
+        Assert.Contains("var self = await selfTask;", tasks);
+        Assert.Contains("var self = await selfTask;", valueTasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.Task", tasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.ValueTask", valueTasks);
         Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
-        Assert.Equal(78, CountMethods(updated, "ResultExtensionsAsync"));
-        Assert.Equal(78, CountMethods(updated, "ResultExtensionsValueAsync"));
+        Assert.Equal(130, CountMethods(updated, "ResultExtensionsAsync"));
+        Assert.Equal(130, CountMethods(updated, "ResultExtensionsValueAsync"));
     }
 
     [Fact]
@@ -152,6 +159,75 @@ public class ResultApiGeneratorTests
         Assert.Contains("var self = await selfTask;", source);
         Assert.Contains("await onSuccess(self.Value!);", source);
         Assert.DoesNotContain("ConfigureAwait", source);
+        Assert.Equal(78, CountMethods(updated, "DeferredExtensions"));
+    }
+
+    [Fact]
+    public void ConfiguredReceiver_IsAwaitedDirectlyAndKeepsRegularAsyncReturnType()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using System.Runtime.CompilerServices;
+            using System.Threading.Tasks;
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public readonly struct DirectReceiver<T>(Task<T> task)
+            {
+                public TaskAwaiter<T> GetAwaiter() => task.GetAwaiter();
+                public ConfiguredTaskAwaitable<T> ConfigureAwait(bool capture) => task.ConfigureAwait(capture);
+            }
+
+            [ResultAPIExtension(typeof(ResultTemplate), typeof(Task<>), typeof(Task), "DirectAsync",
+                ConfiguredFuncType = typeof(DirectReceiver<>))]
+            public static partial class DirectExtensions;
+
+            internal static class DirectCaller
+            {
+                public static Task<Result<int>> WithSyncCallback(DirectReceiver<Result<int>> source)
+                    => source.ThenDirectAsync(value => Result<int>.CreateSuccess(value));
+
+                public static Task<Result<int>> WithAsyncCallback(DirectReceiver<Result<int>> source)
+                    => source.ThenDirectAsync(value => Task.FromResult(Result<int>.CreateSuccess(value)));
+            }
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        var source = GetGeneratedSource(result, "DirectExtensions");
+        Assert.Contains("this DirectReceiver<Result<T>> selfTask", source);
+        Assert.Contains("var self = await selfTask;", source);
+        Assert.Contains("var self = await selfTask.ConfigureAwait(false);", source);
+    }
+
+    [Fact]
+    public void ConfiguredReceiver_ReportsAwaitResultThatDoesNotMatchItsTypeArgument()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using System.Runtime.CompilerServices;
+            using System.Threading.Tasks;
+            using InteractionFlow.Core.ResultAPI.Attributes;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public readonly struct BadReceiver<T>
+            {
+                public TaskAwaiter<int> GetAwaiter() => Task.FromResult(0).GetAwaiter();
+            }
+
+            [ResultAPIExtension(typeof(ResultTemplate), typeof(Task<>), typeof(Task), "BadAsync",
+                ConfiguredFuncType = typeof(BadReceiver<>))]
+            public static partial class BadExtensions;
+            """));
+        var (result, updated) = Run(compilation);
+
+        var diagnostic = Assert.Single(Problems(result.Diagnostics));
+        Assert.Equal("IFRESULT001", diagnostic.Id);
+        Assert.Contains("ConfiguredFuncType", diagnostic.GetMessage());
+        Assert.DoesNotContain(Assert.Single(result.Results).GeneratedSources, source =>
+            source.HintName.EndsWith(".BadExtensions.g.cs", StringComparison.Ordinal));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
     }
 
     [Fact]
@@ -334,7 +410,7 @@ public class ResultApiGeneratorTests
             .Where(method => method.Identifier.ValueText.StartsWith("Then", StringComparison.Ordinal)
                 && method.ParameterList.Parameters[0].Type!.ToString().Contains("ForwardOnlyResult", StringComparison.Ordinal))
             .ToArray();
-        Assert.Equal(14, generated.Length);
+        Assert.Equal(22, generated.Length);
         Assert.All(generated, method =>
         {
             var body = method.Body!.ToString();

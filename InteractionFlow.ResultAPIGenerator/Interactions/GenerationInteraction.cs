@@ -59,21 +59,24 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             cancellationToken.ThrowIfCancellationRequested();
             if (candidate.AwaitedReturnTypeName is null)
             {
-                AddOverload(awaitReceiver: false, awaitCallbacks: false);
+                methods.Add(ExpandedMethod.Create(candidate, awaitCallbacks: false));
                 continue;
             }
 
-            var canAwaitReceiver = candidate.Receiver.AwaitedTypeName is not null;
             var canAwaitCallbacks = candidate.AwaitedCallbacksBody is not null;
-            if (canAwaitReceiver)
-                AddOverload(awaitReceiver: true, awaitCallbacks: false);
             if (canAwaitCallbacks)
-                AddOverload(awaitReceiver: false, awaitCallbacks: true);
-            if (canAwaitReceiver && canAwaitCallbacks)
-                AddOverload(awaitReceiver: true, awaitCallbacks: true);
+                methods.Add(ExpandedMethod.Create(candidate, awaitCallbacks: true));
+            if (candidate.Receiver.AwaitedTypeName is not null)
+                AddReceiverOverloads(candidate.Receiver);
+            if (candidate.ConfiguredReceiver is { } configuredReceiver)
+                AddReceiverOverloads(configuredReceiver);
 
-            void AddOverload(bool awaitReceiver, bool awaitCallbacks) =>
-                methods.Add(ExpandedMethod.Create(candidate, awaitReceiver, awaitCallbacks));
+            void AddReceiverOverloads(AnalyzedParameter receiver)
+            {
+                methods.Add(ExpandedMethod.Create(candidate, awaitCallbacks: false, awaitedReceiver: receiver));
+                if (canAwaitCallbacks)
+                    methods.Add(ExpandedMethod.Create(candidate, awaitCallbacks: true, awaitedReceiver: receiver));
+            }
         }
 
         return methods.ToImmutable();
@@ -168,6 +171,7 @@ internal sealed class GenerationInteraction : IGenerationInteraction
 
         bool Equivalent() =>
             SameParameter(general.Receiver, specific.Receiver)
+            && SameConfiguredReceiver()
             && Same(general.ReturnTypeName, specific.ReturnTypeName)
             && Same(general.AwaitedReturnTypeName, specific.AwaitedReturnTypeName)
             && general.Parameters.Zip(specific.Parameters, SameParameter).All(static equal => equal)
@@ -179,6 +183,10 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             first.Name == second.Name && Same(first.TypeName, second.TypeName)
             && Same(first.AwaitedTypeName, second.AwaitedTypeName)
             && first.UseConfigureAwait == second.UseConfigureAwait;
+
+        bool SameConfiguredReceiver() => general.ConfiguredReceiver is { } receiver
+            ? specific.ConfiguredReceiver is { } other && SameParameter(receiver, other)
+            : specific.ConfiguredReceiver is null;
 
         bool Same(string? first, string? second, bool isBody = false) =>
             first is null ? second is null : TypeNames.ReplaceTypeParameters(first, substitutions, isBody) == second;
@@ -198,16 +206,19 @@ internal sealed class GenerationInteraction : IGenerationInteraction
         public string Declaration { get; } = declaration;
         public string Body { get; } = body;
 
-        public static ExpandedMethod Create(AnalyzedCandidate candidate, bool awaitReceiver, bool awaitCallbacks)
+        public static ExpandedMethod Create(
+            AnalyzedCandidate candidate, bool awaitCallbacks, AnalyzedParameter? awaitedReceiver = null)
         {
             var typeParameters = MethodSignatures.CreateTypeParameterKeys(candidate.TypeParameterNames);
+            var receiver = awaitedReceiver ?? candidate.Receiver;
+            var awaitReceiver = awaitedReceiver.HasValue;
             var isAsync = awaitReceiver || awaitCallbacks;
             var returnType = isAsync ? candidate.AwaitedReturnTypeName! : candidate.ReturnTypeName;
             var returnTypeKey = isAsync ? candidate.AwaitedReturnTypeKey! : candidate.ReturnTypeKey;
             var parameterName = awaitReceiver ? GetAwaitedReceiverName(candidate) : candidate.Receiver.Name;
             var parameters = new List<string>();
             var parameterKeys = new List<(string, bool)>();
-            AddParameter(candidate.Receiver, awaitReceiver, receiverName: parameterName);
+            AddParameter(receiver, awaitReceiver, receiverName: parameterName);
             foreach (var parameter in candidate.Parameters)
                 AddParameter(parameter, awaitCallbacks);
 
@@ -219,7 +230,7 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             var body = awaitCallbacks ? candidate.AwaitedCallbacksBody! : candidate.Body;
             if (awaitReceiver)
             {
-                var awaited = AwaitableTypeRules.FormatAwait(parameterName, candidate.Receiver.UseConfigureAwait);
+                var awaited = AwaitableTypeRules.FormatAwait(parameterName, receiver.UseConfigureAwait);
                 body = body.Insert(body.IndexOf('\n') + 1,
                     $"    var {candidate.Receiver.Name} = {awaited};\n");
             }

@@ -55,7 +55,7 @@ public sealed class ResultApiGenerator : IIncrementalGenerator
             .Select(static (result, _) => result.Value.GetValueOrDefault())
             .Combine(context.CompilationProvider)
             .Select(static (input, cancellationToken) =>
-                SameNamespaceTypeShortener.Shorten(input.Left, input.Right, cancellationToken));
+                GeneratedTypeShortener.Shorten(input.Left, input.Right, cancellationToken));
 
         context.RegisterSourceOutput(sources, output.AddSource);
         context.RegisterSourceOutput(analyzedExtensions.SelectMany(static (result, _) => result.Diagnostics), output.ReportDiagnostic);

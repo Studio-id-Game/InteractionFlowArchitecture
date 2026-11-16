@@ -1,7 +1,7 @@
-using System.Linq;
+using System.Collections.Immutable;
 using InteractionFlow.ResultAPIGenerator.Entities;
+using InteractionFlow.ResultAPIGenerator.Interactions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace InteractionFlow.ResultAPIGenerator;
@@ -12,64 +12,63 @@ public sealed class ResultApiGenerator : IIncrementalGenerator
     private const string ExtensionAttributeName =
         "InteractionFlow.Core.ResultAPI.Attributes.ResultAPIExtensionAttribute";
 
-    private static readonly SymbolDisplayFormat NamespaceFormat =
-        SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var targets = context.SyntaxProvider.ForAttributeWithMetadataName(
-            ExtensionAttributeName,
-            static (node, _) => node is ClassDeclarationSyntax declaration
-                && declaration.Parent is not TypeDeclarationSyntax
-                && declaration.Modifiers.Any(SyntaxKind.PartialKeyword),
-            static (attributeContext, _) =>
-            {
-                var type = (INamedTypeSymbol)attributeContext.TargetSymbol;
-                var declaration = (ClassDeclarationSyntax)attributeContext.TargetNode;
-                var namespaceName = type.ContainingNamespace.IsGlobalNamespace
-                    ? string.Empty
-                    : type.ContainingNamespace.ToDisplayString(NamespaceFormat);
-                var declarationName = declaration.Identifier.Text;
-                var hintName = type.Name;
+        Initialize(
+            context,
+            new TestDetectionInteraction(),
+            new TestAnalysisInteraction(),
+            new TestGenerationInteraction(),
+            new OutputInteraction());
+    }
 
-                if (declaration.TypeParameterList is { } typeParameters)
+    internal static void Initialize(
+        IncrementalGeneratorInitializationContext context,
+        IDetectionInteraction detection,
+        IAnalysisInteraction analysis,
+        IGenerationInteraction generation,
+        IOutputInteraction output)
+    {
+        var results = context.SyntaxProvider.ForAttributeWithMetadataName(
+            ExtensionAttributeName,
+            static (node, _) => node is ClassDeclarationSyntax,
+            (attributeContext, cancellationToken) =>
+            {
+                var (definition, targets, detectionDiagnostics) = detection.Detect(attributeContext, cancellationToken);
+                var diagnostics = OrEmpty(detectionDiagnostics);
+                if (definition is null)
                 {
-                    var names = typeParameters.Parameters.Select(static parameter => parameter.Identifier.Text);
-                    declarationName += $"<{string.Join(", ", names)}>";
-                    hintName += $".{type.Arity}";
+                    return (Source: (GeneratedSource?)null, Diagnostics: diagnostics);
                 }
 
-                return (CanGenerate: type.IsStatic && !type.IsFileLocal,
-                    Class: new ExtensionClass(namespaceName, declarationName, hintName));
+                var (candidates, handwrittenMethods, analysisDiagnostics) = analysis.Analyze(
+                    definition,
+                    OrEmpty(targets),
+                    (INamedTypeSymbol)attributeContext.TargetSymbol,
+                    attributeContext.SemanticModel.Compilation,
+                    cancellationToken);
+
+                var (source, generationDiagnostics) = generation.Generate(
+                    definition.Destination,
+                    OrEmpty(candidates),
+                    OrEmpty(handwrittenMethods),
+                    attributeContext.TargetNode.GetLocation(),
+                    cancellationToken);
+
+                return (Source: source,
+                    Diagnostics: diagnostics.AddRange(OrEmpty(analysisDiagnostics))
+                        .AddRange(OrEmpty(generationDiagnostics)));
             });
 
-        var extensionClasses = targets
-            .Where(static target => target.CanGenerate)
-            .Select(static (target, _) => target.Class);
+        var sources = results
+            .Where(static result => result.Source.HasValue)
+            .Select(static (result, _) => result.Source.GetValueOrDefault());
+        var reportedDiagnostics = results.SelectMany(static (result, _) => result.Diagnostics);
 
-        var generatedSources = extensionClasses.Select(static (target, _) =>
-        {
-            var namespaceDeclaration = target.Namespace.Length == 0
-                ? string.Empty
-                : $"namespace {target.Namespace};\n\n";
-            var namespacePrefix = target.Namespace.Length == 0
-                ? string.Empty
-                : target.Namespace.Replace("@", string.Empty) + ".";
-
-            return new GeneratedSource($"{namespacePrefix}{target.HintName}.Test.g.cs", $$"""
-                // <auto-generated/>
-                {{namespaceDeclaration}}static partial class {{target.DeclarationName}}
-                {
-                    /// <summary>コード生成の動作確認用メソッドです。</summary>
-                    public static void Test()
-                    {
-                    }
-                }
-
-                """);
-        });
-
-        context.RegisterSourceOutput(generatedSources, static (output, source) =>
-            output.AddSource(source.HintName, source.Source));
+        context.RegisterSourceOutput(sources, output.AddSource);
+        context.RegisterSourceOutput(reportedDiagnostics, output.ReportDiagnostic);
     }
+
+    private static ImmutableArray<T> OrEmpty<T>(ImmutableArray<T> values) =>
+        values.IsDefault ? ImmutableArray<T>.Empty : values;
 }

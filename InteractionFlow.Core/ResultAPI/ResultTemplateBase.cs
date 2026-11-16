@@ -27,13 +27,13 @@ public abstract class ResultTemplateBase
     protected class Other
     {
         /// <summary>
-        /// 受け手の成功値を使う変換先のファクトリ呼び出しに置換されます。
+        /// 同型なら受け手に、異なる型なら成功値を渡すファクトリ呼び出しに置換されます。
         /// </summary>
         /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public static Other CreateSuccess(Self value) => throw new NotSupportedException();
 
         /// <summary>
-        /// 受け手の失敗情報を使う変換先のファクトリ呼び出しに置換されます。
+        /// 同型なら受け手に、異なる型なら失敗情報を渡すファクトリ呼び出しに置換されます。
         /// </summary>
         /// <exception cref="NotSupportedException">プレースホルダーを直接呼び出しました。</exception>
         public static Other CreateFailure(Self self) => throw new NotSupportedException();

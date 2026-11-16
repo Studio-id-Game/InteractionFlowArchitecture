@@ -172,8 +172,9 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             && Same(general.ReturnTypeName, specific.ReturnTypeName)
             && Same(general.AwaitedReturnTypeName, specific.AwaitedReturnTypeName)
             && general.Parameters.Zip(specific.Parameters, SameParameter).All(static equal => equal)
-            && Same(general.Body, specific.Body, isBody: true)
-            && Same(general.AwaitedCallbacksBody, specific.AwaitedCallbacksBody, isBody: true);
+            && (specific.IsForwardingVariantOf(general)
+                || (Same(general.Body, specific.Body, isBody: true)
+                    && Same(general.AwaitedCallbacksBody, specific.AwaitedCallbacksBody, isBody: true)));
 
         bool SameParameter(AnalyzedParameter first, AnalyzedParameter second) =>
             first.Name == second.Name && Same(first.TypeName, second.TypeName)

@@ -9,9 +9,11 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions;
 internal sealed class TemplateBodyWriter(
     TemplatePlaceholders placeholders,
     IParameterSymbol receiver,
-    IReadOnlyDictionary<IInvocationOperation, (string Expression, bool IsCallback)> calls,
+    IReadOnlyDictionary<IInvocationOperation, (string Expression, TemplateBodyWriter.CallKind Kind)> calls,
     bool awaitCallbacks)
 {
+    internal enum CallKind { Factory, Callback, ForwardReceiver }
+
     private readonly StringBuilder source = new();
 
     public string? Write(IOperation body) => WriteStatement(body, 0) ? source.ToString() : null;
@@ -43,6 +45,9 @@ internal sealed class TemplateBodyWriter(
             case IReturnOperation { ReturnedValue: { } value } when WriteExpression(value) is { } expression:
                 Line(depth, $"return {expression};");
                 return true;
+            case IExpressionStatementOperation { Operation: IInvocationOperation call }
+                when calls.TryGetValue(call, out var resolved) && resolved.Kind == CallKind.ForwardReceiver:
+                return true;
             case IExpressionStatementOperation statement when WriteExpression(statement.Operation) is { } expression:
                 Line(depth, expression + ";");
                 return true;
@@ -71,7 +76,7 @@ internal sealed class TemplateBodyWriter(
         IUnaryOperation { OperatorKind: UnaryOperatorKind.Not, OperatorMethod: null } not
             when WriteExpression(not.Operand) is { } operand => $"!({operand})",
         IInvocationOperation call when calls.TryGetValue(call, out var resolved)
-            => awaitCallbacks && resolved.IsCallback
+            => awaitCallbacks && resolved.Kind == CallKind.Callback
                 ? $"await {resolved.Expression}.ConfigureAwait(false)"
                 : resolved.Expression,
         _ => null,

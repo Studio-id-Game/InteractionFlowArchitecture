@@ -5,6 +5,7 @@ using System.Linq;
 using InteractionFlow.ResultAPIGenerator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 namespace InteractionFlow.Analyzers.Tests;
@@ -49,6 +50,58 @@ public class ResultApiGeneratorTests
         Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsAsync"));
         Assert.Equal(78, CountMethods(updated, "ResultExtensionsValueAsync"));
+    }
+
+    [Fact]
+    public void SameTypeFactories_ForwardReceiverWithoutFactoryMethods()
+    {
+        var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
+            using InteractionFlow.Core.ResultAPI.Attributes;
+            using System.Threading.Tasks;
+
+            namespace InteractionFlow.Core.ResultAPI;
+
+            public readonly struct ForwardOnlyResult
+            {
+                public bool IsSuccess { get; init; }
+            }
+
+            [ResultAPITarget(typeof(ForwardOnlyResult), null)]
+            public static partial class ResultExtensions;
+            [ResultAPITarget(typeof(ForwardOnlyResult), null)]
+            public static partial class ResultExtensionsAsync;
+            [ResultAPITarget(typeof(ForwardOnlyResult), null)]
+            public static partial class ResultExtensionsValueAsync;
+
+            internal static class ForwardingCaller
+            {
+                public static async Task Check(ForwardOnlyResult self)
+                {
+                    ForwardOnlyResult kept = self.Then(() => self);
+                    kept = self.ThenError(() => self);
+                    kept = await Task.FromResult(self).ThenAsync(() => Task.FromResult(self));
+                    kept = await new ValueTask<ForwardOnlyResult>(self).ThenErrorValueAsync(() => self);
+                }
+            }
+            """));
+        var (result, updated) = Run(compilation);
+
+        Assert.Empty(Problems(result.Diagnostics));
+        Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
+        var generated = Assert.Single(result.Results).GeneratedSources
+            .SelectMany(source => source.SyntaxTree.GetRoot(TestContext.Current.CancellationToken)
+                .DescendantNodes().OfType<MethodDeclarationSyntax>())
+            .Where(method => method.Identifier.ValueText.StartsWith("Then", StringComparison.Ordinal)
+                && method.ParameterList.Parameters[0].Type!.ToString().Contains("ForwardOnlyResult", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(14, generated.Length);
+        Assert.All(generated, method =>
+        {
+            var body = method.Body!.ToString();
+            Assert.Contains("if (self.IsSuccess)", body);
+            Assert.Contains("return self;", body);
+            Assert.DoesNotContain("Create", body);
+        });
     }
 
     [Theory]

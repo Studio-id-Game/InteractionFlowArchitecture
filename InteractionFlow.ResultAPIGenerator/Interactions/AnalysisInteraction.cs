@@ -142,7 +142,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
             : null;
     }
 
-    /// <summary>成立しなければ Factories は default、ファクトリが不要なら空です。</summary>
+    /// <summary>不成立なら Factories は default、テンプレートに Create 呼び出しがなければ空です。</summary>
     private static (ImmutableArray<ResolvedFactoryCall> Factories,
         ImmutableArray<Diagnostic> Diagnostics) ResolveFactories(
         AnalysisContext context,
@@ -158,6 +158,12 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
                 || call.TargetMethod.Name is not ("CreateSuccess" or "CreateFailure"))
             {
                 return Invalid("A factory placeholder must receive only the template receiver.");
+            }
+
+            if (boundTarget.HasSameResultType)
+            {
+                factories.Add(new ResolvedFactoryCall(call));
+                continue;
             }
 
             var matches = boundTarget.FindFactories(call.TargetMethod, call.TargetMethod.Name == "CreateSuccess");
@@ -246,7 +252,8 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
             bindings.FormatType(resolvedReturn), awaitedResult is null ? null : bindings.FormatType(awaitedResult),
             bindings.TypeParameters, bindings.Parameters.MoveToImmutable(), body, awaitedBody, xml,
             bindings.FormatType(resolvedReturn, forSignature: true),
-            awaitedResult is null ? null : bindings.FormatType(awaitedResult, forSignature: true)),
+            awaitedResult is null ? null : bindings.FormatType(awaitedResult, forSignature: true),
+            template.Id, boundTarget.HasSameResultType && !factories.IsEmpty),
             default);
 
         (AnalyzedCandidate?, ImmutableArray<Diagnostic>) Invalid(string message) =>
@@ -298,7 +305,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
     private sealed class CandidateBindings
     {
         private readonly Dictionary<ITypeParameterSymbol, string> typeNames = new(SymbolEqualityComparer.Default);
-        private readonly Dictionary<IInvocationOperation, (string Expression, bool IsCallback)> calls = new();
+        private readonly Dictionary<IInvocationOperation, (string Expression, TemplateBodyWriter.CallKind Kind)> calls = new();
 
         public CandidateBindings(ParsedTemplate template, BoundTarget target)
         {
@@ -327,14 +334,19 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         public ImmutableArray<string> TypeParameters { get; }
         public ImmutableArray<AnalyzedParameter>.Builder Parameters { get; }
         public bool CanAwaitCallbacks =>
-            calls.Values.Any(static call => call.IsCallback)
+            calls.Values.Any(static call => call.Kind == TemplateBodyWriter.CallKind.Callback)
             && Parameters.All(static parameter => parameter.AwaitedTypeName is not null);
 
-        public void AddFactory(ResolvedFactoryCall factory) =>
-            calls.Add(factory.Call, (factory.Format(FormatType(Target.Other), FormatProperty), false));
+        public void AddFactory(ResolvedFactoryCall factory)
+        {
+            var resolved = factory.ForwardsReceiver
+                ? (TypeNames.Escape(Receiver.Name), TemplateBodyWriter.CallKind.ForwardReceiver)
+                : (factory.Format(FormatType(Target.Other), FormatProperty), TemplateBodyWriter.CallKind.Factory);
+            calls.Add(factory.Call, resolved);
+        }
 
         public void AddCallback(IInvocationOperation call, string expression) =>
-            calls.Add(call, (expression, true));
+            calls.Add(call, (expression, TemplateBodyWriter.CallKind.Callback));
 
         public string? WriteBody(bool awaitCallbacks) =>
             new TemplateBodyWriter(Template.Placeholders, Receiver, calls, awaitCallbacks).Write(Template.Body);
@@ -446,6 +458,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         bool usesIsSuccess)
     {
         public TemplateMethod Method { get; } = method;
+        public string? Id { get; } = method.Method.GetDocumentationCommentId();
         public IOperation Body { get; } = body;
         public TemplatePlaceholders Placeholders { get; } = placeholders;
         public ImmutableArray<IInvocationOperation> Factories { get; } = factories;
@@ -472,6 +485,7 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
         public INamedTypeSymbol Other { get; } = other;
         public IReadOnlyDictionary<string, ITypeSymbol> TypeArguments { get; } = typeArguments;
         public bool HasSuccessCheck { get; } = HasSuccessProperty(context, self);
+        public bool HasSameResultType { get; } = SymbolEqualityComparer.IncludeNullability.Equals(self, other);
 
         public ImmutableArray<IPropertySymbol> GetProperties(bool forSuccess) =>
             forSuccess ? properties.Success : properties.Failure;
@@ -494,18 +508,17 @@ internal sealed class AnalysisInteraction : IAnalysisInteraction
 
     private sealed class ResolvedFactoryCall(
         IInvocationOperation call,
-        IMethodSymbol factory,
-        ImmutableArray<IPropertySymbol> arguments)
+        IMethodSymbol? factory = null,
+        ImmutableArray<IPropertySymbol> arguments = default)
     {
         public IInvocationOperation Call { get; } = call;
-        public IMethodSymbol Factory { get; } = factory;
-        public ImmutableArray<IPropertySymbol> Arguments { get; } = arguments;
+        public bool ForwardsReceiver => factory is null;
 
         public string Format(string targetType, System.Func<IPropertySymbol, string> formatArgument)
         {
-            var values = Factory.Parameters.Zip(Arguments,
+            var values = factory!.Parameters.Zip(arguments,
                 (parameter, argument) => $"{TypeNames.Escape(parameter.Name)}: {formatArgument(argument)}");
-            return $"{targetType}.{TypeNames.Escape(Factory.Name)}({string.Join(", ", values)})";
+            return $"{targetType}.{TypeNames.Escape(factory.Name)}({string.Join(", ", values)})";
         }
     }
 }

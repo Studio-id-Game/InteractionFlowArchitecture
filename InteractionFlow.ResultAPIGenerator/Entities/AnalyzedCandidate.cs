@@ -16,7 +16,9 @@ internal sealed class AnalyzedCandidate(
     string? awaitedCallbacksBody,
     string? xmlDocumentation,
     string? returnTypeKey = null,
-    string? awaitedReturnTypeKey = null) : IEquatable<AnalyzedCandidate>
+    string? awaitedReturnTypeKey = null,
+    string? templateId = null,
+    bool forwardsReceiver = false) : IEquatable<AnalyzedCandidate>
 {
     public string MethodName { get; } = methodName;
     public AnalyzedParameter Receiver { get; } = receiver;
@@ -39,9 +41,15 @@ internal sealed class AnalyzedCandidate(
 
     public string? XmlDocumentation { get; } = xmlDocumentation;
 
-    private (string, AnalyzedParameter, string, string?, string, string?, string, string?, string?) ScalarValues =>
+    public string? TemplateId { get; } = templateId;
+    public bool ForwardsReceiver { get; } = forwardsReceiver;
+
+    public bool IsForwardingVariantOf(AnalyzedCandidate other) =>
+        ForwardsReceiver && TemplateId is not null && TemplateId == other.TemplateId;
+
+    private (string, AnalyzedParameter, string, string?, string, string?, string, string?, string?, string?, bool) ScalarValues =>
         (MethodName, Receiver, ReturnTypeName, AwaitedReturnTypeName, ReturnTypeKey, AwaitedReturnTypeKey,
-            Body, AwaitedCallbacksBody, XmlDocumentation);
+            Body, AwaitedCallbacksBody, XmlDocumentation, TemplateId, ForwardsReceiver);
 
     public bool Equals(AnalyzedCandidate? other) =>
         ReferenceEquals(this, other) ||

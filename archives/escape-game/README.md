@@ -1,6 +1,7 @@
 # EscapeGameのアーカイブ
 
-保存日: 2026-11-11。完了または後続設計へ置き換えられた検討・移行記録です。
+完了または後続設計へ置き換えられた検討・移行記録です。
+初回の保存日は 2026年11月11日です。Result API に関する2件は、移行が完了した2026年11月17日に追加しました。
 型名、契約、テスト件数、計測値は各記録時点のものです。現行実装の指示には使いません。
 
 | 記録 | アーカイブした理由 |
@@ -11,6 +12,8 @@
 | [責務整理の旧プラン](./ESCAPE_GAME_RESPONSIBILITY_NEXT_PLAN.md) | 旧方式の撤回と後続実装への置換を記録している |
 | [実装簡素化プラン](./ESCAPE_GAME_SIMPLIFICATION_PLAN.md) | 採否判断と実装が完了し、現在は改修の経緯を伝える資料になっている |
 | [過去の改修・検証記録](./IMPLEMENTATION_HISTORY.md) | README・現行ガイドから過去の結果と移行記録を分離した |
+| [Result API の利用調査と改善案](./ESCAPE_GAME_RESULT_API_REVIEW.md) | 局所検証と初期案の採否が確定した |
+| [Result チェーン再設計プラン](./ESCAPE_GAME_RESULT_CHAIN_PLAN.md) | 両 SystemFlow への適用を終え、新 Result API へ移行した |
 
 現行の案内:
 

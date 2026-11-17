@@ -1,5 +1,9 @@
 # EscapeGameのResult API利用調査と改善案
 
+> **完了済みの設計記録**
+> Result API の移行は 2026年11月17日に完了しました。本文は検討当時の記録です。
+> 現行の契約は [Result API](../../docs/RESULT.md)、経緯は [移行記録](../../docs/RESULT_API_MIGRATION.md) を参照してください。
+
 確認日: 2026-11-11。対象は現在の作業ツリーのEscapeGameと既存テスト。
 当初の調査・提案と、その後の実装結果を記録する。
 
@@ -121,7 +125,7 @@ GameplayReaction内部の検証結果のResult化に加えて、SystemFlowでも
 Resultチェーンを採用する。InteractionではPlayTurnとHandleResultの段階接続にも適用する。
 反復・停止・合流の構造を残し、その内側の段階を連結する。
 
-判断基準は[Result API](../RESULT.md)と[Reactionとフローの結果](../REACTION_RESULTS.md)。
+判断基準は[Result API](../../docs/RESULT.md)と[Reactionとフローの結果](../../docs/REACTION_RESULTS.md)。
 `ReactionEnd` / `InteractionEnd`はResultを保持するが、Resultから自由に生成できる同義の型ではない。
 単純な中断判定には`HasException`を使うという既存方針にも従って評価した。
 

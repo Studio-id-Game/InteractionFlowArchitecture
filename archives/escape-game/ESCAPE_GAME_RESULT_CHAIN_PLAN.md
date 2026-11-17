@@ -1,5 +1,9 @@
 # EscapeGameのResultチェーン再設計プラン
 
+> **完了済みの設計記録**
+> Result API の移行は 2026年11月17日に完了しました。本文は検討当時の記録です。
+> 現行の契約は [Result API](../../docs/RESULT.md)、経緯は [移行記録](../../docs/RESULT_API_MIGRATION.md) を参照してください。
+
 作成日: 2026-11-11。
 基準コミット: `02a70f8`（局所検証のResult化、TryAllocateSession、回帰テストと調査記録）。
 この文書は設計・レビュー・実装結果を記録する。Port契約とCore APIは維持する。
@@ -186,7 +190,7 @@ ThenErrorを使う場合は、失敗を保持したうえで「リトライし�
 
 ## 送出例外、キャンセル、資源の所有
 
-[Resultの契約](../RESULT.md)を維持する。
+[Resultの契約](../../docs/RESULT.md)を維持する。
 ThenErrorは失敗Resultに反応し、コールバックの送出例外やキャンセル済みTaskを捕捉しない。
 連結関数へ自動捕捉を追加しない。
 
@@ -271,6 +275,6 @@ Portの返却型変更や専用の継続型を必要とする場合は、その�
 描画スレッド・資源寿命に変更が及ぶ場合は実GUIでも確認する。
 文書は採用した最終設計を説明し、試行案を現行実装として書かない。
 
-関連: [利用設計](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)、
-[描画環境への接続](../guides/RENDERING_LIBRARY_INTEGRATION.md)、
-[Result API](../RESULT.md)、[終了結果](../REACTION_RESULTS.md)。
+関連: [利用設計](../../docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)、
+[描画環境への接続](../../docs/guides/RENDERING_LIBRARY_INTEGRATION.md)、
+[Result API](../../docs/RESULT.md)、[終了結果](../../docs/REACTION_RESULTS.md)。

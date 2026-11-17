@@ -1,5 +1,9 @@
 # Result API ジェネレーターの設計とロードマップ
 
+> **完了済みの設計記録**
+> Result API の移行は 2026年11月17日に完了しました。本文は検討当時の記録です。
+> 現行の契約は [Result API](../../docs/RESULT.md)、経緯は [移行記録](../../docs/RESULT_API_MIGRATION.md) を参照してください。
+
 [ResultAPI の試作](../../InteractionFlow.Core/ResultAPI/Entities/ResultTemplate.cs) は、Result の形と拡張メソッドの分岐を C# で宣言し、型の組ごとに同期・`Task`・`ValueTask` の API を生成する案です。`Self` は拡張メソッドの受け手、`Other` は変換先を表します。生成先は [同期](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensions.cs)、[Task](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsAsync.cs)、[ValueTask](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsValueAsync.cs) の三つの `partial` クラスです。定型処理を生成し、個別の振る舞いを持つ API は手書きで補完します。
 
 ## 生成の前提
@@ -151,7 +155,7 @@ public static Result<R, E> Then<T, E, R>(
 
 `TResult` は各テンプレートを具体化した戻り値型です。同期の生成先ではフラグにかかわらず同期版を生成します。非同期の生成先では、有効なフラグに対応する版と、両方が有効な場合の組み合わせを生成します。`awaitableFuncType` と `awaitableActionType` は、生成する `async` メソッドの戻り値に使え、待機時に型引数の値または `void` を返す必要があります。現在の Core は `Task<>` / `Task` と `ValueTask<>` / `ValueTask` を指定しています。
 
-非同期の受け手は先頭で 1 回だけ直接 `await` します。コールバックは選ばれた分岐で 1 回だけ呼び出します。コールバックの戻り値は、`ConfigureAwait(false)` を呼び出して同じ結果型として待てる場合はその形を使い、それ以外は直接 `await` します。例外とキャンセルは伝播させます。`Resolve` / `IfElse` の両コールバックは同じ同期区分にそろえ、混在版は必要に応じて手書きで追加します。`Task` と `ValueTask` は `Async` / `ValueAsync` で名前を分けます。 [現行の非同期契約](../RESULT.md#非同期版)
+非同期の受け手は先頭で 1 回だけ直接 `await` します。コールバックは選ばれた分岐で 1 回だけ呼び出します。コールバックの戻り値は、`ConfigureAwait(false)` を呼び出して同じ結果型として待てる場合はその形を使い、それ以外は直接 `await` します。例外とキャンセルは伝播させます。`Resolve` / `IfElse` の両コールバックは同じ同期区分にそろえ、混在版は必要に応じて手書きで追加します。`Task` と `ValueTask` は `Async` / `ValueAsync` で名前を分けます。 [現行の非同期契約](../../docs/RESULT.md#非同期版)
 
 省略可能な `ConfiguredFuncType` を指定すると、`asyncSelf` が有効な版にその型を受け手とするオーバーロードを追加します。未構築の 1 型引数の型を指定し、直接待機すると型引数の値を取り出せることを検証します。`Task` / `ValueTask` を渡した場合は通常の `await` と同じ規則で再開し、`.ConfigureAwait(false).ThenAsync(...)` と書くと次のコールバックを呼ぶ前の待機でコンテキストへの復帰を省けます。生成メソッドの戻り値と非同期コールバックには通常の待機可能型を使います。
 

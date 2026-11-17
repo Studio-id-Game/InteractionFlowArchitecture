@@ -119,14 +119,14 @@ HandleResultは結果提示・受付開始・リトライ入力までを扱い�
 段階間とフロー間の停止・再開確認はGameplay内のGameplayCheckpointで共有します。
 
 GamePlaySystemFlowは開始・継続確認からセッション実行へThenAsyncで接続し、送出例外は各段で捕捉します。
-セッション実行のResult<bool>はリトライ意図を渡します。
+セッション実行の `Result<IGameplayContext>` は、リトライ意図を参照するための Context を後続処理へ渡します。
 ResolveAsyncで成功・失敗の両方をEndSessionへ接続し、終了失敗時は再試行しません。
 PlayTurn / HandleResultは各Reaction後に継続を明示的に判定し、失敗・正常停止ではそのReactionEndを直接返します。
 両Interactionのチェーン化は撤回し、終了トークンの直接返却を維持しています。
-WindowSystemFlowはThen/ThenErrorで実行・停止・合流を接続し、集約したResultをCloseWindowへ直接渡します。
-ThenErrorは失敗をFailureCollectorに保持して後始末へ回復し、Closeの前に蓄積した失敗を最終結果へ戻します。
+WindowSystemFlow は `ThenAsync` で実行・停止・合流を接続し、集約した Result を CloseWindow へ渡します。
+`ThenErrorAsync` は失敗を FailureCollector に保持して後始末へ回復し、Close の前に蓄積した失敗を最終結果へ戻します。
 OpenからCloseまで呼び出し元スレッドを維持します。
-局所検証と適用判断の詳細は[Result APIの利用調査と実装結果](../docs/design-notes/ESCAPE_GAME_RESULT_API_REVIEW.md)を参照してください。
+局所検証と当初の適用判断は [Result API の利用調査と改善案](../archives/escape-game/ESCAPE_GAME_RESULT_API_REVIEW.md) に保存しています。
 
 ポーズ・省略要求はPresentFrameが入力として送り、GameplayのHandleControlInputが解釈します。
 WindowSystemFlowがフレームごとにこの独立した制御経路を実行するため、

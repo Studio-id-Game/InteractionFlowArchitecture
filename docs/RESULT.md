@@ -2,6 +2,7 @@
 
 `InteractionFlow.Core.ResultAPI.Entities` の `Result` は、局所的な処理の成功・失敗を明示して連結するための API です。
 この文書を、Result の契約と例外の扱いを確認する基準とします。
+旧 API からの切り替えの経緯は [新 Result API への移行記録](./RESULT_API_MIGRATION.md) を参照してください。
 `ReactionEnd` はこの Result を保持し、Reaction による終了結果の生成規則を付与します。
 `InteractionEnd` はそれに基づく Interaction / SystemFlow の完了を表し、Context は保持しません。
 詳細は [Reaction とフローの結果](./REACTION_RESULTS.md) を参照してください。

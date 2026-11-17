@@ -83,6 +83,7 @@ interactionflow_enabled = True
   ```
 
 Result API の契約と例外の扱いは [Result API](./docs/RESULT.md) を参照してください。
+切り替えの経緯と検証結果は [新 Result API への移行記録](./docs/RESULT_API_MIGRATION.md) にあります。
 キャンセル要求・登録 Task の待機とリセットは [CancellationObject](./docs/CANCELLATION.md) を参照してください。
 期限到達時のキャンセル通知と処理結果の集約は [CancellationScheduler](./docs/CANCELLATION_SCHEDULER.md) を参照してください。
 文脈値の必須・任意の取得については [文脈値の取得](./docs/CONTEXT_VALUES.md) を参照してください。

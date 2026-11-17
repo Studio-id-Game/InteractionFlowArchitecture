@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
@@ -45,7 +45,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
                 if (!password.Value.SequenceEqual(confirmation.Value))
                     return new FormatException("Passwords do not match.");
                 var created = session.CreateCredential(password.Value);
-                if (!created.Try(out credential, out var createError)) return createError;
+                if (!created.HasValue(out credential)) return created.Error!;
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
                 var saved = await credentials.Save(user, credential);
                 if (saved.HasError(out var saveError)) return saveError;

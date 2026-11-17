@@ -25,9 +25,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
             var result = await login.LoginAsync(context);
-            return await output.WriteLineAsync(context, result.Try(out var error)
-                ? context.ExitRequested ? "Goodbye!" : $"Logged in: {NotepadRules.UserName(context.User!)}"
-                : $"Login failed: {error.Message}");
+            return await output.WriteLineAsync(context, result.HasError(out var error)
+                ? $"Login failed: {error.Message}"
+                : context.ExitRequested ? "Goodbye!" : $"Logged in: {NotepadRules.UserName(context.User!)}");
         }
     }
 }

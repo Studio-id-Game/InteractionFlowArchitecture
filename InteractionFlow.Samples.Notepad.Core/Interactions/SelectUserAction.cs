@@ -27,8 +27,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             context.Action = NotepadAction.None;
             var selection = await choices.SelectAsync(context, "Select your action",
                 ["Edit", "Create", "Delete", "Switch user", "List", "Exit"]);
-            if (!selection.Try(out var choice, out var error))
-                return await ExceptionPort.HandleExceptionAsync(context, error);
+            if (!selection.HasValue(out var choice))
+                return await ExceptionPort.HandleExceptionAsync(context, selection.Error!);
             var selected = choice.Index;
             if (selected == null || selected == 5) context.ExitRequested = true;
             else context.Action = selected.Value switch

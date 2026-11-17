@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 
 namespace InteractionFlow.Standard.ConsoleSystem.ExternalPorts

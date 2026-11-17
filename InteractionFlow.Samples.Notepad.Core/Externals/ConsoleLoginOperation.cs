@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -35,11 +35,11 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
             if (user.Length != 0 && !NotepadRules.IsValidId(user))
                 return new FormatException("Use 1–64 letters, digits, underscores or hyphens for a user ID.");
             var authentication = await AuthenticateAsync(context, user);
-            if (authentication.Try(out _) && !context.ExitRequested) context.User = user;
+            if (authentication.IsSuccess && !context.ExitRequested) context.User = user;
             return authentication;
         }
 
         protected virtual Task<Result> AuthenticateAsync(NotepadContext context, string user)
-            => Result.Success.StartAsync();
+            => Task.FromResult(Result.Success);
     }
 }

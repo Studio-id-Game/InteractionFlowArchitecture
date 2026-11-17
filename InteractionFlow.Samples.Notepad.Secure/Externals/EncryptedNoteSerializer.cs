@@ -8,7 +8,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using SessionResult = InteractionFlow.Core.Entities.Result<byte[]>;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals
 {
@@ -29,10 +28,10 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             byte[] plaintext;
             try { plaintext = Utf8.GetBytes(note.Title + "\n" + note.Text); }
             catch (EncoderFallbackException error) { return error; }
-            SessionResult encrypted;
+            Result<byte[]> encrypted;
             try { encrypted = session.Encrypt(plaintext); }
             finally { CryptographicOperations.ZeroMemory(plaintext); }
-            if (!encrypted.Try(out var bytes, out var encryptionError)) return encryptionError;
+            if (!encrypted.HasValue(out var bytes)) return encrypted.Error!;
             try { await stream.WriteAsync(bytes); return stream.AsResult(); }
             catch (Exception error) { return error; }
         }
@@ -57,7 +56,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             }
             catch (Exception error) { return error; }
             var decrypted = session.Decrypt(bytes);
-            if (!decrypted.Try(out var plaintext, out var decryptError)) return decryptError;
+            if (!decrypted.HasValue(out var plaintext)) return decrypted.Error!;
             try
             {
                 string text;

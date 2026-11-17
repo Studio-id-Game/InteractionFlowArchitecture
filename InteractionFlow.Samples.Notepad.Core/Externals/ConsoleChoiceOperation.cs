@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -50,8 +50,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                     case ConsoleKey.PageDown: selected = Math.Min(choices.Length - 1, selected + capacity); break;
                     case ConsoleKey.Enter:
                     case ConsoleKey.Escape:
-                        return (await frame.ClearAsync(context)).HasError(out var clearError)
-                            ? clearError : new ChoiceValue(key.Key == ConsoleKey.Enter ? selected : null);
+                        return await frame.ClearAsync(context)
+                            .ThenAsync(() => new ChoiceValue(key.Key == ConsoleKey.Enter ? selected : null).AsResult());
                     default:
                         var digit = key.KeyChar - '1';
                         if (key.KeyChar is >= '1' and <= '9' && digit < choices.Length) selected = digit;

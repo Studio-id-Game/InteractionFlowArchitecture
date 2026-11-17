@@ -1,8 +1,8 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
@@ -266,7 +266,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var probe = new AcquisitionProbe(input, output, new MemoryNotes());
             var result = await probe.ReadAsync(new NotepadContext { User = "alice" });
 
-            Assert.True(result.Try(out var value, out _));
+            Assert.True(result.HasValue(out var value));
             Assert.Equal(selected, value.Key.HasValue);
             if (!selected) Assert.Equal(message, value.GetMessage("Create cancelled."));
             if (value.Key is { } key) Assert.Equal(new NotepadKey("alice", "note"), key);
@@ -282,7 +282,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var result = await probe.ReadAsync(new NotepadContext { User = "alice" });
 
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(0, input.ReadCount);
@@ -297,7 +297,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var result = await probe.ReadAsync(new NotepadContext { User = "alice" }, existing: true);
 
-            Assert.True(result.Try(out var value, out _));
+            Assert.True(result.HasValue(out var value));
             Assert.Equal("No notes available.", value.GetMessage("Edit cancelled."));
             Assert.Null(value.Key);
             Assert.Empty(output.Lines);
@@ -313,7 +313,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var result = await probe.ReadAsync(new NotepadContext { User = "alice" }, existing: true);
 
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Same(failure, error.InnerException);
             Assert.Empty(output.Lines);
         }
@@ -330,7 +330,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var result = await operation.EditAsync(new NotepadContext(), new NotepadData("Old title", "Old body"));
 
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(failureAt <= 2 ? 0 : 1, input.ReadCount);
@@ -345,7 +345,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
 
             var result = await Choices(input, output).SelectAsync(new NotepadContext(), "Choose", ["One"]);
 
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(0, input.ReadCount);
@@ -463,7 +463,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public int Count { get; private set; }
             public override void ForceResetMemoryState() { }
             protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(
-                IFlowContext context, OperationCanceledException exception, InteractionFlow.Core.ResultAPI.Entities.Result waitAndResetResult)
+                IFlowContext context, OperationCanceledException exception, Result waitAndResetResult)
             {
                 Count++;
                 return new(GetEnd(waitAndResetResult));

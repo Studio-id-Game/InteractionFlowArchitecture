@@ -35,8 +35,8 @@ namespace InteractionFlow.Samples.Notepad.Tests
         {
             using var session = new SecureSession();
             var credentialResult = session.CreateCredential("password");
-            Assert.True(credentialResult.Try(out var credential, out _));
-            Assert.True(session.Authenticate("alice", "password", credential!).Try(out _));
+            Assert.True(credentialResult.HasValue(out var credential));
+            Assert.True(session.Authenticate("alice", "password", credential!).IsSuccess);
             var serializer = new EncryptedNoteSerializer(session);
             using var stream = new MemoryStream();
             var saved = await serializer.Serialize(new NotepadData("日本語🐦", "Body"), stream.AsResult<Stream>());
@@ -47,7 +47,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             Assert.True(loaded.HasValue(out var note));
             Assert.Equal("日本語🐦", note!.Title);
             Assert.True(stream.CanRead);
-            Assert.True(session.Authenticate("bob", "password", credential!).Try(out _));
+            Assert.True(session.Authenticate("bob", "password", credential!).IsSuccess);
             stream.Position = 0;
             var wrongUser = await serializer.Deserialize(stream.AsResult<Stream>(), new InvalidOperationException());
             Assert.False(wrongUser.IsSuccess);
@@ -57,14 +57,14 @@ namespace InteractionFlow.Samples.Notepad.Tests
         public void FailedAuthenticationAndResetDiscardThePreviousKey()
         {
             using var session = new SecureSession();
-            Assert.True(session.CreateCredential("secret").Try(out var credential, out _));
-            Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
-            Assert.True(session.Encrypt([1]).Try(out _, out _));
-            Assert.False(session.Authenticate("alice", "wrong", credential!).Try(out _));
-            Assert.False(session.Encrypt([1]).Try(out _, out _));
-            Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
+            Assert.True(session.CreateCredential("secret").HasValue(out var credential));
+            Assert.True(session.Authenticate("alice", "secret", credential!).IsSuccess);
+            Assert.True(session.Encrypt([1]).HasValue(out _));
+            Assert.True(session.Authenticate("alice", "wrong", credential!).HasError(out _));
+            Assert.False(session.Encrypt([1]).HasValue(out _));
+            Assert.True(session.Authenticate("alice", "secret", credential!).IsSuccess);
             session.ForceResetMemoryState();
-            Assert.False(session.Encrypt([1]).Try(out _, out _));
+            Assert.False(session.Encrypt([1]).HasValue(out _));
         }
 
         [Fact]
@@ -99,8 +99,8 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 || !Path.GetFileName(target).StartsWith("InteractionFlow-NoteFiles-", StringComparison.Ordinal))
                 throw new InvalidOperationException("Unexpected cleanup target.");
             using var session = new SecureSession();
-            Assert.True(session.CreateCredential("secret").Try(out var credential, out _));
-            Assert.True(session.Authenticate("alice", "secret", credential!).Try(out _));
+            Assert.True(session.CreateCredential("secret").HasValue(out var credential));
+            Assert.True(session.Authenticate("alice", "secret", credential!).IsSuccess);
             INotepadDataSerializerPort serializer = secure
                 ? new EncryptedNoteSerializer(session) : new NotepadDataSimpleSerializer();
             var files = new TestFiles(serializer, root);

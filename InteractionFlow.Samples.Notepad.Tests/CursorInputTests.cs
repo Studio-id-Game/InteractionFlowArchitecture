@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.Externals;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
@@ -82,14 +82,14 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var context = new NotepadContext();
             var selected = await operation.SelectAsync(context, "Choose", ["First", "Second"],
                 ["First: first title", "Second: second title"]);
-            Assert.True(selected.Try(out var choice, out _));
+            Assert.True(selected.HasValue(out var choice));
             Assert.Equal(1, choice.Index);
             Assert.Equal(0, io.LineReadCount);
             Assert.Contains(io.Frames, text => text.Contains("> [2] Second: second title"));
             Assert.True(io.ClearCount >= 2);
             io.Keys.Enqueue(Key(ConsoleKey.Escape));
             var cancelled = await operation.SelectAsync(context, "Choose", ["First"]);
-            Assert.True(cancelled.Try(out var cancelledChoice, out _));
+            Assert.True(cancelled.HasValue(out var cancelledChoice));
             Assert.Null(cancelledChoice.Index);
             Assert.False(context.ExitRequested);
         }
@@ -106,7 +106,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             io.Keys.Enqueue(Key(ConsoleKey.F2));
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
             var edited = await editor.EditAsync(new NotepadContext(), new NotepadData("Title", "Body"));
-            Assert.True(edited.Try(out var edit, out _));
+            Assert.True(edited.HasValue(out var edit));
             var note = edit.Note;
             Assert.NotNull(note);
             Assert.Equal("Titl!", note.Title);
@@ -124,7 +124,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var original = new NotepadData("Original", "Body");
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
             var cancelled = await editor.EditAsync(new NotepadContext(), original);
-            Assert.True(cancelled.Try(out var edit, out _));
+            Assert.True(cancelled.HasValue(out var edit));
             Assert.Null(edit.Note);
             Assert.Equal("Original", original.Title);
         }
@@ -138,7 +138,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             io.Keys.Enqueue(Key(ConsoleKey.F2));
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
             var edited = await editor.EditAsync(new NotepadContext(), new NotepadData("日", ""));
-            Assert.True(edited.Try(out var edit, out _));
+            Assert.True(edited.HasValue(out var edit));
             var note = edit.Note;
             Assert.Equal("日🐦", note!.Title);
             Assert.Contains(io.Positions, position => position.Left == 8 && position.Top == 2);
@@ -155,7 +155,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var original = new NotepadData("Title",
                 string.Join("\n", Enumerable.Range(0, 100).Select(_ => new string('x', 200))));
             var result = await editor.EditAsync(new NotepadContext(), original);
-            Assert.True(result.Try(out var edit, out _));
+            Assert.True(result.HasValue(out var edit));
             Assert.Equal(original.Text, edit.Note!.Text);
             Assert.All(io.Positions, position =>
             {
@@ -171,7 +171,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var io = new Terminal { ScreenFailure = failure };
             var editor = new ConsoleNoteEditor(io, io, io, io, io);
             var result = await editor.EditAsync(new NotepadContext(), null);
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Same(failure, error.InnerException);
             Assert.Equal(0, io.KeyReadCount);
         }
@@ -204,7 +204,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 : (await new ConsoleChoiceOperation(io, io, io, io, io).SelectAsync(context, "Choose", ["One"]))
                     .WithoutValue;
 
-            Assert.False(result.Try(out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Same(failure, error.InnerException);
             Assert.Equal(stage == "finish" ? 1 : 0, io.KeyReadCount);
             Assert.Equal(0, io.LineReadCount);

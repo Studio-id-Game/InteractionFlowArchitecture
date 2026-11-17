@@ -21,7 +21,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
         public async Task<Result> ResizeAsync(IFlowContext context)
         {
             var size = terminal.GetWindowSize();
-            if (!size.Try(out var dimensions, out var error)) return error;
+            if (!size.HasValue(out var dimensions)) return size.Error!;
             var (newWidth, newHeight) = dimensions;
             if (newWidth < 24 || newHeight < 8)
                 return new InvalidOperationException("Resize the terminal to at least 24 columns and 8 rows.");

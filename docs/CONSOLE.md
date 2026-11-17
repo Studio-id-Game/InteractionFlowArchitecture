@@ -106,7 +106,8 @@ AggregateException に保持します。リダイレクトされた出力では�
 
 `ClearAsync` / `SetCursorPositionAsync` は表示を変える Reaction です。
 非対応環境や無効な画面位置は失敗結果になります。環境の観測は SilentExternal が担当します。
-位置は非負の Left / Top を持つ ConsolePosition とし、現在位置の取得は Result を返します。
+位置は非負の Left / Top を持つ ConsolePosition とします。
+現在位置とウィンドウサイズの取得は、`InteractionFlow.Core.ResultAPI.Entities` の Result を返します。
 `IConsoleEnvironmentPort.GetWindowSize()` は表示ウィンドウの列数・行数を
 `Result<(int Width, int Height)>` で返します。画面操作と同じロックで観測し、
 リダイレクト出力や取得失敗は失敗 Result とします。サイズ変更通知ではなく、呼び出し時点の観測値です。

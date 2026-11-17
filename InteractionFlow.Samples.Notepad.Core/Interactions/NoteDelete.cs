@@ -35,14 +35,14 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             }
             var selection = await choices.SelectAsync(context, "Select a note to delete",
                 [.. available.Select(id => id.Note)], labels);
-            if (!selection.Try(out var choice, out var choiceError))
-                return await ExceptionPort.HandleExceptionAsync(context, choiceError);
+            if (!selection.HasValue(out var choice))
+                    return await ExceptionPort.HandleExceptionAsync(context, selection.Error!);
             var selected = choice.Index;
             if (selected is not >= 0) return await output.WriteLineAsync(context, "Delete cancelled.");
             var id = available[selected.Value];
             var confirmation = await choices.SelectAsync(context, $"Delete '{id.Note}'?", ["No", "Yes"]);
-            if (!confirmation.Try(out var confirm, out var confirmError))
-                return await ExceptionPort.HandleExceptionAsync(context, confirmError);
+            if (!confirmation.HasValue(out var confirm))
+                    return await ExceptionPort.HandleExceptionAsync(context, confirmation.Error!);
             if (confirm.Index != 1) return await output.WriteLineAsync(context, "Delete cancelled.");
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             var result = await notes.Delete(id);

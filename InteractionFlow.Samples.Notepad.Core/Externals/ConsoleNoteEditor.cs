@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -51,15 +51,13 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 var key = await keys.ReadKeyAsync(context);
                 if (key.Key == ConsoleKey.Escape)
                 {
-                    return (await frame.ClearAsync(context)).HasError(out var clearError)
-                        ? clearError : new NoteEditValue(null);
+                    return await frame.ClearAsync(context).ThenAsync(() => new NoteEditValue(null).AsResult());
                 }
                 if (key.Key == ConsoleKey.F2
                     || key.Key == ConsoleKey.S && key.Modifiers.HasFlag(ConsoleModifiers.Control))
                 {
                     context.Cancellation.GetToken().ThrowIfCancellationRequested();
-                    return (await frame.ClearAsync(context)).HasError(out var clearError)
-                        ? clearError : new NoteEditValue(draft.ToNote());
+                    return await frame.ClearAsync(context).ThenAsync(() => new NoteEditValue(draft.ToNote()).AsResult());
                 }
                 status = "";
                 var control = key.Modifiers.HasFlag(ConsoleModifiers.Control);
@@ -139,7 +137,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
             }
         }
 
-        private async Task<InteractionFlow.Core.ResultAPI.Entities.Result> WriteAsync(NotepadContext context, string text)
+        private async Task<Result> WriteAsync(NotepadContext context, string text)
             => (await output.WriteLineAsync(context, text)).Result;
     }
 }

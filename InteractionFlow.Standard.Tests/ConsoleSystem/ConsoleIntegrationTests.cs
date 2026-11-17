@@ -25,12 +25,12 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
             var result = new ConsoleEnvironment().GetWindowSize();
             if (Terminal.IsOutputRedirected)
             {
-                Assert.False(result.Try(out _, out var error));
+                Assert.True(result.HasError(out var error));
                 Assert.IsType<NotSupportedException>(error!.InnerException);
             }
             else
             {
-                Assert.True(result.Try(out var size, out _));
+                Assert.True(result.HasValue(out var size));
                 Assert.True(size.Width > 0);
                 Assert.True(size.Height > 0);
             }

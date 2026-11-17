@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -39,8 +39,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
             var keyResult = await ReadKeyAsync(context, SelectExisting);
-            if (!keyResult.Try(out var readKey, out var keyError))
-                return await ExceptionPort.HandleExceptionAsync(context, keyError);
+            if (!keyResult.HasValue(out var readKey))
+                return await ExceptionPort.HandleExceptionAsync(context, keyResult.Error!);
             if (readKey.Key is not NotepadKey key)
                 return await output.WriteLineAsync(context, readKey.GetMessage($"{ActionName} cancelled."));
 
@@ -49,8 +49,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 return await output.WriteLineAsync(context, preparation.StopMessage);
 
             var edited = await editor.EditAsync(context, preparation.Original);
-            if (!edited.Try(out var editValue, out var editError))
-                return await ExceptionPort.HandleExceptionAsync(context, editError);
+            if (!edited.HasValue(out var editValue))
+                return await ExceptionPort.HandleExceptionAsync(context, edited.Error!);
             var draft = editValue.Note;
             if (draft == null) return await output.WriteLineAsync(context, DraftCancelledMessage);
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
@@ -85,7 +85,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 }
                 var selection = await choices.SelectAsync(context, "Select a note",
                     [.. available.Select(id => id.Note)], labels);
-                if (!selection.Try(out var choice, out var choiceError)) return choiceError;
+                if (!selection.HasValue(out var choice)) return selection.Error!;
                 var selected = choice.Index;
                 return selected is >= 0
                     ? ReadKeyValue.Selected(available[selected.Value]) : ReadKeyValue.Cancelled;

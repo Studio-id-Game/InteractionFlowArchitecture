@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Core.ResultAPI.Attributes;
+namespace InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
 /// <summary>
 /// テンプレートまたは生成先で Self と Other の置換型を指定します。

@@ -7,7 +7,7 @@ namespace InteractionFlow.ResultAPIGenerator.Interactions.Rules;
 
 internal static class ResultApiAttributes
 {
-    private const string Namespace = "InteractionFlow.Core.ResultAPI.Attributes.";
+    private const string Namespace = "InteractionFlow.Core.ResultAPI.Entities.Attributes.";
     private const string Template = Namespace + "ResultAPITemplateAttribute";
 
     public const string Extension = Namespace + "ResultAPIExtensionAttribute";

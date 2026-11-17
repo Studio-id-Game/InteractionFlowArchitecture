@@ -21,14 +21,14 @@ public class ResultApiGeneratorTests
     public void TemplateTargets_GenerateCallableOverloads()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            using InteractionFlow.Core.ResultAPI;
+            using InteractionFlow.Core.ResultAPI.Entities;
             using System.Threading.Tasks;
 
             internal static class Caller
             {
                 public static async Task Check()
                 {
-                    var source = Result<int>.CreateSuccess(1);
+                    Result<int> source = 1.AsResult();
                     Result<int> same = source.Then(value => Result<int>.CreateSuccess(value));
                     Result<string> different = source.Then(value => Result<string>.CreateSuccess(value.ToString()));
                     var typed = Result<int, int>.CreateSuccess(2);
@@ -52,7 +52,7 @@ public class ResultApiGeneratorTests
         var sources = Assert.Single(result.Results).GeneratedSources;
         Assert.Equal(3, sources.Length);
         Assert.All(sources, source =>
-            Assert.DoesNotContain("global::InteractionFlow.Core.ResultAPI.", source.SourceText.ToString()));
+            Assert.DoesNotContain("global::InteractionFlow.Core.ResultAPI.Entities.", source.SourceText.ToString()));
         var synchronous = GetGeneratedSource(result, "ResultExtensions");
         var tasks = GetGeneratedSource(result, "ResultExtensionsAsync");
         var valueTasks = GetGeneratedSource(result, "ResultExtensionsValueAsync");
@@ -72,7 +72,7 @@ public class ResultApiGeneratorTests
         Assert.Contains("var self = await selfTask;", valueTasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.Task", tasks);
         Assert.DoesNotContain("global::System.Threading.Tasks.ValueTask", valueTasks);
-        Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
+        Assert.Equal(27, CountMethods(updated, "ResultExtensions"));
         Assert.Equal(130, CountMethods(updated, "ResultExtensionsAsync"));
         Assert.Equal(130, CountMethods(updated, "ResultExtensionsValueAsync"));
     }
@@ -84,9 +84,9 @@ public class ResultApiGeneratorTests
             using System;
             using System.Runtime.CompilerServices;
             using System.Threading.Tasks;
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             [AsyncMethodBuilder(typeof(DeferredBuilder<>))]
             public readonly struct Deferred<T>(Task<T> task)
@@ -170,9 +170,9 @@ public class ResultApiGeneratorTests
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
             using System.Runtime.CompilerServices;
             using System.Threading.Tasks;
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public readonly struct DirectReceiver<T>(Task<T> task)
             {
@@ -209,9 +209,9 @@ public class ResultApiGeneratorTests
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
             using System.Runtime.CompilerServices;
             using System.Threading.Tasks;
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public readonly struct BadReceiver<T>
             {
@@ -237,9 +237,9 @@ public class ResultApiGeneratorTests
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
             using System.Runtime.CompilerServices;
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             [ResultAPIExtension(typeof(ResultTemplate), typeof(ConfiguredTaskAwaitable<>), typeof(ConfiguredTaskAwaitable), "Configured")]
             public static partial class ConfiguredExtensions;
@@ -254,7 +254,7 @@ public class ResultApiGeneratorTests
 
     [Theory]
     [InlineData("""
-        namespace InteractionFlow.Core.ResultAPI;
+        namespace InteractionFlow.Core.ResultAPI.Entities;
         public static partial class ResultExtensionsAsync
         {
             private static class Tasks;
@@ -283,7 +283,7 @@ public class ResultApiGeneratorTests
     public void TypeNames_KeepQualificationForHandwrittenTypeAndGeneratedTypeParameter()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public static partial class ResultExtensions
             {
@@ -298,8 +298,8 @@ public class ResultApiGeneratorTests
         Assert.Empty(Problems(result.Diagnostics));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
         var source = GetGeneratedSource(result, "ResultExtensions");
-        Assert.Contains("this global::InteractionFlow.Core.ResultAPI.Result<T> self", source);
-        Assert.Contains("Resolve<Result>(this global::InteractionFlow.Core.ResultAPI.Result self", source);
+        Assert.Contains("this global::InteractionFlow.Core.ResultAPI.Entities.Result<T> self", source);
+        Assert.Contains("Resolve<Result>(this global::InteractionFlow.Core.ResultAPI.Entities.Result self", source);
         Assert.Contains("Result<R>.CreateFailure(", GetGeneratedSource(result, "ResultExtensionsAsync"));
     }
 
@@ -307,7 +307,7 @@ public class ResultApiGeneratorTests
     public void TypeNames_KeepQualificationForShadowedFactoryReceiver()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public static partial class ResultExtensions
             {
@@ -319,7 +319,7 @@ public class ResultApiGeneratorTests
         Assert.Empty(Problems(result.Diagnostics));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
         var source = GetGeneratedSource(result, "ResultExtensions");
-        Assert.Contains("return global::InteractionFlow.Core.ResultAPI.Result.CreateFailure(", source);
+        Assert.Contains("return global::InteractionFlow.Core.ResultAPI.Entities.Result.CreateFailure(", source);
         Assert.Contains("this Result self", source);
     }
 
@@ -329,9 +329,9 @@ public class ResultApiGeneratorTests
     public void TypeParameters_AvoidOtherNamesInGeneratedDeclaration(string typeParameter, string method)
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse($$"""
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public readonly struct ParameterNameResult<T>
             {
@@ -355,9 +355,9 @@ public class ResultApiGeneratorTests
     public void EquivalentResultTargets_ShareTheSameGeneratedOverloads()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             [ResultAPITarget(typeof(Result<>), "Renamed")]
             [ResultAPITarget(typeof(Result<>), "Renamed", typeof(Result<>), "Renamed", twoWay: false)]
@@ -367,17 +367,17 @@ public class ResultApiGeneratorTests
 
         Assert.Empty(Problems(result.Diagnostics));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
-        Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
+        Assert.Equal(27, CountMethods(updated, "ResultExtensions"));
     }
 
     [Fact]
     public void SameTypeFactories_ForwardReceiverWithoutFactoryMethods()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
             using System.Threading.Tasks;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public readonly struct ForwardOnlyResult
             {
@@ -429,7 +429,7 @@ public class ResultApiGeneratorTests
     public void HandwrittenOverload_IsRetainedOrReported(string returnType, string constraint, bool compatible)
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse($$"""
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
             public static partial class ResultExtensions
             {
                 public static {{returnType}} IfSuccess<T>(this Result<T> self, System.Action<T> onSuccess)
@@ -446,14 +446,14 @@ public class ResultApiGeneratorTests
             Assert.Equal("IFRESULT001", Assert.Single(diagnostics).Id);
 
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
-        Assert.Equal(26, CountMethods(updated, "ResultExtensions"));
+        Assert.Equal(27, CountMethods(updated, "ResultExtensions"));
     }
 
     [Fact]
     public void HandwrittenProperty_ReportsConflictAndSkipsOverloadsWithSameName()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
             public static partial class ResultExtensions
             {
                 public static int IfSuccess => 1;
@@ -464,16 +464,16 @@ public class ResultApiGeneratorTests
         Assert.NotEmpty(Problems(result.Diagnostics));
         Assert.All(Problems(result.Diagnostics), diagnostic => Assert.Equal("IFRESULT001", diagnostic.Id));
         Assert.Empty(Problems(updated.GetDiagnostics(TestContext.Current.CancellationToken)));
-        Assert.Equal(23, CountMethods(updated, "ResultExtensions"));
+        Assert.Equal(24, CountMethods(updated, "ResultExtensions"));
     }
 
     [Fact]
     public void CallbackArguments_UseIndexedOrderThenPropertyName()
     {
         var compilation = CreateCompilation().AddSyntaxTrees(Parse("""
-            using InteractionFlow.Core.ResultAPI.Attributes;
+            using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
 
             public readonly struct MultipleArguments
             {
@@ -520,7 +520,7 @@ public class ResultApiGeneratorTests
         Assert.All(unchanged, reason => Assert.Equal(IncrementalStepRunReason.Cached, reason));
 
         compilation = compilation.AddSyntaxTrees(Parse("""
-            namespace InteractionFlow.Core.ResultAPI;
+            namespace InteractionFlow.Core.ResultAPI.Entities;
             public static partial class ResultExtensions
             {
                 public static Result<T> IfSuccess<T>(this Result<T> self, System.Action<T> onSuccess) => self;
@@ -562,7 +562,7 @@ public class ResultApiGeneratorTests
         CSharpSyntaxTree.ParseText(source, path: path);
 
     private static int CountMethods(Compilation compilation, string name) =>
-        compilation.GetTypeByMetadataName("InteractionFlow.Core.ResultAPI." + name)!
+        compilation.GetTypeByMetadataName("InteractionFlow.Core.ResultAPI.Entities." + name)!
             .GetMembers().OfType<IMethodSymbol>().Count(static method => method.MethodKind == MethodKind.Ordinary);
 
     private static string GetGeneratedSource(GeneratorDriverRunResult result, string destination) =>

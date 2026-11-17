@@ -1,9 +1,9 @@
 using InteractionFlow.Core.Entities;
-using InteractionFlow.Core.ResultAPI.Attributes;
+using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace InteractionFlow.Core.ResultAPI;
+namespace InteractionFlow.Core.ResultAPI.Entities;
 
 /// <summary>
 /// 値なしの処理結果です。<see langword="default"/> は成功です。

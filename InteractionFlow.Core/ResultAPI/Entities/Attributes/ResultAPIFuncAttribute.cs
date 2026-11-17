@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Core.ResultAPI.Attributes;
+namespace InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
 /// <summary>
 /// 拡張メソッドの生成に使うテンプレートメソッドを指定します。

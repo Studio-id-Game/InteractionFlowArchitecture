@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Core.ResultAPI.Attributes;
+namespace InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
 /// <summary>
 /// プロパティをコールバック引数にします。

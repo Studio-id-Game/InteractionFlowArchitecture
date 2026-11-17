@@ -1,6 +1,6 @@
-using InteractionFlow.Core.ResultAPI.Attributes;
+using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
-namespace InteractionFlow.Core.ResultAPI;
+namespace InteractionFlow.Core.ResultAPI.Entities;
 
 /// <summary>
 /// コードジェネレーターで生成される拡張メソッドのテンプレートです。

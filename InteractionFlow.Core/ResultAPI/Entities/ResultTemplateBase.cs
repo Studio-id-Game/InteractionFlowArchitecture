@@ -1,7 +1,7 @@
-using InteractionFlow.Core.ResultAPI.Attributes;
+using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 using System;
 
-namespace InteractionFlow.Core.ResultAPI;
+namespace InteractionFlow.Core.ResultAPI.Entities;
 
 /// <summary>
 /// Result 拡張メソッドの生成時に置換する型とメンバーを定義します。

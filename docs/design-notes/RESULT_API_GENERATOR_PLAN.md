@@ -1,13 +1,13 @@
 # Result API ジェネレーターの設計とロードマップ
 
-[ResultAPI の試作](../../InteractionFlow.Core/ResultAPI/ResultTemplate.cs) は、Result の形と拡張メソッドの分岐を C# で宣言し、型の組ごとに同期・`Task`・`ValueTask` の API を生成する案です。`Self` は拡張メソッドの受け手、`Other` は変換先を表します。生成先は [同期](../../InteractionFlow.Core/ResultAPI/ResultExtensions.cs)、[Task](../../InteractionFlow.Core/ResultAPI/ResultExtensionsAsync.cs)、[ValueTask](../../InteractionFlow.Core/ResultAPI/ResultExtensionsValueAsync.cs) の三つの `partial` クラスです。定型処理を生成し、個別の振る舞いを持つ API は手書きで補完します。
+[ResultAPI の試作](../../InteractionFlow.Core/ResultAPI/Entities/ResultTemplate.cs) は、Result の形と拡張メソッドの分岐を C# で宣言し、型の組ごとに同期・`Task`・`ValueTask` の API を生成する案です。`Self` は拡張メソッドの受け手、`Other` は変換先を表します。生成先は [同期](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensions.cs)、[Task](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsAsync.cs)、[ValueTask](../../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsValueAsync.cs) の三つの `partial` クラスです。定型処理を生成し、個別の振る舞いを持つ API は手書きで補完します。
 
 ## 生成の前提
 
 - **対象型。** `ResultAPITarget` が指定する型を束縛し、テンプレートが使うメンバーを検証します。`IsSuccess` にはアクセス可能な `bool` のインスタンスプロパティを要求します。生成先は `ResultAPIExtension` で検出します。
-- **Result の状態。** `default(Result)` は成功です。値付きの `default` は未初期化で、`IsSuccess` の参照時に `ResultException` を送出します。生成メソッドはこの例外を伝播させます。初期化済みの成功分岐では `Value`、失敗分岐では `Error` と `ErrorValue` が非 null です。 [Result の定義](../../InteractionFlow.Core/ResultAPI/Result.cs)
-- **コールバックの引数。** `Self` のプロパティに付いた `ResultAPICallbackArgument` で、成功・失敗の区分と引数順を指定します。 [コールバック引数の属性](../../InteractionFlow.Core/ResultAPI/Attributes/ResultAPICallbackArgumentAttribute.cs)
-- **公開範囲。** 初版の生成器は Core ビルド専用とし、属性・テンプレートは内部化します。試作の `InteractionFlow.Core.ResultAPI` と既存の `InteractionFlow.Core.Entities` は別の名前空間に同名型を持ちます。まず試作側で生成を検証し、公開 API のシグネチャと呼び出し側を新しい Result 契約に合わせて書き直します。`HasValue`、`HasError`、`WithoutValue`、`ThrowIfError`、暗黙変換などの実行時契約は Core の手書きコードが担います。
+- **Result の状態。** `default(Result)` は成功です。値付きの `default` は未初期化で、`IsSuccess` の参照時に `ResultException` を送出します。生成メソッドはこの例外を伝播させます。初期化済みの成功分岐では `Value`、失敗分岐では `Error` と `ErrorValue` が非 null です。 [Result の定義](../../InteractionFlow.Core/ResultAPI/Entities/Result.cs)
+- **コールバックの引数。** `Self` のプロパティに付いた `ResultAPICallbackArgument` で、成功・失敗の区分と引数順を指定します。 [コールバック引数の属性](../../InteractionFlow.Core/ResultAPI/Entities/Attributes/ResultAPICallbackArgumentAttribute.cs)
+- **公開範囲。** 初版の生成器は Core ビルド専用とし、属性・テンプレートは内部化します。試作の `InteractionFlow.Core.ResultAPI.Entities` と既存の `InteractionFlow.Core.Entities` は別の名前空間に同名型を持ちます。まず試作側で生成を検証し、公開 API のシグネチャと呼び出し側を新しい Result 契約に合わせて書き直します。`HasValue`、`HasError`、`WithoutValue`、`ThrowIfError`、暗黙変換などの実行時契約は Core の手書きコードが担います。
 
 ## 生成する API の成立条件
 
@@ -51,7 +51,7 @@
 | `Result<T> → Result<T, E>` | `E` のエラー値がない | 生成 |
 | `Result<T, E> → Result<T>` | 生成。例外を保持 | 生成 |
 
-ファクトリ照合後は `Then` 9 件、`ThenError` 8 件、`Self` のみの 4 メソッドが各 3 件の計 29 候補です。型付きから型なしへの `Then` では `Error` が残り、`ErrorValue` は変換先の契約に従って落ちます。 [ターゲット宣言](../../InteractionFlow.Core/ResultAPI/ResultTemplate.cs#L8)
+ファクトリ照合後は `Then` 9 件、`ThenError` 8 件、`Self` のみの 4 メソッドが各 3 件の計 29 候補です。型付きから型なしへの `Then` では `Error` が残り、`ErrorValue` は変換先の契約に従って落ちます。 [ターゲット宣言](../../InteractionFlow.Core/ResultAPI/Entities/ResultTemplate.cs#L8)
 
 ### 同じ呼び出しを受けるオーバーロード
 

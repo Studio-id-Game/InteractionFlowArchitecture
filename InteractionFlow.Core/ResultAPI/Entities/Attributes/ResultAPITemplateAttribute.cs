@@ -1,6 +1,6 @@
 using System;
 
-namespace InteractionFlow.Core.ResultAPI.Attributes;
+namespace InteractionFlow.Core.ResultAPI.Entities.Attributes;
 
 /// <summary>
 /// ResultAPIのコードジェネレータで利用するために、テンプレートをマークします。

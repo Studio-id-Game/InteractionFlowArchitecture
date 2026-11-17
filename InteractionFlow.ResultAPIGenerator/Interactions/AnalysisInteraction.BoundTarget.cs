@@ -57,7 +57,7 @@ internal sealed partial class AnalysisInteraction
             ReadProperties(context, self);
         private readonly AnalysisContext analysisContext = context;
         private readonly bool guaranteesNonNullBranchValues =
-            self.ContainingNamespace.ToDisplayString() == "InteractionFlow.Core.ResultAPI"
+            self.ContainingNamespace.ToDisplayString() == "InteractionFlow.Core.ResultAPI.Entities"
             && self.Name == "Result" && self.Arity <= 2;
 
         public ResultTarget Target { get; } = target;

@@ -33,8 +33,8 @@
 						  Version="3.2.2" />
 	</ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource Include="..\InteractionFlow.Core\ResultAPI\*.cs;
-								   ..\InteractionFlow.Core\ResultAPI\Attributes\*.cs;
+		<EmbeddedResource Include="..\InteractionFlow.Core\ResultAPI\Entities\*.cs;
+								   ..\InteractionFlow.Core\ResultAPI\Entities\Attributes\*.cs;
 								   ..\InteractionFlow.Core\Entities\ResultException.cs"
 						  LogicalName="ResultApiSources.%(Filename)%(Extension)" />
 	</ItemGroup>

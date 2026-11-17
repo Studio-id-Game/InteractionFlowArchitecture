@@ -27,12 +27,10 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             if (password == null) { context.ExitRequested = true; return Result.Success; }
             if (password.Value.Length == 0) return new FormatException("Password must not be empty.");
 
-            var loaded = await credentials.Load(user, new CredentialData([], []));
+            var loaded = await LoadCredentialAsync(user);
             if (!loaded.HasValue(out var credential))
             {
-                // Only missing files allow registration. Corrupt or inaccessible metadata must be preserved.
-                var error = loaded.Error!;
-                if (error.InnerException is not (FileNotFoundException or DirectoryNotFoundException)) return error;
+                if (loaded.ErrorValue != CredentialLoadError.Missing) return loaded.WithoutValue;
                 var listed = await notes.GetAllIds();
                 if (!listed.HasValue(out var ids)) return listed.Error!;
                 if (ids.Any(id => id.User == user))
@@ -53,5 +51,19 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             return session.Authenticate(user, password.Value, credential);
         }
+
+        private async Task<Result<CredentialData, CredentialLoadError>> LoadCredentialAsync(string user)
+        {
+            var loaded = await credentials.Load(user, new CredentialData([], []));
+            if (loaded.HasValue(out var credential)) return credential;
+
+            var error = loaded.Error!;
+            var detail = error.InnerException is FileNotFoundException or DirectoryNotFoundException
+                ? CredentialLoadError.Missing
+                : CredentialLoadError.ReadFailed;
+            return (error, detail);
+        }
+
+        private enum CredentialLoadError { Missing, ReadFailed }
     }
 }

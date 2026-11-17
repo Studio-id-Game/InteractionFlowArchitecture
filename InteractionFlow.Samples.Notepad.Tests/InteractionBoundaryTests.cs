@@ -7,12 +7,16 @@ using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
 using InteractionFlow.Samples.Notepad.Core.Interactions;
+using InteractionFlow.Samples.Notepad.Secure.Entities;
+using InteractionFlow.Samples.Notepad.Secure.ExternalPorts;
+using InteractionFlow.Samples.Notepad.Secure.Externals;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.Externals;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,6 +24,49 @@ namespace InteractionFlow.Samples.Notepad.Tests
 {
     public sealed class InteractionBoundaryTests
     {
+        [Theory]
+        [InlineData("returned")]
+        [InlineData("faulted")]
+        [InlineData("canceled")]
+        public async Task SecureLoginPreservesCredentialLoadFailureAndClearsPreviousSession(string outcome)
+        {
+            using var session = new SecureSession();
+            var previousCredential = session.CreateCredential("old-password");
+            Assert.True(previousCredential.HasValue(out var credential));
+            Assert.True(session.Authenticate("alice", "old-password", credential).IsSuccess);
+            var context = new NotepadContext { User = "alice" };
+            var input = new ScriptedInput("bob", "new-password");
+            var output = new RecordingOutput();
+            var passwords = new PasswordInput(input, new ConsoleKeyInput(), output, new RedirectedEnvironment());
+            var returned = Result<CredentialData>.CreateFailure(new IOException("Account could not be read."));
+            var thrown = new FileNotFoundException("Credential load task faulted.");
+            var token = new CancellationToken(canceled: true);
+            var load = outcome switch
+            {
+                "returned" => Task.FromResult(returned),
+                "faulted" => Task.FromException<Result<CredentialData>>(thrown),
+                _ => Task.FromCanceled<Result<CredentialData>>(token)
+            };
+            var login = new SecureLoginOperation(input, output, passwords, new CredentialLoadStub(load), session,
+                new MemoryNotes { Empty = true });
+
+            var operation = login.LoginAsync(context);
+            if (outcome == "returned")
+                Assert.Same(returned.Error, (await operation).Error);
+            else if (outcome == "faulted")
+                Assert.Same(thrown, await Assert.ThrowsAsync<FileNotFoundException>(() => operation));
+            else
+            {
+                var canceled = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
+                Assert.Equal(token, canceled.CancellationToken);
+                Assert.True(operation.IsCanceled);
+            }
+            Assert.Null(context.User);
+            Assert.False(context.ExitRequested);
+            Assert.DoesNotContain("New account. Confirm password:", output.Lines);
+            Assert.IsType<InvalidOperationException>(session.Encrypt([1]).Error?.InnerException);
+        }
+
         [Fact]
         public async Task CancelDuringEditDiscardsDraftAndReleasesBinding()
         {
@@ -467,6 +514,16 @@ namespace InteractionFlow.Samples.Notepad.Tests
                 Count++;
                 return new(GetEnd(waitAndResetResult));
             }
+        }
+
+        private sealed class CredentialLoadStub(Task<Result<CredentialData>> load) : ICredentialPersistencePort
+        {
+            public ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
+            public Task<Result<CredentialData>> Load(string id, Result<CredentialData> oldValue) => load;
+            public Task<Result> Save(string id, Result<CredentialData> value) => throw new NotSupportedException();
+            public Task<Result> Delete(string id) => throw new NotSupportedException();
+            public Task<Result> Exists(string id) => throw new NotSupportedException();
+            public Task<Result<string[]>> GetAllIds() => throw new NotSupportedException();
         }
 
         private sealed class MemoryNotes : INotepadDataPersistencePort

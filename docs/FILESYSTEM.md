@@ -7,6 +7,7 @@ Storage は値の所有、Serializer は形式変換、Persistence は実際の 
 ## 公開 API
 
 利用側は `IPersistencePort<TId, TValue>` またはそれを継承するアプリケーションの Port に依存します。
+永続化の引数と戻り値には `InteractionFlow.Core.ResultAPI.Entities` の Result 型を使います。
 FileSystem 固有の特殊化 Port と公開 DirectoryUtility は廃止しました。
 ID とパスの変換は派生実装向けの protected メソッドです。
 

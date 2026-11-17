@@ -28,12 +28,13 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             if (password.Value.Length == 0) return new FormatException("Password must not be empty.");
 
             var loaded = await credentials.Load(user, new CredentialData([], []));
-            if (!loaded.Try(out var credential, out var error))
+            if (!loaded.HasValue(out var credential))
             {
                 // Only missing files allow registration. Corrupt or inaccessible metadata must be preserved.
+                var error = loaded.Error!;
                 if (error.InnerException is not (FileNotFoundException or DirectoryNotFoundException)) return error;
                 var listed = await notes.GetAllIds();
-                if (!listed.Try(out var ids, out var listError)) return listError;
+                if (!listed.HasValue(out var ids)) return listed.Error!;
                 if (ids.Any(id => id.User == user))
                     return new InvalidOperationException(
                         "Account metadata is missing for existing notes. Restore the account file.");
@@ -47,7 +48,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
                 if (!created.Try(out credential, out var createError)) return createError;
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
                 var saved = await credentials.Save(user, credential);
-                if (!saved.Try(out var saveError)) return saveError;
+                if (saved.HasError(out var saveError)) return saveError;
             }
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             return session.Authenticate(user, password.Value, credential);

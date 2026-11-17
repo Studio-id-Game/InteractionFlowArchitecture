@@ -22,8 +22,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         protected override async Task<Preparation> PrepareAsync(NotepadKey key)
         {
             var existing = await Notes.GetAllIds();
-            if (!existing.Try(out var ids, out var error))
-                return new(stopMessage: $"Create failed: {error.Message}");
+            if (!existing.HasValue(out var ids))
+                return new(stopMessage: $"Create failed: {existing.Error!.Message}");
             if (ids.Any(id => id.User == key.User && id.Note == key.Note))
                 return new(stopMessage: "That note already exists. Use Edit instead.");
             return new();

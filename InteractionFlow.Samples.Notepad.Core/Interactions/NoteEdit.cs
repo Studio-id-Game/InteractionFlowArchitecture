@@ -21,8 +21,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
         protected override async Task<Preparation> PrepareAsync(NotepadKey key)
         {
             var loaded = await Notes.Load(key, new NotepadData("", ""));
-            return loaded.Try(out var note, out var error)
-                ? new(original: note) : new(stopMessage: $"Load failed: {error.Message}");
+            return loaded.HasValue(out var note)
+                ? new(original: note) : new(stopMessage: $"Load failed: {loaded.Error!.Message}");
         }
     }
 }

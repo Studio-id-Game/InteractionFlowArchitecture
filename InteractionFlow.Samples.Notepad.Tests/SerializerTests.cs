@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Core.Externals;
@@ -20,11 +20,11 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var serializer = new NotepadDataSimpleSerializer();
             using var stream = new MemoryStream();
             var saved = await serializer.Serialize(new NotepadData("日本語🐦", "line1\nline2"), stream.AsResult<Stream>());
-            Assert.True(saved.Try(out _, out _));
+            Assert.True(saved.IsSuccess);
             stream.Position = 0;
             var loaded = await serializer.Deserialize(stream.AsResult<Stream>(),
                 new InvalidOperationException("No reference value"));
-            Assert.True(loaded.Try(out var note, out _));
+            Assert.True(loaded.HasValue(out var note));
             Assert.Equal("日本語🐦", note!.Title);
             Assert.Equal("line1\nline2", note.Text);
             Assert.True(stream.CanRead);
@@ -40,17 +40,17 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var serializer = new EncryptedNoteSerializer(session);
             using var stream = new MemoryStream();
             var saved = await serializer.Serialize(new NotepadData("日本語🐦", "Body"), stream.AsResult<Stream>());
-            Assert.True(saved.Try(out _, out _));
+            Assert.True(saved.IsSuccess);
             Assert.DoesNotContain("Body", Encoding.UTF8.GetString(stream.ToArray()));
             stream.Position = 0;
             var loaded = await serializer.Deserialize(stream.AsResult<Stream>(), new InvalidOperationException());
-            Assert.True(loaded.Try(out var note, out _));
+            Assert.True(loaded.HasValue(out var note));
             Assert.Equal("日本語🐦", note!.Title);
             Assert.True(stream.CanRead);
             Assert.True(session.Authenticate("bob", "password", credential!).Try(out _));
             stream.Position = 0;
             var wrongUser = await serializer.Deserialize(stream.AsResult<Stream>(), new InvalidOperationException());
-            Assert.False(wrongUser.Try(out _, out _));
+            Assert.False(wrongUser.IsSuccess);
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var serializer = new EncryptedNoteSerializer(session);
             using var stream = new MemoryStream([1, 2, 3]);
             var result = await serializer.Serialize(new FormatException("Failed input"), stream.AsResult<Stream>());
-            Assert.False(result.Try(out _, out _));
+            Assert.False(result.IsSuccess);
             Assert.Equal(new byte[] { 1, 2, 3 }, stream.ToArray());
             Assert.Equal(0, stream.Position);
         }
@@ -84,7 +84,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
         {
             var serializer = new NotepadDataSimpleSerializer();
             var result = await serializer.Deserialize("No separator".AsResult(), new InvalidOperationException());
-            Assert.False(result.Try(out _, out _));
+            Assert.False(result.IsSuccess);
         }
         [Theory]
         [InlineData(false)]
@@ -107,11 +107,11 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var id = new NotepadKey("alice", "note");
             try
             {
-                Assert.True((await files.Save(id, new NotepadData("Original", "Body"))).Try(out _));
+                Assert.True((await files.Save(id, new NotepadData("Original", "Body"))).IsSuccess);
                 var path = Path.Combine(root, "user-alice", "note-note.note");
                 var before = File.ReadAllBytes(path);
                 var failed = await files.Save(id, new NotepadData("Invalid\nTitle", "Changed"));
-                Assert.False(failed.Try(out _));
+                Assert.False(failed.IsSuccess);
                 Assert.Equal(before, File.ReadAllBytes(path));
                 Assert.Single(Directory.GetFiles(root, "*", SearchOption.AllDirectories));
             }

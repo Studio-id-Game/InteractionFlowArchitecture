@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Standard.FileSystem.Externals;
 using InteractionFlow.Standard.SerializationSystem.Externals;
 using System;
@@ -34,7 +34,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Success(await store.Exists(id));
             Success(await store.Delete(id));
             Success(await store.Delete(id));
-            Assert.False((await store.Exists(id)).Try(out _));
+            Assert.True((await store.Exists(id)).HasError(out _));
             Assert.False(serializer.LastStream!.CanRead);
             Assert.False(serializer.LastStream.CanWrite);
         }
@@ -47,7 +47,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var store = new Store(() => throw new InvalidOperationException("must not resolve"), serializer);
             var result = await store.Save("note", new IOException("upstream failed"));
 
-            Assert.False(result.Try(out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Contains("upstream failed", error!.ToString());
             Assert.Equal(0, store.RootCalls);
             Assert.Equal(0, serializer.SerializeCalls);
@@ -87,7 +87,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             };
 
             if (mode == "throw") await Assert.ThrowsAsync<IOException>(() => store.Save("note", "replacement"));
-            else Assert.False((await store.Save("note", "replacement")).Try(out _));
+            else Assert.True((await store.Save("note", "replacement")).HasError(out _));
             if (newFile) Assert.False(File.Exists(target));
             else Assert.Equal(original, await File.ReadAllBytesAsync(target, TestContext.Current.CancellationToken));
             Assert.Equal(newFile ? 0 : 1, Directory.EnumerateFiles(directory.Root).Count());
@@ -110,7 +110,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             };
             var store = new Store(() => directory.Root, serializer);
             var result = await store.Save("note", "value");
-            Assert.False(result.Try(out var failure));
+            Assert.True(result.HasError(out var failure));
             Assert.IsType<AggregateException>(failure!.InnerException);
             Assert.Contains("serialization failed before cleanup", failure.ToString());
             Assert.False(File.Exists(directory.PathFor("note.bin")));
@@ -123,7 +123,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Directory.CreateDirectory(directory.PathFor("note.bin"));
             var store = new Store(() => directory.Root, new ProbeSerializer());
 
-            Assert.False((await store.Save("note", "value")).Try(out _));
+            Assert.True((await store.Save("note", "value")).HasError(out _));
             Assert.True(Directory.Exists(directory.PathFor("note.bin")));
             Assert.Empty(Directory.EnumerateFiles(directory.Root));
         }
@@ -138,7 +138,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var target = directory.PathFor("note.bin");
             using (var held = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                Assert.False((await store.Save("note", "replacement")).Try(out _));
+                Assert.True((await store.Save("note", "replacement")).HasError(out _));
             }
             Assert.Equal("original", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
             Assert.Single(Directory.EnumerateFiles(directory.Root));
@@ -155,7 +155,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             {
                 Write = async (input, stream) =>
                 {
-                    Assert.True(input.Try(out var value, out _));
+                    Assert.True(input.HasValue(out var value));
                     await stream.WriteAsync(Encoding.UTF8.GetBytes(value), TestContext.Current.CancellationToken);
                     if (Interlocked.Increment(ref staged) == 2) ready.TrySetResult();
                     await release.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
@@ -175,7 +175,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             }
 
             var results = await Task.WhenAll(first, second);
-            Assert.Contains(results, result => result.Try(out _));
+            Assert.Contains(results, result => result.IsSuccess);
             var saved = File.ReadAllText(directory.PathFor("note.bin"));
             Assert.Contains(saved, ExpectedConcurrentValues);
             Assert.Single(Directory.EnumerateFiles(directory.Root));
@@ -193,7 +193,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             try
             {
                 Success(await store.Exists("note"));
-                Assert.False((await store.Delete("note")).Try(out var failure));
+                Assert.True((await store.Delete("note")).HasError(out var failure));
                 Assert.Contains("UnauthorizedAccessException", failure!.ToString());
                 Assert.Equal("original", File.ReadAllText(target));
             }
@@ -224,8 +224,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var store = new Store(() => directory.Root, new ProbeSerializer());
 
             Assert.Empty(Value(await store.GetAllIds()));
-            Assert.False((await store.Load("note", new IOException("no old value"))).Try(out _, out _));
-            Assert.False((await store.Exists("note")).Try(out _));
+            Assert.False((await store.Load("note", new IOException("no old value"))).HasValue(out _));
+            Assert.True((await store.Exists("note")).HasError(out _));
             Success(await store.Delete("note"));
             Assert.Equal(4, store.RootCalls);
             Assert.False(Directory.Exists(directory.Root));
@@ -280,7 +280,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 };
                 var store = new Store(() => "data", serializer);
                 var result = await store.Save("note", "value");
-                Assert.Equal(!fail, result.Try(out _));
+                Assert.Equal(!fail, result.IsSuccess);
                 Assert.Equal(1, store.RootCalls);
                 Assert.Equal(fail ? "original" : "value",
                     File.ReadAllText(directory.PathFor("first", "data", "note.bin")));
@@ -303,7 +303,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
         {
             using var directory = new FileSystemTestDirectory();
             var store = new Store(() => directory.PathFor("root"), new ProbeSerializer(), "");
-            Assert.False((await store.Save(id, "value")).Try(out _));
+            Assert.True((await store.Save(id, "value")).HasError(out _));
             Assert.False(Directory.Exists(directory.Root));
         }
 
@@ -312,8 +312,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
         {
             using var directory = new FileSystemTestDirectory();
             var store = new Store(() => directory.PathFor("root"), new ProbeSerializer());
-            Assert.False((await store.Save(directory.PathFor("absolute"), "value")).Try(out _));
-            Assert.False((await store.Save("../root-neighbor/note", "value")).Try(out _));
+            Assert.True((await store.Save(directory.PathFor("absolute"), "value")).HasError(out _));
+            Assert.True((await store.Save("../root-neighbor/note", "value")).HasError(out _));
             Assert.False(Directory.Exists(directory.Root));
         }
 
@@ -340,11 +340,11 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var store = new Store(() => directory.Root, new ProbeSerializer());
             Success(await store.Save("note", "value"));
             store.Parse = _ => throw new FormatException("invalid ID");
-            Assert.False((await store.GetAllIds()).Try(out _, out var parseFailure));
+            Assert.True((await store.GetAllIds()).HasError(out var parseFailure));
             Assert.Contains("invalid ID", parseFailure!.ToString());
 
             var failing = new Store(() => throw new IOException("root unavailable"), new ProbeSerializer());
-            Assert.False((await failing.GetAllIds()).Try(out _, out var rootFailure));
+            Assert.True((await failing.GetAllIds()).HasError(out var rootFailure));
             Assert.Contains("root unavailable", rootFailure!.ToString());
         }
 
@@ -354,11 +354,11 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             using var directory = new FileSystemTestDirectory();
             Directory.CreateDirectory(directory.PathFor("note.bin"));
             var store = new Store(() => directory.Root, new ProbeSerializer());
-            Assert.False((await store.Exists("note")).Try(out _));
-            Assert.False((await store.Delete("note")).Try(out _));
+            Assert.True((await store.Exists("note")).HasError(out _));
+            Assert.True((await store.Delete("note")).HasError(out _));
             var fileRoot = directory.PathFor("file-root");
             File.WriteAllText(fileRoot, "not a directory");
-            Assert.False((await new Store(() => fileRoot, new ProbeSerializer()).GetAllIds()).Try(out _, out _));
+            Assert.False((await new Store(() => fileRoot, new ProbeSerializer()).GetAllIds()).HasValue(out _));
         }
 
         [Theory]
@@ -409,11 +409,11 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Assert.False(File.Exists(directory.PathFor("note.bin")));
         }
 
-        private static void Success(Result result) => Assert.True(result.Try(out var failure), failure?.ToString());
+        private static void Success(Result result) => Assert.True(result.IsSuccess, result.Error?.ToString());
 
         private static T Value<T>(Result<T> result)
         {
-            Assert.True(result.Try(out var value, out var failure), failure?.ToString());
+            Assert.True(result.HasValue(out var value), result.Error?.ToString());
             return value!;
         }
 
@@ -443,17 +443,17 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             public override async Task<Result<Stream>> Serialize(Result<string> inputValue, Result<Stream> refData)
             {
                 SerializeCalls++;
-                if (!refData.Try(out var stream, out var streamFailure)) return streamFailure;
+                if (!refData.HasValue(out var stream)) return refData.Error!;
                 LastStream = stream;
                 if (Write != null) return await Write(inputValue, stream);
-                if (!inputValue.Try(out var value, out var valueFailure)) return valueFailure;
+                if (!inputValue.HasValue(out var value)) return inputValue.Error!;
                 await stream.WriteAsync(Encoding.UTF8.GetBytes(value), TestContext.Current.CancellationToken);
                 return stream;
             }
 
             public override async Task<Result<string>> Deserialize(Result<Stream> inputData, Result<string> refValue)
             {
-                if (!inputData.Try(out var stream, out var failure)) return failure;
+                if (!inputData.HasValue(out var stream)) return inputData.Error!;
                 LastStream = stream;
                 if (ReadException != null) throw ReadException;
                 using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);

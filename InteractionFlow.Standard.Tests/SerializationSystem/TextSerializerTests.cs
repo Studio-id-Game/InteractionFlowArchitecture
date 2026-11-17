@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Standard.SerializationSystem.Externals;
 using System;
 using System.IO;
@@ -141,13 +141,13 @@ namespace InteractionFlow.Standard.Tests.SerializationSystem
 
         private static T Value<T>(Result<T> result)
         {
-            Assert.True(result.Try(out var value, out var error), error?.ToString());
+            Assert.True(result.HasValue(out var value), result.Error?.ToString());
             return value;
         }
 
         private static Exception Error<T>(Result<T> result)
         {
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             return error.GetBaseException();
         }
 

@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading.Tasks;
 
@@ -11,7 +11,8 @@ namespace InteractionFlow.Core.ExternalPorts
     /// <typeparam name="TValue">ラップする値の型。</typeparam>
     /// <param name="persistenceId">永続化先を識別する ID。</param>
     /// <param name="value">初期値。</param>
-    public class PersistentEntry<TPersistenceId, TValue>(TPersistenceId persistenceId, TValue? value) : Entry<TValue>(value)
+    public class PersistentEntry<TPersistenceId, TValue>(TPersistenceId persistenceId, TValue? value)
+        : Entities.Entry<TValue>(value)
     {
         /// <summary>
         /// 永続化先を識別する ID を取得します。
@@ -28,12 +29,7 @@ namespace InteractionFlow.Core.ExternalPorts
             var oldValue = Value != null ? Value.AsResult() : new NullReferenceException(nameof(Value));
 
             return await persistencePort.Load(persistenceId, oldValue)
-                .ThenAsync(value =>
-                {
-                    Load(value);
-                    return value.AsResult().StartAsync();
-                })
-                .ConfigureAwait(false);
+                .IfSuccessAsync(Load);
         }
 
         /// <summary>
@@ -53,14 +49,7 @@ namespace InteractionFlow.Core.ExternalPorts
         public async Task<Result> DeleteAndReset(IPersistencePort<TPersistenceId, TValue> persistencePort)
         {
             return await persistencePort.Delete(PersistenceId)
-                .ResolveAsync(
-                onSuccess: () =>
-                {
-                    Value = default;
-                    return Result.Success.StartAsync();
-                },
-                onFailure: e => e.AsResult().StartAsync()
-                );
+                .IfSuccessAsync(() => Value = default);
         }
     }
 }

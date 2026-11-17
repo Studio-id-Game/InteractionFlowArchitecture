@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
+using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Samples.Notepad.Tests
 {
@@ -478,24 +479,24 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public Exception? SaveFailure { get; set; }
             public Exception? ListFailure { get; set; }
             public bool Empty { get; set; }
-            public Task<Result<NotepadData>> Load(NotepadKey id, Result<NotepadData> oldValue)
+            public Task<ResultTypes.Result<NotepadData>> Load(NotepadKey id, ResultTypes.Result<NotepadData> oldValue)
             {
                 LoadCount++;
-                return Note.AsResult().StartAsync();
+                return Task.FromResult(ResultTypes.Result<NotepadData>.CreateSuccess(Note));
             }
-            public Task<Result> Save(NotepadKey id, Result<NotepadData> value)
+            public Task<ResultTypes.Result> Save(NotepadKey id, ResultTypes.Result<NotepadData> value)
             {
                 SaveCount++;
-                if (SaveFailure != null) return ((Result)SaveFailure).StartAsync();
-                return value.OnSuccess(note => Note = note).WithoutValue.StartAsync();
+                if (SaveFailure != null) return Task.FromResult(ResultTypes.Result.CreateFailure(SaveFailure));
+                return Task.FromResult(ResultTypes.ResultExtensions.IfSuccess(value, note => Note = note).WithoutValue);
             }
-            public Task<Result> Delete(NotepadKey id) => Result.Success.StartAsync();
-            public Task<Result> Exists(NotepadKey id) => Result.Success.StartAsync();
-            public Task<Result<NotepadKey[]>> GetAllIds()
+            public Task<ResultTypes.Result> Delete(NotepadKey id) => Task.FromResult(ResultTypes.Result.Success);
+            public Task<ResultTypes.Result> Exists(NotepadKey id) => Task.FromResult(ResultTypes.Result.Success);
+            public Task<ResultTypes.Result<NotepadKey[]>> GetAllIds()
             {
-                if (ListFailure != null) return ((Result<NotepadKey[]>)ListFailure).StartAsync();
+                if (ListFailure != null) return Task.FromResult(ResultTypes.Result<NotepadKey[]>.CreateFailure(ListFailure));
                 NotepadKey[] keys = Empty ? [] : [new NotepadKey("alice", "note")];
-                return keys.AsResult().StartAsync();
+                return Task.FromResult(ResultTypes.Result<NotepadKey[]>.CreateSuccess(keys));
             }
         }
     }

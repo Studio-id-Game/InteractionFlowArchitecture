@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Standard.FileSystem.Externals;
 using System;
 using System.Collections.Generic;
@@ -38,7 +38,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var store = new Store(() => throw new IOException("must not resolve"));
             var result = await store.Save("note", new InvalidOperationException("upstream"));
 
-            Assert.False(result.Try(out var failure));
+            Assert.True(result.HasError(out var failure));
             Assert.Contains("upstream", failure!.ToString());
             Assert.Equal(0, store.RootCalls);
             Assert.Empty(store.Events);
@@ -62,7 +62,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             else
             {
                 var result = await store.Save("note", "value");
-                Assert.False(result.Try(out var failure));
+                Assert.True(result.HasError(out var failure));
                 Assert.Contains("preparation failed", failure!.ToString());
             }
             Assert.Equal(1, store.EnsureCalls);
@@ -92,7 +92,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             using var directory = new FileSystemTestDirectory();
             var store = new Store(() => directory.Root) { FailAfterWrite = true };
 
-            Assert.False((await store.Save("note", "partially updated")).Try(out _));
+            Assert.True((await store.Save("note", "partially updated")).HasError(out _));
             Assert.Equal("partially updated", File.ReadAllText(directory.PathFor("note", "value.txt")));
         }
 
@@ -103,8 +103,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             var store = new Store(() => directory.Root);
 
             Assert.Empty(Value(await store.GetAllIds()));
-            Assert.False((await store.Load("note", new IOException())).Try(out _, out _));
-            Assert.False((await store.Exists("note")).Try(out _));
+            Assert.False((await store.Load("note", new IOException())).HasValue(out _));
+            Assert.True((await store.Exists("note")).HasError(out _));
             Success(await store.Delete("note"));
             Assert.Equal(4, store.RootCalls);
             Assert.Equal(0, store.EnsureCalls);
@@ -130,7 +130,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 Assert.Same(store.DeleteFailure, await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.Delete("missing")));
             else
             {
-                Assert.False((await store.Delete("missing")).Try(out var failure));
+                Assert.True((await store.Delete("missing")).HasError(out var failure));
                 Assert.Contains("custom cleanup failed", failure!.ToString());
             }
             Assert.Equal(1, store.DeleteCalls);
@@ -173,7 +173,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 Assert.Same(store.ListFailure, await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.GetAllIds()));
             else
             {
-                Assert.False((await store.GetAllIds()).Try(out _, out var failure));
+                Assert.True((await store.GetAllIds()).HasError(out var failure));
                 Assert.Contains("a child disappeared", failure!.ToString());
             }
         }
@@ -230,8 +230,8 @@ namespace InteractionFlow.Standard.Tests.FileSystem
         {
             using var directory = new FileSystemTestDirectory();
             var store = new Store(() => directory.PathFor("root"));
-            Assert.False((await store.Save(id, "value")).Try(out _));
-            Assert.False((await store.Delete(id)).Try(out _));
+            Assert.True((await store.Save(id, "value")).HasError(out _));
+            Assert.True((await store.Delete(id)).HasError(out _));
             Assert.Empty(store.Events);
             Assert.False(Directory.Exists(directory.Root));
         }
@@ -241,13 +241,13 @@ namespace InteractionFlow.Standard.Tests.FileSystem
         {
             using var directory = new FileSystemTestDirectory();
             var store = new Store(() => directory.Root);
-            Assert.False((await store.Save(directory.PathFor("absolute"), "value")).Try(out _));
+            Assert.True((await store.Save(directory.PathFor("absolute"), "value")).HasError(out _));
             Directory.CreateDirectory(directory.Root);
             File.WriteAllText(directory.PathFor("note"), "a file");
-            Assert.False((await store.Exists("note")).Try(out _));
-            Assert.False((await store.Load("note", new IOException())).Try(out _, out _));
+            Assert.True((await store.Exists("note")).HasError(out _));
+            Assert.False((await store.Load("note", new IOException())).HasValue(out _));
             Assert.Equal(0, store.LoadCalls);
-            Assert.False((await store.Delete("note")).Try(out _));
+            Assert.True((await store.Delete("note")).HasError(out _));
         }
 
         [Fact]
@@ -260,11 +260,11 @@ namespace InteractionFlow.Standard.Tests.FileSystem
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => store.Load("note", "")));
         }
 
-        private static void Success(Result result) => Assert.True(result.Try(out var failure), failure?.ToString());
+        private static void Success(Result result) => Assert.True(result.IsSuccess, result.Error?.ToString());
 
         private static T Value<T>(Result<T> result)
         {
-            Assert.True(result.Try(out var value, out var failure), failure?.ToString());
+            Assert.True(result.HasValue(out var value), result.Error?.ToString());
             return value!;
         }
 
@@ -315,7 +315,7 @@ namespace InteractionFlow.Standard.Tests.FileSystem
                 SaveCalls++;
                 if (ContentException != null) throw ContentException;
                 SavedPath = path;
-                if (!value.Try(out var text, out var failure)) return failure;
+                if (!value.HasValue(out var text)) return value.Error!;
                 await File.WriteAllTextAsync(Path.Combine(path, "value.txt"), text, TestContext.Current.CancellationToken);
                 if (FailAfterWrite) return new IOException("partial save");
                 return Result.Success;

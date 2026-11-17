@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,9 +40,8 @@ namespace InteractionFlow.Core.ExternalPorts
                 {
                     if (loaded.Length != entries.Length)
                     {
-                        Result<TValue?[]> error = new InvalidOperationException(
-                            "The number of loaded values must match the number of entries.");
-                        return error.StartAsync();
+                        return Result<TValue?[]>.CreateFailure(new InvalidOperationException(
+                            "The number of loaded values must match the number of entries."));
                     }
 
                     for (int i = 0; i < entries.Length; i++)
@@ -55,9 +54,8 @@ namespace InteractionFlow.Core.ExternalPorts
                         }
                     }
 
-                    return loaded.AsResultAsync();
-                })
-                .ConfigureAwait(false);
+                    return loaded.AsResult();
+                });
         }
 
         /// <summary>

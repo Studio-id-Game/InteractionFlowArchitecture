@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.IO;
 using System.Text;
@@ -57,13 +57,8 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
         /// </remarks>
         public override async Task<Result<Stream>> Serialize(Result<TValue> inputValue, Result<Stream> refData)
         {
-            return await refData.StartAsync()
-                .ThenAsync(async stream =>
-                {
-                    return await Serialize(inputValue, "".AsResult())
-                        .MapAsync(text => (stream, text))
-                        .ConfigureAwait(false);
-                })
+            return await refData.ThenAsync(stream => Serialize(inputValue, "")
+                    .ThenAsync(text => (stream, text).AsResult()))
                 .ThenAsync(async value =>
                 {
                     var (stream, text) = value;
@@ -85,8 +80,7 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
                     {
                         return exception;
                     }
-                })
-                .ConfigureAwait(false);
+                });
         }
 
         /// <summary>
@@ -102,8 +96,7 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
         /// </remarks>
         public override async Task<Result<TValue>> Deserialize(Result<Stream> inputData, Result<TValue> refValue)
         {
-            return await inputData.StartAsync()
-                .ThenAsync(async stream =>
+            return await inputData.ThenAsync(async stream =>
                 {
                     try
                     {
@@ -124,8 +117,7 @@ namespace InteractionFlow.Standard.SerializationSystem.Externals
                         return exception;
                     }
                 })
-                .ThenAsync(text => Deserialize(text.AsResult(), refValue))
-                .ConfigureAwait(false);
+                .ThenAsync(text => Deserialize(text, refValue));
         }
     }
 }

@@ -21,8 +21,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             var context = flowContext.GetRequired<NotepadContext>();
             using var bindingScope = binding.Bind(flowContext);
             var listed = await notes.GetAllIds();
-            if (!listed.Try(out var ids, out var error))
-                return await output.WriteLineAsync(context, $"List failed: {error.Message}");
+            if (!listed.HasValue(out var ids))
+                return await output.WriteLineAsync(context, $"List failed: {listed.Error!.Message}");
             var available = ids.Where(id => id.User == context.User)
                 .OrderBy(id => id.Note, StringComparer.Ordinal).ToArray();
             if (available.Length == 0) return await output.WriteLineAsync(context, "No notes available.");
@@ -31,7 +31,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             {
                 context.Cancellation.GetToken().ThrowIfCancellationRequested();
                 var loaded = await notes.Load(available[i], new NotepadData("", ""));
-                labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
+                labels[i] = available[i].Note + ": " + (loaded.HasValue(out var note) ? note.Title : "[Unreadable]");
             }
             var selection = await choices.SelectAsync(context, "Select a note to delete",
                 [.. available.Select(id => id.Note)], labels);
@@ -46,8 +46,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             if (confirm.Index != 1) return await output.WriteLineAsync(context, "Delete cancelled.");
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             var result = await notes.Delete(id);
-            return await output.WriteLineAsync(context, result.Try(out var deleteError)
-                ? $"Deleted: {id.Note}" : $"Delete failed: {deleteError.Message}");
+            return await output.WriteLineAsync(context, result.HasError(out var deleteError)
+                ? $"Delete failed: {deleteError.Message}" : $"Deleted: {id.Note}");
         }
     }
 }

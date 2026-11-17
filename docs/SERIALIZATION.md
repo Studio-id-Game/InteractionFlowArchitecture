@@ -21,7 +21,8 @@ BOM によって文字コードが切り替わった場合は、StreamReader が
 
 ## TextSerializer の Stream 変換
 
-Result API で成功時の処理を連結し、失敗を伝播します。
+`ISerializerPort` の引数と戻り値には `InteractionFlow.Core.ResultAPI.Entities` の Result 型を使います。
+Stream 変換は `ThenAsync` で成功時の処理を連結し、失敗を伝播します。
 
 - Serialize は書き込み先の失敗を先に確認し、失敗なら文字列変換を呼びません。
 - 文字列版 Serialize には inputValue をそのまま渡し、refText には空文字を渡します。

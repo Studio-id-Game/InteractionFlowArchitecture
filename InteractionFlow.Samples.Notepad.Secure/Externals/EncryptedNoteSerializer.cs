@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Samples.Notepad.Core.ExternalPorts;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts;
@@ -8,6 +8,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using SessionResult = InteractionFlow.Core.Entities.Result<byte[]>;
 
 namespace InteractionFlow.Samples.Notepad.Secure.Externals
 {
@@ -19,8 +20,8 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
 
         public override async Task<Result<Stream>> Serialize(Result<NotepadData> inputValue, Result<Stream> refData)
         {
-            if (!inputValue.Try(out var note, out var valueError)) return valueError;
-            if (!refData.Try(out var stream, out var streamError)) return streamError;
+            if (!inputValue.HasValue(out var note)) return inputValue.Error!;
+            if (!refData.HasValue(out var stream)) return refData.Error!;
             if (note.Title.Length > NotepadRules.MaxTitleLength
                 || note.Title.Contains('\n') || note.Title.Contains('\r')
                 || note.Text.Length > NotepadRules.MaxTextLength)
@@ -28,7 +29,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
             byte[] plaintext;
             try { plaintext = Utf8.GetBytes(note.Title + "\n" + note.Text); }
             catch (EncoderFallbackException error) { return error; }
-            Result<byte[]> encrypted;
+            SessionResult encrypted;
             try { encrypted = session.Encrypt(plaintext); }
             finally { CryptographicOperations.ZeroMemory(plaintext); }
             if (!encrypted.Try(out var bytes, out var encryptionError)) return encryptionError;
@@ -39,7 +40,7 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
         public override async Task<Result<NotepadData>> Deserialize(
             Result<Stream> inputData, Result<NotepadData> refValue)
         {
-            if (!inputData.Try(out var stream, out var streamError)) return streamError;
+            if (!inputData.HasValue(out var stream)) return inputData.Error!;
             byte[] bytes;
             try
             {

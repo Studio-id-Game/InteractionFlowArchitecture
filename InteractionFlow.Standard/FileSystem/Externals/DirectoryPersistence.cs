@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -69,7 +69,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         /// <summary>入力を確認し、EnsureDirectory の成功後に内容を保存します。</summary>
         public async Task<Result> Save(TDirectoryId id, Result<TValue> value)
         {
-            if (!value.Try(out _, out var inputFailure)) return inputFailure;
+            if (value.HasError(out var inputFailure)) return inputFailure;
 
             string path;
             try
@@ -80,7 +80,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals
             catch (Exception exception) { return exception; }
 
             var ensured = await EnsureDirectory(path, id).ConfigureAwait(false);
-            if (!ensured.Try(out _)) return ensured;
+            if (!ensured.IsSuccess) return ensured;
             return await SaveDirectory(path, id, value).ConfigureAwait(false);
         }
 

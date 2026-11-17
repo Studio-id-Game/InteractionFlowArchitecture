@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -68,7 +68,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals
         /// <summary>一時ファイルへの出力成功後に保存先を置き換えます。失敗入力では I/O を行いません。</summary>
         public async Task<Result> Save(TFileId id, Result<TValue> value)
         {
-            if (!value.Try(out _, out var inputFailure)) return inputFailure;
+            if (value.HasError(out var inputFailure)) return inputFailure;
 
             string? temporaryPath = null;
             string? path = null;
@@ -89,7 +89,7 @@ namespace InteractionFlow.Standard.FileSystem.Externals
                 propagate = true;
                 var serialized = await serializer.Serialize(value, stream).ConfigureAwait(false);
                 propagate = false;
-                if (!serialized.Try(out _, out var serializationFailure)) failure = serializationFailure;
+                if (serialized.HasError(out var serializationFailure)) failure = serializationFailure;
                 else await stream.FlushAsync().ConfigureAwait(false);
             }
             catch (Exception exception)

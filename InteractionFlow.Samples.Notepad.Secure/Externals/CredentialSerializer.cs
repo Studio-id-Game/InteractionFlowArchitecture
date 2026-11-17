@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Secure.Entities;
 using InteractionFlow.Samples.Notepad.Secure.ExternalPorts;
 using InteractionFlow.Standard.SerializationSystem.Externals;
@@ -10,14 +10,14 @@ namespace InteractionFlow.Samples.Notepad.Secure.Externals
     public sealed class CredentialSerializer : TextSerializer<CredentialData>, ICredentialSerializerPort
     {
         public override Task<Result<string>> Serialize(Result<CredentialData> inputValue, Result<string> refText)
-            => inputValue.Then(value => value.Salt.Length == 16 && value.Verifier.Length == 32
+            => Task.FromResult(inputValue.Then(value => value.Salt.Length == 16 && value.Verifier.Length == 32
                 ? ("IFACCOUNT2\n" + Convert.ToBase64String(value.Salt) + "\n" +
                     Convert.ToBase64String(value.Verifier)).AsResult()
-                : new FormatException("Invalid account metadata size.")).StartAsync();
+                : new FormatException("Invalid account metadata size.")));
 
         public override Task<Result<CredentialData>> Deserialize(
             Result<string> inputText, Result<CredentialData> refValue)
-            => inputText.Then(Parse).StartAsync();
+            => Task.FromResult(inputText.Then(Parse));
 
         private static Result<CredentialData> Parse(string text)
         {

@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Standard.Tests.Entities
 {
@@ -72,15 +73,15 @@ namespace InteractionFlow.Standard.Tests.Entities
         private sealed class BatchPort(Exception failure, bool asynchronous) : IPersistencePort<int[], string?[]>
         {
             public ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
-            public Task<Result<string?[]>> Load(int[] id, Result<string?[]> oldValue)
+            public Task<ResultTypes.Result<string?[]>> Load(int[] id, ResultTypes.Result<string?[]> oldValue)
             {
-                if (asynchronous) return Task.FromException<Result<string?[]>>(failure);
+                if (asynchronous) return Task.FromException<ResultTypes.Result<string?[]>>(failure);
                 throw failure;
             }
-            public Task<Result> Save(int[] id, Result<string?[]> value) => throw new NotSupportedException();
-            public Task<Result> Delete(int[] id) => throw new NotSupportedException();
-            public Task<Result> Exists(int[] id) => throw new NotSupportedException();
-            public Task<Result<int[][]>> GetAllIds() => throw new NotSupportedException();
+            public Task<ResultTypes.Result> Save(int[] id, ResultTypes.Result<string?[]> value) => throw new NotSupportedException();
+            public Task<ResultTypes.Result> Delete(int[] id) => throw new NotSupportedException();
+            public Task<ResultTypes.Result> Exists(int[] id) => throw new NotSupportedException();
+            public Task<ResultTypes.Result<int[][]>> GetAllIds() => throw new NotSupportedException();
         }
     }
 }

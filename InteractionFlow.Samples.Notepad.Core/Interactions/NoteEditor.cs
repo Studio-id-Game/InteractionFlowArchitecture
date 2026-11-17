@@ -55,8 +55,8 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             if (draft == null) return await output.WriteLineAsync(context, DraftCancelledMessage);
             context.Cancellation.GetToken().ThrowIfCancellationRequested();
             var saved = await notes.Save(key, draft);
-            return await output.WriteLineAsync(context, saved.Try(out var error)
-                ? $"{SavedVerb}: {key.Note}" : $"Save failed: {error.Message}");
+            return await output.WriteLineAsync(context, saved.HasError(out var error)
+                ? $"Save failed: {error.Message}" : $"{SavedVerb}: {key.Note}");
         }
 
         // Acquisition returns data and status; the caller decides the final reaction.
@@ -66,9 +66,9 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
             if (existing)
             {
                 var result = await notes.GetAllIds();
-                if (!result.Try(out var ids, out var error))
+                if (!result.HasValue(out var ids))
                 {
-                    return error;
+                    return result.Error!;
                 }
                 var available = ids.Where(id => id.User == context.User)
                     .OrderBy(id => id.Note, StringComparer.Ordinal).ToArray();
@@ -81,7 +81,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                 {
                     context.Cancellation.GetToken().ThrowIfCancellationRequested();
                     var loaded = await notes.Load(available[i], new NotepadData("", ""));
-                    labels[i] = available[i].Note + ": " + (loaded.Try(out var note, out _) ? note.Title : "[Unreadable]");
+                    labels[i] = available[i].Note + ": " + (loaded.HasValue(out var note) ? note.Title : "[Unreadable]");
                 }
                 var selection = await choices.SelectAsync(context, "Select a note",
                     [.. available.Select(id => id.Note)], labels);

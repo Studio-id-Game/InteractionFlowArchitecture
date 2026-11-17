@@ -118,9 +118,11 @@ PlayTurnは選択開始・入力反復・プレイヤー行動・敵行動の提
 HandleResultは結果提示・受付開始・リトライ入力までを扱います。
 段階間とフロー間の停止・再開確認はGameplay内のGameplayCheckpointで共有します。
 
-GamePlaySystemFlowは開始・継続確認からセッション実行へThenAsyncで接続し、送出例外は各段で捕捉します。
-セッション実行の `Result<IGameplayContext>` は、リトライ意図を参照するための Context を後続処理へ渡します。
-ResolveAsyncで成功・失敗の両方をEndSessionへ接続し、終了失敗時は再試行しません。
+GamePlaySystemFlowはBeginSessionの終了結果をThenAsyncで継続確認へ渡します。
+セッション実行の `Result<SessionProgress, SessionFailure>` は、完走と正常停止を成功値で区別し、
+子が終了結果を返した失敗では、そのInteractionEndを原因例外とともに保持します。
+ResolveAsyncで成功・失敗の両方をEndSessionへ接続します。後始末が先行失敗を引き継いだ場合は
+子のInteractionEndをそのまま返し、後始末にも失敗した場合は両方の原因を保持します。
 PlayTurn / HandleResultは各Reaction後に継続を明示的に判定し、失敗・正常停止ではそのReactionEndを直接返します。
 両Interactionのチェーン化は撤回し、終了トークンの直接返却を維持しています。
 WindowSystemFlow は `ThenAsync` で実行・停止・合流を接続し、集約した Result を CloseWindow へ渡します。

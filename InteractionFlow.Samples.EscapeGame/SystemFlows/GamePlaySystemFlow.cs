@@ -25,9 +25,9 @@ public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSys
         }
     }
 
-    private class SessionEndException(Exception? innerException = null) : Exception("Session is end.", innerException)
-    {
-    }
+    private enum SessionProgress { Completed, Stopped }
+
+    private readonly record struct SessionFailure(InteractionEnd? End);
 
     public async Task<(InteractionEnd? end, long sessionId)> CheckStartAsync(IGameplayContext context)
     {
@@ -41,58 +41,55 @@ public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSys
     public async Task<InteractionEnd?> PlayAndCheckContinueAsync(IGameplayContext rootContext, long sessionId)
     {
         using var context = new GameplayContext(rootContext, sessionId, ContextInheritance.All);
-        return await context.AsResult<IGameplayContext>()
-            .ThenAsync(GameplayAsync)
+        return await GameplayAsync(context)
             .ResolveAsync(
-                async context =>
-                {
-                    var retryRequested = context.Gameplay.ReadGameState(context.SessionId).State.RetryRequested;
-                    var end = await EndSessionAsync(context, Result.Success);
-                    var quit = end.HasException || context.Lifetime.ShutdownRequested || !retryRequested;
-                    return quit ? end : null;
-                },
-                async error =>
-                {
-                    var isSessionEnd = error is ResultException { InnerException: SessionEndException };
-                    var resultError = isSessionEnd ? Result.Success : error;
-                    var end = await EndSessionAsync(context, resultError);
-                    return (InteractionEnd?)end;
-                }
-            );
+                progress => FinishAsync(progress == SessionProgress.Completed),
+                (error, failure) => FinishAsync(false, error, failure.End));
+
+        async Task<InteractionEnd?> FinishAsync(bool allowRetry, Result previous = default, InteractionEnd? failed = null)
+        {
+            var retry = allowRetry && context.Gameplay.ReadGameState(context.SessionId).State.RetryRequested;
+            var end = await EndSessionAsync(context, previous);
+            if (failed != null && ReferenceEquals(end.Result.Error, previous.Error))
+                return failed;
+
+            return retry && !end.HasException && !context.Lifetime.ShutdownRequested ? null : end;
+        }
     }
 
-    private async Task<Result<IGameplayContext>> GameplayAsync(IGameplayContext context)
+    private async Task<Result<SessionProgress, SessionFailure>> GameplayAsync(IGameplayContext context)
     {
         try
         {
-            InteractionEnd? end = null;
-            return await context
-                .AsResult()
-                .ThenAsync(context => SetEnd(context, beginSession.ExecuteAsync))
-                .ThenAsync(context => WaitToContinueAsync(context, end!))
-                .ThenAsync(context => SetEnd(context, gameSessionFlow.ExecuteAsync));
+            var started = await beginSession.ExecuteAsync(context);
+            return await ToSessionResult(started).ThenAsync(ContinueAsync);
 
-            async Task<Result<IGameplayContext>> SetEnd(IGameplayContext context, Func<IGameplayContext, Task<InteractionEnd>> interaction)
+            async Task<Result<SessionProgress, SessionFailure>> ContinueAsync(InteractionEnd end)
             {
-                end = await interaction(context);
-                return end.Result.Then(() => context.AsResult());
-            }
+                if (!await GameplayCheckpoint.WaitToContinueAsync(context, end.End))
+                    return SessionProgress.Stopped;
 
-            async Task<Result<IGameplayContext>> WaitToContinueAsync(IGameplayContext context, InteractionEnd end)
-            {
-                return await GameplayCheckpoint.WaitToContinueAsync(context, end.End) ?
-                    context.AsResult() : new SessionEndException();
+                return ToSessionResult(await gameSessionFlow.ExecuteAsync(context))
+                    .Then(_ => Result<SessionProgress, SessionFailure>.CreateSuccess(SessionProgress.Completed));
             }
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException)
             when (context.Lifetime.ShutdownRequested || context.Cancellation.IsCancellationRequested)
         {
-            return new SessionEndException(e);
+            return SessionProgress.Stopped;
         }
         catch (Exception e)
         {
-            return e;
+            return (e, new SessionFailure(null));
         }
+    }
+
+    private static Result<InteractionEnd, SessionFailure> ToSessionResult(InteractionEnd end)
+    {
+        if (end.Result.HasError(out var error))
+            return (error, new SessionFailure(end));
+
+        return end;
     }
 
     private async Task<InteractionEnd> EndSessionAsync(IGameplayContext context, Result sessionResult)

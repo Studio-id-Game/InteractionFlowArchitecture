@@ -7,6 +7,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Application.Entities.Contexts;
+using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Externals;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
@@ -221,6 +222,24 @@ public sealed class FlowTests
             Assert.Null(fixture.Game.Cancellation);
             Assert.Equal(0, fixture.Window.DrawCount);
         }
+    }
+
+    [Fact]
+    public async Task GameplayReturnsTheFailedReactionEndAfterEndingTheSessionOnce()
+    {
+        using var fixture = new Fixture();
+        using var gameplay = fixture.BuildGameplayFlow();
+        using var context = new GameplayContext(fixture.Context, ContextInheritance.Cancellation);
+        var failed = TrackingGameplayReaction.Failed(new InvalidOperationException("begin failed"));
+        fixture.Game.BeginFailure = failed;
+
+        var end = await gameplay.ExecuteAsync(context);
+
+        Assert.Same(failed, end.End);
+        Assert.True(failed.Result.HasError(out var original));
+        Assert.Same(original, fixture.Session.PreviousResult.Error);
+        Assert.Equal(1, fixture.Session.EndCalls);
+        Assert.Equal(0, fixture.Game.SelectionStarts);
     }
 
     [Theory]
@@ -714,6 +733,9 @@ public sealed class FlowTests
             scope.Dispose();
             Context.Dispose();
         }
+
+        public InteractionFlow.Core.Builders.SystemFlowHandler<IGameplayContext> BuildGameplayFlow()
+            => scope.BuildSystemFlow<GamePlaySystemFlow, IGameplayContext>();
     }
 
     public sealed class DeferredCloseFailureHandler : ExceptionHandling
@@ -803,7 +825,8 @@ public sealed class FlowTests
 
     public sealed class TrackingGameSessionReaction : Reaction, IGameSessionReaction
     {
-        public bool Ended { get; private set; }
+        public bool Ended => EndCalls > 0;
+        public int EndCalls { get; private set; }
         public Exception? EndFailure { get; set; }
         public Result PreviousResult { get; private set; }
         public override void ForceResetMemoryState() { }
@@ -811,7 +834,7 @@ public sealed class FlowTests
         {
             PreviousResult = previous;
             context.Gameplay.EndSession(context.SessionId);
-            Ended = true;
+            EndCalls++;
             if (EndFailure is { } failure)
                 throw failure;
             return GetEnd(previous);

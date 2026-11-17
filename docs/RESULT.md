@@ -15,7 +15,7 @@
 - 値は暗黙変換または `AsResult()` で成功結果にできます。null と Exception 派生型は成功値にできません。
   それらをデータとして保持する必要がある場合は、非 null のコンテナー型で包みます。
 - Exception は失敗結果へ暗黙変換できます。失敗を作るために throw / catch する必要はありません。
-- 失敗は `ResultException` で包まれ、元の例外は InnerException に保持されます。
+- 失敗は同じ名前空間の [`ResultException`](../InteractionFlow.Core/ResultAPI/Entities/ResultException.cs) で包まれ、元の例外は InnerException に保持されます。
   既存の ResultException を伝播するときは二重に包みません。
   DEBUG ビルドでは ResultCreationStackTrace で失敗結果の生成位置を確認できます。
 

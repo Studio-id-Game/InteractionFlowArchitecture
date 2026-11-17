@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ResultAPI.Entities.Attributes;
 using System;
 using System.Diagnostics.CodeAnalysis;

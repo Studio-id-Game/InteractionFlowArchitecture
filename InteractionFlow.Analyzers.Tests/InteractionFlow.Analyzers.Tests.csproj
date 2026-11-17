@@ -34,8 +34,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="..\InteractionFlow.Core\ResultAPI\Entities\*.cs;
-								   ..\InteractionFlow.Core\ResultAPI\Entities\Attributes\*.cs;
-								   ..\InteractionFlow.Core\Entities\ResultException.cs"
+								   ..\InteractionFlow.Core\ResultAPI\Entities\Attributes\*.cs"
 						  LogicalName="ResultApiSources.%(Filename)%(Extension)" />
 	</ItemGroup>
 </Project>

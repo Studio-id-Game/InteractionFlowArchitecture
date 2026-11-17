@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;

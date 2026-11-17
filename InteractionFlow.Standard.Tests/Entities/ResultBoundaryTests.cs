@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.ResultAPI.Entities;

@@ -1,5 +1,6 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using Xunit;
 

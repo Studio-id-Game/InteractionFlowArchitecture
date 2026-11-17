@@ -1,8 +1,7 @@
-using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Diagnostics;
 
-namespace InteractionFlow.Core.Entities
+namespace InteractionFlow.Core.ResultAPI.Entities
 {
     /// <summary>
     /// <see cref="Result"/> 、<see cref="Result{T}"/>、または <see cref="Result{T, TError}"/> が失敗や不正な成功値を表すために使用する例外です。

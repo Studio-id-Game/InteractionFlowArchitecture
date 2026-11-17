@@ -1,4 +1,3 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading.Tasks;

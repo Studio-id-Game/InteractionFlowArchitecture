@@ -181,8 +181,7 @@ internal sealed class GenerationInteraction : IGenerationInteraction
 
         bool SameParameter(AnalyzedParameter first, AnalyzedParameter second) =>
             first.Name == second.Name && Same(first.TypeName, second.TypeName)
-            && Same(first.AwaitedTypeName, second.AwaitedTypeName)
-            && first.UseConfigureAwait == second.UseConfigureAwait;
+            && Same(first.AwaitedTypeName, second.AwaitedTypeName);
 
         bool SameConfiguredReceiver() => general.ConfiguredReceiver is { } receiver
             ? specific.ConfiguredReceiver is { } other && SameParameter(receiver, other)
@@ -230,9 +229,8 @@ internal sealed class GenerationInteraction : IGenerationInteraction
             var body = awaitCallbacks ? candidate.AwaitedCallbacksBody! : candidate.Body;
             if (awaitReceiver)
             {
-                var awaited = AwaitableTypeRules.FormatAwait(parameterName, receiver.UseConfigureAwait);
                 body = body.Insert(body.IndexOf('\n') + 1,
-                    $"    var {candidate.Receiver.Name} = {awaited};\n");
+                    $"    var {candidate.Receiver.Name} = await {parameterName};\n");
             }
 
             var signature = MethodSignatures.CreateKey(candidate.MethodName, typeParameters.Count, parameterKeys);

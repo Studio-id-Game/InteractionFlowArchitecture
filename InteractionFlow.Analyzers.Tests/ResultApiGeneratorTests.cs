@@ -62,7 +62,9 @@ public class ResultApiGeneratorTests
         Assert.Contains(alias, valueTasks);
         Assert.Contains("Tasks.Task<Result<T>>", tasks);
         Assert.Contains("Tasks.ValueTask<Result<T>>", valueTasks);
-        Assert.Contains("await selfTask.ConfigureAwait(false)", tasks);
+        Assert.DoesNotContain("selfTask.ConfigureAwait", tasks);
+        Assert.DoesNotContain("selfTask.ConfigureAwait", valueTasks);
+        Assert.Contains("await onSuccess(self.Value!).ConfigureAwait(false)", tasks);
         Assert.Contains("await onSuccess(self.Value!).ConfigureAwait(false)", valueTasks);
         Assert.Contains("ConfiguredTaskAwaitable<Result<T>> selfTask", tasks);
         Assert.Contains("ConfiguredValueTaskAwaitable<Result<T>> selfTask", valueTasks);
@@ -198,7 +200,7 @@ public class ResultApiGeneratorTests
         var source = GetGeneratedSource(result, "DirectExtensions");
         Assert.Contains("this DirectReceiver<Result<T>> selfTask", source);
         Assert.Contains("var self = await selfTask;", source);
-        Assert.Contains("var self = await selfTask.ConfigureAwait(false);", source);
+        Assert.DoesNotContain("selfTask.ConfigureAwait", source);
     }
 
     [Fact]

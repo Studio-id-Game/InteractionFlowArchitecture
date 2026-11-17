@@ -149,8 +149,7 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         var xml = method.GetDocumentationCommentXml(cancellationToken: context.CancellationToken);
         var candidate = new AnalyzedCandidate(
             TypeNames.Escape(template.GeneratedName),
-            bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, awaitedReceiver,
-                useConfigureAwait: awaitedReceiver is not null && awaitables?.UsesConfigureAwait(boundTarget.Self) == true),
+            bindings.DescribeParameter(bindings.ReceiverName, boundTarget.Self, awaitedReceiver),
             bindings.FormatType(resolvedReturn), awaitedResult is null ? null : bindings.FormatType(awaitedResult),
             bindings.TypeParameters, bindings.Parameters.MoveToImmutable(), body, awaitedBody, xml,
             returnTypeKey: bindings.FormatType(resolvedReturn, forSignature: true),
@@ -269,10 +268,9 @@ internal sealed partial class AnalysisInteraction : IAnalysisInteraction
         public ITypeSymbol BindType(ITypeSymbol type) =>
             Template.Placeholders.IsSelf(type) ? Target.Self : Template.Placeholders.IsOther(type) ? Target.Other : type;
 
-        public AnalyzedParameter DescribeParameter(
-            string name, ITypeSymbol type, ITypeSymbol? awaitedType, bool useConfigureAwait = false) =>
+        public AnalyzedParameter DescribeParameter(string name, ITypeSymbol type, ITypeSymbol? awaitedType) =>
             new(name, FormatType(type), awaitedType is null ? null : FormatType(awaitedType),
-                FormatType(type, true), awaitedType is null ? null : FormatType(awaitedType, true), useConfigureAwait);
+                FormatType(type, true), awaitedType is null ? null : FormatType(awaitedType, true));
 
         public string FormatProperty(IPropertySymbol property)
         {

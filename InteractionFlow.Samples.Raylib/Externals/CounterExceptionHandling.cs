@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using System;
@@ -21,7 +21,7 @@ internal sealed class CounterExceptionHandling : ExceptionHandling
         Result result = exception;
 
         // Close から送出された例外も、既に集約したフローの失敗を上書きしません。
-        if (context.TryGet<Result>(out var preceding) && !preceding.Try(out var previous))
+        if (context.TryGet<Result>(out var preceding) && preceding.HasError(out var previous))
             result = new AggregateException(previous, exception);
         context.GetRequired<ICounterStateAccess>().Fail(exception);
 

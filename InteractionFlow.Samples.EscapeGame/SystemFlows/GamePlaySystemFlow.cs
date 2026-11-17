@@ -1,12 +1,13 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System;
 using System.Threading.Tasks;
+using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Samples.EscapeGame.SystemFlows;
 
@@ -41,7 +42,7 @@ public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSys
     public async Task<InteractionEnd?> PlayAndCheckContinueAsync(IGameplayContext rootContext, long sessionId)
     {
         using var context = new GameplayContext(rootContext, sessionId, ContextInheritance.All);
-        return await context.AsResultAsync()
+        return await context.AsResult<IGameplayContext>()
             .ThenAsync(GameplayAsync)
             .ResolveAsync(
                 async context =>
@@ -67,10 +68,10 @@ public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSys
         {
             InteractionEnd? end = null;
             return await context
-                .AsResultAsync()
-                .ThenAsync(async context => await SetEnd(context, beginSession.ExecuteAsync))
-                .ThenAsync(async context => await WaitToContinueAsync(context, end!))
-                .ThenAsync(async context => await SetEnd(context, gameSessionFlow.ExecuteAsync));
+                .AsResult()
+                .ThenAsync(context => SetEnd(context, beginSession.ExecuteAsync))
+                .ThenAsync(context => WaitToContinueAsync(context, end!))
+                .ThenAsync(context => SetEnd(context, gameSessionFlow.ExecuteAsync));
 
             async Task<Result<IGameplayContext>> SetEnd(IGameplayContext context, Func<IGameplayContext, Task<InteractionEnd>> interaction)
             {
@@ -105,7 +106,7 @@ public sealed class GamePlaySystemFlow(BeginSession beginSession, GameSessionSys
         {
             return await endSession.ExecuteAsync(cleanupContext);
         }
-        catch (Exception error) when (!sessionResult.Try(out var sessionError))
+        catch (Exception error) when (sessionResult.HasError(out var sessionError))
         {
             throw new AggregateException(sessionError, error);
         }

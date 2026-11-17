@@ -1,5 +1,5 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using Xunit;
 
@@ -14,21 +14,21 @@ public sealed class FailureTests
         failures.Add(Result.Success);
 
         Assert.False(failures.HasFailure);
-        Assert.True(failures.ToResult().Try(out _));
+        Assert.True(failures.ToResult().IsSuccess);
     }
 
     [Fact]
     public void SingleFailedResultPreservesItsExistingResultException()
     {
         Result previous = new InvalidOperationException("failed");
-        Assert.False(previous.Try(out var original));
+        Assert.True(previous.HasError(out var original));
         var failures = new FailureCollector();
 
         failures.Add(previous);
         var result = failures.ToResult();
 
         Assert.True(failures.HasFailure);
-        Assert.False(result.Try(out var actual));
+        Assert.True(result.HasError(out var actual));
         Assert.Same(original, actual);
     }
 
@@ -39,7 +39,7 @@ public sealed class FailureTests
         var failures = new FailureCollector();
 
         failures.Add(original);
-        Assert.False(failures.ToResult().Try(out var failure));
+        Assert.True(failures.ToResult().HasError(out var failure));
 
         Assert.Same(original, failure!.InnerException);
         Assert.IsNotType<AggregateException>(failure.InnerException);
@@ -49,19 +49,19 @@ public sealed class FailureTests
     public void MultipleFailuresPreserveOrderWrappersAndNestedAggregates()
     {
         Result first = new FormatException("first");
-        Assert.False(first.Try(out var firstWrapper));
+        Assert.True(first.HasError(out var firstWrapper));
         var second = new AggregateException(
             new InvalidOperationException("second-a"),
             new ArgumentException("second-b"));
         Result third = new Exception("third");
-        Assert.False(third.Try(out var thirdWrapper));
+        Assert.True(third.HasError(out var thirdWrapper));
         var failures = new FailureCollector();
 
         failures.Add(first);
         failures.Add(Result.Success);
         failures.Add(second);
         failures.Add(third);
-        Assert.False(failures.ToResult().Try(out var result));
+        Assert.True(failures.ToResult().HasError(out var result));
         var aggregate = Assert.IsType<AggregateException>(result!.InnerException);
 
         Assert.Equal(3, aggregate.InnerExceptions.Count);
@@ -99,13 +99,13 @@ public sealed class FailureTests
     public void RepeatedAppendKeepsExistingNestedAggregateStructureAndOrder()
     {
         Result previous = new FormatException("first");
-        Assert.False(previous.Try(out var firstWrapper));
+        Assert.True(previous.HasError(out var firstWrapper));
         var second = new InvalidOperationException("second");
         var third = new ArgumentException("third");
 
         var inner = Assert.IsType<AggregateException>(FailureCollector.Append(previous, second));
         Result combined = inner;
-        Assert.False(combined.Try(out var combinedWrapper));
+        Assert.True(combined.HasError(out var combinedWrapper));
         var outer = Assert.IsType<AggregateException>(FailureCollector.Append(combined, third));
 
         Assert.Equal(2, inner.InnerExceptions.Count);

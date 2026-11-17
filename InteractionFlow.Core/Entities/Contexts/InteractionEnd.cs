@@ -1,4 +1,5 @@
 using System;
+using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
@@ -13,7 +14,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         public ReactionEnd End { get; }
 
         /// <summary>フローの成功・失敗を取得します。</summary>
-        public Result Result => End.Result;
+        public ResultTypes.Result Result => End.Result;
 
         /// <summary>
         /// フロー終了時に発生した例外を取得します。

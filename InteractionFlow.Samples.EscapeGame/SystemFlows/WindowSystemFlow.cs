@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Interactions;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
@@ -68,14 +68,12 @@ public sealed class WindowSystemFlow(
     {
         using var runContext = new RunContext(context);
 
-        return await runContext.AsResultAsync()
+        return await runContext.AsResult()
             .ThenAsync(StartGameAsync)
             .ThenAsync(StopGameAsync)
             .ThenAsync(CloseWindowAsync)
             .ResolveAsync(
-                completed => completed.End == null ?
-                    throw completed.AggregateErrors() :
-                    Task.FromResult(completed.End),
+                completed => completed.End ?? throw completed.AggregateErrors(),
                 error => throw error
             );
     }
@@ -84,11 +82,11 @@ public sealed class WindowSystemFlow(
     {
         try
         {
-            return await context.AsResultAsync()
+            return await context.AsResult()
                 .ThenAsync(OpenWindowAsync)
                 .ThenAsync(RunGameAsync)
                 .ThenAsync(FrameLoopAsync)
-                .ThenErrorAsync(async error => context.CollectError(error));
+                .ThenErrorAsync(context.CollectError);
         }
         catch (Exception error)
         {
@@ -145,10 +143,10 @@ public sealed class WindowSystemFlow(
     private async Task<Result<RunContext>> StopGameAsync(RunContext context)
     {
         // Stop は提示・入力・再開待機を解除します。失敗しても cancel/join/close を続けます。
-        return (await context.AsResultAsync()
-            .ThenAsync(ShutdownRequestAsync))
-            .Then(GameCancel)
-            .Then(WaitGameEnd);
+        return await context.AsResult()
+            .ThenAsync(ShutdownRequestAsync)
+            .ThenAsync(GameCancel)
+            .ThenAsync(WaitGameEnd);
 
         async Task<Result<RunContext>> ShutdownRequestAsync(RunContext context)
         {
@@ -158,7 +156,7 @@ public sealed class WindowSystemFlow(
             {
                 using var shutdownContext = new ViewContext(windowContext, ContextInheritance.None);
                 var end = await requestShutdown.ExecuteAsync(shutdownContext);
-                return end.Result.Resolve(() => context, context.CollectError);
+                return end.Result.Resolve(() => context.AsResult(), context.CollectError);
             }
             catch (Exception error)
             {
@@ -199,7 +197,7 @@ public sealed class WindowSystemFlow(
             try
             {
                 var end = gameTask.GetAwaiter().GetResult();
-                return end.Result.Resolve(() => context, context.CollectError);
+                return end.Result.Resolve(() => context.AsResult(), context.CollectError);
             }
             catch (Exception error)
             {
@@ -225,7 +223,7 @@ public sealed class WindowSystemFlow(
             context.End = end;
             return context;
         }
-        catch (Exception error) when (!errors.Try(out _))
+        catch (Exception error) when (!errors.IsSuccess)
         {
             return context.CollectError(error);
         }

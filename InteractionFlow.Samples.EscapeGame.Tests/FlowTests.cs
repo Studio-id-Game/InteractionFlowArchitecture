@@ -1,8 +1,8 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
@@ -54,7 +54,7 @@ public sealed class FlowTests
             handler.Resume.TrySetResult(true);
 
             var aggregate = await Assert.ThrowsAsync<AggregateException>(() => execution.WaitAsync(timeout, token));
-            Assert.False(opened.Result.Try(out var openWrapper));
+            Assert.True(opened.Result.HasError(out var openWrapper));
             Assert.Equal(2, aggregate.InnerExceptions.Count);
             Assert.Same(openWrapper, aggregate.InnerExceptions[0]);
             Assert.Same(closeError, aggregate.InnerExceptions[1]);
@@ -83,8 +83,8 @@ public sealed class FlowTests
 
         var aggregate = await Assert.ThrowsAsync<AggregateException>(() => fixture.Flow.ExecuteAsync(fixture.Context));
 
-        Assert.False(opened.Result.Try(out var openWrapper));
-        Assert.False(stopped.Result.Try(out var stopWrapper));
+        Assert.True(opened.Result.HasError(out var openWrapper));
+        Assert.True(stopped.Result.HasError(out var stopWrapper));
         Assert.Equal(3, aggregate.InnerExceptions.Count);
         Assert.Same(openWrapper, aggregate.InnerExceptions[0]);
         Assert.Same(throwStop ? stopError : stopWrapper, aggregate.InnerExceptions[1]);
@@ -204,8 +204,8 @@ public sealed class FlowTests
 
         var end = await fixture.Flow.ExecuteAsync(fixture.Context);
 
-        Assert.False(failed.Result.Try(out var original));
-        Assert.False(end.Result.Try(out var actual));
+        Assert.True(failed.Result.HasError(out var original));
+        Assert.True(end.Result.HasError(out var actual));
         Assert.Same(original, actual);
         Assert.Equal(0, fixture.Game.SelectionStarts);
         Assert.Equal(failBegin, fixture.Session.Ended);
@@ -213,7 +213,7 @@ public sealed class FlowTests
         Assert.Equal("close", fixture.Window.Events[^1]);
         if (failBegin)
         {
-            Assert.False(fixture.Session.PreviousResult.Try(out var beforeCleanup));
+            Assert.True(fixture.Session.PreviousResult.HasError(out var beforeCleanup));
             Assert.Same(original, beforeCleanup);
         }
         else

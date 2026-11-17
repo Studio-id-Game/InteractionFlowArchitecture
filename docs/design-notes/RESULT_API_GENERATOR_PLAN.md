@@ -9,6 +9,8 @@
 - **コールバックの引数。** `Self` のプロパティに付いた `ResultAPICallbackArgument` で、成功・失敗の区分と引数順を指定します。 [コールバック引数の属性](../../InteractionFlow.Core/ResultAPI/Entities/Attributes/ResultAPICallbackArgumentAttribute.cs)
 - **公開範囲。** 初版の生成器は Core ビルド専用とし、属性・テンプレートは内部化します。試作の `InteractionFlow.Core.ResultAPI.Entities` と既存の `InteractionFlow.Core.Entities` は別の名前空間に同名型を持ちます。まず試作側で生成を検証し、公開 API のシグネチャと呼び出し側を新しい Result 契約に合わせて書き直します。`HasValue`、`HasError`、`WithoutValue`、`ThrowIfError`、暗黙変換などの実行時契約は Core の手書きコードが担います。
 
+旧 Result API の削除時に、新旧の同名型を区別するために追加した `using` の別名宣言も削除します。
+
 ## 生成する API の成立条件
 
 1. **対象パターンを選ぶ。** `ResultAPITarget` の型引数名を分解し、同じ指定内の同名を同じメソッド型変数に束縛します。`twoWay` は方向付きの候補を二つに展開します。テンプレートと生成先の指定を束縛し、同じ型の組を一つにまとめます。同じ組に 2 引数形式の指定が含まれる場合は、`Self` のみを参照するテンプレートにも適用します。`Self` のみを参照する `Resolve` / `IfSuccess` / `IfError` / `IfElse` では、属性のコンストラクターが 2 引数形式の `Self → Self` を選びます。`Other` を参照する `Then` / `ThenError` には、`Self → Self` を含む方向付き候補を適用します。

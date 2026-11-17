@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
@@ -335,9 +335,9 @@ public sealed class WindowFlowTests
                 throw CloseFailure;
 
             if (CloseFailure is not null)
-                result = result.Try(out var previous)
-                    ? CloseFailure
-                    : new AggregateException(previous, CloseFailure);
+                result = result.HasError(out var previous)
+                    ? new AggregateException(previous, CloseFailure)
+                    : CloseFailure;
 
             return GetEnd(result);
         }

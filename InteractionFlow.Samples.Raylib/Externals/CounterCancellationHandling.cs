@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using System;
@@ -29,10 +29,10 @@ internal sealed class CounterCancellationHandling : CancellationHandling
         {
             var failures = new List<Exception> { exception };
 
-            if (!preceding.Try(out var previous))
+            if (preceding.HasError(out var previous))
                 failures.Insert(0, previous);
 
-            if (!waitAndResetResult.Try(out var waiting))
+            if (waitAndResetResult.HasError(out var waiting))
                 failures.Add(waiting);
             return new(GetEnd(failures.Count == 1 ? failures[0] : new AggregateException(failures)));
         }

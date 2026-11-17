@@ -1,10 +1,10 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Standard.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -199,7 +199,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var end = await interaction.ExecuteAsync(context);
 
             Assert.True(end.HasException);
-            Assert.False(cancellations.WaitResult.Try(out var failure));
+            Assert.True(cancellations.WaitResult.HasError(out var failure));
             Assert.Contains(cleanup, Assert.IsType<AggregateException>(failure!.InnerException).InnerExceptions);
             Assert.Equal(1, interaction.HookCount);
             Assert.False(context.Cancellation.HasTask);

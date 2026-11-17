@@ -1,6 +1,7 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
+using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 
@@ -21,7 +22,7 @@ internal sealed class FailureCollector
 
     public Result Add(Result result)
     {
-        if (!result.Try(out var failure))
+        if (result.HasError(out var failure))
         {
             Add(failure);
         }
@@ -54,5 +55,5 @@ internal sealed class FailureCollector
 
     // 既存の ResultException を内側の一要素として保ち、flatten / 再ラップしません。
     public static Exception Append(Result previous, Exception next)
-        => previous.Try(out var earlier) ? next : new AggregateException(earlier, next);
+        => previous.HasError(out var earlier) ? new AggregateException(earlier, next) : next;
 }

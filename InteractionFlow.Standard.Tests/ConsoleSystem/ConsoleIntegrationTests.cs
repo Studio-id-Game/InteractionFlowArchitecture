@@ -290,7 +290,7 @@ namespace InteractionFlow.Standard.Tests.ConsoleSystem
                 Assert.True(context.Cancellation.IsCancellationRequested);
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => input.ReadLineAsync(context).AsTask());
                 var reset = await context.Cancellation.WaitForTasksAndResetCancellationAsync();
-                Assert.True(reset.Try(out _));
+                Assert.True(reset.IsSuccess);
                 Assert.Equal("next", await input.ReadLineAsync(context));
             }
             finally

@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
 using System;

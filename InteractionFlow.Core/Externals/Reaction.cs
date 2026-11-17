@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 
 namespace InteractionFlow.Core.Externals

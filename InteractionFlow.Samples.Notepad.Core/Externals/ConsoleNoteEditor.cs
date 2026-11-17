@@ -29,7 +29,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
             while (true)
             {
                 var resized = await frame.ResizeAsync(context);
-                if (!resized.Try(out var resizeError)) return resizeError;
+                if (resized.HasError(out var resizeError)) return resizeError;
                 var capacity = frame.Height - 3;
                 var contentWidth = frame.Width - 4;
                 if (draft.Row < top) top = draft.Row;
@@ -47,17 +47,19 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                         ConsoleCells.Slice(draft.Lines[i], left, contentWidth));
                 rows.Add($"Row {draft.Row + 1}, column {caret + 1}  {status}");
                 var rendered = await frame.RenderAsync(context, rows, 4 + caret - left, 2 + draft.Row - top);
-                if (!rendered.Try(out var renderError)) return renderError;
+                if (rendered.HasError(out var renderError)) return renderError;
                 var key = await keys.ReadKeyAsync(context);
                 if (key.Key == ConsoleKey.Escape)
                 {
-                    return (await frame.ClearAsync(context)).Then(() => new NoteEditValue(null).AsResult());
+                    return (await frame.ClearAsync(context)).HasError(out var clearError)
+                        ? clearError : new NoteEditValue(null);
                 }
                 if (key.Key == ConsoleKey.F2
                     || key.Key == ConsoleKey.S && key.Modifiers.HasFlag(ConsoleModifiers.Control))
                 {
                     context.Cancellation.GetToken().ThrowIfCancellationRequested();
-                    return (await frame.ClearAsync(context)).Then(() => new NoteEditValue(draft.ToNote()).AsResult());
+                    return (await frame.ClearAsync(context)).HasError(out var clearError)
+                        ? clearError : new NoteEditValue(draft.ToNote());
                 }
                 status = "";
                 var control = key.Modifiers.HasFlag(ConsoleModifiers.Control);
@@ -98,21 +100,23 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
             if (oldNote != null)
             {
                 var current = await WriteAsync(context, $"Current title: {oldNote.Title}\nCurrent body:\n{oldNote.Text}");
-                if (!current.Try(out var currentError)) return currentError;
+                if (current.HasError(out var currentError)) return currentError;
             }
             var prompt = await WriteAsync(context, oldNote == null
                 ? "Title (/cancel cancels):" : "New title (blank keeps current, /cancel cancels):");
-            if (!prompt.Try(out var promptError)) return promptError;
+            if (prompt.HasError(out var promptError)) return promptError;
             var title = await lines.ReadLineAsync(context);
             if (title == null) context.ExitRequested = true;
             if (title == null || title == "/cancel") return new NoteEditValue(null);
             if (title.Length == 0 && oldNote != null) title = oldNote.Title;
             if (title.Length > NotepadRules.MaxTitleLength)
-                return (await WriteAsync(context, "Title is too long (maximum 200 characters). Nothing saved."))
-                    .Then(() => new NoteEditValue(null).AsResult());
+            {
+                var warning = await WriteAsync(context, "Title is too long (maximum 200 characters). Nothing saved.");
+                return warning.HasError(out var warningError) ? warningError : new NoteEditValue(null);
+            }
             var instructions = await WriteAsync(context,
                 "Body: '.' saves; '..' inserts '.'; /cancel discards. /keep on the first line keeps the old body.");
-            if (!instructions.Try(out var instructionsError)) return instructionsError;
+            if (instructions.HasError(out var instructionsError)) return instructionsError;
             var body = new StringBuilder();
             var first = true;
             while (true)
@@ -128,12 +132,14 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 body.Append(line);
                 first = false;
                 if (body.Length > NotepadRules.MaxTextLength)
-                    return (await WriteAsync(context, "Body is too long (maximum 1 Mi characters). Nothing saved."))
-                        .Then(() => new NoteEditValue(null).AsResult());
+                {
+                    var warning = await WriteAsync(context, "Body is too long (maximum 1 Mi characters). Nothing saved.");
+                    return warning.HasError(out var warningError) ? warningError : new NoteEditValue(null);
+                }
             }
         }
 
-        private async Task<Result> WriteAsync(NotepadContext context, string text)
+        private async Task<InteractionFlow.Core.ResultAPI.Entities.Result> WriteAsync(NotepadContext context, string text)
             => (await output.WriteLineAsync(context, text)).Result;
     }
 }

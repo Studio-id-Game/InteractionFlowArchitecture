@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
@@ -36,8 +36,9 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 ? TimeSpan.FromSeconds(10) : Timeout.InfiniteTimeSpan;
             var result = await scheduler.TimeoutAsync(timeout, TalkAsync(context, automatic, style, greeting));
             // Restore the exception/cancellation boundary after Scheduler's explicit Result conversion.
-            if (result.Try(out var end, out var error))
+            if (result.HasValue(out var end))
                 return end;
+            var error = result.Error!;
             throw error.InnerException ?? error;
         }
 

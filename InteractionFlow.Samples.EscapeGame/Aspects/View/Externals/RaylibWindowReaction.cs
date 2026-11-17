@@ -1,9 +1,9 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using InteractionFlow.Samples.EscapeGame.Aspects.View.ExternalPorts;
@@ -144,8 +144,8 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
         try
         {
-            if (previous.Try(out var error)) Console.WriteLine("Escape game closed.");
-            else Console.Error.WriteLine(error);
+            if (previous.HasError(out var error)) Console.Error.WriteLine(error);
+            else Console.WriteLine("Escape game closed.");
         }
         catch (Exception error) { previous = FailureCollector.Append(previous, error); }
         return GetEnd(previous);

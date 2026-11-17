@@ -282,7 +282,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var result = await probe.ReadAsync(new NotepadContext { User = "alice" });
 
             Assert.False(result.Try(out _, out var error));
-            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(0, input.ReadCount);
             Assert.Single(output.Lines);
@@ -330,7 +330,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var result = await operation.EditAsync(new NotepadContext(), new NotepadData("Old title", "Old body"));
 
             Assert.False(result.Try(out _, out var error));
-            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(failureAt <= 2 ? 0 : 1, input.ReadCount);
             Assert.Equal(failureAt, output.Lines.Count);
@@ -345,7 +345,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             var result = await Choices(input, output).SelectAsync(new NotepadContext(), "Choose", ["One"]);
 
             Assert.False(result.Try(out _, out var error));
-            Assert.False(output.LastEnd!.Result.Try(out var original));
+            Assert.True(output.LastEnd!.Result.HasError(out var original));
             Assert.Same(original, error);
             Assert.Equal(0, input.ReadCount);
         }
@@ -462,7 +462,7 @@ namespace InteractionFlow.Samples.Notepad.Tests
             public int Count { get; private set; }
             public override void ForceResetMemoryState() { }
             protected override ValueTask<ReactionEnd> AfterCancellationCoreAsync(
-                IFlowContext context, OperationCanceledException exception, Result waitAndResetResult)
+                IFlowContext context, OperationCanceledException exception, InteractionFlow.Core.ResultAPI.Entities.Result waitAndResetResult)
             {
                 Count++;
                 return new(GetEnd(waitAndResetResult));

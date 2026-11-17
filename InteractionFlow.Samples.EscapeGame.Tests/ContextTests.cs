@@ -15,6 +15,7 @@ using InteractionFlow.Samples.EscapeGame.Aspects.View.Entities.Contexts;
 using System;
 using System.Threading.Tasks;
 using Xunit;
+using Result = InteractionFlow.Core.ResultAPI.Entities.Result;
 
 namespace InteractionFlow.Samples.EscapeGame.Tests;
 
@@ -200,7 +201,7 @@ public sealed class ContextTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => next);
         Assert.False(view.Cancellation.IsCancellationRequested);
         Assert.True(game.Cancellation.IsCancellationRequested);
-        Assert.True((await game.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+        Assert.True((await game.Cancellation.WaitForTasksAndResetCancellationAsync()).IsSuccess);
         Assert.False(app.Cancellation.IsCancellationRequested);
         Assert.True(token.IsCancellationRequested);
         game.Cancellation.Cancel();

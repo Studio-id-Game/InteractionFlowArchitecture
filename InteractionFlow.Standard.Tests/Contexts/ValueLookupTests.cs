@@ -48,16 +48,16 @@ public sealed class ValueLookupTests
     {
         var leaf = new RefEntry<object>(null);
         var outer = new RefEntry<object>(leaf);
-        Assert.False(outer.Parse<string>().Try(out _, out var missing));
+        Assert.True(outer.Parse<string>().HasError(out var missing));
         Assert.IsType<EntryValueNotFoundException>(missing.InnerException);
         Assert.Contains("null", missing.Message);
 
         leaf.Value = 42;
-        Assert.False(outer.Parse<string>().Try(out _, out var mismatch));
+        Assert.True(outer.Parse<string>().HasError(out var mismatch));
         Assert.IsType<EntryValueNotFoundException>(mismatch.InnerException);
         Assert.Contains(typeof(int).FullName!, mismatch.Message);
         leaf.Value = "found";
-        Assert.True(outer.Parse<string>().Try(out var found, out _));
+        Assert.True(outer.Parse<string>().HasValue(out var found));
         Assert.Equal("found", found);
     }
 
@@ -70,7 +70,7 @@ public sealed class ValueLookupTests
         using var context = new FlowContext().With("fallback").With(first);
 
         Assert.Same(first, context.GetRequired<RefEntry<object>>());
-        Assert.False(first.Parse<string>().Try(out _, out var parsedError));
+        Assert.True(first.Parse<string>().HasError(out var parsedError));
         Assert.IsType<EntryResolutionLimitException>(parsedError.InnerException);
         var error = Assert.Throws<ResultException>(() => context.TryGet<string>(out _));
         Assert.IsType<EntryResolutionLimitException>(error.InnerException);

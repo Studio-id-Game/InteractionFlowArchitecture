@@ -1,8 +1,8 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Access;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Contexts;
 using System.Threading.Tasks;
 using System;
@@ -20,10 +20,11 @@ public sealed class GameCancellationHandling : CancellationHandling
     {
         var failures = new FailureCollector();
         var finishing = context.TryGet<CleanupInfo>(out var operation);
-        if (finishing && !operation!.PreviousResult.Try(out var earlierFailure))
+        if (finishing && operation!.PreviousResult.HasError(out var earlierFailure))
             failures.Add(earlierFailure);
 
-        var resetSucceeded = waitAndResetResult.Try(out var waitFailure);
+        var waitFailure = waitAndResetResult.Error;
+        var resetSucceeded = waitFailure is null;
         // 通常の停止通知は回復できますが、Close/EndSession 自身のキャンセルは失敗です。
         if (finishing || !resetSucceeded)
             failures.Add(exception);

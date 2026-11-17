@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Notepad.Core.Entities;
 using InteractionFlow.Standard.ConsoleSystem.Entities;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -42,7 +42,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
         public async Task<Result> RenderAsync(IFlowContext context, IReadOnlyList<string> rows, int left, int top)
         {
             var moved = await screen.SetCursorPositionAsync(context, new ConsolePosition(0, 0));
-            if (!moved.Result.Try(out var moveError)) return moveError;
+            if (moved.Result.HasError(out var moveError)) return moveError;
             var frame = new StringBuilder();
             for (var row = 0; row < height; row++)
             {
@@ -50,7 +50,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Externals
                 frame.Append(ConsoleCells.Slice(row < rows.Count ? rows[row] : "", 0, width));
             }
             var written = await output.WriteAsync(context, frame.ToString());
-            if (!written.Result.Try(out var writeError)) return writeError;
+            if (written.Result.HasError(out var writeError)) return writeError;
             moved = await screen.SetCursorPositionAsync(context,
                 new ConsolePosition(Math.Max(0, Math.Min(width - 1, left)), Math.Max(0, Math.Min(height - 1, top))));
             return moved.Result;

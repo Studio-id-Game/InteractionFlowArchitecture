@@ -1,11 +1,12 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading.Tasks;
 using Xunit;
+using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Standard.Tests.Contexts
 {
@@ -15,7 +16,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         public void ReactionCanCompleteWithASuccessfulResult()
         {
             var end = Ends.Create(Result.Success);
-            Assert.True(end.Result.Try(out _));
+            Assert.True(end.Result.IsSuccess);
             Assert.False(end.HasException);
             Assert.False(end.HasCanceled);
             Assert.Null(end.Exception);
@@ -27,8 +28,8 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var failure = new FormatException("Failed");
             Result result = failure;
             var end = Ends.Create(result);
-            Assert.False(result.Try(out var expected));
-            Assert.False(end.Result.Try(out var actual));
+            Assert.True(result.HasError(out var expected));
+            Assert.True(end.Result.HasError(out var actual));
             Assert.Same(expected, actual);
             Assert.Same(failure, end.Exception);
             Assert.True(end.HasException);
@@ -49,11 +50,12 @@ namespace InteractionFlow.Standard.Tests.Contexts
         [Fact]
         public void ResultExceptionWithoutInnerExceptionIsPreserved()
         {
-            var result = default(Result<string>).WithoutValue;
-            Assert.False(result.Try(out var failure));
+            var error = Assert.Throws<ResultException>(() => default(Result<string>).WithoutValue);
+            var result = Result.CreateFailure(error);
+            Assert.True(result.HasError(out var failure));
             var end = Ends.Create(result);
             Assert.Same(failure, end.Exception);
-            Assert.False(end.Result.Try(out var actual));
+            Assert.True(end.Result.HasError(out var actual));
             Assert.Same(failure, actual);
         }
 
@@ -62,7 +64,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
         {
             Result failure = new FormatException("Recoverable");
             var recovered = failure.ThenError(_ => Result.Success);
-            Assert.True(Ends.Create(recovered).Result.Try(out _));
+            Assert.True(Ends.Create(recovered).Result.IsSuccess);
         }
 
         [Fact]
@@ -79,8 +81,8 @@ namespace InteractionFlow.Standard.Tests.Contexts
 
             Assert.Same(token, actual);
             Assert.Same(reaction, actual.End);
-            Assert.False(failure.Try(out var expected));
-            Assert.False(actual.Result.Try(out var error));
+            Assert.True(failure.HasError(out var expected));
+            Assert.True(actual.Result.HasError(out var error));
             Assert.Same(expected, error);
         }
 

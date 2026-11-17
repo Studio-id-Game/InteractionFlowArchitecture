@@ -6,8 +6,8 @@ Core の拡張メソッド `GetScheduler()` で取得します。
 CancellationObject の世代への結び付けは Core 内部で行い、世代操作の公開 API は追加しません。
 
 ```csharp
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 
 using var scheduler = context.Cancellation.GetScheduler();
 var result = await scheduler.TimeoutAsync(
@@ -26,11 +26,12 @@ Task を受け取るため、処理は呼び出し側で開始します。非同
 
 ## 値を返す処理
 
-`TimeoutAsync<T>(TimeSpan timeoutTime, Task<Result<T>> task)` は、通知が成功した場合に対象の Result<T> をそのまま返します。
+`TimeoutAsync<T>(TimeSpan timeoutTime, Task<Result<T>> task)` は、新しい Result API の型を受け取ります。
+通知が成功した場合、初期化済みの Result<T> をそのまま返します。
 
 ```csharp
 var result = await scheduler.TimeoutAsync(TimeSpan.FromSeconds(10), LoadValueAsync());
-if (result.Try(out var value, out var error))
+if (result.HasValue(out var value))
 {
     // 成功値を利用
 }
@@ -61,6 +62,7 @@ async Task<Result<ReactionEnd>> RunAsync()
 - 期限が先なら Cancel を呼びます。通知が失敗しても対象 Task の終了を待ちます。
 - 判定時点で対象 Task がすでに完了していれば、タイマーも完了していても処理の完了を優先します。
 - Cancel の送出例外、Task の送出例外・キャンセル完了は、この明示的な境界で失敗 Result にします。
+- Task が未初期化の Result<T> を返した場合、その参照時の ResultException を失敗 Result に保持します。
 - 通知が成功して Task が失敗 Result を返した場合、その Result をそのまま返し、再ラップしません。
 - 両方の失敗は AggregateException に保持します。通知失敗と処理側の失敗を保持し、
   Task 自体が複数例外で失敗している場合も全例外を残します。

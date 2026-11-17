@@ -1,4 +1,4 @@
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 

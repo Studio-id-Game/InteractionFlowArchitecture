@@ -6,6 +6,7 @@ using InteractionFlow.Samples.Raylib.Externals;
 using System;
 using System.Threading.Tasks;
 using Xunit;
+using Result = InteractionFlow.Core.ResultAPI.Entities.Result;
 
 namespace InteractionFlow.Samples.Raylib.Tests;
 
@@ -86,7 +87,7 @@ public sealed class CounterFlowContextTests
 
         Assert.Same(frames, child.GetRequired<FrameState>());
         Assert.Same(window, child.GetRequired<WindowState>());
-        Assert.True(child.GetRequired<Result>().Try(out _));
+        Assert.True(child.GetRequired<Result>().IsSuccess);
         Assert.False(child.TryGet<RefEntry<string>>(out _));
         Assert.False(child.TryGet<RefEntry<object>>(out _));
     }

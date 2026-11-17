@@ -1,6 +1,6 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
-using InteractionFlow.Core.Entities;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.ExternalPorts;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
@@ -47,7 +47,7 @@ public sealed class CleanupTests
         Assert.False(context.TryGet<CleanupInfo>(out _));
         Assert.False(context.Cancellation.IsCancellationRequested);
         Assert.False(context.Cancellation.HasTask);
-        Assert.Equal(!failedResult, context.GetRequired<Result>().Try(out _));
+        Assert.Equal(!failedResult, context.GetRequired<Result>().IsSuccess);
     }
 
     [Theory]
@@ -67,7 +67,7 @@ public sealed class CleanupTests
         Assert.False(Contains(end.Exception, unrelated));
         Assert.False(context.TryGet<CleanupInfo>(out _));
         Assert.False(context.Cancellation.HasTask);
-        Assert.Equal(!failedResult, context.GetRequired<Result>().Try(out _));
+        Assert.Equal(!failedResult, context.GetRequired<Result>().IsSuccess);
     }
 
     [Theory]

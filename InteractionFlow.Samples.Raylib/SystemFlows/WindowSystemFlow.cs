@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.SystemFlows;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Interactions;
@@ -144,7 +144,7 @@ public sealed class WindowSystemFlow(
 
     private static void AddFailure(Result result, List<Exception> failures)
     {
-        if (!result.Try(out var error))
+        if (result.HasError(out var error))
             failures.Add(error);
     }
 }

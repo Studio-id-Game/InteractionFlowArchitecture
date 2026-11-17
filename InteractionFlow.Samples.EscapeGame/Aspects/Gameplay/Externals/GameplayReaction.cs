@@ -1,8 +1,8 @@
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Game;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities.Session;
 using InteractionFlow.Core.Entities.Contexts;
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.Entities;
 using InteractionFlow.Samples.EscapeGame.Aspects.Gameplay.ExternalPorts;
 using InteractionFlow.Samples.EscapeGame.Aspects.Shared.Entities;
@@ -30,7 +30,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
         // 未公開セッションには Active の待機を要求しません。初期化はここだけで明示します。
         var change = context.Gameplay.BeginSession(context.SessionId, WorldRules.BeginSession);
         var failure = ValidatePresentation(change, nameof(BeginSessionAsync));
-        if (!failure.Try(out _) || change.Status == GameUpdateStatus.Stopped)
+        if (!failure.IsSuccess || change.Status == GameUpdateStatus.Stopped)
             return GetEnd(failure);
 
         return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);
@@ -126,7 +126,7 @@ public sealed class GameplayReaction : Reaction, IGameplayReaction
                 continue;
 
             var failure = ValidatePresentation(change, operation);
-            if (!failure.Try(out _) || change.Status == GameUpdateStatus.Stopped)
+            if (!failure.IsSuccess || change.Status == GameUpdateStatus.Stopped)
                 return GetEnd(failure);
 
             return await WaitForPresentationAndResumeAsync(context, change.Presentation!.Value);

@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 
 namespace InteractionFlow.Core.ExternalPorts
@@ -35,7 +35,7 @@ namespace InteractionFlow.Core.ExternalPorts
         /// <returns>Reaction が生成した終了結果。</returns>
         protected static ReactionEnd GetEnd(Result result)
         {
-            return result.Try(out _) ? ReactionEnd.Success : new(result);
+            return result.IsSuccess ? ReactionEnd.Success : new(result);
         }
     }
 }

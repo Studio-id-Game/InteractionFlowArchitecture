@@ -1,13 +1,14 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Standard.Tests.Interactions
 {
@@ -124,7 +125,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var end = await Finish(interaction.ExecuteAsync(context));
             Assert.True(end.HasException);
             Assert.Same(original, cancellations.Original!.InnerException);
-            Assert.False(cancellations.ResetResult.Try(out var resetError));
+            Assert.True(cancellations.ResetResult.HasError(out var resetError));
             Assert.Contains(cleanupFailure, Leaves(resetError!));
             Assert.Contains(original, Leaves(end.Exception!));
             Assert.Contains(cleanupFailure, Leaves(end.Exception!));
@@ -166,7 +167,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             Assert.Equal(0, cancellations.AfterCount);
             context.Cancellation.Cancel();
             var reset = await context.Cancellation.WaitForTasksAndResetCancellationAsync();
-            Assert.True(reset.Try(out _));
+            Assert.True(reset.IsSuccess);
         }
 
         [Fact]
@@ -196,7 +197,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var interaction = new Probe(errors, cancellations);
             var end = await Finish(interaction.ExecuteAsync(context));
             Assert.False(end.HasException);
-            Assert.True(end.Result.Try(out _));
+            Assert.True(end.Result.IsSuccess);
             Assert.Equal(0, interaction.HookCount);
             Assert.Equal(0, errors.Count);
             Assert.Equal(0, cancellations.BeforeCount);
@@ -296,7 +297,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             if (!afterReset)
             {
                 // The registration is released even though the port never drained it.
-                Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+                Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).IsSuccess);
             }
         }
 
@@ -328,7 +329,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             Assert.Contains(original, leaves);
             Assert.Contains(cleanup, leaves);
             if (returnFailure) Assert.Contains(returnedFailure, leaves);
-            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).IsSuccess);
         }
 
         [Fact]
@@ -351,7 +352,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var end = await Finish(interaction.ExecuteAsync(context));
             Assert.Same(returned, end.End);
             Assert.Equal([original, cleanup], Leaves(end.Exception!));
-            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).IsSuccess);
         }
 
         [Theory]
@@ -375,7 +376,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             var end = await Finish(interaction.ExecuteAsync(context));
             Assert.Equal(translate, end.HasException);
             if (translate) Assert.Same(translated, end.Exception);
-            Assert.False(port.ResetResult.Try(out var error));
+            Assert.True(port.ResetResult.HasError(out var error));
             Assert.Contains(cleanup, Leaves(error!));
             Assert.False(context.Cancellation.IsCancellationRequested);
         }
@@ -396,7 +397,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
             };
             var actual = await Assert.ThrowsAsync<AggregateException>(() => Finish(interaction.ExecuteAsync(context)));
             Assert.Same(shared, Assert.Single(Leaves(actual)));
-            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+            Assert.True((await context.Cancellation.WaitForTasksAndResetCancellationAsync()).IsSuccess);
         }
 
         private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -463,7 +464,7 @@ namespace InteractionFlow.Standard.Tests.Interactions
                 ResetResult = result;
                 if (Failure != null && FailAfterReset) throw Failure;
                 if (RecoverCleanupFailure) return new(GetEnd(ReplacementFailure));
-                return new(GetEnd(result.Try(out var failure) ? null : new AggregateException(error, failure)));
+                return new(GetEnd(result.HasError(out var failure) ? new AggregateException(error, failure) : null));
             }
         }
 

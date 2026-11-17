@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
 using InteractionFlow.Core.Interactions;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Parrot.Entities;
 using InteractionFlow.Samples.Parrot.ExternalPorts;
 using InteractionFlow.Standard.ConsoleSystem.ExternalPorts;
@@ -49,7 +49,7 @@ namespace InteractionFlow.Samples.Parrot.Interactions
                 return await output.WriteLineAsync(context, "That perch doesn't exist. Choose a name or index.");
 
             var last = memory.GetKey(context).Then(memory.GetOrCreate);
-            if (!last.Try(out var entry, out var error)) throw error;
+            if (!last.HasValue(out var entry)) throw last.Error!;
             if (mode == SampleMode.RepeatLast)
             {
                 mode = entry.Value;

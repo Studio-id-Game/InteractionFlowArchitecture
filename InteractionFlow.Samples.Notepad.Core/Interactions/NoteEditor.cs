@@ -91,7 +91,7 @@ namespace InteractionFlow.Samples.Notepad.Core.Interactions
                     ? ReadKeyValue.Selected(available[selected.Value]) : ReadKeyValue.Cancelled;
             }
             var prompt = await output.WriteLineAsync(context, "Note ID (blank cancels):");
-            if (!prompt.Result.Try(out var promptError)) return promptError;
+            if (prompt.Result.HasError(out var promptError)) return promptError;
             var text = await input.ReadLineAsync(context);
             if (text == null) context.ExitRequested = true;
             if (string.IsNullOrWhiteSpace(text)) return ReadKeyValue.Cancelled;

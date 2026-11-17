@@ -13,7 +13,7 @@ namespace InteractionFlow.Core.Entities
         bool IsContextBox => false;
 
         /// <summary>未発見の診断情報も含めた公開の解決結果。</summary>
-        Result<T> Parse<T>();
+        ResultAPI.Entities.Result<T> Parse<T>();
 
         /// <summary>通常の未発見と、展開上限による解決失敗を区別して返します。</summary>
         bool TryResolve<T>(bool reportMissing,

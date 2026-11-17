@@ -44,7 +44,7 @@ Operation や委譲先の送出例外を包括的に捕捉する処理は追加�
 Task のキャンセルは失敗 Result へ変換せず伝播し、Interaction のキャンセル処理につながります。
 失敗 Result に格納された OperationCanceledException は Task のキャンセルとは区別します。
 
-ReactionEnd.Result と InteractionEnd.Result は既存の Result の契約に従います。
+ReactionEnd.Result と InteractionEnd.Result は `InteractionFlow.Core.ResultAPI.Entities.Result` を返します。
 返された失敗、送出例外、キャンセルされた Task を混同しません。
 Result の連結 API に、委譲先の例外を自動捕捉する動作は追加しません。
 

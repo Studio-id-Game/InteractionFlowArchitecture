@@ -20,7 +20,7 @@ public sealed class EntryDepthTests
     public void LimitCountsUserEntriesEquallyForParseAndContext(int depth)
     {
         var entry = Chain(depth);
-        Assert.True(entry.Parse<string>().Try(out var found, out _));
+        Assert.True(entry.Parse<string>().HasValue(out var found));
         Assert.Equal("found", found);
         using var context = new FlowContext().With(entry);
         Assert.Equal("found", context.GetRequired<string>());
@@ -30,7 +30,7 @@ public sealed class EntryDepthTests
     public void AcyclicOverLimitFailsWithoutFallingBack()
     {
         var entry = Chain(101);
-        Assert.False(entry.Parse<string>().Try(out _, out var failure));
+        Assert.True(entry.Parse<string>().HasError(out var failure));
         var error = Assert.IsType<EntryResolutionLimitException>(failure.InnerException);
         Assert.Equal(typeof(string), error.RequestedType);
         Assert.Equal(100, error.DepthLimit);
@@ -56,7 +56,7 @@ public sealed class EntryDepthTests
             tail = next;
         }
         tail.Value = root;
-        Assert.False(root.Parse<string>().Try(out _, out var failure));
+        Assert.True(root.Parse<string>().HasError(out var failure));
         var error = Assert.IsType<EntryResolutionLimitException>(failure.InnerException);
         Assert.Equal(detected, error.CycleDetected);
         Assert.InRange(error.DiagnosticDepth, 1, 100);

@@ -198,21 +198,21 @@ public sealed class GameplayReactionTests
     [Fact]
     public void AppliedPresentationRequiresAKeyWhileStoppedDoesNot()
     {
-        Assert.False(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Applied), "apply").Try(out var failure));
+        Assert.True(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Applied), "apply").HasError(out var failure));
         var missing = Assert.IsType<InvalidOperationException>(failure!.InnerException);
         Assert.Contains("presentation key", missing.Message);
-        Assert.True(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop").Try(out _));
+        Assert.True(GameplayReaction.ValidatePresentation(new(GameUpdateStatus.Stopped), "stop").IsSuccess);
         Assert.True(GameplayReaction.ValidatePresentation(
-            new(GameUpdateStatus.Applied, new PresentationKey(1, 1, 1)), "apply").Try(out _));
+            new(GameUpdateStatus.Applied, new PresentationKey(1, 1, 1)), "apply").IsSuccess);
     }
 
     [Fact]
     public void UnexpectedMutationStatusDoesNotBecomeSuccess()
     {
         var unknown = (GameUpdateStatus)123;
-        Assert.False(GameplayReaction.ValidateUpdate(unknown, "select", allowRejected: true).Try(out var select));
-        Assert.False(GameplayReaction.ValidateUpdate(unknown, "advance").Try(out var advance));
-        Assert.False(GameplayReaction.ValidatePresentation(new(unknown), "present").Try(out var present));
+        Assert.True(GameplayReaction.ValidateUpdate(unknown, "select", allowRejected: true).HasError(out var select));
+        Assert.True(GameplayReaction.ValidateUpdate(unknown, "advance").HasError(out var advance));
+        Assert.True(GameplayReaction.ValidatePresentation(new(unknown), "present").HasError(out var present));
         Assert.IsType<InvalidOperationException>(select!.InnerException);
         Assert.IsType<InvalidOperationException>(advance!.InnerException);
         Assert.IsType<InvalidOperationException>(present!.InnerException);

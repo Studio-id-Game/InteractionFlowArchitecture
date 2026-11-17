@@ -1,6 +1,6 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.ExternalPorts;
@@ -84,10 +84,10 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
 
         try
         {
-            if (result.Try(out var failure))
-                Console.WriteLine("Window closed.");
-            else
+            if (result.HasError(out var failure))
                 Console.Error.WriteLine(failure);
+            else
+                Console.WriteLine("Window closed.");
         }
         catch (Exception error)
         {
@@ -98,7 +98,7 @@ internal sealed class RaylibWindowReaction : Reaction, IWindowReaction
     }
 
     private static Result Combine(Result result, Exception error)
-        => result.Try(out var previous) ? error : new AggregateException(previous, error);
+        => result.HasError(out var previous) ? new AggregateException(previous, error) : error;
 
     public ReactionEnd Draw(CounterFlowContext context)
     {

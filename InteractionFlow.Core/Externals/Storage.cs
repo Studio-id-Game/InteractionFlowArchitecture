@@ -1,7 +1,7 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -60,7 +60,7 @@ namespace InteractionFlow.Core.Externals
         public Result ClearWithoutDispose()
         {
             var canRemove = CanRemoveAllItems();
-            if (!canRemove.Try(out var e))
+            if (canRemove.HasError(out var e))
             {
                 return e;
             }
@@ -84,7 +84,7 @@ namespace InteractionFlow.Core.Externals
         public Result ClearAndDispose()
         {
             var canRemove = CanRemoveAllItems();
-            if (!canRemove.Try(out var e))
+            if (canRemove.HasError(out var e))
             {
                 return e;
             }
@@ -99,7 +99,7 @@ namespace InteractionFlow.Core.Externals
 
             foreach (var (key, value) in items)
             {
-                if (!CanRemoveValue(key, value).Try(out var e))
+                if (CanRemoveValue(key, value).HasError(out var e))
                 {
                     exceptions ??= [];
                     exceptions.Add(e.InnerException);
@@ -215,9 +215,9 @@ namespace InteractionFlow.Core.Externals
             return Get(key)
                 .ThenError(_ =>
                 {
-                    //OnSuccess() を入れ子にしているのは、CreateNewValue() のルートでのみ items.Add() を実行するため
+                    //IfSuccess() を入れ子にしているのは、CreateNewValue() のルートでのみ items.Add() を実行するため
                     return CreateNewValue(key)
-                        .OnSuccess(newValue =>
+                        .IfSuccess(newValue =>
                         {
                             items.Add(key, newValue);
                         });
@@ -237,7 +237,7 @@ namespace InteractionFlow.Core.Externals
             if (items.TryGetValue(key, out var value))
             {
                 return CanRemoveValue(key, value)
-                    .OnSuccess(() =>
+                    .IfSuccess(() =>
                     {
                         items.Remove(key);
                     });
@@ -263,7 +263,7 @@ namespace InteractionFlow.Core.Externals
             if (items.TryGetValue(key, out var value))
             {
                 return CanRemoveValue(key, value)
-                    .OnSuccess(() =>
+                    .IfSuccess(() =>
                     {
                         items.Remove(key);
 

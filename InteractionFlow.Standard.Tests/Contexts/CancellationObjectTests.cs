@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,12 +61,12 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.Equal(token, cancelled.CancellationToken);
             Assert.Throws<InvalidOperationException>(() => cancellation.AddCancelableTask(Task.CompletedTask));
             var duplicate = await cancellation.WaitForTasksAndResetCancellationAsync();
-            Assert.False(duplicate.Try(out var duplicateError));
+            Assert.True(duplicate.HasError(out var duplicateError));
             Assert.IsType<InvalidOperationException>(duplicateError!.InnerException);
             registration.Dispose();
             Assert.True(cancellation.HasTask); // Snapshot still owns the wait, even after deregistration.
             work.SetResult(true);
-            Assert.True((await Finish(wait)).Try(out _));
+            Assert.True((await Finish(wait)).IsSuccess);
             Assert.False(cancellation.HasTask);
             Assert.False(cancellation.IsCancellationRequested);
             Assert.True(token.IsCancellationRequested);
@@ -87,7 +87,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var wait = cancellation.WaitForTasksAndResetCancellationAsync();
             if (delayed) work.SetException(failure);
             var result = await Finish(wait);
-            Assert.False(result.Try(out var error));
+            Assert.True(result.HasError(out var error));
             var aggregate = Assert.IsType<AggregateException>(error!.InnerException);
             Assert.Same(failure, Assert.Single(aggregate.InnerExceptions));
             Assert.False(cancellation.IsCancellationRequested);
@@ -105,7 +105,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             cancellation.Cancel();
             var wait = cancellation.WaitForTasksAndResetCancellationAsync();
             if (delayed) work.SetCanceled(new CancellationToken(true));
-            Assert.True((await Finish(wait)).Try(out _));
+            Assert.True((await Finish(wait)).IsSuccess);
         }
 
         [Fact]
@@ -126,7 +126,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.True(cancellation.IsCancellationRequested);
             first.SetException(failure1);
             var result = await Finish(wait);
-            Assert.False(result.Try(out var error));
+            Assert.True(result.HasError(out var error));
             var aggregate = Assert.IsType<AggregateException>(error!.InnerException);
             Assert.Equal(new Exception[] { failure1, failure2, failure3 }, aggregate.InnerExceptions);
             Assert.False(cancellation.IsCancellationRequested);
@@ -145,7 +145,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 for (var i = 0; i < 96; i++) registrations.Add(cancellation.AddCancelableTask(Task.CompletedTask));
                 cancellation.Cancel();
                 var result = await Finish(cancellation.WaitForTasksAndResetCancellationAsync());
-                Assert.False(result.Try(out var error));
+                Assert.True(result.HasError(out var error));
                 Assert.Same(failure, Assert.Single(Assert.IsType<AggregateException>(error!.InnerException).InnerExceptions));
             }
             finally { foreach (var registration in registrations) registration.Dispose(); }
@@ -159,11 +159,11 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var task = Task.FromException(failure);
             using var old = cancellation.AddCancelableTask(task);
             cancellation.Cancel();
-            Assert.False((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).Try(out _));
+            Assert.True((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).HasError(out _));
             using var current = cancellation.AddCancelableTask(task);
             old.Dispose();
             cancellation.Cancel();
-            Assert.False((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).Try(out _));
+            Assert.True((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).HasError(out _));
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var cancellation = new CancellationObject();
             var work = Work();
             using var registration = cancellation.AddCancelableTask(work.Task);
-            Assert.False((await cancellation.WaitForTasksAndResetCancellationAsync()).Try(out _));
+            Assert.True((await cancellation.WaitForTasksAndResetCancellationAsync()).HasError(out _));
             Assert.True(cancellation.HasTask);
             registration.Dispose();
             work.SetResult(true);
@@ -196,7 +196,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             {
                 var reset = cancellation.WaitForTasksAndResetCancellationAsync();
                 Assert.True(reset.IsCompletedSuccessfully);
-                Assert.True(reset.Result.Try(out _));
+                Assert.True(reset.Result.IsSuccess);
                 Assert.False(cancellation.IsCancellationRequested);
                 Assert.NotNull(token.WaitHandle); // Old source is still alive while Cancel is notifying.
                 Assert.False(cancellation.GetToken().IsCancellationRequested);
@@ -221,7 +221,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             try
             {
                 await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-                Assert.True((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).Try(out _));
+                Assert.True((await Finish(cancellation.WaitForTasksAndResetCancellationAsync())).IsSuccess);
                 Assert.NotNull(token.WaitHandle);
                 Assert.False(cancellation.GetToken().IsCancellationRequested);
             }
@@ -239,7 +239,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             using var callback = token.Register(() =>
             {
                 var reset = cancellation.WaitForTasksAndResetCancellationAsync().AsTask();
-                Assert.True(reset.GetAwaiter().GetResult().Try(out _));
+                Assert.True(reset.GetAwaiter().GetResult().IsSuccess);
                 throw failure;
             });
             var actual = Assert.Throws<AggregateException>(cancellation.Cancel);

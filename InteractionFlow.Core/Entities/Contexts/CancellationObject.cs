@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
@@ -136,7 +137,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// 待機開始後に登録スコープが破棄されても、確定済みの Task は待ちます。
         /// 通知中の Source の実際の破棄は、最後の Cancel 呼び出しの終了まで遅延します。
         /// </remarks>
-        public ValueTask<Result> WaitForTasksAndResetCancellationAsync()
+        public ValueTask<ResultTypes.Result> WaitForTasksAndResetCancellationAsync()
         {
             CancellationState current;
             Task[] tasks;
@@ -158,7 +159,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             finally { FinishReset(current); }
         }
 
-        private async Task<Result> WaitAndResetCoreAsync(
+        private async Task<ResultTypes.Result> WaitAndResetCoreAsync(
             CancellationState current, TaskRegistration[] snapshot, Task[] tasks)
         {
             try
@@ -176,7 +177,7 @@ namespace InteractionFlow.Core.Entities.Contexts
             finally { FinishReset(current); }
         }
 
-        private Result CollectFailures(TaskRegistration[] snapshot, Task[] tasks)
+        private ResultTypes.Result CollectFailures(TaskRegistration[] snapshot, Task[] tasks)
         {
             List<Exception>? failures = null;
             foreach (var task in tasks)
@@ -185,7 +186,7 @@ namespace InteractionFlow.Core.Entities.Contexts
                 failures ??= [];
                 failures.AddRange(task.Exception!.InnerExceptions);
             }
-            Result result = failures is null ? Result.Success : new AggregateException(failures);
+            ResultTypes.Result result = failures is null ? ResultTypes.Result.Success : new AggregateException(failures);
             lock (gate)
             {
                 // Record transfer to the wait result, not whether a port chose to retain or recover the failure.

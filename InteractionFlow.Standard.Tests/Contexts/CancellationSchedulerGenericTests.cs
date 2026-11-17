@@ -1,5 +1,5 @@
-using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Standard.Tests.Contexts
 {
@@ -24,7 +25,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             using var scheduler = cancellation.GetScheduler();
             var expected = new object();
             var result = await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(expected.AsResult()));
-            Assert.True(result.Try(out var value, out _));
+            Assert.True(result.HasValue(out var value));
             Assert.Same(expected, value);
             Assert.False(cancellation.IsCancellationRequested);
         }
@@ -35,9 +36,9 @@ namespace InteractionFlow.Standard.Tests.Contexts
             using var scheduler = new CancellationObject().GetScheduler();
             Result innerFailure = new FormatException("Value contains a failure");
             var result = await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(innerFailure.AsResult()));
-            Assert.True(result.Try(out var inner, out _));
-            Assert.False(innerFailure.Try(out var expected));
-            Assert.False(inner.Try(out var actual));
+            Assert.True(result.HasValue(out var inner));
+            Assert.True(innerFailure.HasError(out var expected));
+            Assert.True(inner.HasError(out var actual));
             Assert.Same(expected, actual);
         }
 
@@ -47,9 +48,19 @@ namespace InteractionFlow.Standard.Tests.Contexts
             using var scheduler = new CancellationObject().GetScheduler();
             Result<string> original = new FormatException("Work failed");
             var result = await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(original));
-            Assert.False(original.Try(out _, out var expected));
-            Assert.False(result.Try(out _, out var actual));
+            Assert.True(original.HasError(out var expected));
+            Assert.True(result.HasError(out var actual));
             Assert.Same(expected, actual);
+        }
+
+        [Fact]
+        public async Task UninitializedResultIsReturnedAsAnExplicitFailure()
+        {
+            using var scheduler = new CancellationObject().GetScheduler();
+            var result = await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(default(Result<string>)));
+
+            Assert.True(result.HasError(out var error));
+            Assert.Contains("is not initialized", error.Message);
         }
 
         [Fact]
@@ -63,7 +74,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.False(cancellation.HasTask);
             Assert.False(task.IsCompleted);
             work.SetResult("completed");
-            Assert.True((await Finish(task)).Try(out var value, out _));
+            Assert.True((await Finish(task)).HasValue(out var value));
             Assert.Equal("completed", value);
             Assert.True(cancellation.IsCancellationRequested);
         }
@@ -76,7 +87,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var work = Work();
             using var registration = cancellation.GetToken().Register(() => work.SetResult("completed"));
             var result = await Finish(scheduler.TimeoutAsync(TimeSpan.FromMilliseconds(10), work.Task));
-            Assert.True(result.Try(out var value, out _));
+            Assert.True(result.HasValue(out var value));
             Assert.Equal("completed", value);
         }
 
@@ -95,7 +106,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.False(task.IsCompleted);
             work.SetResult(failWork ? (Result<string>)workFailure : "completed");
             var result = await Finish(task);
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Equal(failWork ? new Exception[] { notification, workFailure } : [notification], Leaves(error));
         }
 
@@ -114,7 +125,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 throw notification;
             });
             var result = await Finish(scheduler.TimeoutAsync(TimeSpan.Zero, work.Task));
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Equal([notification, first, second], Leaves(error));
         }
 
@@ -127,7 +138,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var token = cancellation.GetToken();
             using var registration = token.Register(() => work.SetCanceled(token));
             var result = await Finish(scheduler.TimeoutAsync(TimeSpan.Zero, work.Task));
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             var cancelled = Assert.IsType<OperationCanceledException>(error.InnerException, exactMatch: false);
             Assert.Equal(token, cancelled.CancellationToken);
         }
@@ -139,7 +150,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             var failure = new FormatException("Task failed");
             var result = await scheduler.TimeoutAsync(Timeout.InfiniteTimeSpan,
                 Task.FromException<Result<string>>(failure));
-            Assert.False(result.Try(out _, out var error));
+            Assert.True(result.HasError(out var error));
             Assert.Same(failure, error.InnerException);
         }
 
@@ -154,10 +165,10 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 _ = scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(Result.Success));
             });
             work.SetResult("first");
-            Assert.True((await Finish(first)).Try(out _, out _));
-            Assert.True((await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(Result.Success))).Try(out _));
+            Assert.True((await Finish(first)).HasValue(out _));
+            Assert.True((await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult(Result.Success))).IsSuccess);
             Assert.True((await scheduler.TimeoutAsync(TimeSpan.Zero, Task.FromResult("next".AsResult())))
-                .Try(out var value, out _));
+                .HasValue(out var value));
             Assert.Equal("next", value);
         }
 
@@ -172,7 +183,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
             Assert.False(task.IsCompleted);
             Assert.False(cancellation.IsCancellationRequested);
             work.SetResult("completed");
-            Assert.True((await Finish(task)).Try(out var value, out _));
+            Assert.True((await Finish(task)).HasValue(out var value));
             Assert.Equal("completed", value);
             Assert.Throws<ObjectDisposedException>(() =>
             {
@@ -192,7 +203,7 @@ namespace InteractionFlow.Standard.Tests.Contexts
                 work.SetResult("completed");
             });
             var result = await Finish(scheduler.TimeoutAsync(TimeSpan.Zero, work.Task));
-            Assert.True(result.Try(out var value, out _));
+            Assert.True(result.HasValue(out var value));
             Assert.Equal("completed", value);
         }
 

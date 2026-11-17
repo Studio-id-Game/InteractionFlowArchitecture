@@ -5,7 +5,10 @@
 呼び出し側が失敗値を使う箇所を見つけ、採用しやすい箇所から一サンプルずつ実装・検証します。
 対象範囲から HelloDoor と HelloDoor.Lock を外します。
 この文書の候補は採否を決めるための出発点です。
-[移行記録](../RESULT_API_MIGRATION.md) · [Result API の契約](../RESULT.md)
+[移行記録](../../docs/RESULT_API_MIGRATION.md) · [Result API の契約](../../docs/RESULT.md)
+
+実施後の採否、設計レビューでの再検討、実装・検証結果は
+[サンプルでの検討と実装記録](../../docs/design-notes/RESULT_TYPED_ERRORS_SAMPLES_REVIEW.md) にまとめました。
 
 ## 採用判断の進め方
 
@@ -17,7 +20,7 @@
 3. 状態と Context、SystemFlow、Interaction、Port 契約の順に影響を確認します。
    サンプル内の小さな境界で使い、Port の戻り値を変更する場合は実装・呼び出し側・テストダブルを一緒に更新します。
    基本ルールへの抵触や大きな設計変更が必要と分かった段階で、影響と理由を報告して実装を止めます。
-   [エージェントガイド](../../AGENTS.md) · [アプリ設計ガイド](../guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)
+   [エージェントガイド](../../AGENTS.md) · [アプリ設計ガイド](../../docs/guides/INTERACTIONFLOW_APPLICATION_DESIGN.md)
 
 ## 新 API の使い方と境界
 
@@ -33,7 +36,8 @@
 - 通常終了、ユーザーの取り消し、返却された失敗、送出例外、Task のキャンセルは既存の意味に沿って扱います。
   `ReactionEnd` / `InteractionEnd` を返す箇所では、終了結果の同一性や失敗の集約を確認します。
   復帰先に要件のある待機点だけで `ConfigureAwait` を明示し、描画スレッドの確認には `WindowState` と実行時のテストを使います。
-  [Reaction とフローの結果](../REACTION_RESULTS.md) · [描画ライブラリとの接続設計](../guides/RENDERING_LIBRARY_INTEGRATION.md)
+  [Reaction とフローの結果](../../docs/REACTION_RESULTS.md) ·
+  [描画ライブラリとの接続設計](../../docs/guides/RENDERING_LIBRARY_INTEGRATION.md)
 
 ## サンプル別の検討候補
 
@@ -88,7 +92,7 @@ Scheduler の現行オーバーロードは `Task<Result>` と `Task<Result<T>>`
 型付きの失敗値を試す場合は、メニューの局所処理から検討し、Scheduler をまたぐ必要が生じた場合は設計上の変更として扱います。
 [メニュー選択](../../InteractionFlow.Samples.Parrot/Interactions/SelectSample.cs) ·
 [会話とタイムアウト](../../InteractionFlow.Samples.Parrot/Interactions/TalkToParrot.cs) ·
-[Scheduler の契約](../CANCELLATION_SCHEDULER.md)
+[Scheduler の契約](../../docs/CANCELLATION_SCHEDULER.md)
 
 ## 実装順と完了の確認
 

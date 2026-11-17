@@ -7,9 +7,9 @@
 - **対象型。** `ResultAPITarget` が指定する型を束縛し、テンプレートが使うメンバーを検証します。`IsSuccess` にはアクセス可能な `bool` のインスタンスプロパティを要求します。生成先は `ResultAPIExtension` で検出します。
 - **Result の状態。** `default(Result)` は成功です。値付きの `default` は未初期化で、`IsSuccess` の参照時に `ResultException` を送出します。生成メソッドはこの例外を伝播させます。初期化済みの成功分岐では `Value`、失敗分岐では `Error` と `ErrorValue` が非 null です。 [Result の定義](../../InteractionFlow.Core/ResultAPI/Entities/Result.cs)
 - **コールバックの引数。** `Self` のプロパティに付いた `ResultAPICallbackArgument` で、成功・失敗の区分と引数順を指定します。 [コールバック引数の属性](../../InteractionFlow.Core/ResultAPI/Entities/Attributes/ResultAPICallbackArgumentAttribute.cs)
-- **公開範囲。** 初版の生成器は Core ビルド専用とし、属性・テンプレートは内部化します。試作の `InteractionFlow.Core.ResultAPI.Entities` と既存の `InteractionFlow.Core.Entities` は別の名前空間に同名型を持ちます。まず試作側で生成を検証し、公開 API のシグネチャと呼び出し側を新しい Result 契約に合わせて書き直します。`HasValue`、`HasError`、`WithoutValue`、`ThrowIfError`、暗黙変換などの実行時契約は Core の手書きコードが担います。
+- **公開範囲。** 生成器は Core ビルド専用です。公開 API と呼び出し側は `InteractionFlow.Core.ResultAPI.Entities` の Result 型を使います。`HasValue`、`HasError`、`WithoutValue`、`ThrowIfError`、暗黙変換などの実行時契約は Core の手書きコードが担います。
 
-旧 Result API の削除時に、新旧の同名型を区別するために追加した `using` の別名宣言も削除します。
+旧 Result 型と拡張の削除に伴い、移行中に同名型を区別していた `using` の別名宣言も削除しました。
 
 ## 生成する API の成立条件
 
@@ -158,7 +158,7 @@ public static Result<R, E> Then<T, E, R>(
 ### 手書きコードとの共存
 
 - 生成先の同じ `partial` クラスに、同一シグネチャで戻り型・公開性・拡張メソッドとしての宣言が整合する手書きメソッドがある場合、その候補だけを生成から外します。型制約つきや参照戻り値のメソッド、同名のプロパティなど、整合しない宣言には診断を出します。
-- `Map` / `MapAsync`、`AsResult` / `AsResultAsync`、`StartAsync` に相当する機能や、値・エラーの個別変換は、必要に応じて新契約に沿ったシグネチャで手書きします。
+- 成功値の変換は `Then` / `ThenAsync` / `ThenValueAsync` で連結し、値は手書きの `AsResult` で包めます。
 - 別クラスにある同名拡張は候補を抑止しません。公開前に、生成・手書きの両方が見える利用側コードをコンパイルします。型を維持する `Then` / `ThenError` の呼び出し、`Task` を返すコールバックを渡した `ResolveAsync` の戻り値型、`If*` の `async` ラムダが待機されることを確認します。
 
 ## 実装ロードマップ

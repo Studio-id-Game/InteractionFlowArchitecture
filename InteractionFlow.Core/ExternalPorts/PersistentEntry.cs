@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace InteractionFlow.Core.ExternalPorts
     /// <param name="persistenceId">永続化先を識別する ID。</param>
     /// <param name="value">初期値。</param>
     public class PersistentEntry<TPersistenceId, TValue>(TPersistenceId persistenceId, TValue? value)
-        : Entities.Entry<TValue>(value)
+        : Entry<TValue>(value)
     {
         /// <summary>
         /// 永続化先を識別する ID を取得します。

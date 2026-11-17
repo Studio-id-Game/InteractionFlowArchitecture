@@ -1,7 +1,7 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
-using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Samples.EscapeGame.Aspects.Lifetime.Entities;
 

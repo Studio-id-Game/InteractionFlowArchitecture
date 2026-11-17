@@ -1,10 +1,11 @@
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Diagnostics;
 
 namespace InteractionFlow.Core.Entities
 {
     /// <summary>
-    /// <see cref="Result"/> または <see cref="Result{TValue}"/> が失敗や不正な成功値を表すために使用する例外です。
+    /// <see cref="Result"/> 、<see cref="Result{T}"/>、または <see cref="Result{T, TError}"/> が失敗や不正な成功値を表すために使用する例外です。
     /// </summary>
     public class ResultException : Exception
     {

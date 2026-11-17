@@ -1,12 +1,12 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using InteractionFlow.Samples.Raylib.Entities;
 using InteractionFlow.Samples.Raylib.Entities.Contexts;
 using InteractionFlow.Samples.Raylib.Externals;
 using System;
 using System.Threading.Tasks;
 using Xunit;
-using Result = InteractionFlow.Core.ResultAPI.Entities.Result;
 
 namespace InteractionFlow.Samples.Raylib.Tests;
 

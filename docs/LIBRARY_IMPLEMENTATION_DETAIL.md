@@ -211,6 +211,7 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 | --- | --- |
 | `Result` | 値を持たない結果に意味を持たせる |
 | `Result<TValue>` | 値を持つ結果に意味を持たせる |
+| `Result<TValue, TError>` | 失敗時に例外と失敗値を保持する |
 | `ReactionEnd` | `Reaction` の結果に意味を持たせる |
 | `InteractionEnd` | `Interaction`/`SystemFlow` の結果に意味を持たせる |
 | `Entry<TValue>` | 保持する値に意味を持たせる |
@@ -219,7 +220,7 @@ Analyzer は、認識できる依存ノード宣言と `Dependency` 列挙の整
 
 Result の契約、各拡張の使い分け、例外を Result 化する責務は [Result API](./RESULT.md) を基準とします。
 
-ソースコード: [`Result.cs`](../InteractionFlow.Core/Entities/Result.cs)
+ソースコード: [`Result.cs`](../InteractionFlow.Core/ResultAPI/Entities/Result.cs)
 
 `Result` / `Result<TValue>` は、Function や補助処理における局所的な成功、成功値、失敗を表します。
 
@@ -251,17 +252,15 @@ Result の契約、各拡張の使い分け、例外を Result 化する責務�
 - `Result` / `Result<TValue>` は、`null` 安全に例外や値を取り出せる
 
   ```csharp
-  bool Result.Try([MaybeNullWhen(true)] out ResultException e)
-  bool Result<TValue>.Try([MaybeNullWhen(false)] out TValue value,
-    [MaybeNullWhen(true)] out ResultException e)
+  bool Result.HasError([MaybeNullWhen(false)] out ResultException e)
+  bool Result<TValue>.HasValue([MaybeNullWhen(false)] out TValue value)
   ```
 
 - フローを快適に記述・解読するために、拡張メソッドによって 同期・非同期の メソッドチェーン / Fluent API などが提供される
 
-  [`ResultExtensions.cs`](../InteractionFlow.Core/Entities/ResultExtensions.cs),
-  [`ResultTExtensions.cs`](../InteractionFlow.Core/Entities/ResultTExtensions.cs),
-  [`ResultAsyncExtensions.cs`](../InteractionFlow.Core/Entities/ResultAsyncExtensions.cs),
-  [`ResultTAsyncExtensions.cs`](../InteractionFlow.Core/Entities/ResultTAsyncExtensions.cs)
+  [同期版](../InteractionFlow.Core/ResultAPI/Entities/ResultExtensions.cs)、
+  [Task 版](../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsAsync.cs)、
+  [ValueTask 版](../InteractionFlow.Core/ResultAPI/Entities/ResultExtensionsValueAsync.cs)
   ```csharp
   Result<int> ModUnder(int num, int mod, int limit)
   {
@@ -284,7 +283,7 @@ Result の契約、各拡張の使い分け、例外を Result 化する責務�
 
 - `default(Result)` は例外を持たないため成功として扱われる
 
-- `default(Result<TValue>)` は成功値を持たないため失敗として扱われる
+- `default(Result<TValue>)` は未初期化で、結果の検査時に `ResultException` を送出する
 
 - 意味の重複を避けるために、`Exception` 派生型の値（`Result<Exception>` など）は使用できない
 - `Result<TValue>` の成功値に `null` は使用できない
@@ -301,7 +300,7 @@ Result の契約、各拡張の使い分け、例外を Result 化する責務�
   任意の Result から公開ファクトリーや暗黙変換で生成することはできません。
 - `GetEnd(Result)` は既存の失敗 Result を再ラップせず保持します。
   引数なし、および `Exception?` を受ける既存の GetEnd も利用できます。
-- `HasException` は `!Result.Try(out _)` です。
+- `HasException` は `!Result.IsSuccess` です。
 - `Exception` は ResultException の一段のラッパーを除いた原因です。
   InnerException を持たない ResultException はそのまま返します。
 - `HasCanceled` はその原因が OperationCanceledException の場合だけ true です。
@@ -312,7 +311,7 @@ Result の契約、各拡張の使い分け、例外を Result 化する責務�
 ReactionEnd Complete(Result result) => GetEnd(result);
 
 // 利用側
-if (!end.Result.Try(out var error))
+if (end.Result.HasError(out var error))
 {
     // error は ResultException。元の原因は InnerException に保持されます。
 }
@@ -994,7 +993,7 @@ namespace MyApp.Externals
             return Task.FromResult(inputText
                 .Then(text =>
                 {
-                    if (!refValue.Try(out var item, out _))
+                    if (!refValue.HasValue(out var item))
                     {
                         item = new TextStorageItem();
                     }
@@ -1084,31 +1083,22 @@ namespace MyApp.Interactions
                     return entry.AsResult();
                 })
 
-                // 同期処理の結果を引き継いで、非同期チェーンを開始する
-                .StartAsync()
-
                 // Entry.Value の値を永続化する
-                .ThenAsync(async entry =>
-                {
-                    return await entry.Save(persistence)
-                        // Save 成功時、同じ Entry を後続処理へ引き継ぐ
-                        .ThenAsync(() => entry.AsResultAsync());
-                })
+                .ThenAsync(entry => entry.Save(persistence)
+                    // Save 成功時、同じ Entry を後続処理へ引き継ぐ
+                    .ThenAsync(() => entry.AsResult()))
 
                 // 永続値を残したまま、キャッシュ上の値を空にする
                 .ThenAsync(entry =>
                 {
                     entry.Value!.Text = string.Empty;
-                    return entry.AsResultAsync();
+                    return entry.AsResult();
                 })
 
                 // 同じ Entry に永続値を読み戻す
-                .ThenAsync(async entry =>
-                {
-                    return await entry.Load(persistence)
-                        // Load 成功時、同じ Entry を後続処理へ引き継ぐ
-                        .ThenAsync(_ => entry.AsResultAsync());
-                })
+                .ThenAsync(entry => entry.Load(persistence)
+                    // Load 成功時、同じ Entry を後続処理へ引き継ぐ
+                    .ThenAsync(_ => entry.AsResult()))
 
                 // 読み戻されたキャッシュ値を検証する
                 .ThenAsync(entry =>
@@ -1121,7 +1111,7 @@ namespace MyApp.Interactions
                             $"Failed to save or load. " +
                             $"(key = {key.Value}, text = \"{loadedText}\")");
 
-                    return result.StartAsync();
+                    return result;
                 });
         }
     }
@@ -1195,9 +1185,10 @@ namespace MyApp.Externals
 
                 for (int i = 0; i < keys.Length; i++)
                 {
-                    if (!GetOrCreate(keys[i]).Try(out var entry, out var error))
+                    var resolved = GetOrCreate(keys[i]);
+                    if (!resolved.HasValue(out var entry))
                     {
-                        return error;
+                        return resolved.Error!;
                     }
 
                     entries[i] = entry;

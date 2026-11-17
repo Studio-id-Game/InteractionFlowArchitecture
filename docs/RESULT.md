@@ -1,6 +1,6 @@
 # Result API
 
-`InteractionFlow.Core.Entities` の `Result` は、局所的な処理の成功・失敗を明示して連結するための API です。
+`InteractionFlow.Core.ResultAPI.Entities` の `Result` は、局所的な処理の成功・失敗を明示して連結するための API です。
 この文書を、Result の契約と例外の扱いを確認する基準とします。
 `ReactionEnd` はこの Result を保持し、Reaction による終了結果の生成規則を付与します。
 `InteractionEnd` はそれに基づく Interaction / SystemFlow の完了を表し、Context は保持しません。
@@ -9,7 +9,9 @@
 ## 成功値と失敗
 
 - `Result` は値を持たない成功・失敗です。`Result.Success` と `default(Result)` は成功です。
-- `Result<T>` は非 null の成功値、または例外による失敗です。`default(Result<T>)` は未初期化の失敗です。
+- `Result<T>` は非 null の成功値、または例外による失敗です。
+- `Result<T, TError>` は失敗時に例外と非 null の失敗値を保持します。
+- 値付き Result の `default` は未初期化です。結果を検査する操作やチェーンは `ResultException` を送出します。
 - 値は暗黙変換または `AsResult()` で成功結果にできます。null と Exception 派生型は成功値にできません。
   それらをデータとして保持する必要がある場合は、非 null のコンテナー型で包みます。
 - Exception は失敗結果へ暗黙変換できます。失敗を作るために throw / catch する必要はありません。
@@ -26,8 +28,10 @@ Result<int> ParseCount(string text)
 }
 ```
 
-`Try(out value, out error)`（値なしは `Try(out error)`）で分岐します。
-`WithoutValue` は成功値を除いた Result を返し、失敗は保持します。
+`IsSuccess` で状態を調べ、`HasValue(out value)` で成功値、`HasError(out error)` で例外を取得します。
+`Result<T, TError>` の `HasError(out error, out errorValue)` は失敗値も取得します。
+`WithoutValue` は成功・失敗と例外を値なし Result に引き継ぎます。
+`WithoutErrorValue` は成功値と例外を `Result<T>` に引き継ぎます。
 `ThrowIfError()` は失敗を例外へ戻す明示的な境界です。
 保持している ResultException を送出するため、元の例外型そのものを直接 catch する用途とは異なります。
 
@@ -35,44 +39,36 @@ Result<int> ParseCount(string text)
 
 | 操作 | 意味 | コールバック |
 | --- | --- | --- |
-| Map | 成功値を別の値へ変換 | `T → U` |
 | Then | 成功時に次の Result を返す処理へ進む | `T → Result<U>` など |
-| ThenError | 失敗時に回復・別の失敗への変換を行う | `Exception → Result<T>` など |
-| OnSuccess | 成功時に副作用を行い、元の結果を返す | `Action<T>` または `Action` |
+| ThenError | 失敗時に回復・別の失敗への変換を行う | `ResultException → Result<T>` など |
+| IfSuccess / IfError / IfElse | 該当する分岐で副作用を行い、元の結果を返す | 成功用・失敗用のアクション |
 | Resolve | 成功・失敗の両方を処理して通常の値へ取り出す | 成功用・失敗用の関数 |
 
-Map / Then / OnSuccess は失敗時に成功用コールバックを呼びません。
-ThenError は成功時に回復用コールバックを呼びません。
-Map の変換先は任意型で、タプルの個数や順序も呼び出し側が決めます。
-Map に Result を返す関数を渡すと Result が入れ子になるため、その用途では Then を使います。
+`Then` で成功値を変換する場合、変換した値を `AsResult()` または `CreateSuccess` で包みます。
+失敗結果は変換先の Result へ引き継ぎます。
 
 ```csharp
 var result = ParseCount(text)
-    .Map(count => (count, label: "items"))
+    .Then(count => (count, label: "items").AsResult())
     .Then(pair => Validate(pair.count))
     .ThenError(error => Recover(error));
 ```
 
 ## 非同期版
 
-`StartAsync()` は Result を完了済み Task にし、非同期チェーンを開始します。
-`AsResultAsync()` は値を成功結果の完了済み Task にします。処理を別スレッドで実行するものではありません。
-
-- `MapAsync` は `Task<Result<T>>` を待ち、`Func<T, U>` によって同期的に成功値を変換します。
-- `ThenAsync` は次の `Task<Result>` / `Task<Result<U>>` を返す処理へ接続します。
-- `ThenErrorAsync` は失敗時の非同期処理へ接続します。
-- `ResolveAsync` は成功・失敗それぞれの非同期処理から通常の値を取り出します。
+`Task` には `ThenAsync`、`ValueTask` には `ThenValueAsync` を使います。
+同期 Result から直接非同期コールバックにつなげられます。
+非同期の受け手を渡した場合は、同期コールバックでの値変換もチェーンにできます。
 
 ```csharp
-return await Serialize(inputValue, "".AsResult())
-    .MapAsync(text => (stream, text))
-    .ConfigureAwait(false);
+return await input.ThenAsync(value => Serialize(value, ""))
+    .ThenAsync(text => (stream, text).AsResult());
 ```
 
-MapAsync の Async は元の Task を待つことを表し、変換関数を非同期にする意味ではありません。
-非同期の変換には ThenAsync を使い、必要な位置で AsResult します。
-引数・戻り値の同期 / 非同期の全組み合わせをオーバーロードとして提供する方針ではありません。
-必要性を実際の利用から判断し、拡張数を抑えます。
+非同期の受け手は通常の `await` の規則で待機します。
+`.ConfigureAwait(false).ThenAsync(...)` とすると、次のコールバック前の待機でコンテキストへの復帰を省けます。
+生成コードはコールバックを呼んだ後、その戻り値を `ConfigureAwait(false)` で待機します。
+コールバック内部の待機には、その実装自身の指定が適用されます。
 
 ## Result と例外の境界
 
@@ -85,7 +81,7 @@ Result を返すメソッドであることは、例外が絶対に送出され�
 Serialize / Deserialize の例外は捕捉しません。FileSystem も Serializer や
 Result を返す拡張点の例外を Result 化せず、担当するファイル操作の例外を変換します。
 
-Map / Then / ThenError / Resolve / OnSuccess と非同期版は、コールバックの例外を捕捉しません。
+Result の連結・分岐とその非同期版は、コールバックの例外を捕捉しません。
 非同期版では元の Task の例外やキャンセルもそのまま伝播します。
 OperationCanceledException を Result に格納する場合と、Task がキャンセルされる場合は別の状態です。
 ThenError は失敗 Result に反応し、投げられた例外やキャンセル済み Task を回復するものではありません。
@@ -111,7 +107,7 @@ Interaction が未処理例外を専用 Port に委譲する処理も、明示�
 
 Core の `CancellationScheduler.TimeoutAsync` は、期限付き処理を実行する利用側が明示的に選ぶ境界です。
 この API はユーザー指定の契約として、Cancel の例外と対象 Task の送出例外・キャンセル完了を Result 化し、
-処理が返した失敗 Result も含めて集約します。一般の Map / Then や Persistence の委譲とは異なる契約です。
+処理が返した失敗 Result も含めて集約します。
 詳細は [CancellationScheduler](./CANCELLATION_SCHEDULER.md) を参照してください。
 
 ## 実装・検証時の確認
@@ -122,6 +118,6 @@ Core の `CancellationScheduler.TimeoutAsync` は、期限付き処理を実行�
 - 外部操作の失敗を担当する実装内で Result 化できているか。
 - 例外が伝播しても資源を解放し、既存データを不必要に破壊しないか。
 
-実装は Core の Result.cs と四つの Result 拡張クラスを参照してください。
+型定義と拡張は [Core の ResultAPI](../InteractionFlow.Core/ResultAPI/Entities) を参照してください。
 形式変換固有の契約は [SerializationSystem](./SERIALIZATION.md)、
 ファイル保存と清掃の契約は [FileSystem](./FILESYSTEM.md) にあります。

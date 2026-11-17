@@ -1,3 +1,4 @@
+using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Contexts;
 using InteractionFlow.Core.Externals;
 using InteractionFlow.Core.Interactions;
@@ -6,7 +7,6 @@ using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading.Tasks;
 using Xunit;
-using ResultException = InteractionFlow.Core.Entities.ResultException;
 
 namespace InteractionFlow.Standard.Tests.Contexts
 {

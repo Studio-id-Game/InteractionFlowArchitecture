@@ -1,3 +1,4 @@
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -25,10 +26,10 @@ namespace InteractionFlow.Core.Entities
         /// 保持値が Entry の場合は、最大100回の展開で解決した結果。
         /// 保持値がない場合、指定型として取得できない場合、または展開上限に到達した場合は失敗結果。
         /// </returns>
-        public ResultAPI.Entities.Result<T> Parse<T>()
+        public Result<T> Parse<T>()
         {
             return ((IEntry)this).TryResolve<T>(true, out var value, out var error)
-                ? value : (ResultAPI.Entities.Result<T>)error!;
+                ? value : (Result<T>)error!;
         }
 
         object? IEntry.UntypedValue => Value;

@@ -1,7 +1,7 @@
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Core.Entities.Contexts
 {
@@ -36,8 +36,8 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// 処理が正常完了すれば、期限到達自体を失敗にはしません。
         /// 引数・破棄済み・同時利用の誤りは同期的に例外を送出します。
         /// </remarks>
-        public Task<ResultTypes.Result> TimeoutAsync(TimeSpan timeoutTime, Task<ResultTypes.Result> task)
-            => TimeoutCoreAsync(timeoutTime, task, static result => result, static error => (ResultTypes.Result)error);
+        public Task<Result> TimeoutAsync(TimeSpan timeoutTime, Task<Result> task)
+            => TimeoutCoreAsync(timeoutTime, task, static result => result, static error => (Result)error);
 
         /// <summary>期限到達時に Cancel を通知し、対象 Task の値または集約した失敗を返します。</summary>
         /// <typeparam name="T">対象 Task が返す成功値の型。</typeparam>
@@ -48,14 +48,14 @@ namespace InteractionFlow.Core.Entities.Contexts
         /// 成功値の内容は解釈しません。通知が失敗した場合は成功値ではなく失敗を返します。
         /// 引数検証、例外・キャンセルの変換、破棄との同期は値なし版と同じです。
         /// </remarks>
-        public Task<ResultTypes.Result<T>> TimeoutAsync<T>(TimeSpan timeoutTime, Task<ResultTypes.Result<T>> task)
+        public Task<Result<T>> TimeoutAsync<T>(TimeSpan timeoutTime, Task<Result<T>> task)
             => TimeoutCoreAsync(timeoutTime, task,
-                static result => result.WithoutValue, static error => (ResultTypes.Result<T>)error);
+                static result => result.WithoutValue, static error => (Result<T>)error);
 
         // Keep the original Task so that both overloads retain every exception of faulted WhenAll tasks.
         // Only Result inspection and failure construction differ between the two result types.
         private Task<TResult> TimeoutCoreAsync<TResult>(TimeSpan timeoutTime, Task<TResult> task,
-            Func<TResult, ResultTypes.Result> getStatus, Func<Exception, TResult> fromFailure)
+            Func<TResult, Result> getStatus, Func<Exception, TResult> fromFailure)
         {
             if (task is null) throw new ArgumentNullException(nameof(task));
             if (timeoutTime != Timeout.InfiniteTimeSpan
@@ -82,7 +82,7 @@ namespace InteractionFlow.Core.Entities.Contexts
         }
 
         private async Task<TResult> RunAsync<TResult>(TimeoutOperation operation, Task delay, Task<TResult> task,
-            Func<TResult, ResultTypes.Result> getStatus, Func<Exception, TResult> fromFailure)
+            Func<TResult, Result> getStatus, Func<Exception, TResult> fromFailure)
         {
             try
             {
@@ -115,7 +115,7 @@ namespace InteractionFlow.Core.Entities.Contexts
                 }
 
                 TResult result;
-                ResultTypes.Result status;
+                Result status;
                 try
                 {
                     result = await task.ConfigureAwait(false);

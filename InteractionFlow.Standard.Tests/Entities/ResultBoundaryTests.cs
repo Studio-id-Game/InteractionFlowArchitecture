@@ -1,11 +1,11 @@
 using InteractionFlow.Core.Entities;
 using InteractionFlow.Core.Entities.Architectures;
 using InteractionFlow.Core.ExternalPorts;
+using InteractionFlow.Core.ResultAPI.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using ResultTypes = InteractionFlow.Core.ResultAPI.Entities;
 
 namespace InteractionFlow.Standard.Tests.Entities
 {
@@ -19,9 +19,9 @@ namespace InteractionFlow.Standard.Tests.Entities
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
                 1.AsResult().Then<int, string>(_ => throw failure)));
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                failed.ThenError(_ => throw failure)));
+                failed.ThenError(Result<int> (ResultException _) => throw failure)));
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                1.AsResult().OnSuccess(_ => throw failure)));
+                1.AsResult().IfSuccess(_ => throw failure)));
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
                 failed.Resolve(_ => "success", _ => throw failure)));
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
@@ -32,12 +32,13 @@ namespace InteractionFlow.Standard.Tests.Entities
         public void FailedResultsSkipSuccessCallbacksAndSuccessfulResultsSkipRecovery()
         {
             Result<int> failed = new InvalidOperationException("failure");
-            failed.Try(out _, out var original);
-            Assert.False(failed.Then<int, string>(_ => throw new Exception("must not run")).Try(out _, out var error));
+            Assert.True(failed.HasError(out var original));
+            Assert.True(failed.Then<int, string>(_ => throw new Exception("must not run")).HasError(out var error));
             Assert.Same(original, error);
-            Assert.False(failed.OnSuccess(_ => throw new Exception("must not run")).Try(out _, out error));
+            Assert.True(failed.IfSuccess(_ => throw new Exception("must not run")).HasError(out error));
             Assert.Same(original, error);
-            Assert.True(1.AsResult().ThenError(_ => throw new Exception("must not run")).Try(out var value, out _));
+            var succeeded = 1.AsResult().ThenError(Result<int> (ResultException _) => throw new Exception("must not run"));
+            Assert.True(succeeded.HasValue(out var value));
             Assert.Equal(1, value);
         }
 
@@ -46,16 +47,16 @@ namespace InteractionFlow.Standard.Tests.Entities
         {
             var failure = new InvalidOperationException("callback");
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                1.AsResult().StartAsync().ThenAsync<int, string>(_ => Task.FromException<Result<string>>(failure))));
+                1.AsResult().ThenAsync<int, string>(_ => Task.FromException<Result<string>>(failure))));
             Result<int> failed = failure;
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                failed.StartAsync().ThenErrorAsync(_ => throw failure)));
+                Task.FromResult(failed).ThenErrorAsync(Result<int> (ResultException _) => throw failure)));
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                failed.StartAsync().ResolveAsync(_ => Task.FromResult("success"), _ => throw failure)));
+                Task.FromResult(failed).ResolveAsync<int, string>(_ => Task.FromResult("success"), _ => throw failure)));
             var canceled = Task.FromCanceled<Result<int>>(new CancellationToken(canceled: true));
-            var mapped = canceled.MapAsync(value => value.ToString());
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => mapped);
-            Assert.True(mapped.IsCanceled);
+            var chained = canceled.ThenAsync(value => value.ToString().AsResult());
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => chained);
+            Assert.True(chained.IsCanceled);
         }
 
         [Theory]
@@ -73,15 +74,15 @@ namespace InteractionFlow.Standard.Tests.Entities
         private sealed class BatchPort(Exception failure, bool asynchronous) : IPersistencePort<int[], string?[]>
         {
             public ReadOnlyMemory<IDependencyNode> Dependency => ReadOnlyMemory<IDependencyNode>.Empty;
-            public Task<ResultTypes.Result<string?[]>> Load(int[] id, ResultTypes.Result<string?[]> oldValue)
+            public Task<Result<string?[]>> Load(int[] id, Result<string?[]> oldValue)
             {
-                if (asynchronous) return Task.FromException<ResultTypes.Result<string?[]>>(failure);
+                if (asynchronous) return Task.FromException<Result<string?[]>>(failure);
                 throw failure;
             }
-            public Task<ResultTypes.Result> Save(int[] id, ResultTypes.Result<string?[]> value) => throw new NotSupportedException();
-            public Task<ResultTypes.Result> Delete(int[] id) => throw new NotSupportedException();
-            public Task<ResultTypes.Result> Exists(int[] id) => throw new NotSupportedException();
-            public Task<ResultTypes.Result<int[][]>> GetAllIds() => throw new NotSupportedException();
+            public Task<Result> Save(int[] id, Result<string?[]> value) => throw new NotSupportedException();
+            public Task<Result> Delete(int[] id) => throw new NotSupportedException();
+            public Task<Result> Exists(int[] id) => throw new NotSupportedException();
+            public Task<Result<int[][]>> GetAllIds() => throw new NotSupportedException();
         }
     }
 }
